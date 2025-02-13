@@ -1,0 +1,6 @@
+TODO: create sqlscript to setup db and connect to it.
+TODO: import transactions from Kraken
+TODO: import transactions from kasa.ods
+TODO: create way to include manual fixes
+TODO: cerata way to combine transactions
+TODO: compute taxless ETH
