@@ -4,7 +4,7 @@ from db.db import init_db
 
 
 def main() -> None:
-    session: Session = init_db()
+    _session: Session = init_db()
 
 
 if __name__ == "__main__":
