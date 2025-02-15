@@ -1,9 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, BigInteger, Column, DateTime, Integer, Numeric, String, Text, Uuid
+from sqlalchemy import JSON, BigInteger, DateTime, String, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 

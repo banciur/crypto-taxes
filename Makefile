@@ -12,11 +12,11 @@ deps: ## install dependencies
 	pip install .[dev]
 
 lint_check: ## code quality tools: format, lint
-	ruff check --select I
+	ruff check
 	ruff format --check
 
 lint_fix: ## code quality tools: format, lint
-	ruff check --select I --fix
+	ruff check --fix
 	ruff format
 
 test: ## run tests
