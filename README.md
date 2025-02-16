@@ -1,4 +1,5 @@
 # crypto-taxes
+Yet another unfinished system for tracking crypto transactions and calculating taxes. But I need something tailored for stable farmer in Germany.
 
 ## Development
 ### Python version
