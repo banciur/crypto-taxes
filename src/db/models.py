@@ -42,6 +42,7 @@ class Ledger(Base):
     fee: Mapped[int | None] = mapped_column(BigIntegerAsString)
     fee_currency: Mapped[str | None]
 
+    # At this moment deposit, withdraw, trade, earn
     operation_type: Mapped[str | None]
     operation_place: Mapped[str | None]
 

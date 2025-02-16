@@ -48,7 +48,6 @@ class KrakenImporter:
         entries: list[KrakenLedgerEntry],
     ) -> None:
         operation_place: str = "Kraken"
-        # Group by refid
         refid_map: dict[str, list[KrakenLedgerEntry]] = defaultdict(list)
         type = set()
         subtype = set()
@@ -61,7 +60,7 @@ class KrakenImporter:
 
         for refid, lines in refid_map.items():
             if refid == "ELFI6E5-PNXZG-NSGNER":
-                # Those are 4 strange operations on BTC where it was automatically moved between earn types
+                # Those are 4 operations on BTC where it was automatically moved between earn types but token stayed the same so nothing to do
                 # "LSGSVB-OHSHV-NQ5NUN", "ELFI6E5-PNXZG-NSGNER", "2024-04-17 20:36:43", "earn", "allocation", "currency", "BTC", "spot / main", -0.0000099500, 0, 0.0000000000
                 # "L3SUVI-QSFMZ-624QPQ", "ELFI6E5-PNXZG-NSGNER", "2024-04-17 20:36:43", "earn", "allocation", "currency", "BTC", "earn / flexible", 0.0000099500, 0, 0.0000099500
                 # "L5ZXEE-YEAID-PCBXU3", "ELFI6E5-PNXZG-NSGNER", "2024-09-10 13:48:39", "earn", "deallocation", "currency", "BTC", "earn / flexible", -0.0000099539, 0, 0.0000000000
@@ -71,14 +70,24 @@ class KrakenImporter:
             date = lines[0].time
 
             combined_txids = [line.txid for line in lines]
-            # TODO: Kraken fees are computed incorrectly
-            total_fee = sum(decimal_to_int(line.fee) for line in lines if line.fee is not None)
+
+            # Compute fee
+            fee_lines = [line for line in lines if line.fee != 0]
+            if len(fee_lines) == 0:
+                fee = 0
+                fee_currency = None
+            elif len(fee_lines) == 1:
+                fee = decimal_to_int(fee_lines[0].fee)
+                fee_currency = fee_lines[0].asset
+            else:
+                raise Exception(f"Multiple fee lines for refid {refid}, but expected exactly one.")
 
             ledger_entry = Ledger(
                 date=date,
                 external_id=refid,
                 operation_place=operation_place,
-                fee=total_fee,
+                fee=fee,
+                fee_currency=fee_currency,
                 transactions=combined_txids,
             )
             if len(lines) == 2:

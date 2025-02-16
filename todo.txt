@@ -1,7 +1,13 @@
 TODO: import transactions from Kraken
+TODO: there are quite a few operations types and dig deeper to process them to one common model. Which I don't have yet
+
+TODO: need a better currency price model due to changes probably should store it with 1 hour resolution
+  store it as separate database so it won't be dumped with every run
+
 TODO: import tx from Lido
 TODO: import tx from StakeWise
 TODO: import transactions from kasa.ods
+TODO: import tx from etherscan to fill the blanks or cross check?
 TODO: create way to include manual fixes
 TODO: create way to combine entries from different sources
 TODO: compute tax-less token FIFO
