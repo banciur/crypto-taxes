@@ -29,6 +29,10 @@ testpaths = [
 line-length = 120
 target-version = "py313"
 
+[tool.ruff.lint]
+extend-select = ["I"]
+
+
 [tool.mypy]
 python_version = "3.13"
 disallow_untyped_defs = true

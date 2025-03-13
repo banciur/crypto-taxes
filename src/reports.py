@@ -1,13 +1,13 @@
 from collections import defaultdict
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from db.models import Ledger
 from utils import int_to_decimal
 
 
-def get_token_amounts(session: Session):
+def get_token_amounts(session: Session) -> None:
     aggregator: dict[str, int] = defaultdict(int)
 
     stmt = select(Ledger)
