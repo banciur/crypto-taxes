@@ -20,4 +20,6 @@ def get_token_amounts(session: Session) -> None:
             aggregator[entry.fee_currency] -= entry.fee
 
     for currency, amount in aggregator.items():
-        print(currency, int_to_decimal(amount))
+        a = int_to_decimal(amount)
+        if a > 0:
+            print(currency, a)

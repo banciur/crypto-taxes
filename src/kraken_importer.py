@@ -16,7 +16,7 @@ class KrakenLedgerEntry(BaseModel):
     asset: str
     balance: Decimal
     fee: Decimal
-    refid: str
+    refid: str  # This is id of an operation. For example, trade operation has two transactions (txid) in and out
     subtype: str
     time: datetime
     txid: str
@@ -36,15 +36,10 @@ class KrakenImporter:
 
     def _read_data(self) -> list[KrakenLedgerEntry]:
         data = []
-        try:
-            with open(self._source_path, mode="r", encoding="utf-8") as file:
-                reader = DictReader(file)  # Uses the first row as header
-                for row in reader:
-                    data.append(KrakenLedgerEntry.model_validate(row))
-        except FileNotFoundError:
-            print(f"Error: The file '{self._source_path}' was not found.")
-        except Exception as e:
-            print(f"An error occurred: {e}")
+        with open(self._source_path, mode="r", encoding="utf-8") as file:
+            reader = DictReader(file)  # Uses the first row as header
+            for row in reader:
+                data.append(KrakenLedgerEntry.model_validate(row))
 
         return data
 
@@ -106,32 +101,32 @@ class KrakenImporter:
                 note = None
 
                 if lines[0].type == lines[1].type == "trade":
-                    # Nothing special to do this is typical case
+                    # Nothing special to do this is a typical case
                     pass
                 elif lines[0].type == lines[1].type == "earn":
                     if lines[0].subtype == lines[1].subtype in ["allocation", "deallocation"] or line_subtypes == {
                         "allocation",
                         "deallocation",
                     }:
-                        # earn (de) allocation when both assets are same type, same amount and no fee it means this is not interesting for me
+                        # earn (de) allocation when both assets are the same type, same amount and no fee it means this is not interesting for me
                         assert lines[0].asset == lines[1].asset
                         assert fee == 0
                         assert lines[0].amount == -1 * lines[1].amount
                         continue
                     elif lines[0].subtype == lines[1].subtype == "migration":
+                        # This one is a case when one currency was migrated to another. For me, this changes the token type which has tax consequences.
+                        # Treat this as a normal trade add note
                         assert lines[0].amount == -1 * lines[1].amount
                         assert fee == 0
-                        # This one is case when one currency was migrated to another. For me this changes token type which has tax consequences.
-                        # I'll treat this as a normal trade just add note
 
                         note = "It was migration probably automatic"
                     else:
                         print(f'"{refid}" with double lines of type earn which are not handled by import.')
                 elif line_types == {"spend", "receive"}:
-                    # Seems that spend and receive is another type of trade. Happens during "dustsweeping" but also other cases which are unknown to me.
+                    # It seems that spend and receive are another type of trade. Happens during "dustsweeping" but also other cases which are unknown to me.
                     pass
                 else:
-                    # Refid with multiple lines wich are not trade
+                    # Refid with multiple lines which are not trade
                     print(
                         f'"{refid}" with double lines of type {", ".join(line_types)} which are not handled by import."'
                     )
@@ -152,24 +147,22 @@ class KrakenImporter:
                 # Single line: deposit or withdrawal
                 line = lines[0]
                 amt = decimal_to_int(line.amount)
-                ledger_entry.out_currency = line.asset
 
                 if line.amount < 0:
                     # Withdrawal (out)
                     ledger_entry.out_amount = abs(amt)
+                    ledger_entry.out_currency = line.asset
                     ledger_entry.operation_type = "withdrawal"
                 else:
                     # Deposit (in)
                     ledger_entry.in_amount = amt
+                    ledger_entry.in_currency = line.asset
                     ledger_entry.operation_type = "deposit"
+
             else:
                 raise Exception(f"More then two Kraken Ledger entries with {refid}")
 
             self._session.add(ledger_entry)
-
-        # print(types)
-        # print(subtype)
-        # print(wallet)
 
         self._session.commit()
 
