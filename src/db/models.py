@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DateTime, String, Text, Uuid, TypeDecorator
+from sqlalchemy import JSON, DateTime, String, Text, TypeDecorator, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 

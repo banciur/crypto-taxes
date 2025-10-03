@@ -1,13 +1,13 @@
 from collections import defaultdict
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from db.models import Ledger
 from utils import int_to_decimal
 
 
-def get_token_amounts(session: Session):
+def get_token_amounts(session: Session) -> None:
     aggregator: dict[str, int] = defaultdict(int)
 
     stmt = select(Ledger)
@@ -20,4 +20,6 @@ def get_token_amounts(session: Session):
             aggregator[entry.fee_currency] -= entry.fee
 
     for currency, amount in aggregator.items():
-        print(currency, int_to_decimal(amount))
+        a = int_to_decimal(amount)
+        if a > 0:
+            print(currency, a)

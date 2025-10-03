@@ -1,5 +1,7 @@
-TODO: import transactions from Kraken
+TODO: Kraken import is not finished
+TODO: create model for operations, trade, deposit, widthdraw, word when I get money from thin air. stake, claim,
 TODO: there are quite a few operations types and dig deeper to process them to one common model. Which I don't have yet
+TODO: in my model how to track putting two (or more) tokens into one pool. 
 
 TODO: need a better currency price model due to changes probably should store it with 1 hour resolution
   store it as separate database so it won't be dumped with every run
@@ -11,3 +13,8 @@ TODO: import tx from etherscan to fill the blanks or cross check?
 TODO: create way to include manual fixes
 TODO: create way to combine entries from different sources
 TODO: compute tax-less token FIFO
+TODO: question how to calculate income in case when I'm partly leaving the farm.
+  Initial idea.
+  - ctokens only when token is sold compute gain as difference of value when bought (FIFO used for computing buy price)
+  - atokens compute tax / gain every time it rebases and when selling no tax
+

@@ -9,8 +9,8 @@ The minimum required Python version for this project is 3.13. I recommend using 
 pyenv install 3.13
 ```
 ```bash
-pyenv virtualenv 3.13 crypto-taxes-3.11
-echo "crypto-taxes-3.11" > .python-version
+pyenv virtualenv 3.13 crypto-taxes-3.13
+echo "crypto-taxes-3.13" > .python-version
 ```
 
 ### Dependencies
