@@ -1,5 +1,7 @@
-TODO: import transactions from Kraken
+TODO: Kraken import is not finished
+TODO: create model for operations, trade, deposit, widthdraw, word when I get money from thin air. stake, claim,
 TODO: there are quite a few operations types and dig deeper to process them to one common model. Which I don't have yet
+TODO: in my model how to track putting two (or more) tokens into one pool. 
 
 TODO: need a better currency price model due to changes probably should store it with 1 hour resolution
   store it as separate database so it won't be dumped with every run
