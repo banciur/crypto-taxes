@@ -2,20 +2,8 @@
 Yet another unfinished system for tracking crypto transactions and calculating taxes. But I need something tailored for stable farmer in Germany.
 
 ## Development
-### Python version
-The minimum required Python version for this project is 3.13. I recommend using [pyenv](https://github.com/pyenv/pyenv) (along with the [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) plugin) to manage and create virtual environments. While you can name the virtual environment however you like, it's good practice to include both the project name and the Python version
+Project uses [uv](https://docs.astral.sh/uv/) for Python 3.13 builds and dependency management.
 
-```bash
-pyenv install 3.13
-```
-```bash
-pyenv virtualenv 3.13 crypto-taxes-3.13
-echo "crypto-taxes-3.13" > .python-version
-```
-
-### Dependencies
-Note: If you're using macOS with the zsh shell, you need to escape "\[" and "\]" with "\\".
-```bash
-pip install --editable .
-pip install --editable .\[dev\]
-```
+- `make deps` syncs runtime and dev groups into the project `.venv`.
+- `make test` runs the pytest suite (stdout enabled).
+- `make code_check` runs Ruff and mypy gates; `make code_fix` applies Ruff autofixes.

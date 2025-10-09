@@ -7,10 +7,6 @@ from sqlalchemy import JSON, DateTime, String, Text, TypeDecorator, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
-class Base(DeclarativeBase):
-    pass
-
-
 class BigIntegerAsString(TypeDecorator):
     impl = String  # under the hood, this will create a TEXT column
     cache_ok = True  # recommended for SQLAlchemy 2.0+
@@ -24,6 +20,10 @@ class BigIntegerAsString(TypeDecorator):
         if value is None:
             return None
         return int(value)
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 class Ledger(Base):
