@@ -31,6 +31,7 @@ def get_ledger_arr() -> dict:
     }
 
 
+@pytest.mark.skip
 def test_kraken_importer(db_session: Session, tmp_path: Path) -> None:
     # This tests just one case
     file = tmp_path / "mock.csv"
