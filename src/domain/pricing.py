@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
 
@@ -19,14 +21,14 @@ class PriceSnapshot(BaseModel):
     source: str
 
     @model_validator(mode="after")
-    def _validate(self) -> "PriceSnapshot":
+    def _validate(self) -> PriceSnapshot:
         if self.base_id == self.quote_id:
             raise ValueError("base_id and quote_id must differ")
         if self.rate <= 0:
             raise ValueError("rate must be > 0")
         return self
 
-    def invert(self, *, new_source: str | None = None) -> "PriceSnapshot":
+    def invert(self, *, new_source: str | None = None) -> PriceSnapshot:
         """Return the inverted pair (quote/base) with a reciprocal rate."""
         return PriceSnapshot(
             timestamp=self.timestamp,
