@@ -54,7 +54,8 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Unbalanced events are allowed.
 - Fee legs: modeled as additional legs with `is_fee=True`.
 - Precision: use `Decimal` for all quantities/rates. No floats.
- - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
+- Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
+- Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine.
 
 ---
 
