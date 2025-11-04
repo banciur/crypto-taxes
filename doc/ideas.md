@@ -1,3 +1,16 @@
 # Some extra projects to consider
 - https://github.com/eprbell/rp2
 - https://github.com/BittyTax
+- how can system follow such use case:
+  - farming / borrowing on xlend.extrafi.io
+    - supply cbBTC on Base
+    - extra incentive through Merkl that gives
+      - OP on Optimism
+      - xOP on Optimism staked on xlend.extrafi.io
+      - some EXTRA tokens on Optimism
+    - occasionally claimed and swapped to WBTC (no cbBTC on Optimism)
+    - then jumper that moves and trades it to cbBTC on Base
+    - supply cbBTC to farm to decrease debt
+    - borrowing USDC in xlend.extrafi.io
+    - putting it into farm 40acres USDC Vault through vaults.fyi
+    - occasionally get some money from the farm and repay part of the debt to decrease debt
