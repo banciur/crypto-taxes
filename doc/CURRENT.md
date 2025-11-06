@@ -40,12 +40,8 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `quantity_used: Decimal`
   - `proceeds_total_eur: Decimal`
 
-- PriceSnapshot (unified)
-  - `timestamp: datetime`
-  - `base_id: str`,
-  - `quote_id: str`
-  - `rate: Decimal`
-  - `source: str`,
+- PriceProvider (protocol)
+  - `rate(base_id: str, quote_id: str, timestamp: datetime) -> Decimal`
 
 ---
 
@@ -63,4 +59,4 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - Model simple trades and transfers with per-leg wallets and optional fee legs.
 - Create lots for acquisitions and link disposals manually via `DisposalLink`.
-- Record price snapshots uniformly for later valuation.
+- Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.

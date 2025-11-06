@@ -54,7 +54,6 @@ The system should:
 ### 3.2 Reference Tables
 - `Asset`
 - `Wallet`
-- `PriceSnapshot`
 
 ### 3.3 Ledger Structures
 ```
@@ -125,7 +124,7 @@ Note on wallets: `wallet_id` lives on each `LedgerLeg` to enable single-event mo
 
 1. Never alter canonical event data after ingestion.
 2. Generate migrations instead of destructive updates.
-3. Always compute EUR values using nearest `PriceSnapshot` at event timestamp.
+3. Always compute EUR values using the nearest available rate provided by the pricing service at the event timestamp.
 5. Preserve audit chain: any derived record must link to at least one `event_id`.
 6. Support back-testing of `TaxPolicy` versions (frozen snapshot per report run).
 7. Implement reconciliation checks between derived and on-chain balances.
