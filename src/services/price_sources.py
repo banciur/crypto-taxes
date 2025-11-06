@@ -10,17 +10,11 @@ from .price_types import PriceQuote
 
 
 class PriceSource(Protocol):
-    """Source capable of producing price quotes for a base/quote pair."""
-
     def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote: ...
 
 
-class DeterministicRandomPriceSource:
-    """Deterministic pseudo-random price generator.
-
-    Produces stable rates for the same (base, quote, timestamp) tuple.
-    Intended for local testing and offline development.
-    """
+class DeterministicRandomPriceSource(PriceSource):
+    """Deterministic pseudo-random price generator."""
 
     def __init__(
         self,
@@ -59,7 +53,6 @@ class DeterministicRandomPriceSource:
         digest = hashlib.sha256(digest_input.encode("utf-8")).digest()
         seed = self.seed ^ int.from_bytes(digest, "big", signed=False)
         rng = random.Random(seed)
-        # Generate integer in [min_scaled, max_scaled] deterministically.
         scale = Decimal("0.01")
         min_scaled = self._scale_to_int(self.min_price, scale)
         max_scaled = self._scale_to_int(self.max_price, scale)

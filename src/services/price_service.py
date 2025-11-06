@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from pathlib import Path
 
-from .price_sources import DeterministicRandomPriceSource, PriceSource
-from .price_store import JsonlPriceStore, PriceStore
+from domain.pricing import PriceProvider
+
+from .price_sources import PriceSource
+from .price_store import PriceStore
 
 
-class PriceService:
+class PriceService(PriceProvider):
     def __init__(
         self,
         source: PriceSource,
@@ -17,7 +18,7 @@ class PriceService:
         self.source = source
         self.store = store
 
-    def get_price(
+    def rate(
         self,
         base_id: str,
         quote_id: str,
@@ -31,12 +32,3 @@ class PriceService:
         fetched = self.source.fetch_snapshot(base_id=base_id, quote_id=quote_id, timestamp=ts)
         self.store.write(fetched)
         return fetched.rate
-
-
-def build_default_service() -> PriceService:
-    source = DeterministicRandomPriceSource()
-    store = JsonlPriceStore(root_dir=Path("data"))
-    return PriceService(source=source, store=store)
-
-
-__all__ = ["PriceService", "build_default_service"]

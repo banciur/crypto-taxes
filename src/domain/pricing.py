@@ -9,6 +9,3 @@ class PriceProvider(Protocol):
     """Lookup interface for asset→quote rates."""
 
     def rate(self, base_id: str, quote_id: str, timestamp: datetime) -> Decimal: ...
-
-
-__all__ = ["PriceProvider"]

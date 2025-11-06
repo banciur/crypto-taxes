@@ -18,10 +18,10 @@ def test_fetch_and_get_flow(tmp_path: Path) -> None:
         store=store,
     )
 
-    rate = service.get_price("ETH", "EUR", timestamp=fixed_now)
+    rate = service.rate("ETH", "EUR", timestamp=fixed_now)
     assert isinstance(rate, Decimal)
 
-    stored_rate = service.get_price("ETH", "EUR", timestamp=fixed_now)
+    stored_rate = service.rate("ETH", "EUR", timestamp=fixed_now)
     assert stored_rate == rate
 
 
@@ -34,10 +34,10 @@ def test_get_price_reuses_cached_snapshot(tmp_path: Path) -> None:
         store=store,
     )
 
-    first_rate = service.get_price("BTC", "USD", timestamp=base_ts)
-    reused_rate = service.get_price("BTC", "USD", timestamp=base_ts)
+    first_rate = service.rate("BTC", "USD", timestamp=base_ts)
+    reused_rate = service.rate("BTC", "USD", timestamp=base_ts)
     assert reused_rate == first_rate
 
     later_ts = base_ts.replace(minute=base_ts.minute + 2)
-    refreshed_rate = service.get_price("BTC", "USD", timestamp=later_ts)
+    refreshed_rate = service.rate("BTC", "USD", timestamp=later_ts)
     assert refreshed_rate != first_rate

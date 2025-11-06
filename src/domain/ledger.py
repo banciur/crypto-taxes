@@ -75,12 +75,3 @@ class DisposalLink(BaseModel):
         if self.proceeds_total_eur < 0:
             raise ValueError("proceeds_total_eur must be >= 0")
         return self
-
-
-__all__ = [
-    "EventType",
-    "LedgerLeg",
-    "LedgerEvent",
-    "AcquisitionLot",
-    "DisposalLink",
-]

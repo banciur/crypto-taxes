@@ -7,8 +7,6 @@ from decimal import Decimal
 
 @dataclass(frozen=True)
 class PriceQuote:
-    """Price quote with associated validity window."""
-
     timestamp: datetime
     base_id: str
     quote_id: str
@@ -16,6 +14,3 @@ class PriceQuote:
     source: str
     valid_from: datetime
     valid_to: datetime
-
-
-__all__ = ["PriceQuote"]

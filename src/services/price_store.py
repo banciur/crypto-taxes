@@ -10,14 +10,12 @@ from .price_types import PriceQuote
 
 
 class PriceStore(Protocol):
-    """Persistence interface for price quotes."""
-
     def write(self, quote: PriceQuote) -> None: ...
 
     def read(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote | None: ...
 
 
-class JsonlPriceStore:
+class JsonlPriceStore(PriceStore):
     """Persist price snapshots as JSONL files on disk."""
 
     def __init__(self, *, root_dir: Path) -> None:
