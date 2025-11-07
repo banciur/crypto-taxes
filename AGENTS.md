@@ -35,7 +35,11 @@ Prefer the “Current” guide for domain semantics. Use the “Future” guide 
 
 ## Domain modules
 - Ledger and lots: `src/domain/ledger.py`
+- Inventory engine + lot matching: `src/domain/inventory.py`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
+
+## Price services
+- `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
 
 ## Example tests
 - Simple ETH trade flow: `tests/domain_eth_trades_test.py`
