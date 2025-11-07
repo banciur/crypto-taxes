@@ -1,2 +1,5 @@
-TODO: Create price service
+TODO: Need a USD / EUR exchange rate importer?
+TODO: Fix noqa: E402 in few places
+TODO: Add to agents coding hints:
+  - no defensive programming
 TODO: Try to create Kraken events importer

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -13,6 +12,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from config import config  # noqa: E402
 from services.price_service import PriceService  # noqa: E402
 from services.price_sources import CoinDeskPriceSource  # noqa: E402
 from services.price_store import JsonlPriceStore  # noqa: E402
@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--api-key",
-        help="CoinDesk API key (falls back to COINDESK_API_KEY).",
+        help="CoinDesk API key (falls back to configured settings).",
     )
     return parser.parse_args()
 
@@ -80,10 +80,7 @@ def default_timestamps(now: datetime) -> list[datetime]:
 
 def main() -> None:
     args = parse_args()
-    api_key = args.api_key or os.getenv("COINDESK_API_KEY")
-    if not api_key:
-        msg = "Provide --api-key or set COINDESK_API_KEY."
-        raise SystemExit(msg)
+    api_key = args.api_key or config().coindesk_api_key
 
     now = datetime.now(timezone.utc)
     raw_timestamps: Iterable[str] | None = args.timestamps

@@ -1,5 +1,10 @@
 .PHONY: help code_check code_fix deps lint_check lint_fix test types
 
+.env:
+	@cp -n .env.example .env
+
+include .env
+
 help:  ## prints help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ": .*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 

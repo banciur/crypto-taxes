@@ -16,8 +16,6 @@ class PriceStore(Protocol):
 
 
 class JsonlPriceStore(PriceStore):
-    """Persist price snapshots as JSONL files on disk."""
-
     def __init__(self, *, root_dir: Path) -> None:
         self.root_dir = root_dir
 

@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Protocol
 
+from config import config
+
 from .coindesk_client import CoinDeskClient, SpotInstrumentOHLC
 from .price_types import PriceQuote
 
@@ -15,8 +17,6 @@ class PriceSource(Protocol):
 
 
 class DeterministicRandomPriceSource(PriceSource):
-    """Deterministic pseudo-random price generator."""
-
     def __init__(
         self,
         *,
@@ -67,8 +67,6 @@ class DeterministicRandomPriceSource(PriceSource):
 
 
 class CoinDeskPriceSource(PriceSource):
-    """Fetch price snapshots from the CoinDesk Data API."""
-
     def __init__(
         self,
         *,
@@ -78,11 +76,10 @@ class CoinDeskPriceSource(PriceSource):
         client: CoinDeskClient | None = None,
         source_name: str = "coindesk-spot-api",
     ) -> None:
-        if client is None:
-            if api_key is None:
-                msg = "api_key must be provided when client is not supplied"
-                raise ValueError(msg)
-            client = CoinDeskClient(api_key=api_key)
+        resolved_client = client
+        if resolved_client is None:
+            resolved_api_key = api_key or config().coindesk_api_key
+            resolved_client = CoinDeskClient(api_key=resolved_api_key)
 
         if aggregate_minutes <= 0:
             msg = "aggregate_minutes must be greater than 0"
@@ -98,7 +95,7 @@ class CoinDeskPriceSource(PriceSource):
             msg = "market must be provided"
             raise ValueError(msg)
 
-        self.client = client
+        self.client = resolved_client
         self.market = market
         self.aggregate_minutes = aggregate_minutes
         self.source_name = source_name

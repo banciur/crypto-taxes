@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,6 +13,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from config import config  # noqa: E402
 from services.price_sources import CoinDeskPriceSource  # noqa: E402
 
 
@@ -63,10 +63,7 @@ def load_timestamp(raw: str | None) -> datetime:
 
 def main() -> None:
     args = parse_args()
-    api_key = args.api_key or os.getenv("COINDESK_API_KEY")
-    if not api_key:
-        msg = "Provide --api-key or set COINDESK_API_KEY."
-        raise SystemExit(msg)
+    api_key = args.api_key or config().coindesk_api_key
 
     ts = load_timestamp(args.timestamp)
     source = CoinDeskPriceSource(

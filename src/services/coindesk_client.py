@@ -32,8 +32,6 @@ class SpotInstrumentOHLC:
 
 
 class CoinDeskClient:
-    """Minimal CoinDesk Data API client covering the endpoints needed by the app."""
-
     def __init__(
         self,
         *,
