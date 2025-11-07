@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import random
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Protocol
 
+from .coindesk_client import CoinDeskClient, SpotInstrumentOHLC
 from .price_types import PriceQuote
 
 
@@ -65,4 +66,105 @@ class DeterministicRandomPriceSource(PriceSource):
         return int((value * scale_factor).to_integral_value())
 
 
-__all__ = ["DeterministicRandomPriceSource", "PriceSource"]
+class CoinDeskPriceSource(PriceSource):
+    """Fetch price snapshots from the CoinDesk Data API."""
+
+    def __init__(
+        self,
+        *,
+        api_key: str | None = None,
+        market: str = "coinbase",
+        aggregate_minutes: int = 60,
+        client: CoinDeskClient | None = None,
+        source_name: str = "coindesk-spot-api",
+    ) -> None:
+        if client is None:
+            if api_key is None:
+                msg = "api_key must be provided when client is not supplied"
+                raise ValueError(msg)
+            client = CoinDeskClient(api_key=api_key)
+
+        if aggregate_minutes <= 0:
+            msg = "aggregate_minutes must be greater than 0"
+            raise ValueError(msg)
+        if aggregate_minutes < 60 and aggregate_minutes > 30:
+            msg = "CoinDesk minute candles support aggregate_minutes up to 30"
+            raise ValueError(msg)
+        if aggregate_minutes >= 60 and aggregate_minutes % 60 != 0:
+            msg = "aggregate_minutes must be divisible by 60 when requesting hour candles"
+            raise ValueError(msg)
+
+        if not market:
+            msg = "market must be provided"
+            raise ValueError(msg)
+
+        self.client = client
+        self.market = market
+        self.aggregate_minutes = aggregate_minutes
+        self.source_name = source_name
+
+        if aggregate_minutes < 60:
+            self._bucket_mode = "minute"
+            self._aggregate_units = aggregate_minutes
+            self._bucket_duration = timedelta(minutes=aggregate_minutes)
+        else:
+            self._bucket_mode = "hour"
+            self._aggregate_units = aggregate_minutes // 60
+            self._bucket_duration = timedelta(minutes=aggregate_minutes)
+
+    def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
+        ts_utc = self._ensure_utc(timestamp)
+        instrument = self._format_instrument(base_id, quote_id)
+        entries = self._fetch_histo_entries(instrument=instrument, timestamp=ts_utc)
+
+        if not entries:
+            msg = f"No price data returned for {instrument} on {self.market}"
+            raise RuntimeError(msg)
+
+        bucket = max(entries, key=lambda entry: entry.timestamp)
+        valid_from = bucket.timestamp
+        valid_to = valid_from + self._bucket_duration
+
+        return PriceQuote(
+            timestamp=valid_from,
+            base_id=base_id.upper(),
+            quote_id=quote_id.upper(),
+            rate=bucket.close,
+            source=self.source_name,
+            valid_from=valid_from,
+            valid_to=valid_to,
+        )
+
+    def _fetch_histo_entries(self, *, instrument: str, timestamp: datetime) -> list[SpotInstrumentOHLC]:
+        unix_ts = int(timestamp.timestamp())
+        if self._bucket_mode == "minute":
+            return self.client.get_spot_historical_minutes(
+                market=self.market,
+                instrument=instrument,
+                to_ts=unix_ts,
+                limit=1,
+                aggregate=self._aggregate_units,
+            )
+
+        return self.client.get_spot_historical_hours(
+            market=self.market,
+            instrument=instrument,
+            to_ts=unix_ts,
+            limit=1,
+            aggregate=self._aggregate_units,
+        )
+
+    @staticmethod
+    def _ensure_utc(ts: datetime) -> datetime:
+        if ts.tzinfo is None:
+            return ts.replace(tzinfo=timezone.utc)
+        return ts.astimezone(timezone.utc)
+
+    @staticmethod
+    def _format_instrument(base_id: str, quote_id: str) -> str:
+        base = base_id.upper()
+        quote = quote_id.upper()
+        return f"{base}-{quote}"
+
+
+__all__ = ["CoinDeskPriceSource", "DeterministicRandomPriceSource", "PriceSource"]
