@@ -15,6 +15,7 @@ Project uses [uv](https://docs.astral.sh/uv/) with Python 3.13.
 
 ## Repo Layout
 - `src/domain` — Pydantic v2 domain models (ledger, lots, pricing)
+- `src/services` — price source/store implementations plus `PriceService`
 - `src/db`, `src/kraken_importer.py`, `src/main.py`, `src/reports.py` — legacy modules (to be modernized)
 - `tests` — pytest suite (domain example: `tests/domain_eth_trades_test.py`)
 - `doc` — `CURRENT.md` (now), `FUTURE.md` (roadmap), `ideas.md`

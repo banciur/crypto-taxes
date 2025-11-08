@@ -10,7 +10,6 @@ from domain.ledger import (
     LedgerEvent,
     LedgerLeg,
 )
-from domain.pricing import PriceSnapshot
 
 
 def test_eth_trading_flow_simple() -> None:
@@ -25,9 +24,9 @@ def test_eth_trading_flow_simple() -> None:
     t2 = datetime(2024, 9, 3, 12, 0, tzinfo=timezone.utc)
     t3 = datetime(2024, 9, 10, 12, 0, tzinfo=timezone.utc)
 
-    px_t1 = PriceSnapshot(timestamp=t1, base_id="ETH", quote_id="EUR", rate=Decimal("3000"), source="mock")
-    px_t2 = PriceSnapshot(timestamp=t2, base_id="ETH", quote_id="EUR", rate=Decimal("3000"), source="mock")
-    px_t3 = PriceSnapshot(timestamp=t3, base_id="ETH", quote_id="EUR", rate=Decimal("3400"), source="mock")
+    rate_t1 = Decimal("3000")
+    rate_t2 = Decimal("3000")
+    rate_t3 = Decimal("3400")
 
     wallet_id = "hot_mm"
 
@@ -44,7 +43,7 @@ def test_eth_trading_flow_simple() -> None:
     lot1 = AcquisitionLot(
         acquired_event_id=buy1.id,
         acquired_leg_id=buy1.legs[0].id,
-        cost_eur_per_unit=px_t1.rate,  # 3000 EUR/ETH
+        cost_eur_per_unit=rate_t1,  # 3000 EUR/ETH
     )
 
     # 3) Buy 0.5 ETH for 1500 EUR at t2
@@ -60,7 +59,7 @@ def test_eth_trading_flow_simple() -> None:
     lot2 = AcquisitionLot(
         acquired_event_id=buy2.id,
         acquired_leg_id=buy2.legs[0].id,
-        cost_eur_per_unit=px_t2.rate,  # 3000 EUR/ETH
+        cost_eur_per_unit=rate_t2,  # 3000 EUR/ETH
     )
 
     # 4) Sell 0.6 ETH at t3 when ETH is 3400 EUR
@@ -74,7 +73,7 @@ def test_eth_trading_flow_simple() -> None:
     )
 
     # FIFO consumption: consume 0.6 ETH from lot1
-    proceeds = Decimal("0.6") * px_t3.rate  # 2040 EUR
+    proceeds = Decimal("0.6") * rate_t3  # 2040 EUR
     disposal = DisposalLink(
         disposal_leg_id=sell1.legs[0].id,
         lot_id=lot1.id,

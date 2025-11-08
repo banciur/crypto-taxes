@@ -1,2 +1,1 @@
-TODO: Create price service
 TODO: Try to create Kraken events importer

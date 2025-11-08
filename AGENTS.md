@@ -6,6 +6,10 @@
 - `make code_fix` executes `ruff check --fix`, `ruff format`, and `mypy` to auto-fix linting and re-run types.
 - `make test` runs the pytest suite (`uv run --group dev pytest -s`).
 
+### Running commands and scripts
+- Use `uv run <command>` to execute project-aware tooling and Python scripts inside the managed virtualenv.
+- Reserve `uv run --group dev …` for commands that depend on dev-only packages (pytest, ruff, mypy, etc.); regular application scripts (e.g., under `scripts/`) work with plain `uv run python path/to/script.py`.
+
 ## Suggested workflow
 - After making code changes run `make code_fix` to auto-apply lint fixes.
 - Follow up with `make test` to ensure the suite passes before committing.
@@ -27,10 +31,16 @@ Prefer the “Current” guide for domain semantics. Use the “Future” guide 
 - Time fields use `datetime` named `timestamp` and are stored in UTC.
   - Convert inbound times to UTC at ingestion boundaries so internal models are always UTC.
 - IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`).
+- Keep comments/docstrings lean: only retain them when they convey non-obvious intent or context. Remove and avoid boilerplate comments that simply restate what the code already says.
+- Avoid defensive programming inside the system: assume in-process data and types already satisfy invariants, and only perform validation/repairs at ingestion boundaries. When docs guarantee an invariant (e.g., timestamps already in UTC), do not re-normalize or re-validate it within domain/services code.
 
 ## Domain modules
 - Ledger and lots: `src/domain/ledger.py`
+- Inventory engine + lot matching: `src/domain/inventory.py`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
+
+## Price services
+- `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
 
 ## Example tests
 - Simple ETH trade flow: `tests/domain_eth_trades_test.py`

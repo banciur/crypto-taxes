@@ -17,7 +17,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - LedgerEvent
   - `id: UUID`
   - `timestamp: datetime`
-  - `event_type: EventType`
+  - `event_type: EventType` (currently only `TRADE` is implemented; other event types will come shortly)
   - `legs: list[LedgerLeg]`
 
 - LedgerLeg
@@ -40,17 +40,15 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `quantity_used: Decimal`
   - `proceeds_total_eur: Decimal`
 
-- PriceSnapshot (unified)
-  - `timestamp: datetime`
-  - `base_id: str`,
-  - `quote_id: str`
-  - `rate: Decimal`
-  - `source: str`,
+- PriceProvider (protocol)
+  - `rate(base_id: str, quote_id: str, timestamp: datetime) -> Decimal`
+  - Current runtime wiring: `PriceService` composes a CoinDesk spot source for any pair touching crypto assets and an Open Exchange Rates source for fiat↔fiat pairs (EUR, PLN, USD), persisting snapshots via the JSONL store so downstream components can stay stateless.
 
 ---
 
 ## Behavioral Notes
 
+- Inventory processing is automated: the `InventoryEngine` creates `AcquisitionLot`s and `DisposalLink`s from ordered events using FIFO matching. Alternate policies (`HIFO`, `SPEC_ID`) are planned but not yet implemented.
 - Unbalanced events are allowed.
 - Fee legs: modeled as additional legs with `is_fee=True`.
 - Precision: use `Decimal` for all quantities/rates. No floats.
@@ -62,5 +60,5 @@ This document captures the currently implemented domain for modeling crypto ledg
 ## Current Capabilities
 
 - Model simple trades and transfers with per-leg wallets and optional fee legs.
-- Create lots for acquisitions and link disposals manually via `DisposalLink`.
-- Record price snapshots uniformly for later valuation.
+- Automatically create lots for acquisitions and link disposals via `InventoryEngine.process` (FIFO only; other lot policies are future work).
+- Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
