@@ -1,3 +1,4 @@
+# flake8: noqa E402
 from __future__ import annotations
 
 import argparse
@@ -13,8 +14,8 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from config import config  # noqa: E402
-from services.price_sources import CoinDeskPriceSource  # noqa: E402
+from config import config
+from services.price_sources import CoinDeskPriceSource
 
 
 def parse_args() -> argparse.Namespace:

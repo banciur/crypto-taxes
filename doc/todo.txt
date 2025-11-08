@@ -1,5 +1,5 @@
 TODO: Need a USD / EUR exchange rate importer?
-TODO: Fix noqa: E402 in few places
+TODO: Add to doc info that prices are from coindesk and url to API (or in the code)
 TODO: Add to agents coding hints:
   - no defensive programming
 TODO: Try to create Kraken events importer
