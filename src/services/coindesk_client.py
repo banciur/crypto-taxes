@@ -8,6 +8,9 @@ from typing import Any
 import requests
 
 
+# API docs: https://developers.coindesk.com/documentation/data-api/introduction
+# OpenAPI spec: https://data-api.coindesk.com/info/v1/openapi
+# API keys: https://developers.coindesk.com/settings/api-keys
 class CoinDeskAPIError(RuntimeError):
     def __init__(self, message: str, *, status_code: int | None = None, payload: Any | None = None) -> None:
         super().__init__(message)

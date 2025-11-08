@@ -1,4 +1,6 @@
 # flake8: noqa E402
+# Run via uv for access to dev deps, e.g.:
+# uv run python scripts/price_service_probe.py --base BTC --quote USD --timestamp 2024-01-01T00:00:00Z
 from __future__ import annotations
 
 import argparse

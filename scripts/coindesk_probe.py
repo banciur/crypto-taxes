@@ -1,4 +1,6 @@
 # flake8: noqa E402
+# Run via uv so project deps are loaded, e.g.:
+# uv run python scripts/coindesk_probe.py --base BTC --quote USD --market coinbase
 from __future__ import annotations
 
 import argparse
