@@ -3,7 +3,6 @@ Yet another unfinished system for tracking crypto transactions and calculating t
 
 ## Docs
 - Current domain model: `doc/CURRENT.md`
-- Target architecture and roadmap: `doc/FUTURE.md`
 - Developer/agent workflow: `AGENTS.md`
 
 ## Quickstart
@@ -18,4 +17,4 @@ Project uses [uv](https://docs.astral.sh/uv/) with Python 3.13.
 - `src/services` — price source/store implementations plus `PriceService`
 - `src/db`, `src/kraken_importer.py`, `src/main.py`, `src/reports.py` — legacy modules (to be modernized)
 - `tests` — pytest suite (domain example: `tests/domain_eth_trades_test.py`)
-- `doc` — `CURRENT.md` (now), `FUTURE.md` (roadmap), `ideas.md`
+- `doc` — `CURRENT.md` (now), `ideas.md`
