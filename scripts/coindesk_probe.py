@@ -1,6 +1,6 @@
 # flake8: noqa E402
 # Run via uv so project deps are loaded, e.g.:
-# uv run python scripts/coindesk_probe.py --base BTC --quote USD --market coinbase
+# uv run scripts/coindesk_probe.py --base BTC --quote USD --market coinbase
 from __future__ import annotations
 
 import argparse
@@ -39,11 +39,6 @@ def parse_args() -> argparse.Namespace:
         default=60,
         help="Bucket size in minutes for CoinDesk histo API (default: 60 = 1 hour).",
     )
-    parser.add_argument(
-        "--api-key",
-        dest="api_key",
-        help="CoinDesk API key (falls back to COINDESK_API_KEY env).",
-    )
     return parser.parse_args()
 
 
@@ -66,11 +61,10 @@ def load_timestamp(raw: str | None) -> datetime:
 
 def main() -> None:
     args = parse_args()
-    api_key = args.api_key or config().coindesk_api_key
 
     ts = load_timestamp(args.timestamp)
     source = CoinDeskPriceSource(
-        api_key=api_key,
+        api_key=config().coindesk_api_key,
         market=args.market,
         aggregate_minutes=args.aggregate,
     )

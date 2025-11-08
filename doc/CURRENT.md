@@ -42,6 +42,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - PriceProvider (protocol)
   - `rate(base_id: str, quote_id: str, timestamp: datetime) -> Decimal`
+  - Current runtime wiring: `PriceService` composes a CoinDesk spot source for any pair touching crypto assets and an Open Exchange Rates source for fiat↔fiat pairs (EUR, PLN, USD), persisting snapshots via the JSONL store so downstream components can stay stateless.
 
 ---
 

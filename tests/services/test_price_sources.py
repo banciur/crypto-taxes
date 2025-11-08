@@ -7,7 +7,8 @@ from typing import cast
 import pytest
 
 from services.coindesk_client import CoinDeskClient, SpotInstrumentOHLC
-from services.price_sources import CoinDeskPriceSource, DeterministicRandomPriceSource
+from services.price_sources import CoinDeskPriceSource, DeterministicRandomPriceSource, HybridPriceSource
+from services.price_types import PriceQuote
 
 
 class _StubCoinDeskClient:
@@ -116,3 +117,48 @@ def test_coindesk_price_source_rejects_unsupported_bucket_lengths() -> None:
     client = cast(CoinDeskClient, _StubCoinDeskClient([]))
     with pytest.raises(ValueError):
         CoinDeskPriceSource(client=client, market="coinbase", aggregate_minutes=45)
+
+
+class _StubPriceSource:
+    def __init__(self, *, rate: Decimal, source_name: str) -> None:
+        self.rate = rate
+        self.source_name = source_name
+        self.calls: list[tuple[str, str, datetime]] = []
+
+    def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
+        self.calls.append((base_id, quote_id, timestamp))
+        return PriceQuote(
+            timestamp=timestamp,
+            base_id=base_id,
+            quote_id=quote_id,
+            rate=self.rate,
+            source=self.source_name,
+            valid_from=timestamp,
+            valid_to=timestamp,
+        )
+
+
+def test_hybrid_source_routes_fiat_pairs() -> None:
+    crypto = _StubPriceSource(rate=Decimal("1"), source_name="crypto")
+    fiat = _StubPriceSource(rate=Decimal("2"), source_name="fiat")
+    source = HybridPriceSource(crypto_source=crypto, fiat_source=fiat, fiat_currency_codes=("EUR", "PLN"))
+    ts = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+    quote = source.fetch_snapshot("eur", "pln", timestamp=ts)
+
+    assert quote.rate == Decimal("2")
+    assert fiat.calls == [("EUR", "PLN", ts)]
+    assert crypto.calls == []
+
+
+def test_hybrid_source_uses_crypto_for_non_fiat_pairs() -> None:
+    crypto = _StubPriceSource(rate=Decimal("3"), source_name="crypto")
+    fiat = _StubPriceSource(rate=Decimal("4"), source_name="fiat")
+    source = HybridPriceSource(crypto_source=crypto, fiat_source=fiat, fiat_currency_codes=("EUR", "PLN"))
+    ts = datetime(2025, 1, 1, 15, 0, tzinfo=timezone.utc)
+
+    quote = source.fetch_snapshot("btc", "eur", timestamp=ts)
+
+    assert quote.rate == Decimal("3")
+    assert crypto.calls == [("BTC", "EUR", ts)]
+    assert fiat.calls == []

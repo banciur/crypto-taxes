@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from decimal import Decimal
-from typing import Protocol
+from typing import Iterable, Protocol
 
 from config import config
 
 from .coindesk_client import CoinDeskClient, SpotInstrumentOHLC
+from .open_exchange_rates_client import HistoricalRates, OpenExchangeRatesClient
 from .price_types import PriceQuote
 
 
@@ -110,9 +111,8 @@ class CoinDeskPriceSource(PriceSource):
             self._bucket_duration = timedelta(minutes=aggregate_minutes)
 
     def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
-        ts_utc = self._ensure_utc(timestamp)
         instrument = self._format_instrument(base_id, quote_id)
-        entries = self._fetch_histo_entries(instrument=instrument, timestamp=ts_utc)
+        entries = self._fetch_histo_entries(instrument=instrument, timestamp=timestamp)
 
         if not entries:
             msg = f"No price data returned for {instrument} on {self.market}"
@@ -152,16 +152,101 @@ class CoinDeskPriceSource(PriceSource):
         )
 
     @staticmethod
-    def _ensure_utc(ts: datetime) -> datetime:
-        if ts.tzinfo is None:
-            return ts.replace(tzinfo=timezone.utc)
-        return ts.astimezone(timezone.utc)
-
-    @staticmethod
     def _format_instrument(base_id: str, quote_id: str) -> str:
         base = base_id.upper()
         quote = quote_id.upper()
         return f"{base}-{quote}"
 
 
-__all__ = ["CoinDeskPriceSource", "DeterministicRandomPriceSource", "PriceSource"]
+class OpenExchangeRatesPriceSource(PriceSource):
+    def __init__(
+        self,
+        *,
+        app_id: str | None = None,
+        client: OpenExchangeRatesClient | None = None,
+        source_name: str = "open-exchange-rates-historical",
+    ) -> None:
+        resolved_client = client
+        if resolved_client is None:
+            resolved_app_id = app_id or config().open_exchange_rates_app_id
+            if not resolved_app_id:
+                msg = "Open Exchange Rates app_id must be provided"
+                raise ValueError(msg)
+            resolved_client = OpenExchangeRatesClient(app_id=resolved_app_id)
+
+        self.client = resolved_client
+        self.source_name = source_name
+
+    def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
+        snapshot = self.client.get_historical_rates(target_date=timestamp.date())
+
+        base = base_id.upper()
+        quote = quote_id.upper()
+
+        rate = self._compute_rate(snapshot=snapshot, base=base, quote=quote)
+        valid_from = datetime.combine(snapshot.date, time.min, tzinfo=timezone.utc)
+        valid_to = valid_from + timedelta(days=1)
+
+        return PriceQuote(
+            timestamp=snapshot.timestamp,
+            base_id=base,
+            quote_id=quote,
+            rate=rate,
+            source=self.source_name,
+            valid_from=valid_from,
+            valid_to=valid_to,
+        )
+
+    def _compute_rate(self, *, snapshot: HistoricalRates, base: str, quote: str) -> Decimal:
+        if base == quote:
+            return Decimal("1")
+
+        base_rate = self._resolve_rate(snapshot=snapshot, currency=base)
+        quote_rate = self._resolve_rate(snapshot=snapshot, currency=quote)
+        return quote_rate / base_rate
+
+    @staticmethod
+    def _resolve_rate(*, snapshot: HistoricalRates, currency: str) -> Decimal:
+        if currency == snapshot.base:
+            return Decimal("1")
+        try:
+            return snapshot.rates[currency]
+        except KeyError as exc:
+            msg = f"Currency {currency} not available in Open Exchange Rates data"
+            raise RuntimeError(msg) from exc
+
+
+class HybridPriceSource(PriceSource):
+    def __init__(
+        self,
+        *,
+        crypto_source: PriceSource,
+        fiat_source: PriceSource,
+        fiat_currency_codes: Iterable[str] | None = None,
+    ) -> None:
+        self.crypto_source = crypto_source
+        self.fiat_source = fiat_source
+        fiat_codes = {code.upper() for code in (fiat_currency_codes or ("EUR", "PLN", "USD"))}
+        if not fiat_codes:
+            msg = "fiat_currency_codes must contain at least one entry"
+            raise ValueError(msg)
+        self._fiat_codes = frozenset(fiat_codes)
+
+    def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
+        base = base_id.upper()
+        quote = quote_id.upper()
+        if self._is_fiat_pair(base, quote):
+            return self.fiat_source.fetch_snapshot(base, quote, timestamp)
+        return self.crypto_source.fetch_snapshot(base, quote, timestamp)
+
+    def _is_fiat_pair(self, base: str, quote: str) -> bool:
+        return base in self._fiat_codes and quote in self._fiat_codes
+
+
+__all__ = [
+    "CoinDeskPriceSource",
+    "DeterministicRandomPriceSource",
+    "HybridPriceSource",
+    "OpenExchangeRatesPriceSource",
+    "PriceSource",
+]
