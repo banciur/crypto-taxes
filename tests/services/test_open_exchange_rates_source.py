@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from decimal import Decimal
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
 import requests
 
-from services.open_exchange_rates_client import HistoricalRates, OpenExchangeRatesClient
-from services.price_sources import OpenExchangeRatesPriceSource
+import services.open_exchange_rates_source as oxr_module
+from services.open_exchange_rates_source import (
+    HistoricalRates,
+    OpenExchangeRatesSource,
+    _OpenExchangeRatesClient,
+)
 
 
 class _StubResponse:
@@ -27,6 +32,9 @@ class _StubSession:
         self._payload = payload
         self.last_request: dict[str, Any] | None = None
 
+    def mount(self, prefix: str, adapter: Any) -> None:  # pragma: no cover - test helper
+        return None
+
     def request(
         self, method: str, url: str, params: dict[str, Any] | None = None, timeout: float | None = None
     ) -> _StubResponse:
@@ -34,7 +42,12 @@ class _StubSession:
         return _StubResponse(self._payload)
 
 
-def test_client_parses_historical_payload() -> None:
+def _set_app_id(monkeypatch: pytest.MonkeyPatch, value: str = "test-app") -> None:
+    monkeypatch.setattr(oxr_module, "config", lambda: SimpleNamespace(open_exchange_rates_app_id=value))
+
+
+def test_open_exchange_rates_http_client_parses_historical_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_app_id(monkeypatch)
     payload = {
         "timestamp": 1704153599,
         "base": "usd",
@@ -42,7 +55,7 @@ def test_client_parses_historical_payload() -> None:
     }
     stub_session = _StubSession(payload=payload)
     session = cast(requests.Session, stub_session)
-    client = OpenExchangeRatesClient(app_id="test-app", base_url="https://example.com", session=session)
+    client = _OpenExchangeRatesClient(base_url="https://example.com", session=session, retry_attempts=0)
 
     snapshot = client.get_historical_rates(target_date=date(2024, 1, 1))
 
@@ -78,8 +91,8 @@ def test_price_source_converts_cross_currency_pair() -> None:
         },
     )
     stub_client = _StubOXRClient(snapshot=historical)
-    client = cast(OpenExchangeRatesClient, stub_client)
-    source = OpenExchangeRatesPriceSource(client=client, source_name="test-source")
+    client = cast(_OpenExchangeRatesClient, stub_client)
+    source = OpenExchangeRatesSource(client=client, source_name="test-source")
 
     ts = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
     quote = source.fetch_snapshot("EUR", "USD", timestamp=ts)
@@ -99,8 +112,18 @@ def test_price_source_raises_for_missing_currency() -> None:
         base="USD",
         rates={"USD": Decimal("1")},
     )
-    source = OpenExchangeRatesPriceSource(client=cast(OpenExchangeRatesClient, _StubOXRClient(snapshot=historical)))
+    source = OpenExchangeRatesSource(client=cast(_OpenExchangeRatesClient, _StubOXRClient(snapshot=historical)))
 
     ts = datetime(2024, 1, 1, 9, 0, tzinfo=timezone.utc)
     with pytest.raises(RuntimeError):
         source.fetch_snapshot("EUR", "USD", timestamp=ts)
+
+
+@pytest.mark.skip(reason="This test requires real api key in .env")
+def test_live_request() -> None:
+    source = OpenExchangeRatesSource()
+    ts = datetime.combine(date(2024, 1, 1), time.min, tzinfo=timezone.utc)
+    quote = source.fetch_snapshot("EUR", "USD", timestamp=ts)
+    from pprint import pprint
+
+    pprint(quote)
