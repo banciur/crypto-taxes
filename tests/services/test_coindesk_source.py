@@ -208,4 +208,5 @@ def test_live_request() -> None:
         timestamp=ts,
     )
     from pprint import pprint
+
     pprint(quote)

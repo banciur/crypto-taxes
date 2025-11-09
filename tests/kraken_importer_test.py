@@ -1,96 +1,64 @@
-from collections.abc import Generator
+from __future__ import annotations
+
 from csv import DictWriter
 from datetime import datetime
-from decimal import Decimal
 from pathlib import Path
 
-import pytest
-from sqlalchemy import Engine, create_engine, select
-from sqlalchemy.orm import Session, sessionmaker
+from importers.kraken_importer import KrakenImporter
 
-from db.models import Base, Ledger
-from kraken_importer import KrakenImporter, KrakenLedgerEntry
-from utils import generate_random_string
-
-
-@pytest.fixture(scope="function")
-def db_session() -> Generator[Session, None, None]:
-    engine: Engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine)
-    session_maker = sessionmaker(engine)
-    with session_maker() as session:
-        yield session
-
-
-def get_ledger_arr() -> dict:
-    return {
-        "aclass": "currency",
-        "txid": generate_random_string(10),
-        "time": datetime.now(),
-        "wallet": "spot / main",
-    }
+FIELDNAMES = [
+    "txid",
+    "refid",
+    "time",
+    "type",
+    "subtype",
+    "aclass",
+    "asset",
+    "wallet",
+    "amount",
+    "fee",
+    "balance",
+]
 
 
-@pytest.mark.skip
-def test_kraken_importer(db_session: Session, tmp_path: Path) -> None:
-    # This tests just one case
-    file = tmp_path / "mock.csv"
-
-    refdid = "come_refId"
-
-    records = [
-        KrakenLedgerEntry.model_validate(
-            {
-                **get_ledger_arr(),
-                "amount": Decimal(5),
-                "asset": "ETH",
-                "balance": Decimal(5),
-                "fee": Decimal(0),
-                "refid": generate_random_string(10),
-                "type": "earn",
-                "subtype": "reward",
-                "wallet": "earn / bonded",
-            }
-        ),
-        KrakenLedgerEntry.model_validate(
-            {
-                **get_ledger_arr(),
-                "amount": Decimal(10),
-                "asset": "USD",
-                "balance": Decimal(0),
-                "fee": Decimal(0),
-                "refid": refdid,
-                "subtype": "allocation",
-                "type": "earn",
-                "wallet": "spot / main",
-            }
-        ),
-        KrakenLedgerEntry.model_validate(
-            {
-                **get_ledger_arr(),
-                "amount": Decimal(-10),
-                "asset": "USD",
-                "balance": Decimal(10),
-                "fee": Decimal(0),
-                "refid": refdid,
-                "subtype": "allocation",
-                "type": "earn",
-                "wallet": "earn / flexible",
-            }
-        ),
-    ]
-
-    with open(file, "w", newline="") as csvfile:
-        fieldnames = list(KrakenLedgerEntry.model_fields.keys())
-        writer = DictWriter(csvfile, fieldnames=fieldnames)
+def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = DictWriter(handle, fieldnames=FIELDNAMES)
         writer.writeheader()
-        data = records[0].model_dump()
+        for row in rows:
+            writer.writerow(row)
 
-        writer.writerow(data)
 
-    importer = KrakenImporter(str(file), db_session)
-    importer.perform_import()
+def iso(ts: datetime) -> str:
+    return ts.strftime("%Y-%m-%d %H:%M:%S")
 
-    stmt = select(Ledger)
-    res = list(db_session.execute(stmt).scalars())
-    assert len(res) == 1
+
+def test_importer_raises_until_event_builder_exists(tmp_path: Path) -> None:
+    file = tmp_path / "unimplemented.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "T1",
+                "refid": "R1",
+                "time": iso(datetime(2024, 1, 1, 12, 0)),
+                "type": "trade",
+                "subtype": "tradespot",
+                "aclass": "currency",
+                "asset": "ETH",
+                "wallet": "spot / main",
+                "amount": "-1.0000000000",
+                "fee": "0",
+                "balance": "0",
+            },
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+
+    try:
+        importer.load_events()
+    except ValueError as exc:
+        assert "not implemented" in str(exc)
+    else:  # pragma: no cover - defensive until implementation exists
+        raise AssertionError("Importer should raise until event builder is implemented")
