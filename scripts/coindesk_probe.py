@@ -64,7 +64,6 @@ def main() -> None:
 
     ts = load_timestamp(args.timestamp)
     source = CoinDeskPriceSource(
-        api_key=config().coindesk_api_key,
         market=args.market,
         aggregate_minutes=args.aggregate,
     )

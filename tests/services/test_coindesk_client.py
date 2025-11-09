@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from decimal import Decimal
+from pprint import pprint
 from unittest.mock import Mock
 
 import pytest
@@ -16,6 +17,13 @@ def _mock_response(payload: dict, status_code: int = 200) -> Mock:
     response.json.return_value = payload
     response.text = "payload"
     response.raise_for_status.return_value = None
+    return response
+
+
+def _http_error_response(status_code: int) -> Mock:
+    response = _mock_response({}, status_code=status_code)
+    http_error = requests.HTTPError(response=response)
+    response.raise_for_status.side_effect = http_error
     return response
 
 
@@ -42,7 +50,7 @@ def test_get_spot_historical_minutes_parses_response() -> None:
     }
     session.request.return_value = _mock_response(payload)
 
-    client = CoinDeskClient(api_key="token", session=session)
+    client = CoinDeskClient(session=session, retry_attempts=0)
     entries = client.get_spot_historical_minutes(
         market="coinbase",
         instrument="BTC-USD",
@@ -77,7 +85,7 @@ def test_get_spot_historical_hours_parses_response() -> None:
     }
     session.request.return_value = _mock_response(payload)
 
-    client = CoinDeskClient(api_key="token", session=session)
+    client = CoinDeskClient(session=session)
     entries = client.get_spot_historical_hours(
         market="coinbase",
         instrument="BTC-USD",
@@ -96,19 +104,30 @@ def test_get_spot_historical_minutes_raises_on_api_error() -> None:
     payload = {"Data": [], "Err": {"message": "Invalid market"}}
     session.request.return_value = _mock_response(payload)
 
-    client = CoinDeskClient(api_key="token", session=session)
+    client = CoinDeskClient(session=session)
     with pytest.raises(CoinDeskAPIError):
         client.get_spot_historical_minutes(market="bad", instrument="BTC-USD", to_ts=123)
 
 
 def test_request_wraps_http_errors() -> None:
     session = Mock()
-    response = _mock_response({}, status_code=429)
-    http_error = requests.HTTPError(response=response)
-    response.raise_for_status.side_effect = http_error
+    response = _http_error_response(429)
     session.request.return_value = response
 
-    client = CoinDeskClient(api_key="token", session=session)
+    client = CoinDeskClient(session=session)
 
     with pytest.raises(CoinDeskAPIError):
         client.get_spot_historical_minutes(market="coinbase", instrument="BTC-USD", to_ts=1)
+
+
+@pytest.mark.skip(reason="This test requires real api key in .env")
+def test_live_request() -> None:
+    client = CoinDeskClient()
+    entries = client.get_spot_historical_minutes(
+        market="coinbase",
+        instrument="BTC-USD",
+        to_ts=1_700_000_010,
+    )
+
+    assert len(entries) == 1
+    pprint(entries)

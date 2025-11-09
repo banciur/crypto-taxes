@@ -15,7 +15,6 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from config import config
 from services.price_service import PriceService
 from services.price_sources import CoinDeskPriceSource, HybridPriceSource, OpenExchangeRatesPriceSource
 from services.price_store import JsonlPriceStore
@@ -106,7 +105,6 @@ def main() -> None:
     store_path.mkdir(parents=True, exist_ok=True)
     store = JsonlPriceStore(root_dir=store_path)
     crypto_source = LoggingCoinDeskPriceSource(
-        api_key=config().coindesk_api_key,
         market=args.market,
         aggregate_minutes=args.aggregate,
     )

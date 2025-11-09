@@ -6,12 +6,17 @@ from decimal import Decimal
 from typing import Any
 
 import requests
+from requests import Response
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
+
+from config import config
 
 
 # API docs: https://developers.coindesk.com/documentation/data-api/introduction
 # OpenAPI spec: https://data-api.coindesk.com/info/v1/openapi
 # API keys: https://developers.coindesk.com/settings/api-keys
-class CoinDeskAPIError(RuntimeError):
+class CoinDeskAPIError(Exception):
     def __init__(self, message: str, *, status_code: int | None = None, payload: Any | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -37,20 +42,25 @@ class SpotInstrumentOHLC:
 class CoinDeskClient:
     def __init__(
         self,
-        *,
-        api_key: str,
         base_url: str = "https://data-api.coindesk.com",
+        # Should be a default config value
         timeout: float = 10.0,
         session: requests.Session | None = None,
+        # Should be a default config value
+        retry_attempts: int = 3,
+        # Should be a default config value
+        retry_backoff_seconds: float = 0.5,
     ) -> None:
-        if not api_key:
-            msg = "api_key must be provided"
-            raise ValueError(msg)
-
-        self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self._session = session or requests.Session()
+
+        retry = Retry(
+            total=retry_attempts, backoff_factor=retry_backoff_seconds, status_forcelist={429}, allowed_methods={"GET"}
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self._session.mount("https://", adapter)
+        self._session.mount("http://", adapter)
 
     def get_spot_historical_minutes(
         self,
@@ -104,17 +114,13 @@ class CoinDeskClient:
         fill: bool,
     ) -> list[SpotInstrumentOHLC]:
         if limit <= 0:
-            msg = "limit must be > 0"
-            raise ValueError(msg)
+            raise ValueError("limit must be > 0")
         if aggregate <= 0:
-            msg = "aggregate must be > 0"
-            raise ValueError(msg)
+            raise ValueError("aggregate must be > 0")
         if not market:
-            msg = "market must be provided"
-            raise ValueError(msg)
+            raise ValueError("market must be provided")
         if not instrument:
-            msg = "instrument must be provided"
-            raise ValueError(msg)
+            raise ValueError("instrument must be provided")
 
         params = {
             "market": market,
@@ -127,10 +133,7 @@ class CoinDeskClient:
         }
         payload = self._request("GET", path, params=params)
         entries = payload.get("Data") or []
-        parsed: list[SpotInstrumentOHLC] = []
-        for entry in entries:
-            parsed.append(self._parse_histo_entry(entry))
-        return parsed
+        return [self._parse_histo_entry(entry) for entry in entries]
 
     def _request(self, method: str, path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
@@ -140,36 +143,25 @@ class CoinDeskClient:
                 url,
                 params=params,
                 timeout=self.timeout,
-                headers={"Authorization": f"Bearer {self.api_key}"},
+                headers={"Authorization": f"Bearer {config().coindesk_api_key}"},
             )
             response.raise_for_status()
         except requests.HTTPError as exc:
             resp = exc.response
-            status_code = getattr(resp, "status_code", None)
-            error_payload: Any | None = None
-            message = "CoinDesk API request failed"
-            if resp is not None:
-                try:
-                    error_payload = resp.json()
-                    err = error_payload.get("Err") if isinstance(error_payload, dict) else None
-                    if isinstance(err, dict) and err.get("message"):
-                        message = err["message"]
-                except ValueError:
-                    error_payload = resp.text
-            raise CoinDeskAPIError(message, status_code=status_code, payload=error_payload) from exc
+            message, payload_err = self._extract_error(resp)
+            raise CoinDeskAPIError(message, status_code=resp.status_code, payload=payload_err) from exc
         except requests.RequestException as exc:
             status_code = getattr(getattr(exc, "response", None), "status_code", None)
             raise CoinDeskAPIError("CoinDesk API request failed", status_code=status_code) from exc
 
         try:
-            payload_raw = response.json()
+            payload: dict[str, Any] = response.json()
         except ValueError as exc:
             raise CoinDeskAPIError("CoinDesk API returned invalid JSON", payload=response.text) from exc
 
-        if not isinstance(payload_raw, dict):
-            raise CoinDeskAPIError("CoinDesk API returned unexpected payload type", payload=payload_raw)
+        if not isinstance(payload, dict):
+            raise CoinDeskAPIError("CoinDesk API returned unexpected payload type", payload=payload)
 
-        payload: dict[str, Any] = payload_raw
         err = payload.get("Err")
         if isinstance(err, dict) and err.get("message"):
             raise CoinDeskAPIError(err["message"], status_code=response.status_code, payload=payload)
@@ -207,6 +199,18 @@ class CoinDeskClient:
         if value is None:
             return None
         return Decimal(str(value))
+
+    @staticmethod
+    def _extract_error(response: Response) -> tuple[str, Any]:
+        message = "CoinDesk API request failed"
+        try:
+            payload = response.json()
+            err = payload.get("Err") if isinstance(payload, dict) else None
+            if isinstance(err, dict) and err.get("message"):
+                message = err["message"]
+        except ValueError:
+            payload = response.text
+        return message, payload
 
 
 __all__ = ["CoinDeskAPIError", "CoinDeskClient", "SpotInstrumentOHLC"]

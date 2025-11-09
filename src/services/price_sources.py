@@ -71,7 +71,6 @@ class CoinDeskPriceSource(PriceSource):
     def __init__(
         self,
         *,
-        api_key: str | None = None,
         market: str = "coinbase",
         aggregate_minutes: int = 60,
         client: CoinDeskClient | None = None,
@@ -79,8 +78,7 @@ class CoinDeskPriceSource(PriceSource):
     ) -> None:
         resolved_client = client
         if resolved_client is None:
-            resolved_api_key = api_key or config().coindesk_api_key
-            resolved_client = CoinDeskClient(api_key=resolved_api_key)
+            resolved_client = CoinDeskClient()
 
         if aggregate_minutes <= 0:
             msg = "aggregate_minutes must be greater than 0"
