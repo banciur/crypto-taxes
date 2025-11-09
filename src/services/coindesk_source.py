@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -12,10 +12,10 @@ from urllib3.util import Retry
 
 from config import config
 
+from .price_sources import PriceSource
+from .price_types import PriceQuote
 
-# API docs: https://developers.coindesk.com/documentation/data-api/introduction
-# OpenAPI spec: https://data-api.coindesk.com/info/v1/openapi
-# API keys: https://developers.coindesk.com/settings/api-keys
+
 class CoinDeskAPIError(Exception):
     def __init__(self, message: str, *, status_code: int | None = None, payload: Any | None = None) -> None:
         super().__init__(message)
@@ -39,24 +39,24 @@ class SpotInstrumentOHLC:
     quote_volume: Decimal | None
 
 
-class CoinDeskClient:
+class _CoinDeskClient:
     def __init__(
         self,
         base_url: str = "https://data-api.coindesk.com",
-        # Should be a default config value
         timeout: float = 10.0,
         session: requests.Session | None = None,
-        # Should be a default config value
-        retry_attempts: int = 3,
-        # Should be a default config value
-        retry_backoff_seconds: float = 0.5,
+        retry_attempts: int = 5,
+        retry_backoff_seconds: float = 1,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self._session = session or requests.Session()
 
         retry = Retry(
-            total=retry_attempts, backoff_factor=retry_backoff_seconds, status_forcelist={429}, allowed_methods={"GET"}
+            total=retry_attempts,
+            backoff_factor=retry_backoff_seconds,
+            status_forcelist={429},
+            allowed_methods={"GET"},
         )
         adapter = HTTPAdapter(max_retries=retry)
         self._session.mount("https://", adapter)
@@ -213,4 +213,85 @@ class CoinDeskClient:
         return message, payload
 
 
-__all__ = ["CoinDeskAPIError", "CoinDeskClient", "SpotInstrumentOHLC"]
+class CoinDeskSource(PriceSource):
+    def __init__(
+        self,
+        *,
+        market: str = "coinbase",
+        aggregate_minutes: int = 60,
+        client: _CoinDeskClient | None = None,
+        source_name: str = "coindesk-spot-api",
+    ) -> None:
+        resolved_client = client or _CoinDeskClient()
+
+        if aggregate_minutes <= 0:
+            msg = "aggregate_minutes must be greater than 0"
+            raise ValueError(msg)
+        if aggregate_minutes < 60 and aggregate_minutes > 30:
+            msg = "CoinDesk minute candles support aggregate_minutes up to 30"
+            raise ValueError(msg)
+        if aggregate_minutes >= 60 and aggregate_minutes % 60 != 0:
+            msg = "aggregate_minutes must be divisible by 60 when requesting hour candles"
+            raise ValueError(msg)
+
+        if not market:
+            msg = "market must be provided"
+            raise ValueError(msg)
+
+        self.client = resolved_client
+        self.market = market
+        self.aggregate_minutes = aggregate_minutes
+        self.source_name = source_name
+
+        if aggregate_minutes < 60:
+            self._bucket_mode = "minute"
+            self._aggregate_units = aggregate_minutes
+            self._bucket_duration = timedelta(minutes=aggregate_minutes)
+        else:
+            self._bucket_mode = "hour"
+            self._aggregate_units = aggregate_minutes // 60
+            self._bucket_duration = timedelta(minutes=aggregate_minutes)
+
+    def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
+        instrument = f"{base_id.upper()}-{quote_id.upper()}"
+        entries = self._fetch_histo_entries(instrument=instrument, timestamp=timestamp)
+
+        if not entries:
+            msg = f"No price data returned for {instrument} on {self.market}"
+            raise RuntimeError(msg)
+
+        bucket = max(entries, key=lambda entry: entry.timestamp)
+        valid_from = bucket.timestamp
+        valid_to = valid_from + self._bucket_duration
+
+        return PriceQuote(
+            timestamp=valid_from,
+            base_id=base_id.upper(),
+            quote_id=quote_id.upper(),
+            rate=bucket.close,
+            source=self.source_name,
+            valid_from=valid_from,
+            valid_to=valid_to,
+        )
+
+    def _fetch_histo_entries(self, *, instrument: str, timestamp: datetime) -> list[SpotInstrumentOHLC]:
+        unix_ts = int(timestamp.timestamp())
+        if self._bucket_mode == "minute":
+            return self.client.get_spot_historical_minutes(
+                market=self.market,
+                instrument=instrument,
+                to_ts=unix_ts,
+                limit=1,
+                aggregate=self._aggregate_units,
+            )
+
+        return self.client.get_spot_historical_hours(
+            market=self.market,
+            instrument=instrument,
+            to_ts=unix_ts,
+            limit=1,
+            aggregate=self._aggregate_units,
+        )
+
+
+__all__ = ["CoinDeskSource"]
