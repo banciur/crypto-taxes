@@ -107,12 +107,33 @@ class KrakenImporter:
 
         if len(entries) == 1 and entries[0].type == "deposit":
             return self._deposit_event(entries[0])
+        if len(entries) == 1 and entries[0].type == "withdrawal":
+            return self._withdrawal_event(entries[0])
 
         raise ValueError(f"Unsupported Kraken ledger group (refid={entries[0].refid}, count={len(entries)})")
 
     def _deposit_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
+        if entry.amount <= 0:
+            raise ValueError(f"Deposit entry must have positive amount (refid={entry.refid})")
+
         asset_code = entry.asset.upper()
         event_type = EventType.DEPOSIT if asset_code in FIAT_ASSETS else EventType.TRANSFER
+
+        legs = [_ledger_leg(entry, entry.amount)]
+        legs.extend(_fee_legs(entry))
+
+        return LedgerEvent(
+            timestamp=entry.time,
+            event_type=event_type,
+            legs=legs,
+        )
+
+    def _withdrawal_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
+        if entry.amount >= 0:
+            raise ValueError(f"Withdrawal entry must have negative amount (refid={entry.refid})")
+
+        asset_code = entry.asset.upper()
+        event_type = EventType.WITHDRAWAL if asset_code in FIAT_ASSETS else EventType.TRANSFER
 
         legs = [_ledger_leg(entry, entry.amount)]
         legs.extend(_fee_legs(entry))

@@ -112,3 +112,78 @@ def test_deposit_crypto_becomes_transfer_event(tmp_path: Path) -> None:
     assert leg.asset_id == "ETH"
     assert leg.quantity == Decimal("2.5")
     assert leg.wallet_id == "kraken::spot / main"
+
+
+def test_withdrawal_fiat_becomes_withdrawal_event(tmp_path: Path) -> None:
+    ts = datetime(2024, 3, 1, 15, 45)
+    file = tmp_path / "fiat_withdrawal.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "W1",
+                "refid": "R3",
+                "time": iso(ts),
+                "type": "withdrawal",
+                "subtype": "",
+                "aclass": "currency",
+                "asset": "EUR",
+                "wallet": "spot / main",
+                "amount": "-250.0000",
+                "fee": "0.1000",
+                "balance": "0",
+            }
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+    events = importer.load_events()
+
+    assert len(events) == 1
+    event = events[0]
+    assert event.event_type == EventType.WITHDRAWAL
+    assert event.timestamp == ts.replace(tzinfo=timezone.utc)
+
+    assert len(event.legs) == 2
+    main_leg = next(leg for leg in event.legs if not leg.is_fee)
+    fee_leg = next(leg for leg in event.legs if leg.is_fee)
+
+    assert main_leg.asset_id == "EUR"
+    assert main_leg.quantity == Decimal("-250.0000")
+    assert fee_leg.quantity == Decimal("-0.1000")
+
+
+def test_withdrawal_crypto_becomes_transfer_event(tmp_path: Path) -> None:
+    ts = datetime(2024, 4, 1, 10, 0)
+    file = tmp_path / "crypto_withdrawal.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "W2",
+                "refid": "R4",
+                "time": iso(ts),
+                "type": "withdrawal",
+                "subtype": "",
+                "aclass": "currency",
+                "asset": "ETH",
+                "wallet": "spot / main",
+                "amount": "-1.2500000000",
+                "fee": "0",
+                "balance": "0",
+            }
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+    events = importer.load_events()
+
+    assert len(events) == 1
+    event = events[0]
+    assert event.event_type == EventType.TRANSFER
+    assert event.timestamp == ts.replace(tzinfo=timezone.utc)
+
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.asset_id == "ETH"
+    assert leg.quantity == Decimal("-1.25")

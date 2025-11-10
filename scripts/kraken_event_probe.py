@@ -18,7 +18,7 @@ from importers.kraken_importer import KrakenImporter, KrakenLedgerEntry
 UNKNOWN_PRINT_LIMIT = 15
 # Set to a Kraken ledger row type (e.g., "deposit") to list all unresolved groups containing that type.
 # Leave as None to display the latest UNKNOWN_PRINT_LIMIT unresolved groups regardless of type.
-# UNRESOLVED_TYPE_FILTER: str | None = "deposit"
+# UNRESOLVED_TYPE_FILTER: str | None = "withdrawal"
 UNRESOLVED_TYPE_FILTER: str | None = None
 
 

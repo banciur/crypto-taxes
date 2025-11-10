@@ -19,3 +19,10 @@ As we implement each event type, this document will be expanded with the concret
 - If the `asset` is a fiat ticker (`EUR` or `USD`), the event is emitted as `EventType.DEPOSIT`.
 - All other assets are treated as crypto deposits, which we model as `EventType.TRANSFER` (asset moving from an external wallet into Kraken without tax impact).
 - A single positive leg is created for the deposited asset, and any reported fee on the same row is attached as a fee leg (negative quantity).
+
+### 2. Single-row `withdrawal`
+
+- Applies when the refid group has a single ledger row of type `withdrawal` with a negative `amount`.
+- Fiat withdrawals (`EUR`, `USD`) emit `EventType.WITHDRAWAL`.
+- Crypto withdrawals are modeled as `EventType.TRANSFER` (asset leaving Kraken to an external wallet).
+- The main leg carries the reported amount (negative quantity). Fee rows on the same entry are emitted as fee legs (negative quantities) in the same asset.
