@@ -1,6 +1,8 @@
+# flake8: noqa: E402
+# uv run scripts/kraken_event_probe.py
+
 from __future__ import annotations
 
-# ruff: noqa: E402
 import argparse
 import sys
 from dataclasses import dataclass

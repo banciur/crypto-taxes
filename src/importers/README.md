@@ -8,6 +8,7 @@ We are rebuilding the Kraken ledger ingestion from scratch. The goal is to take 
 2. **Grouping:** `KrakenImporter._group_by_refid` bundles rows that share a `refid`. Each group represents one logical Kraken action (trade, transfer, earn reward, etc.). This grouping step is stable and will be reused throughout the rebuild.
 3. **Event builder:** We are reintroducing logic incrementally inside `_build_event`, one refid pattern at a time, backed by tests and documentation.
 4. **Exploration tooling:** `scripts/kraken_event_probe.py` runs the *real* importer against a CSV and reports which refids are unresolved, printing the first 15 groups (with row details). We’ll use that tool after each incremental change to verify coverage.
+5. **Asset aliases:** Kraken sometimes reports suffixed tickers (e.g., `DOT28.S`, `USDC.M`). The importer normalizes a small allowlist of aliases up-front so that downstream logic sees canonical symbols (`DOT`, `USDC`, etc.).
 
 As we implement each event type, this document will be expanded with the concrete rules, examples, and invariants for that scenario. For now, treat it as the canonical place to record decisions about new handlers.
 
@@ -33,3 +34,10 @@ As we implement each event type, this document will be expanded with the concret
 - The row with a negative `amount` becomes the sell leg; the positive `amount` row becomes the buy leg. Both legs are captured in `EventType.TRADE`.
 - Fee values reported on either row become separate fee legs in the same wallet/asset (negative quantities).
 - Timestamp for the event is the earliest timestamp across the two rows (Kraken typically uses the same instant for both).
+
+### 4. Single-row `staking`
+
+- Applies when a refid group has one `type="staking"` row with a positive `amount`.
+- The event emits as `EventType.REWARD` with a positive leg for the staking asset (after alias normalization, if applicable).
+- Any reported fee is emitted as a negative fee leg in the same asset/wallet.
+- Historical anomalies: refids `STHFSYV-COKEV-2N3FK7` and `STFTGR6-35YZ3-ZWJDFO` contain negative staking amounts (Kraken logged the exit as `type="staking"` instead of `transfer`). These two refids are explicitly whitelisted so we still emit them as rewards despite the negative quantity.

@@ -247,3 +247,70 @@ def test_trade_event_with_fee(tmp_path: Path) -> None:
     assert len(fee_legs) == 1
     assert fee_legs[0].asset_id == "EUR"
     assert fee_legs[0].quantity == Decimal("-1.9440")
+
+
+def test_staking_reward_with_fee(tmp_path: Path) -> None:
+    ts = datetime(2024, 6, 2, 1, 46, 24)
+    file = tmp_path / "staking.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "S1",
+                "refid": "R6",
+                "time": iso(ts),
+                "type": "staking",
+                "subtype": "",
+                "aclass": "currency",
+                "asset": "ETH",
+                "wallet": "spot / main",
+                "amount": "0.0017569136",
+                "fee": "0.0003513827",
+                "balance": "0",
+            }
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+    events = importer.load_events()
+
+    assert len(events) == 1
+    event = events[0]
+    assert event.event_type == EventType.REWARD
+    assert event.timestamp == ts.replace(tzinfo=timezone.utc)
+
+    reward_leg = next(leg for leg in event.legs if not leg.is_fee)
+    fee_leg = next(leg for leg in event.legs if leg.is_fee)
+
+    assert reward_leg.asset_id == "ETH"
+    assert reward_leg.quantity == Decimal("0.0017569136")
+    assert fee_leg.quantity == Decimal("-0.0003513827")
+
+
+def test_asset_aliases_are_applied(tmp_path: Path) -> None:
+    ts = datetime(2024, 7, 1, 12, 0)
+    file = tmp_path / "alias.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "A1",
+                "refid": "R7",
+                "time": iso(ts),
+                "type": "deposit",
+                "subtype": "",
+                "aclass": "currency",
+                "asset": "DOT28.S",
+                "wallet": "spot / main",
+                "amount": "10.0000",
+                "fee": "0",
+                "balance": "0",
+            }
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+    event = importer.load_events()[0]
+
+    assert event.event_type == EventType.TRANSFER  # DOT is not fiat
+    assert event.legs[0].asset_id == "DOT"

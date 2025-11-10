@@ -12,6 +12,14 @@ from pydantic import BaseModel, Field, field_validator
 from domain.ledger import EventType, LedgerEvent, LedgerLeg
 
 FIAT_ASSETS = {"EUR", "USD"}
+ASSET_ALIASES = {
+    "DOT28.S": "DOT",
+    "DOT.S": "DOT",
+    "KAVA21.S": "KAVA",
+    "KAVA.S": "KAVA",
+    "USDC.M": "USDC",
+    "ETH2": "ETH",
+}
 
 
 class KrakenLedgerEntry(BaseModel):
@@ -51,13 +59,19 @@ class KrakenLedgerEntry(BaseModel):
         return value
 
 
+def _normalize_asset(asset: str) -> str:
+    code = asset.upper()
+    return ASSET_ALIASES.get(code, code)
+
+
 def _wallet_id(wallet_name: str) -> str:
     return f"kraken::{wallet_name.strip()}"
 
 
 def _ledger_leg(entry: KrakenLedgerEntry, quantity: Decimal, *, is_fee: bool = False) -> LedgerLeg:
+    asset_id = _normalize_asset(entry.asset)
     return LedgerLeg(
-        asset_id=entry.asset,
+        asset_id=asset_id,
         quantity=quantity,
         wallet_id=_wallet_id(entry.wallet),
         is_fee=is_fee,
@@ -111,6 +125,8 @@ class KrakenImporter:
             return self._deposit_event(lines[0])
         if len(lines) == 1 and lines[0].type == "withdrawal":
             return self._withdrawal_event(lines[0])
+        if len(lines) == 1 and lines[0].type == "staking":
+            return self._staking_event(lines[0])
         if len(lines) == 2 and {line.type for line in lines} == {"trade"}:
             return self._trade_event(lines)
 
@@ -120,7 +136,7 @@ class KrakenImporter:
         if entry.amount <= 0:
             raise ValueError(f"Deposit entry must have positive amount (refid={entry.refid})")
 
-        asset_code = entry.asset.upper()
+        asset_code = _normalize_asset(entry.asset)
         event_type = EventType.DEPOSIT if asset_code in FIAT_ASSETS else EventType.TRANSFER
 
         legs = [_ledger_leg(entry, entry.amount)]
@@ -136,7 +152,7 @@ class KrakenImporter:
         if entry.amount >= 0:
             raise ValueError(f"Withdrawal entry must have negative amount (refid={entry.refid})")
 
-        asset_code = entry.asset.upper()
+        asset_code = _normalize_asset(entry.asset)
         event_type = EventType.WITHDRAWAL if asset_code in FIAT_ASSETS else EventType.TRANSFER
 
         legs = [_ledger_leg(entry, entry.amount)]
@@ -166,5 +182,19 @@ class KrakenImporter:
         return LedgerEvent(
             timestamp=min(entry.time for entry in entries),
             event_type=EventType.TRADE,
+            legs=legs,
+        )
+
+    def _staking_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
+        # For two refids we allow for minus amount.
+        if entry.amount <= 0 and entry.refid not in ["STHFSYV-COKEV-2N3FK7", "STFTGR6-35YZ3-ZWJDFO"]:
+            raise ValueError(f"Staking entry must have positive amount (refid={entry.refid})")
+
+        legs = [_ledger_leg(entry, entry.amount)]
+        legs.extend(_fee_legs(entry))
+
+        return LedgerEvent(
+            timestamp=entry.time,
+            event_type=EventType.REWARD,
             legs=legs,
         )
