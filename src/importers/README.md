@@ -26,3 +26,10 @@ As we implement each event type, this document will be expanded with the concret
 - Fiat withdrawals (`EUR`, `USD`) emit `EventType.WITHDRAWAL`.
 - Crypto withdrawals are modeled as `EventType.TRANSFER` (asset leaving Kraken to an external wallet).
 - The main leg carries the reported amount (negative quantity). Fee rows on the same entry are emitted as fee legs (negative quantities) in the same asset.
+
+### 3. Two-row `trade`
+
+- Applies when a refid group contains exactly two `type="trade"` rows.
+- The row with a negative `amount` becomes the sell leg; the positive `amount` row becomes the buy leg. Both legs are captured in `EventType.TRADE`.
+- Fee values reported on either row become separate fee legs in the same wallet/asset (negative quantities).
+- Timestamp for the event is the earliest timestamp across the two rows (Kraken typically uses the same instant for both).

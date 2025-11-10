@@ -187,3 +187,63 @@ def test_withdrawal_crypto_becomes_transfer_event(tmp_path: Path) -> None:
     leg = event.legs[0]
     assert leg.asset_id == "ETH"
     assert leg.quantity == Decimal("-1.25")
+
+
+def test_trade_event_with_fee(tmp_path: Path) -> None:
+    ts = datetime(2024, 5, 1, 12, 0)
+    file = tmp_path / "trade.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "T1",
+                "refid": "R5",
+                "time": iso(ts),
+                "type": "trade",
+                "subtype": "tradespot",
+                "aclass": "currency",
+                "asset": "ETH",
+                "wallet": "spot / main",
+                "amount": "-0.4500000000",
+                "fee": "0",
+                "balance": "0",
+            },
+            {
+                "txid": "T2",
+                "refid": "R5",
+                "time": iso(ts),
+                "type": "trade",
+                "subtype": "tradespot",
+                "aclass": "currency",
+                "asset": "EUR",
+                "wallet": "spot / main",
+                "amount": "1215.0000",
+                "fee": "1.9440",
+                "balance": "0",
+            },
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+    events = importer.load_events()
+
+    assert len(events) == 1
+    event = events[0]
+    assert event.event_type == EventType.TRADE
+    assert event.timestamp == ts.replace(tzinfo=timezone.utc)
+
+    non_fee = [leg for leg in event.legs if not leg.is_fee]
+    fee_legs = [leg for leg in event.legs if leg.is_fee]
+
+    assert len(non_fee) == 2
+    sell_leg = next(leg for leg in non_fee if leg.quantity < 0)
+    buy_leg = next(leg for leg in non_fee if leg.quantity > 0)
+
+    assert sell_leg.asset_id == "ETH"
+    assert sell_leg.quantity == Decimal("-0.45")
+    assert buy_leg.asset_id == "EUR"
+    assert buy_leg.quantity == Decimal("1215")
+
+    assert len(fee_legs) == 1
+    assert fee_legs[0].asset_id == "EUR"
+    assert fee_legs[0].quantity == Decimal("-1.9440")

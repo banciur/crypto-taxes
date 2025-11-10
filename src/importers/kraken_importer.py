@@ -105,10 +105,14 @@ class KrakenImporter:
         if not entries:
             raise ValueError("Empty Kraken ledger group cannot produce an event")
 
-        if len(entries) == 1 and entries[0].type == "deposit":
-            return self._deposit_event(entries[0])
-        if len(entries) == 1 and entries[0].type == "withdrawal":
-            return self._withdrawal_event(entries[0])
+        lines = sorted(entries, key=lambda entry: entry.time)
+
+        if len(lines) == 1 and lines[0].type == "deposit":
+            return self._deposit_event(lines[0])
+        if len(lines) == 1 and lines[0].type == "withdrawal":
+            return self._withdrawal_event(lines[0])
+        if len(lines) == 2 and {line.type for line in lines} == {"trade"}:
+            return self._trade_event(lines)
 
         raise ValueError(f"Unsupported Kraken ledger group (refid={entries[0].refid}, count={len(entries)})")
 
@@ -141,5 +145,26 @@ class KrakenImporter:
         return LedgerEvent(
             timestamp=entry.time,
             event_type=event_type,
+            legs=legs,
+        )
+
+    def _trade_event(self, entries: list[KrakenLedgerEntry]) -> LedgerEvent:
+        positives = [entry for entry in entries if entry.amount > 0]
+        negatives = [entry for entry in entries if entry.amount < 0]
+
+        if len(positives) != 1 or len(negatives) != 1:
+            raise ValueError(f"Trade entry must have one positive and one negative leg (refid={entries[0].refid})")
+
+        legs = [
+            _ledger_leg(negatives[0], negatives[0].amount),
+            _ledger_leg(positives[0], positives[0].amount),
+        ]
+
+        for entry in entries:
+            legs.extend(_fee_legs(entry))
+
+        return LedgerEvent(
+            timestamp=min(entry.time for entry in entries),
+            event_type=EventType.TRADE,
             legs=legs,
         )
