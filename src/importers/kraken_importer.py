@@ -9,7 +9,9 @@ from typing import Iterable
 
 from pydantic import BaseModel, Field, field_validator
 
-from domain.ledger import LedgerEvent
+from domain.ledger import EventType, LedgerEvent, LedgerLeg
+
+FIAT_ASSETS = {"EUR", "USD"}
 
 
 class KrakenLedgerEntry(BaseModel):
@@ -49,6 +51,25 @@ class KrakenLedgerEntry(BaseModel):
         return value
 
 
+def _wallet_id(wallet_name: str) -> str:
+    return f"kraken::{wallet_name.strip()}"
+
+
+def _ledger_leg(entry: KrakenLedgerEntry, quantity: Decimal, *, is_fee: bool = False) -> LedgerLeg:
+    return LedgerLeg(
+        asset_id=entry.asset,
+        quantity=quantity,
+        wallet_id=_wallet_id(entry.wallet),
+        is_fee=is_fee,
+    )
+
+
+def _fee_legs(entry: KrakenLedgerEntry) -> list[LedgerLeg]:
+    if entry.fee == 0:
+        return []
+    return [_ledger_leg(entry, entry.fee * Decimal("-1"), is_fee=True)]
+
+
 class KrakenImporter:
     def __init__(self, source_path: str) -> None:
         self._source_path = Path(source_path)
@@ -81,4 +102,23 @@ class KrakenImporter:
         return grouped
 
     def _build_event(self, entries: list[KrakenLedgerEntry]) -> LedgerEvent | None:
-        raise ValueError("Kraken importer event builder not implemented")
+        if not entries:
+            raise ValueError("Empty Kraken ledger group cannot produce an event")
+
+        if len(entries) == 1 and entries[0].type == "deposit":
+            return self._deposit_event(entries[0])
+
+        raise ValueError(f"Unsupported Kraken ledger group (refid={entries[0].refid}, count={len(entries)})")
+
+    def _deposit_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
+        asset_code = entry.asset.upper()
+        event_type = EventType.DEPOSIT if asset_code in FIAT_ASSETS else EventType.TRANSFER
+
+        legs = [_ledger_leg(entry, entry.amount)]
+        legs.extend(_fee_legs(entry))
+
+        return LedgerEvent(
+            timestamp=entry.time,
+            event_type=event_type,
+            legs=legs,
+        )

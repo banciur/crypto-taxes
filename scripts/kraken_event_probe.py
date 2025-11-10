@@ -16,6 +16,10 @@ from domain.ledger import LedgerEvent
 from importers.kraken_importer import KrakenImporter, KrakenLedgerEntry
 
 UNKNOWN_PRINT_LIMIT = 15
+# Set to a Kraken ledger row type (e.g., "deposit") to list all unresolved groups containing that type.
+# Leave as None to display the latest UNKNOWN_PRINT_LIMIT unresolved groups regardless of type.
+# UNRESOLVED_TYPE_FILTER: str | None = "deposit"
+UNRESOLVED_TYPE_FILTER: str | None = None
 
 
 class UnresolvedEventError(RuntimeError):
@@ -59,11 +63,24 @@ def iter_group_resolutions(
         yield GroupResolution(refid=refid, entries=list(entries), event=event)
 
 
+def _matches_filter(resolution: GroupResolution, entry_type: str) -> bool:
+    return any(entry.type == entry_type for entry in resolution.entries)
+
+
 def print_unknown_details(failures: list[GroupResolution]) -> None:
     if not failures:
         return
-    print(f"\nFirst {min(len(failures), UNKNOWN_PRINT_LIMIT)} unresolved groups:")
-    for resolution in failures[:UNKNOWN_PRINT_LIMIT]:
+
+    if UNRESOLVED_TYPE_FILTER is not None:
+        display = [res for res in failures if _matches_filter(res, UNRESOLVED_TYPE_FILTER)]
+        print(
+            f"\nUnresolved groups with entry type '{UNRESOLVED_TYPE_FILTER}': {len(display)} (out of {len(failures)})"
+        )
+    else:
+        display = failures[:UNKNOWN_PRINT_LIMIT]
+        print(f"\nMost recent {len(display)} unresolved groups (of {len(failures)} total):")
+
+    for resolution in display:
         print(f"- refid={resolution.refid} :: {type(resolution.error).__name__}: {resolution.error}")
         for entry in resolution.entries:
             subtype = entry.subtype or ""
