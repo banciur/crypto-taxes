@@ -14,18 +14,16 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from collections import Counter
+
 from domain.ledger import LedgerEvent
 from importers.kraken_importer import KrakenImporter, KrakenLedgerEntry
 
-UNKNOWN_PRINT_LIMIT = 15
+UNKNOWN_PRINT_LIMIT = 150
 # Set to a Kraken ledger row type (e.g., "deposit") to list all unresolved groups containing that type.
 # Leave as None to display the latest UNKNOWN_PRINT_LIMIT unresolved groups regardless of type.
 # UNRESOLVED_TYPE_FILTER: str | None = "withdrawal"
 UNRESOLVED_TYPE_FILTER: str | None = None
-
-
-class UnresolvedEventError(RuntimeError):
-    """Raised when the importer cannot build a LedgerEvent for a refid group."""
 
 
 @dataclass(slots=True)
@@ -34,18 +32,20 @@ class GroupResolution:
     entries: list[KrakenLedgerEntry]
     event: LedgerEvent | None
     error: Exception | None = None
+    skipped_reason: str | None = None
 
     @property
     def resolved(self) -> bool:
         return self.error is None and self.event is not None
 
+    @property
+    def skipped(self) -> bool:
+        return self.skipped_reason is not None
 
-def resolve_group(importer: KrakenImporter, entries: Sequence[KrakenLedgerEntry]) -> LedgerEvent:
-    """Invoke the real importer logic and raise when it cannot resolve a group."""
-    event = importer._build_event(list(entries))  # type: ignore[attr-defined]
-    if event is None:
-        raise UnresolvedEventError("Importer returned None (unhandled event)")
-    return event
+
+def resolve_group(importer: KrakenImporter, entries: Sequence[KrakenLedgerEntry]) -> LedgerEvent | None:
+    """Invoke the real importer logic and return whatever it emits (including None)."""
+    return importer._build_event(list(entries))  # type: ignore[attr-defined]
 
 
 def iter_group_resolutions(
@@ -62,7 +62,10 @@ def iter_group_resolutions(
         except Exception as exc:  # noqa: BLE001
             yield GroupResolution(refid=refid, entries=list(entries), event=None, error=exc)
             continue
-        yield GroupResolution(refid=refid, entries=list(entries), event=event)
+        if event is None:
+            yield GroupResolution(refid=refid, entries=list(entries), event=None, skipped_reason="returned_none")
+        else:
+            yield GroupResolution(refid=refid, entries=list(entries), event=event)
 
 
 def _matches_filter(resolution: GroupResolution, entry_type: str) -> bool:
@@ -103,10 +106,13 @@ def summarize(path: Path) -> None:
 
     resolved_events: list[LedgerEvent] = []
     failures: list[GroupResolution] = []
+    skipped: list[GroupResolution] = []
 
     for resolution in iter_group_resolutions(importer, groups):
         if resolution.resolved and resolution.event is not None:
             resolved_events.append(resolution.event)
+        elif resolution.skipped:
+            skipped.append(resolution)
         else:
             failures.append(resolution)
 
@@ -114,6 +120,13 @@ def summarize(path: Path) -> None:
     print(f"Refid groups: {total_groups}")
     print(f"Resolved events: {len(resolved_events)}")
     print(f"Unresolved groups: {len(failures)}")
+    print(f"Skipped groups: {len(skipped)}")
+
+    if skipped:
+        reason_counts = Counter(res.skipped_reason or "unknown" for res in skipped)
+        print("Skip reasons:")
+        for reason, count in sorted(reason_counts.items()):
+            print(f"  {reason:<20} {count}")
 
     print_unknown_details(failures)
 

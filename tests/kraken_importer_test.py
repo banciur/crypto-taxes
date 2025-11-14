@@ -314,3 +314,33 @@ def test_asset_aliases_are_applied(tmp_path: Path) -> None:
 
     assert event.event_type == EventType.TRANSFER  # DOT is not fiat
     assert event.legs[0].asset_id == "DOT"
+
+
+def test_earn_reward_event(tmp_path: Path) -> None:
+    ts = datetime(2024, 3, 1, 6, 43, 18)
+    file = tmp_path / "earn_reward.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "E1",
+                "refid": "R8",
+                "time": iso(ts),
+                "type": "earn",
+                "subtype": "reward",
+                "aclass": "currency",
+                "asset": "USDC",
+                "wallet": "earn / flexible",
+                "amount": "1.21127078",
+                "fee": "0",
+                "balance": "0",
+            }
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+    event = importer.load_events()[0]
+
+    assert event.event_type == EventType.REWARD
+    assert event.legs[0].asset_id == "USDC"
+    assert event.legs[0].quantity == Decimal("1.21127078")

@@ -41,3 +41,12 @@ As we implement each event type, this document will be expanded with the concret
 - The event emits as `EventType.REWARD` with a positive leg for the staking asset (after alias normalization, if applicable).
 - Any reported fee is emitted as a negative fee leg in the same asset/wallet.
 - Historical anomalies: refids `STHFSYV-COKEV-2N3FK7` and `STFTGR6-35YZ3-ZWJDFO` contain negative staking amounts (Kraken logged the exit as `type="staking"` instead of `transfer`). These two refids are explicitly whitelisted so we still emit them as rewards despite the negative quantity.
+
+### 5. Single-row `earn` reward
+
+- Applies when the lone row has `type="earn"` and `subtype="reward"` with a positive amount.
+- Emitted as `EventType.REWARD` with the asset/fee handling matching staking rewards.
+
+## Ignored scenarios
+
+- `earn` migrations: refid groups with two `type="earn"` rows and `subtype="migration"` are skipped when their amounts cancel to zero (asset re-labeling with no economic impact). If the legs do not net to zero, the importer raises for explicit handling.

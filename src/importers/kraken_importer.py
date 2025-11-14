@@ -127,10 +127,29 @@ class KrakenImporter:
             return self._withdrawal_event(lines[0])
         if len(lines) == 1 and lines[0].type == "staking":
             return self._staking_event(lines[0])
+        if len(lines) == 1 and lines[0].type == "earn" and lines[0].subtype == "reward":
+            return self._earn_reward_event(lines[0])
         if len(lines) == 2 and {line.type for line in lines} == {"trade"}:
             return self._trade_event(lines)
+        if (
+            len(lines) == 2
+            and {line.type for line in lines} == {"earn"}
+            and {line.subtype for line in lines} == {"migration"}
+        ):
+            return self._maybe_skip_migration(lines)
 
         raise ValueError(f"Unsupported Kraken ledger group (refid={entries[0].refid}, count={len(entries)})")
+
+    def _maybe_skip_migration(self, entries: list[KrakenLedgerEntry]) -> LedgerEvent | None:
+        amounts = {entry.amount for entry in entries}
+        if len(amounts) != 2:
+            raise ValueError(f"Unexpected earn migration amounts (refid={entries[0].refid})")
+
+        total = sum(amounts)
+        if total != 0:
+            raise ValueError(f"Earn migration amounts do not net to zero (refid={entries[0].refid})")
+
+        return None
 
     def _deposit_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
         if entry.amount <= 0:
@@ -189,6 +208,19 @@ class KrakenImporter:
         # For two refids we allow for minus amount.
         if entry.amount <= 0 and entry.refid not in ["STHFSYV-COKEV-2N3FK7", "STFTGR6-35YZ3-ZWJDFO"]:
             raise ValueError(f"Staking entry must have positive amount (refid={entry.refid})")
+
+        legs = [_ledger_leg(entry, entry.amount)]
+        legs.extend(_fee_legs(entry))
+
+        return LedgerEvent(
+            timestamp=entry.time,
+            event_type=EventType.REWARD,
+            legs=legs,
+        )
+
+    def _earn_reward_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
+        if entry.amount <= 0:
+            raise ValueError(f"Earn reward entry must have positive amount (refid={entry.refid})")
 
         legs = [_ledger_leg(entry, entry.amount)]
         legs.extend(_fee_legs(entry))
