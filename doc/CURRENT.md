@@ -17,7 +17,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - LedgerEvent
   - `id: UUID`
   - `timestamp: datetime`
-  - `event_type: EventType` (currently only `TRADE` is implemented; other event types will come shortly)
+- `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`, `DROP`)
   - `legs: list[LedgerLeg]`
 
 - LedgerLeg
@@ -50,7 +50,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - Inventory processing is automated: the `InventoryEngine` creates `AcquisitionLot`s and `DisposalLink`s from ordered events using FIFO matching. Alternate policies (`HIFO`, `SPEC_ID`) are planned but not yet implemented.
 - Unbalanced events are allowed.
-- Fee legs: modeled as additional legs with `is_fee=True`.
+- Fee legs: modeled as additional legs with `is_fee=True`; when they reduce a non-fiat asset the inventory engine consumes the corresponding lots (fees do not create `DisposalLink`s).
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
 - Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine.

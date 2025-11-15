@@ -10,6 +10,11 @@ from pydantic import BaseModel, Field, model_validator
 
 class EventType(StrEnum):
     TRADE = "TRADE"
+    DEPOSIT = "DEPOSIT"
+    WITHDRAWAL = "WITHDRAWAL"
+    TRANSFER = "TRANSFER"
+    REWARD = "REWARD"
+    DROP = "DROP"
 
 
 class LedgerLeg(BaseModel):

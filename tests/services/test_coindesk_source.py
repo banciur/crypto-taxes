@@ -25,6 +25,9 @@ class _StubCoinDeskClient:
         self.captured_hours_params = params
         return self.entries
 
+    def get_market_instrument(self, **params: object) -> dict | None:
+        return None
+
 
 def test_coindesk_source_transforms_hour_bucket_into_quote() -> None:
     bucket_start = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
@@ -198,6 +201,58 @@ def test_coindesk_http_client_wraps_http_errors() -> None:
         client.get_spot_historical_minutes(market="coinbase", instrument="BTC-USD", to_ts=1)
 
 
+def test_coindesk_source_retries_with_first_trade_timestamp() -> None:
+    bucket_start = datetime(2022, 9, 16, 10, 0, tzinfo=timezone.utc)
+    earlier = bucket_start - timedelta(hours=1)
+    entry = SpotInstrumentOHLC(
+        timestamp=bucket_start,
+        market="kraken",
+        instrument="ETHWEUR",
+        mapped_instrument="ETHW-EUR",
+        base_asset="ETHW",
+        quote_asset="EUR",
+        open=Decimal("10"),
+        high=Decimal("11"),
+        low=Decimal("9"),
+        close=Decimal("10.5"),
+        volume=Decimal("1"),
+        quote_volume=Decimal("10.5"),
+    )
+
+    class _FallbackClient(_StubCoinDeskClient):
+        def __init__(self) -> None:
+            super().__init__([entry])
+            self._fail_once = True
+            self.instrument_lookup: tuple[str, str] | None = None
+
+        def get_spot_historical_hours(self, **params: object) -> list[SpotInstrumentOHLC]:
+            if self._fail_once:
+                self._fail_once = False
+                raise CoinDeskAPIError(
+                    "Invalid: to_ts parameter ... FIRST_TRADE_SPOT_TIMESTAMP",
+                    status_code=404,
+                )
+            return super().get_spot_historical_hours(**params)
+
+        def get_market_instrument(self, **params: object) -> dict | None:
+            market = cast(str, params["market"])
+            instrument = cast(str, params["instrument"])
+            self.instrument_lookup = (market, instrument)
+            return {"FIRST_TRADE_SPOT_TIMESTAMP": int(bucket_start.timestamp())}
+
+    fallback_client = _FallbackClient()
+    source = CoinDeskSource(client=cast(_CoinDeskClient, fallback_client), market="kraken")
+
+    quote = source.fetch_snapshot("ethw", "eur", timestamp=earlier)
+
+    assert quote.rate == Decimal("10.5")
+    assert quote.valid_from == earlier
+    assert quote.valid_to == earlier + timedelta(minutes=60)
+    assert fallback_client.captured_hours_params is not None
+    assert fallback_client.captured_hours_params["to_ts"] == int(bucket_start.timestamp())
+    assert fallback_client.instrument_lookup == ("kraken", "ETHW-EUR")
+
+
 @pytest.mark.skip(reason="This test requires real api key in .env")
 def test_live_request() -> None:
     source = CoinDeskSource()
@@ -208,4 +263,5 @@ def test_live_request() -> None:
         timestamp=ts,
     )
     from pprint import pprint
+
     pprint(quote)
