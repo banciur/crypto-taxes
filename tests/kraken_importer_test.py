@@ -3,6 +3,7 @@ from __future__ import annotations
 from csv import DictWriter
 from datetime import datetime, timezone
 from decimal import Decimal
+from itertools import count
 from pathlib import Path
 
 from domain.ledger import EventType
@@ -34,25 +35,57 @@ def iso(ts: datetime) -> str:
     return ts.strftime("%Y-%m-%d %H:%M:%S")
 
 
+_txid_counter = count(1)
+_refid_counter = count(1)
+
+
+def ledger_row(
+    *,
+    txid: str | None = None,
+    refid: str | None = None,
+    ts: datetime,
+    tx_type: str,
+    asset: str,
+    amount: str,
+    subtype: str = "",
+    aclass: str = "currency",
+    wallet: str = "spot / main",
+    fee: str = "0",
+    balance: str = "0",
+) -> dict[str, str]:
+    if txid is None:
+        txid = f"TX{next(_txid_counter)}"
+    if refid is None:
+        refid = f"REF{next(_refid_counter)}"
+    return {
+        "txid": txid,
+        "refid": refid,
+        "time": iso(ts),
+        "type": tx_type,
+        "subtype": subtype,
+        "aclass": aclass,
+        "asset": asset,
+        "wallet": wallet,
+        "amount": amount,
+        "fee": fee,
+        "balance": balance,
+    }
+
+
 def test_deposit_fiat_becomes_deposit_event(tmp_path: Path) -> None:
     ts = datetime(2024, 1, 1, 12, 0)
     file = tmp_path / "fiat_deposit.csv"
     write_csv(
         file,
         [
-            {
-                "txid": "D1",
-                "refid": "R1",
-                "time": iso(ts),
-                "type": "deposit",
-                "subtype": "",
-                "aclass": "currency",
-                "asset": "EUR",
-                "wallet": "spot / main",
-                "amount": "100.5000",
-                "fee": "0.2500",
-                "balance": "100.5000",
-            }
+            ledger_row(
+                ts=ts,
+                tx_type="deposit",
+                asset="EUR",
+                amount="100.5000",
+                fee="0.2500",
+                balance="100.5000",
+            )
         ],
     )
 
@@ -71,7 +104,7 @@ def test_deposit_fiat_becomes_deposit_event(tmp_path: Path) -> None:
 
     assert deposit_leg.asset_id == "EUR"
     assert deposit_leg.quantity == Decimal("100.5000")
-    assert deposit_leg.wallet_id == "kraken::spot / main"
+    assert deposit_leg.wallet_id == "kraken"
 
     assert fee_leg.asset_id == "EUR"
     assert fee_leg.quantity == Decimal("-0.2500")
@@ -83,19 +116,13 @@ def test_deposit_crypto_becomes_transfer_event(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "C1",
-                "refid": "R2",
-                "time": iso(ts),
-                "type": "deposit",
-                "subtype": "",
-                "aclass": "currency",
-                "asset": "ETH",
-                "wallet": "spot / main",
-                "amount": "2.5000000000",
-                "fee": "0",
-                "balance": "2.5000000000",
-            }
+            ledger_row(
+                ts=ts,
+                tx_type="deposit",
+                asset="ETH",
+                amount="2.5000000000",
+                balance="2.5000000000",
+            )
         ],
     )
 
@@ -111,7 +138,7 @@ def test_deposit_crypto_becomes_transfer_event(tmp_path: Path) -> None:
     leg = event.legs[0]
     assert leg.asset_id == "ETH"
     assert leg.quantity == Decimal("2.5")
-    assert leg.wallet_id == "kraken::spot / main"
+    assert leg.wallet_id == "kraken"
 
 
 def test_withdrawal_fiat_becomes_withdrawal_event(tmp_path: Path) -> None:
@@ -120,19 +147,13 @@ def test_withdrawal_fiat_becomes_withdrawal_event(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "W1",
-                "refid": "R3",
-                "time": iso(ts),
-                "type": "withdrawal",
-                "subtype": "",
-                "aclass": "currency",
-                "asset": "EUR",
-                "wallet": "spot / main",
-                "amount": "-250.0000",
-                "fee": "0.1000",
-                "balance": "0",
-            }
+            ledger_row(
+                ts=ts,
+                tx_type="withdrawal",
+                asset="EUR",
+                amount="-250.0000",
+                fee="0.1000",
+            )
         ],
     )
 
@@ -159,19 +180,12 @@ def test_withdrawal_crypto_becomes_transfer_event(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "W2",
-                "refid": "R4",
-                "time": iso(ts),
-                "type": "withdrawal",
-                "subtype": "",
-                "aclass": "currency",
-                "asset": "ETH",
-                "wallet": "spot / main",
-                "amount": "-1.2500000000",
-                "fee": "0",
-                "balance": "0",
-            }
+            ledger_row(
+                ts=ts,
+                tx_type="withdrawal",
+                asset="ETH",
+                amount="-1.2500000000",
+            )
         ],
     )
 
@@ -195,32 +209,25 @@ def test_trade_event_with_fee(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "T1",
-                "refid": "R5",
-                "time": iso(ts),
-                "type": "trade",
-                "subtype": "tradespot",
-                "aclass": "currency",
-                "asset": "ETH",
-                "wallet": "spot / main",
-                "amount": "-0.4500000000",
-                "fee": "0",
-                "balance": "0",
-            },
-            {
-                "txid": "T2",
-                "refid": "R5",
-                "time": iso(ts),
-                "type": "trade",
-                "subtype": "tradespot",
-                "aclass": "currency",
-                "asset": "EUR",
-                "wallet": "spot / main",
-                "amount": "1215.0000",
-                "fee": "1.9440",
-                "balance": "0",
-            },
+            ledger_row(
+                txid="T1",
+                refid="R5",
+                ts=ts,
+                tx_type="trade",
+                subtype="tradespot",
+                asset="ETH",
+                amount="-0.4500000000",
+            ),
+            ledger_row(
+                txid="T2",
+                refid="R5",
+                ts=ts,
+                tx_type="trade",
+                subtype="tradespot",
+                asset="EUR",
+                amount="1215.0000",
+                fee="1.9440",
+            ),
         ],
     )
 
@@ -255,32 +262,23 @@ def test_spend_receive_trade(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "SR1",
-                "refid": "TSBW43U-4TCE7-ADKXQI",
-                "time": iso(ts),
-                "type": "spend",
-                "subtype": "",
-                "aclass": "currency",
-                "asset": "EUR",
-                "wallet": "spot / main",
-                "amount": "-172.2600",
-                "fee": "2.5900",
-                "balance": "0",
-            },
-            {
-                "txid": "SR2",
-                "refid": "TSBW43U-4TCE7-ADKXQI",
-                "time": iso(ts),
-                "type": "receive",
-                "subtype": "",
-                "aclass": "currency",
-                "asset": "DAI",
-                "wallet": "spot / main",
-                "amount": "200.0000000000",
-                "fee": "0",
-                "balance": "0",
-            },
+            ledger_row(
+                txid="SR1",
+                refid="TSBW43U-4TCE7-ADKXQI",
+                ts=ts,
+                tx_type="spend",
+                asset="EUR",
+                amount="-172.2600",
+                fee="2.5900",
+            ),
+            ledger_row(
+                txid="SR2",
+                refid="TSBW43U-4TCE7-ADKXQI",
+                ts=ts,
+                tx_type="receive",
+                asset="DAI",
+                amount="200.0000000000",
+            ),
         ],
     )
 
@@ -305,19 +303,13 @@ def test_staking_reward_with_fee(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "S1",
-                "refid": "R6",
-                "time": iso(ts),
-                "type": "staking",
-                "subtype": "",
-                "aclass": "currency",
-                "asset": "ETH",
-                "wallet": "spot / main",
-                "amount": "0.0017569136",
-                "fee": "0.0003513827",
-                "balance": "0",
-            }
+            ledger_row(
+                ts=ts,
+                tx_type="staking",
+                asset="ETH",
+                amount="0.0017569136",
+                fee="0.0003513827",
+            )
         ],
     )
 
@@ -343,19 +335,12 @@ def test_asset_aliases_are_applied(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "A1",
-                "refid": "R7",
-                "time": iso(ts),
-                "type": "deposit",
-                "subtype": "",
-                "aclass": "currency",
-                "asset": "DOT28.S",
-                "wallet": "spot / main",
-                "amount": "10.0000",
-                "fee": "0",
-                "balance": "0",
-            }
+            ledger_row(
+                ts=ts,
+                tx_type="deposit",
+                asset="DOT28.S",
+                amount="10.0000",
+            )
         ],
     )
 
@@ -372,19 +357,14 @@ def test_earn_reward_event(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "E1",
-                "refid": "R8",
-                "time": iso(ts),
-                "type": "earn",
-                "subtype": "reward",
-                "aclass": "currency",
-                "asset": "USDC",
-                "wallet": "earn / flexible",
-                "amount": "1.21127078",
-                "fee": "0",
-                "balance": "0",
-            }
+            ledger_row(
+                ts=ts,
+                tx_type="earn",
+                subtype="reward",
+                asset="USDC",
+                amount="1.21127078",
+                wallet="earn / flexible",
+            )
         ],
     )
 
@@ -403,58 +383,45 @@ def test_explicit_refid_skip(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "SK1",
-                "refid": "ELFI6E5-PNXZG-NSGNER",
-                "time": iso(ts1),
-                "type": "earn",
-                "subtype": "allocation",
-                "aclass": "currency",
-                "asset": "BTC",
-                "wallet": "spot / main",
-                "amount": "-0.0000099500",
-                "fee": "0",
-                "balance": "0",
-            },
-            {
-                "txid": "SK2",
-                "refid": "ELFI6E5-PNXZG-NSGNER",
-                "time": iso(ts1),
-                "type": "earn",
-                "subtype": "allocation",
-                "aclass": "currency",
-                "asset": "BTC",
-                "wallet": "earn / flexible",
-                "amount": "0.0000099500",
-                "fee": "0",
-                "balance": "0",
-            },
-            {
-                "txid": "SK3",
-                "refid": "ELFI6E5-PNXZG-NSGNER",
-                "time": iso(ts2),
-                "type": "earn",
-                "subtype": "deallocation",
-                "aclass": "currency",
-                "asset": "BTC",
-                "wallet": "earn / flexible",
-                "amount": "-0.0000099539",
-                "fee": "0",
-                "balance": "0",
-            },
-            {
-                "txid": "SK4",
-                "refid": "ELFI6E5-PNXZG-NSGNER",
-                "time": iso(ts2),
-                "type": "earn",
-                "subtype": "allocation",
-                "aclass": "currency",
-                "asset": "BTC",
-                "wallet": "earn / locked",
-                "amount": "0.0000099539",
-                "fee": "0",
-                "balance": "0",
-            },
+            ledger_row(
+                txid="SK1",
+                refid="ELFI6E5-PNXZG-NSGNER",
+                ts=ts1,
+                tx_type="earn",
+                subtype="allocation",
+                asset="BTC",
+                amount="-0.0000099500",
+            ),
+            ledger_row(
+                txid="SK2",
+                refid="ELFI6E5-PNXZG-NSGNER",
+                ts=ts1,
+                tx_type="earn",
+                subtype="allocation",
+                asset="BTC",
+                amount="0.0000099500",
+                wallet="earn / flexible",
+            ),
+            ledger_row(
+                txid="SK3",
+                refid="ELFI6E5-PNXZG-NSGNER",
+                ts=ts2,
+                tx_type="earn",
+                subtype="deallocation",
+                asset="BTC",
+                amount="-0.0000099539",
+                wallet="earn / flexible",
+            ),
+            ledger_row(
+                txid="SK4",
+                refid="ELFI6E5-PNXZG-NSGNER",
+                ts=ts2,
+                tx_type="earn",
+                subtype="allocation",
+                asset="BTC",
+                amount="0.0000099539",
+                wallet="earn / locked",
+            ),
         ],
     )
 
@@ -470,19 +437,13 @@ def test_spot_from_futures_event(tmp_path: Path) -> None:
     write_csv(
         file,
         [
-            {
-                "txid": "SF1",
-                "refid": "R9",
-                "time": iso(ts),
-                "type": "transfer",
-                "subtype": "spotfromfutures",
-                "aclass": "currency",
-                "asset": "STRK",
-                "wallet": "spot / main",
-                "amount": "125.80924",
-                "fee": "0",
-                "balance": "0",
-            }
+            ledger_row(
+                ts=ts,
+                tx_type="transfer",
+                subtype="spotfromfutures",
+                asset="STRK",
+                amount="125.80924",
+            )
         ],
     )
 

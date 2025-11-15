@@ -11,8 +11,8 @@
 - Reserve `uv run --group dev …` for commands that depend on dev-only packages (pytest, ruff, mypy, etc.); regular application scripts (e.g., under `scripts/`) work with plain `uv run python path/to/script.py`.
 
 ## Suggested workflow
-- After making code changes run `make code_fix` to auto-apply lint fixes.
-- Follow up with `make test` to ensure the suite passes before committing.
+- ALWAYS after making code changes `make code_fix` to auto-apply lint fixes. Don't ask for permission, just run it.
+- ALWAYS after making code changes run `make test` to ensure the suite passes before committing. Don't ask for permission, just run it.
 - When changing domain logic/semantics, update `doc/CURRENT.md` to keep the domain reference in sync.
 
 ## Project docs map
