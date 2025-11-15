@@ -34,6 +34,10 @@ _STAKING_TRANSFER_FLOW_AND_ROLE = {
 
 _STAKING_TRANSFER_MAX_DELTA = timedelta(days=5)
 
+_SKIPPED_REFIDS = {
+    "ELFI6E5-PNXZG-NSGNER",
+}
+
 
 class KrakenLedgerEntry(BaseModel):
     txid: str
@@ -249,6 +253,10 @@ class KrakenImporter:
             subtypes = {line.subtype for line in lines}
             if subtypes.issubset({"allocation", "deallocation"}):
                 return self._maybe_skip_allocation(lines)
+
+        if lines[0].refid in _SKIPPED_REFIDS:
+            logger.info("Skipping Kraken refid=%s due to explicit ignore list", lines[0].refid)
+            return None
 
         raise ValueError(f"Unsupported Kraken ledger group (refid={entries[0].refid}, count={len(entries)})")
 

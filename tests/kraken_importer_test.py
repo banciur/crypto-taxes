@@ -344,3 +344,71 @@ def test_earn_reward_event(tmp_path: Path) -> None:
     assert event.event_type == EventType.REWARD
     assert event.legs[0].asset_id == "USDC"
     assert event.legs[0].quantity == Decimal("1.21127078")
+
+
+def test_explicit_refid_skip(tmp_path: Path) -> None:
+    ts1 = datetime(2024, 4, 17, 20, 36, 43)
+    ts2 = datetime(2024, 9, 10, 13, 48, 39)
+    file = tmp_path / "skip_refid.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "SK1",
+                "refid": "ELFI6E5-PNXZG-NSGNER",
+                "time": iso(ts1),
+                "type": "earn",
+                "subtype": "allocation",
+                "aclass": "currency",
+                "asset": "BTC",
+                "wallet": "spot / main",
+                "amount": "-0.0000099500",
+                "fee": "0",
+                "balance": "0",
+            },
+            {
+                "txid": "SK2",
+                "refid": "ELFI6E5-PNXZG-NSGNER",
+                "time": iso(ts1),
+                "type": "earn",
+                "subtype": "allocation",
+                "aclass": "currency",
+                "asset": "BTC",
+                "wallet": "earn / flexible",
+                "amount": "0.0000099500",
+                "fee": "0",
+                "balance": "0",
+            },
+            {
+                "txid": "SK3",
+                "refid": "ELFI6E5-PNXZG-NSGNER",
+                "time": iso(ts2),
+                "type": "earn",
+                "subtype": "deallocation",
+                "aclass": "currency",
+                "asset": "BTC",
+                "wallet": "earn / flexible",
+                "amount": "-0.0000099539",
+                "fee": "0",
+                "balance": "0",
+            },
+            {
+                "txid": "SK4",
+                "refid": "ELFI6E5-PNXZG-NSGNER",
+                "time": iso(ts2),
+                "type": "earn",
+                "subtype": "allocation",
+                "aclass": "currency",
+                "asset": "BTC",
+                "wallet": "earn / locked",
+                "amount": "0.0000099539",
+                "fee": "0",
+                "balance": "0",
+            },
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+    events = importer.load_events()
+
+    assert events == []
