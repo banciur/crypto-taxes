@@ -245,6 +245,10 @@ class KrakenImporter:
             and {line.subtype for line in lines} == {"migration"}
         ):
             return self._maybe_skip_migration(lines)
+        if len(lines) == 2 and {line.type for line in lines} == {"earn"}:
+            subtypes = {line.subtype for line in lines}
+            if subtypes.issubset({"allocation", "deallocation"}):
+                return self._maybe_skip_allocation(lines)
 
         raise ValueError(f"Unsupported Kraken ledger group (refid={entries[0].refid}, count={len(entries)})")
 
@@ -257,6 +261,22 @@ class KrakenImporter:
         if total != 0:
             raise ValueError(f"Earn migration amounts do not net to zero (refid={entries[0].refid})")
 
+        return None
+
+    def _maybe_skip_allocation(self, entries: list[KrakenLedgerEntry]) -> LedgerEvent | None:
+        amounts = [entry.amount for entry in entries]
+        assets = {_normalize_asset(entry.asset) for entry in entries}
+        if len(assets) != 1:
+            raise ValueError(f"Earn allocation assets differ (refid={entries[0].refid})")
+        total = sum(amounts)
+        if total != 0:
+            raise ValueError(f"Earn allocation amounts do not net to zero (refid={entries[0].refid})")
+        logger.info(
+            "Skipping Kraken earn allocation refid=%s asset=%s amount=%s (internal wallet move)",
+            entries[0].refid,
+            assets.pop(),
+            amounts[0],
+        )
         return None
 
     def _deposit_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
