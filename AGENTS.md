@@ -46,7 +46,6 @@ Prefer the “Current” guide for domain semantics.
 
 ## Legacy implementation (to be updated)
 - `src/db/*` (persistence models and usage)
-- `src/kraken_importer.py`
 - `src/main.py`
 - `src/reports.py`
 
