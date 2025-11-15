@@ -173,7 +173,7 @@ class KrakenImporter:
 
             newer, older = (entry, match) if entry.time >= match.time else (match, entry)
             delta = abs((entry.time - match.time).total_seconds())
-            logger.info(
+            logger.debug(
                 "Dropping Kraken internal staking transfer pair refids %s/%s asset=%s amount=%s (Δ %.2f hours)",
                 older.refid,
                 newer.refid,
@@ -210,9 +210,15 @@ class KrakenImporter:
                 len(skip_txids),
                 matched_pairs,
             )
+        elif staking_rows:
+            logger.info(
+                "Kraken staking-transfer preprocessor: processed %d rows, flagged %d staking transfer rows, no drops (unmatched)",
+                len(entries),
+                staking_rows,
+            )
         else:
             logger.info(
-                "Kraken staking-transfer preprocessor: processed %d rows, no internal staking transfers dropped",
+                "Kraken staking-transfer preprocessor: processed %d rows, no staking transfer rows present",
                 len(entries),
             )
 
