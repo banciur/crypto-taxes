@@ -1,11 +1,26 @@
 TODO: Review coindesk source I think it became very messy
 TODO: Print more info from the kraken inventory script. In out transfers?
-TODO: Review inventory code and tests
+TODO: Review inventory code and tests (there was some change about fee legs review it)
 
 TODO: Basing on Kraken events compute profitability
 TODO: Using Kraken events compute taxes
 
-TODO: On-chain events, what could be the source, how to combine with Kraken (later we will have Coinbase)
+TODO: Import data (historical) from:
+  - Coinbase
+  - Lido
+  - Stakewise
+TODO: On-chain events, what could be the source
+TODO: how to combine different sources of transactions
 TODO: Probably will have to introduce manual adjustments
+TODO: Verify against my own spreadsheet
+
+TODO; question how to calculate income in case when I'm partly leaving the farm.
+  Initial idea (from old model review)
+  - ctokens only when token is sold compute gain as difference of value when bought (FIFO used for computing buy price)
+  - atokens compute tax / gain every time it rebases and when selling no tax
 
 TODO: Think about visualization of the current state?
+
+
+npm list -g @openai/codex
+npm install -g @openai/codex@latest
