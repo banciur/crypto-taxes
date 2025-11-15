@@ -17,10 +17,9 @@
 
 ## Project docs map
 - Current domain model: `doc/CURRENT.md`
-- Target architecture (future): `doc/FUTURE.md`
 - Notes/ideas: `doc/ideas.md`
 
-Prefer the “Current” guide for domain semantics. Use the “Future” guide for architectural direction and roadmap decisions.
+Prefer the “Current” guide for domain semantics.
 
 ## Domain reference
 - Domain semantics and data model are defined in `doc/CURRENT.md`.
