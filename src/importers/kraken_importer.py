@@ -81,16 +81,12 @@ def _normalize_asset(asset: str) -> str:
     return ASSET_ALIASES.get(code, code)
 
 
-def _wallet_id(wallet_name: str) -> str:
-    return f"kraken::{wallet_name.strip()}"
-
-
 def _ledger_leg(entry: KrakenLedgerEntry, quantity: Decimal, *, is_fee: bool = False) -> LedgerLeg:
     asset_id = _normalize_asset(entry.asset)
     return LedgerLeg(
         asset_id=asset_id,
         quantity=quantity,
-        wallet_id=_wallet_id(entry.wallet),
+        wallet_id="kraken",
         is_fee=is_fee,
     )
 

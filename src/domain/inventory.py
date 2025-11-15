@@ -92,6 +92,9 @@ class InventoryEngine:
             disposal_legs = [
                 leg for leg in event.legs if leg.quantity < 0 and not leg.is_fee and leg.asset_id != self.EUR_ASSET_ID
             ]
+            fee_consumption_legs = [
+                leg for leg in event.legs if leg.is_fee and leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID
+            ]
 
             for leg in acquisition_legs:
                 cost_per_unit = self._resolve_cost_per_unit(event, leg)
@@ -116,17 +119,12 @@ class InventoryEngine:
                 qty_to_match = abs(leg.quantity)
                 proceeds_per_unit = self._resolve_proceeds_per_unit(event, leg)
 
-                open_lots = inventory.get((leg.asset_id, leg.wallet_id))
-                if not open_lots:
-                    raise InventoryError(f"No open lots for asset={leg.asset_id} wallet={leg.wallet_id}")
-
-                while qty_to_match > 0:
-                    if not open_lots:
-                        raise InventoryError(f"Not enough inventory for asset={leg.asset_id} wallet={leg.wallet_id}")
-
-                    lot_state = open_lots[0]
-                    take_quantity = min(qty_to_match, lot_state.remaining_quantity)
-
+                for lot_state, take_quantity in self._match_inventory(
+                    leg=leg,
+                    event=event,
+                    quantity_needed=qty_to_match,
+                    inventory=inventory,
+                ):
                     proceeds_total = proceeds_per_unit * take_quantity
                     disposals.append(
                         DisposalLink(
@@ -137,11 +135,17 @@ class InventoryEngine:
                         )
                     )
 
-                    lot_state.remaining_quantity -= take_quantity
                     qty_to_match -= take_quantity
 
-                    if lot_state.remaining_quantity == 0:
-                        open_lots.popleft()
+            for leg in fee_consumption_legs:
+                qty_to_match = abs(leg.quantity)
+                for _lot_state, take_quantity in self._match_inventory(
+                    leg=leg,
+                    event=event,
+                    quantity_needed=qty_to_match,
+                    inventory=inventory,
+                ):
+                    qty_to_match -= take_quantity
 
         open_inventory_snapshots = [
             OpenLotSnapshot(
@@ -211,3 +215,41 @@ class InventoryEngine:
         if len(matches) == 1:
             return matches[0]
         return None
+
+    def _match_inventory(
+        self,
+        *,
+        leg: LedgerLeg,
+        event: LedgerEvent,
+        quantity_needed: Decimal,
+        inventory: dict[tuple[str, str], deque[_OpenLotState]],
+    ) -> Iterable[tuple[_OpenLotState, Decimal]]:
+        open_lots = inventory.get((leg.asset_id, leg.wallet_id))
+        if not open_lots:
+            raise self._inventory_error("No open lots", leg=leg, event=event)
+
+        remaining = quantity_needed
+        while remaining > 0:
+            if not open_lots:
+                raise self._inventory_error("Not enough inventory", leg=leg, event=event)
+
+            lot_state = open_lots[0]
+            take_quantity = min(remaining, lot_state.remaining_quantity)
+            lot_state.remaining_quantity -= take_quantity
+            remaining -= take_quantity
+            if lot_state.remaining_quantity == 0:
+                open_lots.popleft()
+            yield lot_state, take_quantity
+
+    def _inventory_error(self, reason: str, *, leg: LedgerLeg, event: LedgerEvent) -> InventoryError:
+        return InventoryError(
+            f"{reason} for asset={leg.asset_id} wallet={leg.wallet_id} leg={leg.id} "
+            f"event={event.id} {event.event_type} @{event.timestamp.isoformat()} "
+            f"legs={_summarize_event_legs(event)}"
+        )
+
+
+def _summarize_event_legs(event: LedgerEvent) -> str:
+    return "; ".join(
+        f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}@{leg.wallet_id}" for leg in event.legs
+    )

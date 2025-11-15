@@ -1,2 +1,11 @@
-TODO: Try to create Kraken events importer
 TODO: Review coindesk source I think it became very messy
+TODO: Print more info from the kraken inventory script. In out transfers?
+TODO: Review inventory code and tests
+
+TODO: Basing on Kraken events compute profitability
+TODO: Using Kraken events compute taxes
+
+TODO: On-chain events, what could be the source, how to combine with Kraken (later we will have Coinbase)
+TODO: Probably will have to introduce manual adjustments
+
+TODO: Think about visualization of the current state?
