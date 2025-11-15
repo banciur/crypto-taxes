@@ -1,61 +1,95 @@
 # Kraken Ledger Importer
 
-We are rebuilding the Kraken ledger ingestion from scratch. The goal is to take the raw CSV export from Kraken’s “Ledger” report, group rows by `refid`, and translate each group into a domain `LedgerEvent`. Nothing from the previous implementation is assumed correct—we will reintroduce event handling case by case with tests and documentation.
+`KrakenImporter` translates the raw CSV export from Kraken’s “Ledger” report into domain `LedgerEvent`s. The importer normalizes timestamps to UTC, converts numerics to `Decimal`, and collapses all Kraken sub-wallets into a single `wallet_id="kraken"` (spot, futures credit, staking, etc. are treated as one wallet in our tax model). Asset aliases such as `DOT28.S`, `USDC.M`, or `ETH2` are mapped to their canonical tickers up front so downstream systems see consistent asset IDs. While the importer will eventually sit alongside other data sources, you can already exercise it via `scripts/run_kraken_inventory.py` (`uv run scripts/run_kraken_inventory.py --csv path/to/ledger.csv`).
 
-## Starting point
+We expect most refids to be handled by the cases below; unknown patterns still raise so we can add explicit handling later.
 
-1. **CSV parsing:** `KrakenLedgerEntry` (Pydantic model) already normalizes timestamps to UTC and keeps numeric values in `Decimal`.
-2. **Preprocessing:** before grouping we scan the flat ledger to merge/dismiss known zero-impact flows (currently spot↔staking transfers, matched by asset/amount/time window) so that `_build_event` only sees real scenarios.
-3. **Grouping:** `KrakenImporter._group_by_refid` bundles rows that share a `refid`. Each group represents one logical Kraken action (trade, transfer, earn reward, etc.). This grouping step is stable and will be reused throughout the rebuild.
-4. **Event builder:** We are reintroducing logic incrementally inside `_build_event`, one refid pattern at a time, backed by tests and documentation.
-5. **Exploration tooling:** `scripts/kraken_event_probe.py` runs the *real* importer against a CSV and reports which refids are unresolved, printing the first 15 groups (with row details). We’ll use that tool after each incremental change to verify coverage.
-6. **Asset aliases:** Kraken sometimes reports suffixed tickers (e.g., `DOT28.S`, `USDC.M`). The importer normalizes a small allowlist of aliases up-front so that downstream logic sees canonical symbols (`DOT`, `USDC`, etc.).
+## Ledger CSV essentials
 
-As we implement each event type, this document will be expanded with the concrete rules, examples, and invariants for that scenario. For now, treat it as the canonical place to record decisions about new handlers.
+The input CSV comes from Kraken’s web UI (“Ledger” report export). Each row contains the fields we rely on:
 
-## Implemented scenarios
+- `refid`: Kraken’s identifier for a logical action. Rows sharing a `refid` belong to the same scenario.
+- `txid`: unique row identifier (used during preprocessing to drop internal transfers without disturbing other rows).
+- `time`: naive timestamp in Kraken’s export format (`YYYY-MM-DD HH:MM:SS`), converted to UTC when parsed.
+- `type` / `subtype`: primary classification (e.g., `trade`, `deposit`, `transfer`) plus optional subtype such as `spotfromfutures` or `tradespot`.
+- `asset`: reported asset ticker (aliases such as `DOT28.S`, `USDC.M`, `ETH2` are normalized to canonical codes).
+- `amount`: positive quantities mean inflows; negative values mean outflows.
+- `fee`: fee charged on the same row; we emit it as a separate negative leg when non-zero.
+- `wallet`: Kraken’s wallet label. We keep the value for traceability but all legs are emitted with `wallet_id="kraken"` to represent a consolidated exchange wallet.
 
-### 1. Single-row `deposit`
+## Import pipeline
+
+1. **CSV parsing:** `KrakenLedgerEntry` (Pydantic model) normalizes each row (timestamp→UTC, numerics→`Decimal`, empty strings→zero).
+2. **Preprocessing:** a pass over the flat ledger detects spot↔staking transfer pairs that net to zero and drops both rows so only economically meaningful events reach the builder.
+3. **Grouping:** `_group_by_refid` bundles rows that share a `refid`. Each group represents one Kraken action (trade, transfer, reward, etc.).
+4. **Event builder:** `_build_event` matches a refid pattern and emits the corresponding `LedgerEvent`. Fee columns become separate legs with `is_fee=True`.
+
+## Scenario catalog
+
+### Preprocessed multi-ref patterns
+
+#### Internal staking transfers → skip
+
+- Kraken spot↔staking moves show up as two separate refids (e.g., `spottostaking`, `stakingfromspot`, `stakingtospot`, `spotfromstaking`).
+- A preprocessing pass pairs rows by normalized asset/amount within a five-day window; matched pairs are dropped entirely so inventory sees a single consolidated Kraken wallet.
+- Unmatched rows are logged so they can be inspected manually.
+
+### Single-row groups
+
+#### `deposit` → emit event
 
 - Applies when the refid group has a single ledger row of type `deposit` with a positive `amount`.
 - If the `asset` is a fiat ticker (`EUR` or `USD`), the event is emitted as `EventType.DEPOSIT`.
 - All other assets are treated as crypto deposits, which we model as `EventType.TRANSFER` (asset moving from an external wallet into Kraken without tax impact).
 - A single positive leg is created for the deposited asset, and any reported fee on the same row is attached as a fee leg (negative quantity).
 
-### 2. Single-row `withdrawal`
+#### `withdrawal` → emit event
 
 - Applies when the refid group has a single ledger row of type `withdrawal` with a negative `amount`.
 - Fiat withdrawals (`EUR`, `USD`) emit `EventType.WITHDRAWAL`.
 - Crypto withdrawals are modeled as `EventType.TRANSFER` (asset leaving Kraken to an external wallet).
 - The main leg carries the reported amount (negative quantity). Fee rows on the same entry are emitted as fee legs (negative quantities) in the same asset.
 
-### 3. Two-row `trade`
-
-- Applies when a refid group contains exactly two `type="trade"` rows **or** a `spend`/`receive` pair (Kraken sometimes encodes dust-sweeps or special conversions this way).
-- The row with a negative `amount` becomes the sell leg; the positive `amount` row becomes the buy leg. Both legs are captured in `EventType.TRADE`.
-- Fee values reported on either row become separate fee legs in the same wallet/asset (negative quantities).
-- Timestamp for the event is the earliest timestamp across the two rows (Kraken typically uses the same instant for both).
-
-### 4. Single-row `staking`
+#### `staking` → emit event
 
 - Applies when a refid group has one `type="staking"` row with a positive `amount`.
 - The event emits as `EventType.REWARD` with a positive leg for the staking asset (after alias normalization, if applicable).
 - Any reported fee is emitted as a negative fee leg in the same asset/wallet.
 - Historical anomalies: refids `STHFSYV-COKEV-2N3FK7` and `STFTGR6-35YZ3-ZWJDFO` contain negative staking amounts (Kraken logged the exit as `type="staking"` instead of `transfer`). These two refids are explicitly whitelisted so we still emit them as rewards despite the negative quantity.
 
-### 5. Single-row `earn` reward
+#### `earn` reward → emit event
 
 - Applies when the lone row has `type="earn"` and `subtype="reward"` with a positive amount.
 - Emitted as `EventType.REWARD` with the asset/fee handling matching staking rewards.
 
-### 6. Single-row `transfer` (`spotfromfutures`)
+#### `transfer` (`spotfromfutures`) → emit event
 
 - Applies when a refid contains a single `type="transfer"` row whose `subtype="spotfromfutures"` and amount is positive.
 - Represents Kraken crediting spot balances after futures adjustments/forks; emitted as `EventType.DROP` with a single positive leg (plus any fee legs, though fees have not been observed).
 
-## Ignored scenarios
+### Two-row groups
 
-- `earn` migrations: refid groups with two `type="earn"` rows and `subtype="migration"` are skipped when their amounts cancel to zero (asset re-labeling with no economic impact). If the legs do not net to zero, the importer raises for explicit handling.
-- Staking transfers internal to Kraken: single-row `transfer` refids whose subtypes indicate moving between spot and staking wallets (`spottostaking`, `stakingfromspot`, `stakingtospot`, `spotfromstaking`) are paired up by normalized asset/amount and dropped when their timestamps fall within five days. Kraken assigns different `refid`s to the two legs, so we preprocess the flat ledger to find matching pairs before grouping and skip them entirely (spot vs. staking balances are considered a single wallet in our model).
-- `earn` allocations/deallocations that only move an asset between Kraken sub-wallets: when a refid contains two `type="earn"` rows whose subtypes are limited to `allocation`/`deallocation`, the assets match, and the amounts net to zero, the importer logs and returns `None` (no ledger event).
-- Multi-stage Kraken migration refid `ELFI6E5-PNXZG-NSGNER` is explicitly ignored for now (Kraken recorded four earn allocation/deallocation legs across months that simply shuffle satoshis between earn sub-wallets).
+#### `trade`/`spend-receive` → emit event
+
+- Applies when a refid group contains exactly two `type="trade"` rows **or** a `spend`/`receive` pair (Kraken sometimes encodes dust-sweeps or special conversions this way).
+- The row with a negative `amount` becomes the sell leg; the positive `amount` row becomes the buy leg. Both legs are captured in `EventType.TRADE`.
+- Fee values reported on either row become separate fee legs in the same wallet/asset (negative quantities).
+- Timestamp for the event is the earliest timestamp across the two rows (Kraken typically uses the same instant for both).
+
+#### `earn` migration → skip
+
+- Applies when a refid group has two `type="earn"` rows and both rows have `subtype="migration"`.
+- When the amounts cancel to zero (asset re-labeling with no economic impact), the importer drops the refid and returns `None`.
+- If the legs do not net to zero an exception is raised so we can design an explicit handler.
+
+#### `earn` allocation/deallocation → skip
+
+- Applies to refids with two `type="earn"` rows whose subtypes are limited to `allocation` and/or `deallocation`.
+- The importer requires the normalized asset to match and the amounts to net to zero; when these conditions hold it logs the internal wallet move and returns `None`.
+- Non-zero nets raise so we can add explicit support.
+
+#### Explicit refid skip
+
+- `ELFI6E5-PNXZG-NSGNER` (four earn allocation/deallocation legs over months) is ignored because it only shuffles balances between Kraken earn sub-wallets with no economic impact.
+
+Other refid patterns will surface as exceptions during imports; keep those failures so we can document and extend the importer with targeted handlers.
