@@ -1,1 +1,2 @@
 TODO: Try to create Kraken events importer
+TODO: Review coindesk source I think it became very messy

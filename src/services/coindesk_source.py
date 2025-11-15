@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -14,6 +15,8 @@ from config import config
 
 from .price_sources import PriceSource
 from .price_types import PriceQuote
+
+logger = logging.getLogger(__name__)
 
 
 class CoinDeskAPIError(Exception):
@@ -45,7 +48,7 @@ class _CoinDeskClient:
         base_url: str = "https://data-api.coindesk.com",
         timeout: float = 10.0,
         session: requests.Session | None = None,
-        retry_attempts: int = 5,
+        retry_attempts: int = 10,
         retry_backoff_seconds: float = 1,
     ) -> None:
         self.base_url = base_url.rstrip("/")
@@ -212,6 +215,28 @@ class _CoinDeskClient:
             payload = response.text
         return message, payload
 
+    def get_market_instrument(self, *, market: str, instrument: str) -> dict[str, Any] | None:
+        params = {"market": market, "instrument": instrument}
+        payload = self._request("GET", "/spot/v1/markets/instruments", params=params)
+        data = payload.get("Data")
+        if not isinstance(data, dict):
+            return None
+
+        market_key = market.lower()
+        market_data = None
+        for key, value in data.items():
+            if key.lower() == market_key:
+                market_data = value
+                break
+        if not isinstance(market_data, dict):
+            return None
+
+        instruments = market_data.get("instruments")
+        if not isinstance(instruments, dict):
+            return None
+
+        return instruments.get(instrument.upper())
+
 
 class CoinDeskSource(PriceSource):
     def __init__(
@@ -254,14 +279,14 @@ class CoinDeskSource(PriceSource):
 
     def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
         instrument = f"{base_id.upper()}-{quote_id.upper()}"
-        entries = self._fetch_histo_entries(instrument=instrument, timestamp=timestamp)
+        entries, override_valid_from = self._fetch_histo_entries(instrument=instrument, timestamp=timestamp)
 
         if not entries:
             msg = f"No price data returned for {instrument} on {self.market}"
             raise RuntimeError(msg)
 
         bucket = max(entries, key=lambda entry: entry.timestamp)
-        valid_from = bucket.timestamp
+        valid_from = override_valid_from or bucket.timestamp
         valid_to = valid_from + self._bucket_duration
 
         return PriceQuote(
@@ -274,13 +299,25 @@ class CoinDeskSource(PriceSource):
             valid_to=valid_to,
         )
 
-    def _fetch_histo_entries(self, *, instrument: str, timestamp: datetime) -> list[SpotInstrumentOHLC]:
+    def _fetch_histo_entries(
+        self, *, instrument: str, timestamp: datetime
+    ) -> tuple[list[SpotInstrumentOHLC], datetime | None]:
         unix_ts = int(timestamp.timestamp())
+        try:
+            return self._call_histo_api(instrument=instrument, to_ts=unix_ts), None
+        except CoinDeskAPIError as exc:
+            adjusted = self._maybe_adjust_to_first_trade(instrument=instrument, requested_ts=unix_ts, error=exc)
+            if adjusted is None:
+                raise
+            adjusted_ts, override_dt = adjusted
+            return self._call_histo_api(instrument=instrument, to_ts=adjusted_ts), override_dt
+
+    def _call_histo_api(self, *, instrument: str, to_ts: int) -> list[SpotInstrumentOHLC]:
         if self._bucket_mode == "minute":
             return self.client.get_spot_historical_minutes(
                 market=self.market,
                 instrument=instrument,
-                to_ts=unix_ts,
+                to_ts=to_ts,
                 limit=1,
                 aggregate=self._aggregate_units,
             )
@@ -288,10 +325,41 @@ class CoinDeskSource(PriceSource):
         return self.client.get_spot_historical_hours(
             market=self.market,
             instrument=instrument,
-            to_ts=unix_ts,
+            to_ts=to_ts,
             limit=1,
             aggregate=self._aggregate_units,
         )
+
+    def _maybe_adjust_to_first_trade(
+        self,
+        *,
+        instrument: str,
+        requested_ts: int,
+        error: CoinDeskAPIError,
+    ) -> tuple[int, datetime] | None:
+        message = str(error)
+        if error.status_code != 404 or "FIRST_TRADE_SPOT_TIMESTAMP" not in message:
+            return None
+
+        metadata = self.client.get_market_instrument(market=self.market, instrument=instrument)
+        if not metadata:
+            return None
+        first_trade_ts = metadata.get("FIRST_TRADE_SPOT_TIMESTAMP")
+        if not isinstance(first_trade_ts, int):
+            return None
+        if first_trade_ts <= requested_ts:
+            return None
+
+        first_dt = datetime.fromtimestamp(first_trade_ts, tz=timezone.utc)
+        requested_dt = datetime.fromtimestamp(requested_ts, tz=timezone.utc)
+        logger.warning(
+            "CoinDesk instrument %s/%s unavailable at %s, retrying from first trade timestamp %s",
+            self.market,
+            instrument,
+            requested_dt.isoformat(),
+            first_dt.isoformat(),
+        )
+        return first_trade_ts, requested_dt
 
 
 __all__ = ["CoinDeskSource"]
