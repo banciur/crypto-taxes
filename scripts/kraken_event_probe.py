@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -99,6 +100,7 @@ def print_unknown_details(failures: list[GroupResolution]) -> None:
 def summarize(path: Path) -> None:
     importer = KrakenImporter(str(path))
     entries = importer._read_entries()  # type: ignore[attr-defined]
+    entries = importer._preprocess_entries(entries)  # type: ignore[attr-defined]
     groups = importer._group_by_refid(entries)  # type: ignore[attr-defined]
 
     total_groups = len(groups)
@@ -147,4 +149,5 @@ def main(argv: Iterable[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, handlers=[logging.StreamHandler()])
     main()

@@ -5,10 +5,11 @@ We are rebuilding the Kraken ledger ingestion from scratch. The goal is to take 
 ## Starting point
 
 1. **CSV parsing:** `KrakenLedgerEntry` (Pydantic model) already normalizes timestamps to UTC and keeps numeric values in `Decimal`.
-2. **Grouping:** `KrakenImporter._group_by_refid` bundles rows that share a `refid`. Each group represents one logical Kraken action (trade, transfer, earn reward, etc.). This grouping step is stable and will be reused throughout the rebuild.
-3. **Event builder:** We are reintroducing logic incrementally inside `_build_event`, one refid pattern at a time, backed by tests and documentation.
-4. **Exploration tooling:** `scripts/kraken_event_probe.py` runs the *real* importer against a CSV and reports which refids are unresolved, printing the first 15 groups (with row details). We’ll use that tool after each incremental change to verify coverage.
-5. **Asset aliases:** Kraken sometimes reports suffixed tickers (e.g., `DOT28.S`, `USDC.M`). The importer normalizes a small allowlist of aliases up-front so that downstream logic sees canonical symbols (`DOT`, `USDC`, etc.).
+2. **Preprocessing:** before grouping we scan the flat ledger to merge/dismiss known zero-impact flows (currently spot↔staking transfers, matched by asset/amount/time window) so that `_build_event` only sees real scenarios.
+3. **Grouping:** `KrakenImporter._group_by_refid` bundles rows that share a `refid`. Each group represents one logical Kraken action (trade, transfer, earn reward, etc.). This grouping step is stable and will be reused throughout the rebuild.
+4. **Event builder:** We are reintroducing logic incrementally inside `_build_event`, one refid pattern at a time, backed by tests and documentation.
+5. **Exploration tooling:** `scripts/kraken_event_probe.py` runs the *real* importer against a CSV and reports which refids are unresolved, printing the first 15 groups (with row details). We’ll use that tool after each incremental change to verify coverage.
+6. **Asset aliases:** Kraken sometimes reports suffixed tickers (e.g., `DOT28.S`, `USDC.M`). The importer normalizes a small allowlist of aliases up-front so that downstream logic sees canonical symbols (`DOT`, `USDC`, etc.).
 
 As we implement each event type, this document will be expanded with the concrete rules, examples, and invariants for that scenario. For now, treat it as the canonical place to record decisions about new handlers.
 
@@ -50,3 +51,4 @@ As we implement each event type, this document will be expanded with the concret
 ## Ignored scenarios
 
 - `earn` migrations: refid groups with two `type="earn"` rows and `subtype="migration"` are skipped when their amounts cancel to zero (asset re-labeling with no economic impact). If the legs do not net to zero, the importer raises for explicit handling.
+- Staking transfers internal to Kraken: single-row `transfer` refids whose subtypes indicate moving between spot and staking wallets (`spottostaking`, `stakingfromspot`, `stakingtospot`, `spotfromstaking`) are paired up by normalized asset/amount and dropped when their timestamps fall within five days. Kraken assigns different `refid`s to the two legs, so we preprocess the flat ledger to find matching pairs before grouping and skip them entirely (spot vs. staking balances are considered a single wallet in our model).

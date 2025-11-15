@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from csv import DictReader
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
@@ -10,6 +11,8 @@ from typing import Iterable
 from pydantic import BaseModel, Field, field_validator
 
 from domain.ledger import EventType, LedgerEvent, LedgerLeg
+
+logger = logging.getLogger(__name__)
 
 FIAT_ASSETS = {"EUR", "USD"}
 ASSET_ALIASES = {
@@ -19,7 +22,17 @@ ASSET_ALIASES = {
     "KAVA.S": "KAVA",
     "USDC.M": "USDC",
     "ETH2": "ETH",
+    "ETH2.S": "ETH",
 }
+
+_STAKING_TRANSFER_FLOW_AND_ROLE = {
+    "spottostaking": ("spot_to_staking", "source"),
+    "stakingfromspot": ("spot_to_staking", "destination"),
+    "stakingtospot": ("staking_to_spot", "source"),
+    "spotfromstaking": ("staking_to_spot", "destination"),
+}
+
+_STAKING_TRANSFER_MAX_DELTA = timedelta(days=5)
 
 
 class KrakenLedgerEntry(BaseModel):
@@ -90,8 +103,9 @@ class KrakenImporter:
 
     def load_events(self) -> list[LedgerEvent]:
         entries = self._read_entries()
+        preprocessed_entries = self._preprocess_entries(entries)
         events: list[LedgerEvent] = []
-        for group in self._group_by_refid(entries).values():
+        for group in self._group_by_refid(preprocessed_entries).values():
             event = self._build_event(group)
             if event is not None:
                 events.append(event)
@@ -108,6 +122,100 @@ class KrakenImporter:
             for row in reader:
                 entries.append(KrakenLedgerEntry.model_validate(row))
         return entries
+
+    def _preprocess_entries(self, entries: list[KrakenLedgerEntry]) -> list[KrakenLedgerEntry]:
+        pending: dict[str, dict[tuple[str, str, Decimal], list[KrakenLedgerEntry]]] = {
+            "source": defaultdict(list),
+            "destination": defaultdict(list),
+        }
+        skip_txids: set[str] = set()
+        staking_rows = 0
+        matched_pairs = 0
+
+        for entry in sorted(entries, key=lambda item: item.time):
+            subtype = (entry.subtype or "").lower()
+            flow_and_role = _STAKING_TRANSFER_FLOW_AND_ROLE.get(subtype)
+            if flow_and_role is None:
+                continue
+
+            staking_rows += 1
+            flow, role = flow_and_role
+            asset_code = _normalize_asset(entry.asset)
+            key = (flow, asset_code, abs(entry.amount))
+            opposite_role = "destination" if role == "source" else "source"
+            candidates = pending[opposite_role].get(key, [])
+
+            match: KrakenLedgerEntry | None = None
+            match_index: int | None = None
+            for idx, candidate in enumerate(candidates):
+                if abs(entry.time - candidate.time) <= _STAKING_TRANSFER_MAX_DELTA:
+                    match = candidate
+                    match_index = idx
+                    break
+
+            if match is None:
+                pending[role][key].append(entry)
+                continue
+
+            # Remove matched candidate from its queue.
+            assert match_index is not None
+            candidates.pop(match_index)
+            if not candidates:
+                pending[opposite_role].pop(key, None)
+
+            skip_txids.add(entry.txid)
+            skip_txids.add(match.txid)
+            matched_pairs += 1
+
+            newer, older = (entry, match) if entry.time >= match.time else (match, entry)
+            delta = abs((entry.time - match.time).total_seconds())
+            logger.info(
+                "Dropping Kraken internal staking transfer pair refids %s/%s asset=%s amount=%s (Δ %.2f hours)",
+                older.refid,
+                newer.refid,
+                asset_code,
+                abs(entry.amount),
+                delta / 3600,
+            )
+
+        unmatched_entries = [
+            candidate
+            for role_groups in pending.values()
+            for group_entries in role_groups.values()
+            for candidate in group_entries
+        ]
+
+        if unmatched_entries:
+            logger.info("Kraken staking-transfer preprocessor: %d flagged rows left unmatched", len(unmatched_entries))
+            for entry in unmatched_entries:
+                logger.info(
+                    "  unmatched refid=%s txid=%s subtype=%s asset=%s amount=%s timestamp=%s",
+                    entry.refid,
+                    entry.txid,
+                    entry.subtype,
+                    entry.asset,
+                    entry.amount,
+                    entry.time.isoformat(),
+                )
+
+        if skip_txids:
+            logger.info(
+                "Kraken staking-transfer preprocessor: processed %d rows, flagged %d staking transfer rows, dropped %d rows (%d pairs)",
+                len(entries),
+                staking_rows,
+                len(skip_txids),
+                matched_pairs,
+            )
+        else:
+            logger.info(
+                "Kraken staking-transfer preprocessor: processed %d rows, no internal staking transfers dropped",
+                len(entries),
+            )
+
+        if not skip_txids:
+            return entries
+
+        return [entry for entry in entries if entry.txid not in skip_txids]
 
     def _group_by_refid(self, entries: Iterable[KrakenLedgerEntry]) -> dict[str, list[KrakenLedgerEntry]]:
         grouped: dict[str, list[KrakenLedgerEntry]] = defaultdict(list)
