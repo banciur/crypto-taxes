@@ -31,7 +31,7 @@ As we implement each event type, this document will be expanded with the concret
 
 ### 3. Two-row `trade`
 
-- Applies when a refid group contains exactly two `type="trade"` rows.
+- Applies when a refid group contains exactly two `type="trade"` rows **or** a `spend`/`receive` pair (Kraken sometimes encodes dust-sweeps or special conversions this way).
 - The row with a negative `amount` becomes the sell leg; the positive `amount` row becomes the buy leg. Both legs are captured in `EventType.TRADE`.
 - Fee values reported on either row become separate fee legs in the same wallet/asset (negative quantities).
 - Timestamp for the event is the earliest timestamp across the two rows (Kraken typically uses the same instant for both).
@@ -47,6 +47,11 @@ As we implement each event type, this document will be expanded with the concret
 
 - Applies when the lone row has `type="earn"` and `subtype="reward"` with a positive amount.
 - Emitted as `EventType.REWARD` with the asset/fee handling matching staking rewards.
+
+### 6. Single-row `transfer` (`spotfromfutures`)
+
+- Applies when a refid contains a single `type="transfer"` row whose `subtype="spotfromfutures"` and amount is positive.
+- Represents Kraken crediting spot balances after futures adjustments/forks; emitted as `EventType.DROP` with a single positive leg (plus any fee legs, though fees have not been observed).
 
 ## Ignored scenarios
 

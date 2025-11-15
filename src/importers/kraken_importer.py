@@ -241,7 +241,11 @@ class KrakenImporter:
             return self._staking_event(lines[0])
         if len(lines) == 1 and lines[0].type == "earn" and lines[0].subtype == "reward":
             return self._earn_reward_event(lines[0])
+        if len(lines) == 1 and lines[0].type == "transfer" and lines[0].subtype == "spotfromfutures":
+            return self._spot_from_futures_event(lines[0])
         if len(lines) == 2 and {line.type for line in lines} == {"trade"}:
+            return self._trade_event(lines)
+        if len(lines) == 2 and {line.type for line in lines} == {"spend", "receive"}:
             return self._trade_event(lines)
         if (
             len(lines) == 2
@@ -364,5 +368,18 @@ class KrakenImporter:
         return LedgerEvent(
             timestamp=entry.time,
             event_type=EventType.REWARD,
+            legs=legs,
+        )
+
+    def _spot_from_futures_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
+        if entry.amount <= 0:
+            raise ValueError(f"Spot-from-futures entry must have positive amount (refid={entry.refid})")
+
+        legs = [_ledger_leg(entry, entry.amount)]
+        legs.extend(_fee_legs(entry))
+
+        return LedgerEvent(
+            timestamp=entry.time,
+            event_type=EventType.DROP,
             legs=legs,
         )

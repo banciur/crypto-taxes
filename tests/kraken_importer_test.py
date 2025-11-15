@@ -249,6 +249,56 @@ def test_trade_event_with_fee(tmp_path: Path) -> None:
     assert fee_legs[0].quantity == Decimal("-1.9440")
 
 
+def test_spend_receive_trade(tmp_path: Path) -> None:
+    ts = datetime(2021, 11, 3, 22, 18, 32)
+    file = tmp_path / "spend_receive_trade.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "SR1",
+                "refid": "TSBW43U-4TCE7-ADKXQI",
+                "time": iso(ts),
+                "type": "spend",
+                "subtype": "",
+                "aclass": "currency",
+                "asset": "EUR",
+                "wallet": "spot / main",
+                "amount": "-172.2600",
+                "fee": "2.5900",
+                "balance": "0",
+            },
+            {
+                "txid": "SR2",
+                "refid": "TSBW43U-4TCE7-ADKXQI",
+                "time": iso(ts),
+                "type": "receive",
+                "subtype": "",
+                "aclass": "currency",
+                "asset": "DAI",
+                "wallet": "spot / main",
+                "amount": "200.0000000000",
+                "fee": "0",
+                "balance": "0",
+            },
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+    event = importer.load_events()[0]
+
+    assert event.event_type == EventType.TRADE
+    assert event.timestamp == ts.replace(tzinfo=timezone.utc)
+
+    sell_leg = next(leg for leg in event.legs if leg.asset_id == "EUR" and not leg.is_fee)
+    buy_leg = next(leg for leg in event.legs if leg.asset_id == "DAI")
+    fee_leg = next(leg for leg in event.legs if leg.is_fee)
+
+    assert sell_leg.quantity == Decimal("-172.2600")
+    assert buy_leg.quantity == Decimal("200")
+    assert fee_leg.quantity == Decimal("-2.5900")
+
+
 def test_staking_reward_with_fee(tmp_path: Path) -> None:
     ts = datetime(2024, 6, 2, 1, 46, 24)
     file = tmp_path / "staking.csv"
@@ -412,3 +462,35 @@ def test_explicit_refid_skip(tmp_path: Path) -> None:
     events = importer.load_events()
 
     assert events == []
+
+
+def test_spot_from_futures_event(tmp_path: Path) -> None:
+    ts = datetime(2024, 2, 20, 12, 35, 53)
+    file = tmp_path / "spot_from_futures.csv"
+    write_csv(
+        file,
+        [
+            {
+                "txid": "SF1",
+                "refid": "R9",
+                "time": iso(ts),
+                "type": "transfer",
+                "subtype": "spotfromfutures",
+                "aclass": "currency",
+                "asset": "STRK",
+                "wallet": "spot / main",
+                "amount": "125.80924",
+                "fee": "0",
+                "balance": "0",
+            }
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+    event = importer.load_events()[0]
+
+    assert event.event_type == EventType.DROP
+    assert event.timestamp == ts.replace(tzinfo=timezone.utc)
+    assert len(event.legs) == 1
+    assert event.legs[0].asset_id == "STRK"
+    assert event.legs[0].quantity == Decimal("125.80924")
