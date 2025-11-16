@@ -52,7 +52,8 @@ class InventoryEngine:
     """Create acquisition lots and disposal links from ledger events.
 
     v1 assumptions:
-    - Fees remain separate: fee legs do not adjust cost basis or proceeds.
+    - Fees that show up in their own legs (third-asset fees) behave like normal disposals.
+      Netted fees are already reflected in the remaining legs and require no extra handling.
     - EUR legs are optional; if none exist (or ambiguous), pricing falls back
       to the provided `PriceProvider`.
     - Lot scope is per (asset_id, wallet_id); cross-wallet consolidation can
@@ -74,6 +75,8 @@ class InventoryEngine:
             # Only FIFO is implemented. Other policies are future work.
             raise NotImplementedError(f"{self._policy} matching not implemented yet")
 
+    IGNORED_WALLETS = {"outside"}
+
     def process(self, events: Iterable[LedgerEvent]) -> InventoryResult:
         """Transform ordered ledger events into lots, disposal links, and snapshots.
 
@@ -87,13 +90,28 @@ class InventoryEngine:
 
         for event in events:
             acquisition_legs = [
-                leg for leg in event.legs if leg.quantity > 0 and not leg.is_fee and leg.asset_id != self.EUR_ASSET_ID
+                leg
+                for leg in event.legs
+                if leg.wallet_id not in self.IGNORED_WALLETS
+                and leg.quantity > 0
+                and not leg.is_fee
+                and leg.asset_id != self.EUR_ASSET_ID
             ]
             disposal_legs = [
-                leg for leg in event.legs if leg.quantity < 0 and not leg.is_fee and leg.asset_id != self.EUR_ASSET_ID
+                leg
+                for leg in event.legs
+                if leg.wallet_id not in self.IGNORED_WALLETS
+                and leg.quantity < 0
+                and not leg.is_fee
+                and leg.asset_id != self.EUR_ASSET_ID
             ]
             fee_consumption_legs = [
-                leg for leg in event.legs if leg.is_fee and leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID
+                leg
+                for leg in event.legs
+                if leg.wallet_id not in self.IGNORED_WALLETS
+                and leg.is_fee
+                and leg.quantity < 0
+                and leg.asset_id != self.EUR_ASSET_ID
             ]
 
             for leg in acquisition_legs:
