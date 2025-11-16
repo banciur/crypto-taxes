@@ -49,16 +49,7 @@ class InventoryResult(BaseModel):
 
 
 class InventoryEngine:
-    """Create acquisition lots and disposal links from ledger events.
-
-    v1 assumptions:
-    - Fees that show up in their own legs (third-asset fees) behave like normal disposals.
-      Netted fees are already reflected in the remaining legs and require no extra handling.
-    - EUR legs are optional; if none exist (or ambiguous), pricing falls back
-      to the provided `PriceProvider`.
-    - Lot scope is per (asset_id, wallet_id); cross-wallet consolidation can
-      be added later if policy requires it.
-    """
+    """Create acquisition lots and disposal links from ledger events."""
 
     EUR_ASSET_ID = "EUR"
 
@@ -78,11 +69,7 @@ class InventoryEngine:
     IGNORED_WALLETS = {"outside"}
 
     def process(self, events: Iterable[LedgerEvent]) -> InventoryResult:
-        """Transform ordered ledger events into lots, disposal links, and snapshots.
-
-        Caller must provide events in chronological order; the engine preserves the
-        incoming sequence instead of re-sorting internally.
-        """
+        """Caller must provide events in chronological order."""
         acquisitions: list[AcquisitionLot] = []
         disposals: list[DisposalLink] = []
 

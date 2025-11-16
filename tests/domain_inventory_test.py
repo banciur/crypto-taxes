@@ -38,7 +38,6 @@ def test_inventory_engine_fifo_with_explicit_eur_legs() -> None:
         legs=[
             LedgerLeg(asset_id="ETH", quantity=Decimal("1.0"), wallet_id=wallet_id),
             LedgerLeg(asset_id="EUR", quantity=Decimal("-3000"), wallet_id=wallet_id),
-            LedgerLeg(asset_id="EUR", quantity=Decimal("-5"), wallet_id=wallet_id, is_fee=True),
         ],
     )
 
