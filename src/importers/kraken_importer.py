@@ -81,20 +81,32 @@ def _normalize_asset(asset: str) -> str:
     return ASSET_ALIASES.get(code, code)
 
 
-def _ledger_leg(entry: KrakenLedgerEntry, quantity: Decimal, *, is_fee: bool = False) -> LedgerLeg:
-    asset_id = _normalize_asset(entry.asset)
-    return LedgerLeg(
-        asset_id=asset_id,
-        quantity=quantity,
-        wallet_id="kraken",
-        is_fee=is_fee,
-    )
+def _net_quantity(entry: KrakenLedgerEntry) -> Decimal:
+    if entry.fee == 0:
+        return entry.amount
+    return entry.amount - entry.fee
 
 
 def _fee_legs(entry: KrakenLedgerEntry) -> list[LedgerLeg]:
     if entry.fee == 0:
         return []
     return [_ledger_leg(entry, entry.fee * Decimal("-1"), is_fee=True)]
+
+
+def _ledger_leg(
+    entry: KrakenLedgerEntry,
+    quantity: Decimal,
+    *,
+    is_fee: bool = False,
+    wallet_id: str = "kraken",
+) -> LedgerLeg:
+    asset_id = _normalize_asset(entry.asset)
+    return LedgerLeg(
+        asset_id=asset_id,
+        quantity=quantity,
+        wallet_id=wallet_id,
+        is_fee=is_fee,
+    )
 
 
 class KrakenImporter:
@@ -297,11 +309,17 @@ class KrakenImporter:
         if entry.amount <= 0:
             raise ValueError(f"Deposit entry must have positive amount (refid={entry.refid})")
 
+        incoming_quantity = entry.amount - entry.fee
+        if incoming_quantity <= 0:
+            raise ValueError(f"Deposit entry net amount must be positive (refid={entry.refid})")
+
         asset_code = _normalize_asset(entry.asset)
         event_type = EventType.DEPOSIT if asset_code in FIAT_ASSETS else EventType.TRANSFER
 
-        legs = [_ledger_leg(entry, entry.amount)]
-        legs.extend(_fee_legs(entry))
+        legs = [
+            _ledger_leg(entry, -entry.amount, wallet_id="outside"),
+            _ledger_leg(entry, incoming_quantity),
+        ]
 
         return LedgerEvent(
             timestamp=entry.time,
@@ -313,11 +331,17 @@ class KrakenImporter:
         if entry.amount >= 0:
             raise ValueError(f"Withdrawal entry must have negative amount (refid={entry.refid})")
 
+        sent_quantity = entry.amount - entry.fee
+        if sent_quantity >= 0:
+            raise ValueError(f"Withdrawal entry net amount must be negative (refid={entry.refid})")
+
         asset_code = _normalize_asset(entry.asset)
         event_type = EventType.WITHDRAWAL if asset_code in FIAT_ASSETS else EventType.TRANSFER
 
-        legs = [_ledger_leg(entry, entry.amount)]
-        legs.extend(_fee_legs(entry))
+        legs = [
+            _ledger_leg(entry, sent_quantity),
+            _ledger_leg(entry, abs(entry.amount), wallet_id="outside"),
+        ]
 
         return LedgerEvent(
             timestamp=entry.time,
@@ -333,12 +357,9 @@ class KrakenImporter:
             raise ValueError(f"Trade entry must have one positive and one negative leg (refid={entries[0].refid})")
 
         legs = [
-            _ledger_leg(negatives[0], negatives[0].amount),
-            _ledger_leg(positives[0], positives[0].amount),
+            _ledger_leg(negatives[0], _net_quantity(negatives[0])),
+            _ledger_leg(positives[0], _net_quantity(positives[0])),
         ]
-
-        for entry in entries:
-            legs.extend(_fee_legs(entry))
 
         return LedgerEvent(
             timestamp=min(entry.time for entry in entries),
@@ -347,12 +368,12 @@ class KrakenImporter:
         )
 
     def _staking_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
+        quantity = _net_quantity(entry)
         # For two refids we allow for minus amount.
-        if entry.amount <= 0 and entry.refid not in ["STHFSYV-COKEV-2N3FK7", "STFTGR6-35YZ3-ZWJDFO"]:
+        if quantity <= 0 and entry.refid not in ["STHFSYV-COKEV-2N3FK7", "STFTGR6-35YZ3-ZWJDFO"]:
             raise ValueError(f"Staking entry must have positive amount (refid={entry.refid})")
 
-        legs = [_ledger_leg(entry, entry.amount)]
-        legs.extend(_fee_legs(entry))
+        legs = [_ledger_leg(entry, quantity)]
 
         return LedgerEvent(
             timestamp=entry.time,
@@ -361,11 +382,11 @@ class KrakenImporter:
         )
 
     def _earn_reward_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
-        if entry.amount <= 0:
+        quantity = _net_quantity(entry)
+        if quantity <= 0:
             raise ValueError(f"Earn reward entry must have positive amount (refid={entry.refid})")
 
-        legs = [_ledger_leg(entry, entry.amount)]
-        legs.extend(_fee_legs(entry))
+        legs = [_ledger_leg(entry, quantity)]
 
         return LedgerEvent(
             timestamp=entry.time,
@@ -374,10 +395,11 @@ class KrakenImporter:
         )
 
     def _spot_from_futures_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
-        if entry.amount <= 0:
+        quantity = entry.amount
+        if quantity <= 0:
             raise ValueError(f"Spot-from-futures entry must have positive amount (refid={entry.refid})")
 
-        legs = [_ledger_leg(entry, entry.amount)]
+        legs = [_ledger_leg(entry, quantity)]
         legs.extend(_fee_legs(entry))
 
         return LedgerEvent(
