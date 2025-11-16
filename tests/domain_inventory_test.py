@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, List, Tuple
 
-from domain.inventory import InventoryEngine, InventoryResult, LotSelectionPolicy
+from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import EventType, LedgerEvent, LedgerLeg
 
 
@@ -24,7 +24,7 @@ class StubPriceProvider:
 
 def test_inventory_engine_fifo_with_explicit_eur_legs() -> None:
     provider = StubPriceProvider({})
-    engine = InventoryEngine(price_provider=provider, lot_selection_policy=LotSelectionPolicy.FIFO)
+    engine = InventoryEngine(price_provider=provider)
 
     wallet_id = "hot_mm"
 
@@ -87,7 +87,7 @@ def test_inventory_engine_uses_price_provider_when_no_eur_leg() -> None:
             ("BTC", "EUR", t2): Decimal("21000"),
         }
     )
-    engine = InventoryEngine(price_provider=provider, lot_selection_policy=LotSelectionPolicy.FIFO)
+    engine = InventoryEngine(price_provider=provider)
 
     wallet_id = "treasury"
 
