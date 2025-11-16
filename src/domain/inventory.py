@@ -4,7 +4,6 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from enum import StrEnum
 from typing import Iterable
 from uuid import UUID
 
@@ -16,12 +15,6 @@ from .pricing import PriceProvider
 
 class InventoryError(Exception):
     pass
-
-
-class LotSelectionPolicy(StrEnum):
-    FIFO = "FIFO"
-    HIFO = "HIFO"
-    SPEC_ID = "SPEC_ID"
 
 
 @dataclass
@@ -53,18 +46,8 @@ class InventoryEngine:
 
     EUR_ASSET_ID = "EUR"
 
-    def __init__(
-        self,
-        *,
-        price_provider: PriceProvider,
-        lot_selection_policy: LotSelectionPolicy = LotSelectionPolicy.FIFO,
-    ) -> None:
+    def __init__(self, *, price_provider: PriceProvider) -> None:
         self._price_provider = price_provider
-        self._policy = lot_selection_policy
-
-        if self._policy not in {LotSelectionPolicy.FIFO}:
-            # Only FIFO is implemented. Other policies are future work.
-            raise NotImplementedError(f"{self._policy} matching not implemented yet")
 
     IGNORED_WALLETS = {"outside"}
 

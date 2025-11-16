@@ -124,9 +124,6 @@ class KrakenImporter:
         events.sort(key=lambda evt: evt.timestamp)
         return events
 
-    def perform_import(self) -> list[LedgerEvent]:
-        return self.load_events()
-
     def _read_entries(self) -> list[KrakenLedgerEntry]:
         entries: list[KrakenLedgerEntry] = []
         with self._source_path.open(encoding="utf-8") as handle:

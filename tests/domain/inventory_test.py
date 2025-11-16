@@ -12,13 +12,13 @@ from tests.helpers.test_price_service import TestPriceService
 
 @pytest.fixture(scope="function")
 def inventory_engine() -> InventoryEngine:
-    provider = TestPriceService(seed=1)
-    return InventoryEngine(price_provider=provider)
+    return InventoryEngine(price_provider=TestPriceService(seed=1))
 
 
-def test_inventory_engine_fifo_with_explicit_eur_legs(inventory_engine: InventoryEngine) -> None:
-    wallet_id = "hot_mm"
+WALLET_ID = "wallet"
 
+
+def test_fifo_with_explicit_eur_legs(inventory_engine: InventoryEngine) -> None:
     t1 = datetime(2024, 9, 2, 12, 0, tzinfo=timezone.utc)
     t2 = datetime(2024, 9, 3, 12, 0, tzinfo=timezone.utc)
     t3 = datetime(2024, 9, 10, 12, 0, tzinfo=timezone.utc)
@@ -27,8 +27,8 @@ def test_inventory_engine_fifo_with_explicit_eur_legs(inventory_engine: Inventor
         timestamp=t1,
         event_type=EventType.TRADE,
         legs=[
-            LedgerLeg(asset_id="ETH", quantity=Decimal("1.0"), wallet_id=wallet_id),
-            LedgerLeg(asset_id="EUR", quantity=Decimal("-3000"), wallet_id=wallet_id),
+            LedgerLeg(asset_id="ETH", quantity=Decimal("1.0"), wallet_id=WALLET_ID),
+            LedgerLeg(asset_id="EUR", quantity=Decimal("-3000"), wallet_id=WALLET_ID),
         ],
     )
 
@@ -36,8 +36,8 @@ def test_inventory_engine_fifo_with_explicit_eur_legs(inventory_engine: Inventor
         timestamp=t2,
         event_type=EventType.TRADE,
         legs=[
-            LedgerLeg(asset_id="ETH", quantity=Decimal("0.5"), wallet_id=wallet_id),
-            LedgerLeg(asset_id="EUR", quantity=Decimal("-1500"), wallet_id=wallet_id),
+            LedgerLeg(asset_id="ETH", quantity=Decimal("0.5"), wallet_id=WALLET_ID),
+            LedgerLeg(asset_id="EUR", quantity=Decimal("-1500"), wallet_id=WALLET_ID),
         ],
     )
 
@@ -45,8 +45,8 @@ def test_inventory_engine_fifo_with_explicit_eur_legs(inventory_engine: Inventor
         timestamp=t3,
         event_type=EventType.TRADE,
         legs=[
-            LedgerLeg(asset_id="ETH", quantity=Decimal("-0.6"), wallet_id=wallet_id),
-            LedgerLeg(asset_id="EUR", quantity=Decimal("2040"), wallet_id=wallet_id),
+            LedgerLeg(asset_id="ETH", quantity=Decimal("-0.6"), wallet_id=WALLET_ID),
+            LedgerLeg(asset_id="EUR", quantity=Decimal("2040"), wallet_id=WALLET_ID),
         ],
     )
 
@@ -66,21 +66,19 @@ def test_inventory_engine_fifo_with_explicit_eur_legs(inventory_engine: Inventor
     ]
 
 
-def test_inventory_engine_uses_price_provider_when_no_eur_leg(inventory_engine: InventoryEngine) -> None:
+def test_price_provider_when_no_eur_leg(inventory_engine: InventoryEngine) -> None:
     t1 = datetime(2024, 10, 1, 8, 0, tzinfo=timezone.utc)
     t2 = datetime(2024, 10, 5, 10, 0, tzinfo=timezone.utc)
 
     acquisition_rate = inventory_engine._price_provider.rate("BTC", "EUR", t1)
     disposal_rate = inventory_engine._price_provider.rate("BTC", "EUR", t2)
 
-    wallet_id = "treasury"
-
     # TODO this test uses not real scenario. Don't do it like this.
     airdrop = LedgerEvent(
         timestamp=t1,
         event_type=EventType.TRADE,
         legs=[
-            LedgerLeg(asset_id="BTC", quantity=Decimal("2.0"), wallet_id=wallet_id),
+            LedgerLeg(asset_id="BTC", quantity=Decimal("2.0"), wallet_id=WALLET_ID),
         ],
     )
 
@@ -88,7 +86,7 @@ def test_inventory_engine_uses_price_provider_when_no_eur_leg(inventory_engine: 
         timestamp=t2,
         event_type=EventType.TRADE,
         legs=[
-            LedgerLeg(asset_id="BTC", quantity=Decimal("-1.5"), wallet_id=wallet_id),
+            LedgerLeg(asset_id="BTC", quantity=Decimal("-1.5"), wallet_id=WALLET_ID),
         ],
     )
 
@@ -107,17 +105,15 @@ def test_inventory_engine_uses_price_provider_when_no_eur_leg(inventory_engine: 
     assert remaining_snapshot.quantity_remaining == Decimal("0.5")
 
 
-def test_third_asset_fee_leg_creates_disposal(inventory_engine: InventoryEngine) -> None:
+def test_fee_leg_creates_disposal(inventory_engine: InventoryEngine) -> None:
     timestamp = datetime(2024, 10, 1, 12, 0, tzinfo=timezone.utc)
     link_rate = inventory_engine._price_provider.rate("LINK", "EUR", timestamp)
-
-    wallet = "dex"
 
     link_reward = LedgerEvent(
         timestamp=timestamp,
         event_type=EventType.REWARD,
         legs=[
-            LedgerLeg(asset_id="LINK", quantity=Decimal("5"), wallet_id=wallet),
+            LedgerLeg(asset_id="LINK", quantity=Decimal("5"), wallet_id=WALLET_ID),
         ],
     )
 
@@ -125,18 +121,19 @@ def test_third_asset_fee_leg_creates_disposal(inventory_engine: InventoryEngine)
         timestamp=timestamp,
         event_type=EventType.TRADE,
         legs=[
-            LedgerLeg(asset_id="ETH", quantity=Decimal("1"), wallet_id=wallet),
-            LedgerLeg(asset_id="EUR", quantity=Decimal("-1500"), wallet_id=wallet),
+            LedgerLeg(asset_id="ETH", quantity=Decimal("1"), wallet_id=WALLET_ID),
+            LedgerLeg(asset_id="EUR", quantity=Decimal("-1500"), wallet_id=WALLET_ID),
         ],
     )
 
+    # TODO: this test uses not real scenario. Don't do it like this.
     swap_event = LedgerEvent(
         timestamp=timestamp,
         event_type=EventType.TRADE,
         legs=[
-            LedgerLeg(asset_id="ETH", quantity=Decimal("-1"), wallet_id=wallet),
-            LedgerLeg(asset_id="WBTC", quantity=Decimal("0.05"), wallet_id=wallet),
-            LedgerLeg(asset_id="LINK", quantity=Decimal("-2"), wallet_id=wallet),
+            LedgerLeg(asset_id="ETH", quantity=Decimal("-1"), wallet_id=WALLET_ID),
+            LedgerLeg(asset_id="WBTC", quantity=Decimal("0.05"), wallet_id=WALLET_ID),
+            LedgerLeg(asset_id="LINK", quantity=Decimal("-2"), wallet_id=WALLET_ID),
         ],
     )
 
