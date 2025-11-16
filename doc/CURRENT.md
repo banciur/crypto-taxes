@@ -1,6 +1,8 @@
 # AI Dev Guide — Current State and Capabilities
 
-This document captures the currently implemented domain for modeling crypto ledger activity. It reflects the simplified approach we are taking now to keep iteration fast. A separate document describes the target (future) architecture.
+> **Note:** The legal/tax interpretations described here stem from internal research supported by AI tools and may not be exhaustive. Validate against authoritative guidance before relying on them.
+
+This document captures the currently implemented domain for modeling crypto ledger activity fox tax purposes. It reflects the simplified approach we are taking now to keep iteration fast.
 
 ---
 
@@ -17,7 +19,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - LedgerEvent
   - `id: UUID`
   - `timestamp: datetime`
-- `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`, `DROP`)
+  - `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`, `DROP`)
   - `legs: list[LedgerLeg]`
 
 - LedgerLeg
@@ -50,10 +52,17 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - Inventory processing is automated: the `InventoryEngine` creates `AcquisitionLot`s and `DisposalLink`s from ordered events using FIFO matching. Alternate policies (`HIFO`, `SPEC_ID`) are planned but not yet implemented.
 - Unbalanced events are allowed.
-- Fee legs: modeled as additional legs with `is_fee=True`; when they reduce a non-fiat asset the inventory engine consumes the corresponding lots (fees do not create `DisposalLink`s).
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
 - Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine.
+
+---
+
+## Fees
+
+- Swaps and trades (custodial or on-chain) net their exchange fees into whichever leg uses the same asset: if the fee reduces the asset being spent, we decrease that outgoing quantity; if it comes out of what you acquired, we shrink the inbound leg. Only when the fee is taken in an asset that is not otherwise part of the event do we emit a separate disposal leg, allowing FIFO to consume that third asset. Stablecoins follow the same rule as any crypto.
+- Execution costs such as gas are independent on-chain spends and always produce their own disposal legs, even if they happen in the same transaction as the swap. Paying ETH for gas when swapping WETH/WBTC still records an ETH disposal.
+- Transfers, deposits, and withdrawals fees when they are paid from the same asset **and** wallet that performs the move. The recipient still records the full transferred amount (e.g., recipient gets 1 ETH even if the sender paid a 0.001 ETH fee), while the sending wallet reflects the additional outflow. If the fee uses a different wallet (e.g., fee paid from a hot wallet while funds move from cold storage), we model that fee with its own leg so wallet-level balances reconcile.
 
 ---
 

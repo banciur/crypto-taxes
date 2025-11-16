@@ -5,6 +5,7 @@ TODO: Review inventory code and tests (there was some change about fee legs revi
 
 TODO: Basing on Kraken events compute profitability
 TODO: Using Kraken events compute taxes
+TODO: Add original transaction place and id ex (Ethereum, tx hash)
 
 TODO: Review coindesk source it's the worst
 
