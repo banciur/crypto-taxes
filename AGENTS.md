@@ -15,14 +15,10 @@
 - ALWAYS after making code changes run `make test` to ensure the suite passes before committing. Don't ask for permission, just run it.
 - When changing domain logic/semantics, update `doc/CURRENT.md` to keep the domain reference in sync.
 
-## Project docs map
-- Current domain model: `doc/CURRENT.md`
-- Notes/ideas: `doc/ideas.md`
-
-Prefer the “Current” guide for domain semantics.
-
 ## Domain reference
 - Domain semantics and data model are defined in `doc/CURRENT.md`.
+
+Ignore other files from the `doc` directory except for `CURRENT.md`.
 
 ## Implementation conventions
 - Python 3.13; Pydantic v2 models under `src/domain`.
@@ -41,12 +37,7 @@ Prefer the “Current” guide for domain semantics.
 ## Price services
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
 
-## Example tests
-- Simple ETH trade flow: `tests/domain_eth_trades_test.py`
-
-## Legacy implementation (to be updated)
-- `src/db/*` (persistence models and usage)
+## Legacy implementation (ignore those files)
+- `src/db/*`
 - `src/main.py`
 - `src/reports.py`
-
-These modules reflect an older implementation and are not yet aligned with the current domain models under `src/domain`. Prefer building new logic against the domain layer. If you must modify legacy code, keep changes minimal and note any semantic differences in `doc/CURRENT.md`.

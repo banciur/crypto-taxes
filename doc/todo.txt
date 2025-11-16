@@ -1,10 +1,12 @@
-TODO: Review coindesk source I think it became very messy
+TODO: Review how we mark fee example Luna transactions and how it is handled
 TODO: Print more info from the kraken inventory script. In out transfers?
 TODO: Does Kraken importer computes leg properly, latest changes about the legs in the inventory?
 TODO: Review inventory code and tests (there was some change about fee legs review it)
 
 TODO: Basing on Kraken events compute profitability
 TODO: Using Kraken events compute taxes
+
+TODO: Review coindesk source it's the worst
 
 TODO: Import data (historical) from:
   - Coinbase
