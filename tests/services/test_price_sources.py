@@ -5,8 +5,9 @@ from decimal import Decimal
 
 import pytest
 
-from services.price_sources import DeterministicRandomPriceSource, HybridPriceSource
+from services.price_sources import HybridPriceSource
 from services.price_types import PriceQuote
+from tests.helpers.test_price_service import DeterministicRandomPriceSource
 
 
 def test_deterministic_source_returns_same_rate_for_same_inputs() -> None:
