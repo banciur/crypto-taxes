@@ -9,11 +9,11 @@ from typing import Iterable, Protocol
 from .price_types import PriceQuote
 
 
-class PriceSource(Protocol):
+class PriceSnapshotSource(Protocol):
     def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote: ...
 
 
-class DeterministicRandomPriceSource(PriceSource):
+class DeterministicRandomPriceSource(PriceSnapshotSource):
     def __init__(
         self,
         *,
@@ -63,12 +63,12 @@ class DeterministicRandomPriceSource(PriceSource):
         return int((value * scale_factor).to_integral_value())
 
 
-class HybridPriceSource(PriceSource):
+class HybridPriceSource(PriceSnapshotSource):
     def __init__(
         self,
         *,
-        crypto_source: PriceSource,
-        fiat_source: PriceSource,
+        crypto_source: PriceSnapshotSource,
+        fiat_source: PriceSnapshotSource,
         fiat_currency_codes: Iterable[str] | None = None,
     ) -> None:
         self.crypto_source = crypto_source
@@ -93,5 +93,5 @@ class HybridPriceSource(PriceSource):
 __all__ = [
     "DeterministicRandomPriceSource",
     "HybridPriceSource",
-    "PriceSource",
+    "PriceSnapshotSource",
 ]
