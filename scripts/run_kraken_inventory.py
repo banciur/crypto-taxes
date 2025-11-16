@@ -41,6 +41,8 @@ def summarize_assets(events) -> None:
     balances = defaultdict(Decimal)
     for event in events:
         for leg in event.legs:
+            if getattr(leg, "wallet_id", None) == "outside":
+                continue
             balances[leg.asset_id] += leg.quantity
     if not balances:
         print("No asset balances to report.")

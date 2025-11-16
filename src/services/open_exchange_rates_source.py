@@ -12,7 +12,7 @@ from urllib3.util import Retry
 
 from config import config
 
-from .price_sources import PriceSource
+from .price_sources import PriceSnapshotSource
 from .price_types import PriceQuote
 
 
@@ -126,7 +126,7 @@ class _OpenExchangeRatesClient:
         return message, payload
 
 
-class OpenExchangeRatesSource(PriceSource):
+class OpenExchangeRatesSource(PriceSnapshotSource):
     def __init__(
         self,
         *,

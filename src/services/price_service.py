@@ -5,14 +5,14 @@ from decimal import Decimal
 
 from domain.pricing import PriceProvider
 
-from .price_sources import PriceSource
+from .price_sources import PriceSnapshotSource
 from .price_store import PriceStore
 
 
 class PriceService(PriceProvider):
     def __init__(
         self,
-        source: PriceSource,
+        source: PriceSnapshotSource,
         store: PriceStore,
     ) -> None:
         self.source = source

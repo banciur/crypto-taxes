@@ -39,7 +39,7 @@ def test_deterministic_source_validates_price_bounds() -> None:
         DeterministicRandomPriceSource(min_price=Decimal("0"), max_price=Decimal("10"))
 
 
-class _StubPriceSource:
+class _StubPriceSnapshotSource:
     def __init__(self, *, rate: Decimal, source_name: str) -> None:
         self.rate = rate
         self.source_name = source_name
@@ -59,8 +59,8 @@ class _StubPriceSource:
 
 
 def test_hybrid_source_routes_fiat_pairs() -> None:
-    crypto = _StubPriceSource(rate=Decimal("1"), source_name="crypto")
-    fiat = _StubPriceSource(rate=Decimal("2"), source_name="fiat")
+    crypto = _StubPriceSnapshotSource(rate=Decimal("1"), source_name="crypto")
+    fiat = _StubPriceSnapshotSource(rate=Decimal("2"), source_name="fiat")
     source = HybridPriceSource(crypto_source=crypto, fiat_source=fiat, fiat_currency_codes=("EUR", "PLN"))
     ts = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
 
@@ -72,8 +72,8 @@ def test_hybrid_source_routes_fiat_pairs() -> None:
 
 
 def test_hybrid_source_uses_crypto_for_non_fiat_pairs() -> None:
-    crypto = _StubPriceSource(rate=Decimal("3"), source_name="crypto")
-    fiat = _StubPriceSource(rate=Decimal("4"), source_name="fiat")
+    crypto = _StubPriceSnapshotSource(rate=Decimal("3"), source_name="crypto")
+    fiat = _StubPriceSnapshotSource(rate=Decimal("4"), source_name="fiat")
     source = HybridPriceSource(crypto_source=crypto, fiat_source=fiat, fiat_currency_codes=("EUR", "PLN"))
     ts = datetime(2025, 1, 1, 15, 0, tzinfo=timezone.utc)
 

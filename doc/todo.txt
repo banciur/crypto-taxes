@@ -1,12 +1,16 @@
-TODO: Review how we mark fee example Luna transactions and how it is handled
+TODO: Read kraken inventory check if it makes sense as this is now main testing tool.
 TODO: Print more info from the kraken inventory script. In out transfers?
-TODO: Does Kraken importer computes leg properly, latest changes about the legs in the inventory?
-TODO: Review inventory code and tests (there was some change about fee legs review it)
+TODO: Review inventory code and tests. More test cases that will handle more scenarios. Still not sure if we handle fees correctly. Vibed code looks not nice.
+TODO: Kraken scripts maybe move them to a separate directory, some common code can be extracted?
+
+TODO: Start writing real flow with final outcome.
+TODO: Is there a possibility to have a whitelist of commands for codex?
 
 TODO: Basing on Kraken events compute profitability
 TODO: Using Kraken events compute taxes
+TODO: Add original transaction place and id ex (Ethereum, tx hash) to the event
 
-TODO: Review coindesk source it's the worst
+TODO: Review coindesk source it's the worst code ever
 
 TODO: Import data (historical) from:
   - Coinbase
