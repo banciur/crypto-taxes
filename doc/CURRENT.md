@@ -60,7 +60,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 ## Fees
 
-- Swaps and trades (custodial or on-chain) net their exchange fees into whichever leg uses the same asset: if the fee reduces the asset being spent, we decrease that outgoing quantity; if it comes out of what you acquired, we shrink the inbound leg. Only when the fee is taken in an asset that is not otherwise part of the event do we emit a separate disposal leg, allowing FIFO to consume that third asset. Stablecoins follow the same rule as any crypto.
+- Swaps and trades (custodial or on-chain) net their exchange fees into whichever leg uses the same asset: if the fee reduces the asset being spent, we decrease that outgoing quantity; if it comes out of what you acquired, we shrink the inbound leg. Only when the fee is taken in an asset that is not otherwise part of the event do we emit a separate disposal leg, allowing FIFO to consume that third asset and value it like any other disposal. Stablecoins follow the same rule as any crypto.
 - Execution costs such as gas are independent on-chain spends and always produce their own disposal legs, even if they happen in the same transaction as the swap. Paying ETH for gas when swapping WETH/WBTC still records an ETH disposal.
 - Deposits and withdrawals route funds between the `outside` wallet and the exchange wallet without separate fee legs. Deposits decrease the `outside` wallet by the deposited amount while the `kraken` leg reflects the fee-reduced credit; withdrawals increase the `outside` wallet by what the recipient receives while the `kraken` leg spends the amount plus fees.
 

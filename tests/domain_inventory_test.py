@@ -125,3 +125,49 @@ def test_inventory_engine_uses_price_provider_when_no_eur_leg() -> None:
         ("BTC", "EUR", t1),
         ("BTC", "EUR", t2),
     ]
+
+
+def test_third_asset_fee_leg_creates_disposal() -> None:
+    timestamp = datetime(2024, 10, 1, 12, 0, tzinfo=timezone.utc)
+    provider = StubPriceProvider(
+        {
+            ("LINK", "EUR", timestamp): Decimal("10"),
+            ("WBTC", "EUR", timestamp): Decimal("20000"),
+            ("ETH", "EUR", timestamp): Decimal("1500"),
+        }
+    )
+    engine = InventoryEngine(price_provider=provider)
+    wallet = "dex"
+
+    link_reward = LedgerEvent(
+        timestamp=timestamp,
+        event_type=EventType.REWARD,
+        legs=[
+            LedgerLeg(asset_id="LINK", quantity=Decimal("5"), wallet_id=wallet),
+        ],
+    )
+
+    ethtx = LedgerEvent(
+        timestamp=timestamp,
+        event_type=EventType.TRADE,
+        legs=[
+            LedgerLeg(asset_id="ETH", quantity=Decimal("1"), wallet_id=wallet),
+            LedgerLeg(asset_id="EUR", quantity=Decimal("-1500"), wallet_id=wallet),
+        ],
+    )
+
+    swap_event = LedgerEvent(
+        timestamp=timestamp,
+        event_type=EventType.TRADE,
+        legs=[
+            LedgerLeg(asset_id="ETH", quantity=Decimal("-1"), wallet_id=wallet),
+            LedgerLeg(asset_id="WBTC", quantity=Decimal("0.05"), wallet_id=wallet),
+            LedgerLeg(asset_id="LINK", quantity=Decimal("-2"), wallet_id=wallet),
+        ],
+    )
+
+    result = engine.process([link_reward, ethtx, swap_event])
+
+    assert len(result.disposal_links) == 2  # ETH disposal + LINK fee disposal
+    fee_disposal = next(link for link in result.disposal_links if link.quantity_used == Decimal("2"))
+    assert fee_disposal.proceeds_total_eur == Decimal("20")
