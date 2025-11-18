@@ -1,23 +1,23 @@
-TODO: Remove kraken inventory check and start adding its features as real ones.
-TODO: Read kraken inventory check if it makes sense as this is now main testing tool.
-TODO: Kraken scripts maybe move them to a separate directory, some common code can be extracted?
 TODO: Do we need Drop and Reward event types?
-
-TODO: Start writing real flow with final outcome.
 TODO: Is there a possibility to have a whitelist of commands for codex?
 
-TODO: Basing on Kraken events compute profitability
-TODO: Using Kraken events compute taxes
-TODO: Add original transaction place and id ex (Ethereum, tx hash) to the LedgerEvent
+TODO: Basing on Kraken events first attempts of features:
+  - compute profits on disposals and sum by month
+  - compute value of current inventory
+  - compute taxes
 
-TODO: Review coindesk source it's the worst code ever
-
-TODO: Import data (historical) from:
+TODO: Import data from:
   - Coinbase
   - Lido
   - Stakewise
+TODO: Add original transaction place and id ex (Ethereum, tx hash) to the LedgerEvent
 TODO: On-chain events, what could be the source
+
 TODO: how to combine different sources of transactions
+
+TODO: Kraken scripts maybe move them to a separate directory, some common code can be extracted?
+TODO: Review coindesk source it's the worst code ever
+
 TODO: Probably will have to introduce manual adjustments
 TODO: Verify against my own spreadsheet
 
