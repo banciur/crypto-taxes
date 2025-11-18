@@ -40,9 +40,8 @@ def _format_event(event: LedgerEvent, refid: str, row_numbers: list[int]) -> str
     ]
     lines = [" | ".join(header)]
     for leg in event.legs:
-        fee_marker = " (fee)" if leg.is_fee else ""
         lines.append(
-            f"    asset={leg.asset_id:<8} qty={leg.quantity} wallet={leg.wallet_id}{fee_marker}",
+            f"    asset={leg.asset_id:<8} qty={leg.quantity} wallet={leg.wallet_id}",
         )
     return "\n".join(lines)
 

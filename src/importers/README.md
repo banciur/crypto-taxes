@@ -54,7 +54,7 @@ The input CSV comes from Kraken’s web UI (“Ledger” report export). Each ro
 
 - Applies when a refid group has one `type="staking"` row with a positive `amount`.
 - The event emits as `EventType.REWARD` with a positive leg for the staking asset (after alias normalization, if applicable).
-- Any reported fee is netted into the reward quantity (the credited amount is `amount - fee`). No `is_fee` leg is emitted.
+- Any reported fee is netted into the reward quantity (the credited amount is `amount - fee`).
 - Historical anomalies: refids `STHFSYV-COKEV-2N3FK7` and `STFTGR6-35YZ3-ZWJDFO` contain negative staking amounts (Kraken logged the exit as `type="staking"` instead of `transfer`). These two refids are explicitly whitelisted so we still emit them as rewards despite the negative quantity.
 
 #### `earn` reward → emit event

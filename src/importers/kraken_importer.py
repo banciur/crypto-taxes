@@ -90,14 +90,13 @@ def _net_quantity(entry: KrakenLedgerEntry) -> Decimal:
 def _fee_legs(entry: KrakenLedgerEntry) -> list[LedgerLeg]:
     if entry.fee == 0:
         return []
-    return [_ledger_leg(entry, entry.fee * Decimal("-1"), is_fee=True)]
+    return [_ledger_leg(entry, entry.fee * Decimal("-1"))]
 
 
 def _ledger_leg(
     entry: KrakenLedgerEntry,
     quantity: Decimal,
     *,
-    is_fee: bool = False,
     wallet_id: str = "kraken",
 ) -> LedgerLeg:
     asset_id = _normalize_asset(entry.asset)
@@ -105,7 +104,6 @@ def _ledger_leg(
         asset_id=asset_id,
         quantity=quantity,
         wallet_id=wallet_id,
-        is_fee=is_fee,
     )
 
 
@@ -123,9 +121,6 @@ class KrakenImporter:
                 events.append(event)
         events.sort(key=lambda evt: evt.timestamp)
         return events
-
-    def perform_import(self) -> list[LedgerEvent]:
-        return self.load_events()
 
     def _read_entries(self) -> list[KrakenLedgerEntry]:
         entries: list[KrakenLedgerEntry] = []
