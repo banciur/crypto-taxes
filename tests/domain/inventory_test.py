@@ -63,7 +63,7 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
         )
     )
 
-    # This should create two disposals
+    # This should create two disposals as the amount is bigger than amount left in the first lot.
     t4_amount_spent = Decimal("0.7")
     t4_amount_bought = Decimal(1900)
     t4_leg = LedgerLeg(asset_id="ETH", quantity=-t4_amount_spent, wallet_id=WALLET_ID)
@@ -113,6 +113,12 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
     assert dl_3.quantity_used == d3_expected_quantity
     assert dl_3.proceeds_total_eur == d3_expected_quantity * (t4_amount_bought / t4_amount_spent)
 
+    assert len(result.open_inventory) == 1
+    open_lot = result.open_inventory[0]
+
+    assert open_lot.lot_id == lot_2.id
+    assert open_lot.quantity_remaining == t2_amount_bought - d3_expected_quantity
+
 
 def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> None:
     events: list[LedgerEvent] = []
@@ -134,13 +140,15 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
     t2_time = datetime(2024, 10, 5, 10, tzinfo=timezone.utc)
     t2_amount_dropped = Decimal("0.6")
     t2_amount_fee = Decimal("0.0001")
+    t2_drop_leg = LedgerLeg(asset_id="SPK", quantity=t2_amount_dropped, wallet_id=WALLET_ID)
+    t2_fee_leg = LedgerLeg(asset_id="ETH", quantity=-t2_amount_fee, wallet_id=WALLET_ID)
     events.append(
         LedgerEvent(
             timestamp=t2_time,
             event_type=EventType.DROP,
             legs=[
-                LedgerLeg(asset_id="SPK", quantity=t2_amount_dropped, wallet_id=WALLET_ID),
-                LedgerLeg(asset_id="ETH", quantity=-t2_amount_fee, wallet_id=WALLET_ID),
+                t2_drop_leg,
+                t2_fee_leg,
             ],
         )
     )
@@ -149,43 +157,24 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
     assert len(result.acquisition_lots) == 2
     assert len(result.disposal_links) == 1
 
-    # drop_rate = inventory_engine._price_provider.rate("SPK", "EUR", t2_time)
+    lot_2 = result.acquisition_lots[1]
+    assert lot_2.acquired_event_id == events[1].id
+    assert lot_2.acquired_leg_id == t2_drop_leg.id
+    drop_rate = inventory_engine._price_provider.rate("SPK", "EUR", t2_time)
+    assert lot_2.cost_eur_per_unit == drop_rate
 
+    disposal = result.disposal_links[0]
+    assert disposal.disposal_leg_id == t2_fee_leg.id
+    assert disposal.quantity_used == abs(t2_fee_leg.quantity)
+    fee_rate = inventory_engine._price_provider.rate("ETH", "EUR", t2_time)
+    assert disposal.proceeds_total_eur == fee_rate * disposal.quantity_used
 
-def test_fee_leg_creates_disposal(inventory_engine: InventoryEngine) -> None:
-    timestamp = datetime(2024, 10, 1, 12, tzinfo=timezone.utc)
-    link_rate = inventory_engine._price_provider.rate("LINK", "EUR", timestamp)
+    assert len(result.open_inventory) == 2
+    open_lot_eth = result.open_inventory[0]
+    open_lot_spk = result.open_inventory[1]
 
-    link_reward = LedgerEvent(
-        timestamp=timestamp,
-        event_type=EventType.REWARD,
-        legs=[
-            LedgerLeg(asset_id="LINK", quantity=Decimal("5"), wallet_id=WALLET_ID),
-        ],
-    )
+    assert open_lot_eth.lot_id == result.acquisition_lots[0].id
+    assert open_lot_eth.quantity_remaining == t1_amount_bought - t2_amount_fee
 
-    ethtx = LedgerEvent(
-        timestamp=timestamp,
-        event_type=EventType.TRADE,
-        legs=[
-            LedgerLeg(asset_id="ETH", quantity=Decimal("1"), wallet_id=WALLET_ID),
-            LedgerLeg(asset_id="EUR", quantity=Decimal("-1500"), wallet_id=WALLET_ID),
-        ],
-    )
-
-    # TODO: this test uses not real scenario. Don't do it like this.
-    swap_event = LedgerEvent(
-        timestamp=timestamp,
-        event_type=EventType.TRADE,
-        legs=[
-            LedgerLeg(asset_id="ETH", quantity=Decimal("-1"), wallet_id=WALLET_ID),
-            LedgerLeg(asset_id="WBTC", quantity=Decimal("0.05"), wallet_id=WALLET_ID),
-            LedgerLeg(asset_id="LINK", quantity=Decimal("-2"), wallet_id=WALLET_ID),
-        ],
-    )
-
-    result = inventory_engine.process([link_reward, ethtx, swap_event])
-
-    assert len(result.disposal_links) == 2  # ETH disposal + LINK fee disposal
-    fee_disposal = next(link for link in result.disposal_links if link.quantity_used == Decimal("2"))
-    assert fee_disposal.proceeds_total_eur == link_rate * Decimal("2")
+    assert open_lot_spk.lot_id == lot_2.id
+    assert open_lot_spk.quantity_remaining == t2_amount_dropped

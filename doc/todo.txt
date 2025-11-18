@@ -1,6 +1,5 @@
-TODO: Review inventory code and tests. More test cases that will handle more scenarios. Still not sure if we handle fees correctly. Vibed code looks not nice.
+TODO: Remove kraken inventory check and start adding its features as real ones.
 TODO: Read kraken inventory check if it makes sense as this is now main testing tool.
-TODO: Print more info from the kraken inventory script. In out transfers?
 TODO: Kraken scripts maybe move them to a separate directory, some common code can be extracted?
 TODO: Do we need Drop and Reward event types?
 
