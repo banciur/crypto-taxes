@@ -145,7 +145,7 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
     events.append(
         LedgerEvent(
             timestamp=t2_time,
-            event_type=EventType.DROP,
+            event_type=EventType.REWARD,
             legs=[
                 t2_drop_leg,
                 t2_fee_leg,

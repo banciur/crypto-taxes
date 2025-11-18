@@ -1,8 +1,9 @@
-TODO: Do we need Drop and Reward event types?
 TODO: Is there a possibility to have a whitelist of commands for codex?
 
 TODO: Basing on Kraken events first attempts of features:
-  - compute profits on disposals and sum by month
+  - compute profits on disposals and sum by month (consider fees)
+  - Unrealized P/L by asset
+  - compute tax-free assets (one-year rule) and their value
   - compute taxes
 
 TODO: Import data from:

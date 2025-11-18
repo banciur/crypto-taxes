@@ -399,6 +399,6 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
-            event_type=EventType.DROP,
+            event_type=EventType.REWARD,
             legs=legs,
         )

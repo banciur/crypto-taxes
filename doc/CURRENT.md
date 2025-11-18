@@ -19,7 +19,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - LedgerEvent
   - `id: UUID`
   - `timestamp: datetime`
-  - `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`, `DROP`)
+  - `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`)
   - `legs: list[LedgerLeg]`
 
 - LedgerLeg

@@ -578,7 +578,7 @@ def test_spot_from_futures_event(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.event_type == EventType.DROP
+    assert event.event_type == EventType.REWARD
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
     assert len(event.legs) == 1
     assert event.legs[0].asset_id == "STRK"

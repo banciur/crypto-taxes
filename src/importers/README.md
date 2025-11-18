@@ -65,7 +65,7 @@ The input CSV comes from Kraken’s web UI (“Ledger” report export). Each ro
 #### `transfer` (`spotfromfutures`) → emit event
 
 - Applies when a refid contains a single `type="transfer"` row whose `subtype="spotfromfutures"` and amount is positive.
-- Represents Kraken crediting spot after drops/forks; emitted as `EventType.DROP` with a single positive leg.
+- Represents Kraken crediting spot after drops/forks; emitted as `EventType.REWARD` with a single positive leg.
 
 ### Two-row groups
 

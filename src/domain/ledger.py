@@ -14,7 +14,6 @@ class EventType(StrEnum):
     WITHDRAWAL = "WITHDRAWAL"
     TRANSFER = "TRANSFER"
     REWARD = "REWARD"
-    DROP = "DROP"
 
 
 class LedgerLeg(BaseModel):
