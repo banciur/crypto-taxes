@@ -3,7 +3,6 @@ TODO: Is there a possibility to have a whitelist of commands for codex?
 
 TODO: Basing on Kraken events first attempts of features:
   - compute profits on disposals and sum by month
-  - compute value of current inventory
   - compute taxes
 
 TODO: Import data from:
