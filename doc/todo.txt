@@ -2,6 +2,7 @@ TODO: Review inventory code and tests. More test cases that will handle more sce
 TODO: Read kraken inventory check if it makes sense as this is now main testing tool.
 TODO: Print more info from the kraken inventory script. In out transfers?
 TODO: Kraken scripts maybe move them to a separate directory, some common code can be extracted?
+TODO: Do we need Drop and Reward event types?
 
 TODO: Start writing real flow with final outcome.
 TODO: Is there a possibility to have a whitelist of commands for codex?

@@ -62,26 +62,12 @@ class InventoryEngine:
             acquisition_legs = [
                 leg
                 for leg in event.legs
-                if leg.wallet_id not in self.IGNORED_WALLETS
-                and leg.quantity > 0
-                and not leg.is_fee
-                and leg.asset_id != self.EUR_ASSET_ID
+                if leg.wallet_id not in self.IGNORED_WALLETS and leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID
             ]
             disposal_legs = [
                 leg
                 for leg in event.legs
-                if leg.wallet_id not in self.IGNORED_WALLETS
-                and leg.quantity < 0
-                and not leg.is_fee
-                and leg.asset_id != self.EUR_ASSET_ID
-            ]
-            fee_consumption_legs = [
-                leg
-                for leg in event.legs
-                if leg.wallet_id not in self.IGNORED_WALLETS
-                and leg.is_fee
-                and leg.quantity < 0
-                and leg.asset_id != self.EUR_ASSET_ID
+                if leg.wallet_id not in self.IGNORED_WALLETS and leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID
             ]
 
             for leg in acquisition_legs:
@@ -123,16 +109,6 @@ class InventoryEngine:
                         )
                     )
 
-                    qty_to_match -= take_quantity
-
-            for leg in fee_consumption_legs:
-                qty_to_match = abs(leg.quantity)
-                for _lot_state, take_quantity in self._match_inventory(
-                    leg=leg,
-                    event=event,
-                    quantity_needed=qty_to_match,
-                    inventory=inventory,
-                ):
                     qty_to_match -= take_quantity
 
         open_inventory_snapshots = [
@@ -187,7 +163,7 @@ class InventoryEngine:
         expected_sign: int,
         exclude_leg_ids: set[UUID],
     ) -> LedgerLeg | None:
-        """Locate a single non-fee EUR leg matching the expected sign (+/-).
+        """Locate a single EUR leg matching the expected sign (+/-).
 
         Returns None if none (or multiple) are found to avoid ambiguous matching.
         """
@@ -195,7 +171,6 @@ class InventoryEngine:
             leg
             for leg in event.legs
             if leg.id not in exclude_leg_ids
-            and not leg.is_fee
             and leg.asset_id == self.EUR_ASSET_ID
             and (leg.quantity > 0 if expected_sign > 0 else leg.quantity < 0)
         ]
@@ -238,6 +213,4 @@ class InventoryEngine:
 
 
 def _summarize_event_legs(event: LedgerEvent) -> str:
-    return "; ".join(
-        f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}@{leg.wallet_id}" for leg in event.legs
-    )
+    return "; ".join(f"{leg.asset_id}:{leg.quantity}@{leg.wallet_id}" for leg in event.legs)

@@ -378,19 +378,14 @@ def test_trade_event_with_fee(tmp_path: Path) -> None:
     assert event.event_type == EventType.TRADE
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
-    non_fee = [leg for leg in event.legs if not leg.is_fee]
-    fee_legs = [leg for leg in event.legs if leg.is_fee]
-
-    assert len(non_fee) == 2
-    sell_leg = next(leg for leg in non_fee if leg.quantity < 0)
-    buy_leg = next(leg for leg in non_fee if leg.quantity > 0)
+    assert len(event.legs) == 2
+    sell_leg = next(leg for leg in event.legs if leg.quantity < 0)
+    buy_leg = next(leg for leg in event.legs if leg.quantity > 0)
 
     assert sell_leg.asset_id == "ETH"
     assert sell_leg.quantity == Decimal("-0.45")
     assert buy_leg.asset_id == "EUR"
     assert buy_leg.quantity == buy_amount - buy_fee
-
-    assert len(fee_legs) == 0
 
 
 def test_spend_receive_trade(tmp_path: Path) -> None:
@@ -426,7 +421,7 @@ def test_spend_receive_trade(tmp_path: Path) -> None:
     assert event.event_type == EventType.TRADE
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
-    sell_leg = next(leg for leg in event.legs if leg.asset_id == "EUR" and not leg.is_fee)
+    sell_leg = next(leg for leg in event.legs if leg.asset_id == "EUR")
     buy_leg = next(leg for leg in event.legs if leg.asset_id == "DAI")
 
     assert sell_leg.quantity == amount_eur - fee
