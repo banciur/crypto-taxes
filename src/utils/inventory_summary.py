@@ -96,6 +96,7 @@ def render_inventory_summary(summary: InventorySummary) -> None:
     print("Open inventory by asset:")
     if not summary.assets:
         print("  (empty)")
+        return
 
     quantity_label = "Quantity (total/free/taxable)"
     value_label = "Value EUR (total/free/taxable)"
