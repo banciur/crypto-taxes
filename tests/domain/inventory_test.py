@@ -11,8 +11,8 @@ from tests.helpers.test_price_service import TestPriceService
 
 
 @pytest.fixture(scope="function")
-def inventory_engine() -> InventoryEngine:
-    return InventoryEngine(price_provider=TestPriceService(seed=1))
+def inventory_engine(price_service: TestPriceService) -> InventoryEngine:
+    return InventoryEngine(price_provider=price_service)
 
 
 WALLET_ID = "wallet"

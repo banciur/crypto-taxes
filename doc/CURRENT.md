@@ -71,3 +71,4 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Model simple trades and transfers with per-leg wallets and optional fee legs.
 - Automatically create lots for acquisitions and link disposals via `InventoryEngine.process` (FIFO only; other lot policies are future work).
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
+- CLI inventory summary groups open holdings by asset with current EUR values and separates quantities/values that are already past the 1-year tax-free window from those still inside it.
