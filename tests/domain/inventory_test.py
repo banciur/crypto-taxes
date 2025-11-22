@@ -11,8 +11,8 @@ from tests.helpers.test_price_service import TestPriceService
 
 
 @pytest.fixture(scope="function")
-def inventory_engine() -> InventoryEngine:
-    return InventoryEngine(price_provider=TestPriceService(seed=1))
+def inventory_engine(price_service: TestPriceService) -> InventoryEngine:
+    return InventoryEngine(price_provider=price_service)
 
 
 WALLET_ID = "wallet"
@@ -145,7 +145,7 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
     events.append(
         LedgerEvent(
             timestamp=t2_time,
-            event_type=EventType.DROP,
+            event_type=EventType.REWARD,
             legs=[
                 t2_drop_leg,
                 t2_fee_leg,

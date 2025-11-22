@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
-from decimal import Decimal
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Sequence
 
-from domain.inventory import InventoryEngine, OpenLotSnapshot
+from domain.inventory import InventoryEngine, InventoryResult
 from importers.kraken_importer import KrakenImporter
 from services.coindesk_source import CoinDeskSource
 from services.open_exchange_rates_source import OpenExchangeRatesSource
 from services.price_service import PriceService
 from services.price_sources import HybridPriceSource
 from services.price_store import JsonlPriceStore
+from utils.inventory_summary import compute_inventory_summary, render_inventory_summary
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -37,29 +36,19 @@ def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int)
 
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     engine = InventoryEngine(price_provider=price_service)
-    result = engine.process(events)
 
+    inventory = engine.process(events)
+    inventory_summary = compute_inventory_summary(inventory.open_inventory, price_provider=price_service)
+
+    print_base_inventory_summary(inventory)
+    render_inventory_summary(inventory_summary)
+
+
+def print_base_inventory_summary(result: InventoryResult) -> None:
     print("Inventory summary:")
     print(f"  Acquisition lots: {len(result.acquisition_lots)}")
     print(f"  Disposal links:   {len(result.disposal_links)}")
     print(f"  Open inventory entries: {len(result.open_inventory)}")
-    print()
-    summarize_open_inventory(result.open_inventory)
-
-
-def summarize_open_inventory(open_inventory: Iterable[OpenLotSnapshot]) -> None:
-    totals: defaultdict[str, Decimal] = defaultdict(Decimal)
-    counts: defaultdict[str, int] = defaultdict(int)
-    for lot in open_inventory:
-        if lot.quantity_remaining <= 0:
-            continue
-        totals[lot.asset_id] += lot.quantity_remaining
-        counts[lot.asset_id] += 1
-
-    print("Open inventory by asset:")
-
-    for asset in sorted(totals):
-        print(f"  {asset:<8} qty={totals[asset]} lots={counts[asset]}")
 
 
 def main(argv: Sequence[str] | None = None) -> None:
