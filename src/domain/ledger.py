@@ -28,6 +28,7 @@ class LedgerLeg(BaseModel):
     asset_id: str
     quantity: Decimal
     wallet_id: str
+    is_fee: bool = False
 
     @model_validator(mode="after")
     def _validate_quantity(self) -> LedgerLeg:

@@ -3,9 +3,9 @@
 - **Point-in-time net worth**: base-currency cash plus market value of all holdings. Capture periodic snapshots (daily/weekly) with quantities, prices used, and totals.
 - **Flow view per period (day/week/month)**:
   - External cash flows: deposits/withdrawals vs the outside world (crossing the `outside` boundary only).
-  - Income: staking/LP rewards/airdrops/etc. at fair market value when received.
+  - Income: staking/LP rewards/airdrops/etc. at fair market value when received; ignore legs flagged `is_fee` (even if their disposals are valued) since they are tax deductions, not inflows.
   - Realized P&L: proceeds minus cost basis on disposals (trades, swaps, spending, LP exits, gas disposals); reinvestments are a disposal plus a new acquisition.
-  - Fees/interest: explicit drags if not already in disposal legs.
+  - Fees/interest: explicit drags if not already in disposal legs; fee legs are marked with `is_fee=True` and still need valuation for tax deductibility.
   - Taxes: accrued tax liability for the period as a drag.
   - Unrealized P&L: price drift on open positions; stops for a position once it is disposed and can be derived as the reconciliation term between snapshots.
 - **Reconciliation**: change in net worth = cash flows + income + realized P&L − fees/taxes + unrealized P&L.

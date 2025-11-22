@@ -6,6 +6,8 @@ from decimal import Decimal
 from itertools import count
 from pathlib import Path
 
+import pytest
+
 from domain.ledger import EventType
 from importers.kraken_importer import KrakenImporter, KrakenLedgerEntry
 
@@ -583,6 +585,29 @@ def test_spot_from_futures_event(tmp_path: Path) -> None:
     assert len(event.legs) == 1
     assert event.legs[0].asset_id == "STRK"
     assert event.legs[0].quantity == Decimal("125.80924")
+
+
+def test_spot_from_futures_event_with_fee_raises(tmp_path: Path) -> None:
+    fee = Decimal("0.0025")
+    file = tmp_path / "spot_from_futures_with_fee.csv"
+    write_csv(
+        file,
+        [
+            ledger_row(
+                ts=DEFAULT_TS,
+                tx_type="transfer",
+                subtype="spotfromfutures",
+                asset="STRK",
+                amount="125.80924",
+                fee=str(fee),
+            )
+        ],
+    )
+
+    importer = KrakenImporter(str(file))
+
+    with pytest.raises(ValueError):
+        importer.load_events()
 
 
 def test_preprocess_skips_spot_to_staking_pairs() -> None:

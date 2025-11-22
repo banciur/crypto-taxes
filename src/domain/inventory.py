@@ -64,19 +64,13 @@ class InventoryEngine:
                 for leg in event.legs
                 if leg.wallet_id not in self.IGNORED_WALLETS and leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID
             ]
-            disposal_legs = [
-                leg
-                for leg in event.legs
-                if leg.wallet_id not in self.IGNORED_WALLETS and leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID
-            ]
-
             for leg in acquisition_legs:
-                cost_per_unit = self._resolve_cost_per_unit(event, leg)
                 lot = AcquisitionLot(
                     acquired_event_id=event.id,
                     acquired_leg_id=leg.id,
-                    cost_eur_per_unit=cost_per_unit,
+                    cost_eur_per_unit=self._resolve_cost_per_unit(event, leg),
                 )
+                acquisitions.append(lot)
 
                 state = _OpenLotState(
                     lot=lot,
@@ -85,10 +79,13 @@ class InventoryEngine:
                     acquired_timestamp=event.timestamp,
                     remaining_quantity=leg.quantity,
                 )
-
-                acquisitions.append(lot)
                 inventory[(leg.asset_id, leg.wallet_id)].append(state)
 
+            disposal_legs = [
+                leg
+                for leg in event.legs
+                if leg.wallet_id not in self.IGNORED_WALLETS and leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID
+            ]
             for leg in disposal_legs:
                 qty_to_match = abs(leg.quantity)
                 proceeds_per_unit = self._resolve_proceeds_per_unit(event, leg)
@@ -171,6 +168,7 @@ class InventoryEngine:
             leg
             for leg in event.legs
             if leg.id not in exclude_leg_ids
+            and not leg.is_fee
             and leg.asset_id == self.EUR_ASSET_ID
             and (leg.quantity > 0 if expected_sign > 0 else leg.quantity < 0)
         ]
@@ -205,12 +203,11 @@ class InventoryEngine:
             yield lot_state, take_quantity
 
     def _inventory_error(self, reason: str, *, leg: LedgerLeg, event: LedgerEvent) -> InventoryError:
+        legs_summary = "; ".join(
+            f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}@{leg.wallet_id}" for leg in event.legs
+        )
         return InventoryError(
             f"{reason} for asset={leg.asset_id} wallet={leg.wallet_id} leg={leg.id} "
             f"event={event.id} {event.event_type} @{event.timestamp.isoformat()} "
-            f"legs={_summarize_event_legs(event)}"
+            f"legs={legs_summary}"
         )
-
-
-def _summarize_event_legs(event: LedgerEvent) -> str:
-    return "; ".join(f"{leg.asset_id}:{leg.quantity}@{leg.wallet_id}" for leg in event.legs)

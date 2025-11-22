@@ -141,7 +141,7 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
     t2_amount_dropped = Decimal("0.6")
     t2_amount_fee = Decimal("0.0001")
     t2_drop_leg = LedgerLeg(asset_id="SPK", quantity=t2_amount_dropped, wallet_id=WALLET_ID)
-    t2_fee_leg = LedgerLeg(asset_id="ETH", quantity=-t2_amount_fee, wallet_id=WALLET_ID)
+    t2_fee_leg = LedgerLeg(asset_id="ETH", quantity=-t2_amount_fee, wallet_id=WALLET_ID, is_fee=True)
     events.append(
         LedgerEvent(
             timestamp=t2_time,
