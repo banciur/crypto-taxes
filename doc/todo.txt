@@ -1,23 +1,14 @@
-TODO: Is there a possibility to have a whitelist of commands for codex?
+First stage: compute german taxes
+TODO: snapshot mechanism to catch changes in time. Start with value.
+TODO: first attempt of taxes computation. Reintroduce fee on legs (for taxes not usable bo later for profit will need it)
 
-TODO: Basing on Kraken events first attempts of features:
-  - compute profits on disposals and sum by month (consider fees)
-  - Unrealized P/L by asset
-  - compute tax-free assets (one-year rule) and their value
-  - compute taxes
-
-TODO: Import data from:
+TODO: Add original transaction place and id ex (Ethereum, tx hash) to the LedgerEvent
+TODO: Import data from as this should be very easy:
   - Coinbase
   - Lido
   - Stakewise
-TODO: Add original transaction place and id ex (Ethereum, tx hash) to the LedgerEvent
 TODO: On-chain events, what could be the source
-
 TODO: how to combine different sources of transactions
-
-TODO: Kraken scripts maybe move them to a separate directory, some common code can be extracted?
-TODO: Review coindesk source it's the worst code ever
-
 TODO: Probably will have to introduce manual adjustments
 TODO: Verify against my own spreadsheet
 
@@ -26,6 +17,19 @@ TODO; question how to calculate income in case when I'm partly leaving the farm.
   - ctokens only when token is sold compute gain as difference of value when bought (FIFO used for computing buy price)
   - atokens compute tax / gain every time it rebases and when selling no tax
 
+TODO: Kraken scripts maybe move them to a separate directory, some common code can be extracted?
+TODO: Review Coindesk source it's the worst code ever also review OpenExchanger client
+
+TODO: Export data in a format that can be used by Steuerberater
+
+TODO: Is there a possibility to have a whitelist of commands for codex?
+
+Second stage: tracking wealth
+TODO: better visualiation use some library to nicely print stuff or maybe switch to web app
+TODO: Features from WEALTH_MODEL.md
+  - income
+  - realized P/L
+  - unrealized P/L (by asset?)
 
 Codex commands
 ------------------
@@ -38,7 +42,6 @@ Some loose ideas
 
 - Ability to compute / enter the current value of open positions.
 - Store history / snapshots of the state to catch changes in time
-- Think about visualization of the current state?
 
 - Can system handle such use case, handle in terms of following transactions but also to compute
   the current state and profit (two or more currencies?) from the position
