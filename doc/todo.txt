@@ -1,7 +1,8 @@
 First stage: compute german taxes
-TODO: snapshot mechanism to catch changes in time. Start with value.
-TODO: first attempt of taxes computation.
-TODO: does core model handle transfers against own wallets. Shouldn't be able to spend from wallet that doesn't exist or don't have enough funds.
+TODO: I'm suspicious of the tax calculations. Think how we can debug it better.
+TODO: Maybe time to change implementation and add connections to objects, not just id's. Or maybe create object repos so we could query them easily. Or just good old SQLAlchemy?
+TODO: Do we need extra snapshot mechanism to, for example, output value of wallets?
+TODO: does core model handle transfers against own wallets. Shouldn't be able to spend from a wallet that doesn't exist or doesn't have enough funds.
 
 TODO: Add original transaction place and id ex (Ethereum, tx hash) to the LedgerEvent
 TODO: Import data from as this should be very easy:
