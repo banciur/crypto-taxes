@@ -14,7 +14,18 @@ from .pricing import PriceProvider
 
 
 class InventoryError(Exception):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        leg: LedgerLeg | None = None,
+        event: LedgerEvent | None = None,
+        quantity_needed: Decimal | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.leg = leg
+        self.event = event
+        self.quantity_needed = quantity_needed
 
 
 @dataclass
@@ -197,7 +208,9 @@ class InventoryEngine:
             qty_remaining = leg.quantity
             while qty_remaining > 0:
                 if not moved_lots:
-                    raise self._inventory_error("Transfer lacks source inventory", leg=leg, event=event)
+                    raise self._inventory_error(
+                        "Transfer lacks source inventory", leg=leg, event=event, quantity_needed=qty_remaining
+                    )
 
                 lot_state, available_qty = moved_lots[0]
                 take_quantity = min(qty_remaining, available_qty)
@@ -228,7 +241,7 @@ class InventoryEngine:
     ) -> Iterable[tuple[_OpenLotState, Decimal]]:
         open_lots = inventory.get((leg.asset_id, leg.wallet_id))
         if not open_lots:
-            raise self._inventory_error("No open lots", leg=leg, event=event)
+            raise self._inventory_error("No open lots", leg=leg, event=event, quantity_needed=quantity_needed)
 
         remaining = quantity_needed
         while remaining > 0:
@@ -243,14 +256,24 @@ class InventoryEngine:
                 open_lots.popleft()
             yield lot_state, take_quantity
 
-    def _inventory_error(self, reason: str, *, leg: LedgerLeg, event: LedgerEvent) -> InventoryError:
+    def _inventory_error(
+        self,
+        reason: str,
+        *,
+        leg: LedgerLeg,
+        event: LedgerEvent,
+        quantity_needed: Decimal | None = None,
+    ) -> InventoryError:
         legs_summary = "; ".join(
             f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}@{leg.wallet_id}" for leg in event.legs
         )
         return InventoryError(
             f"{reason} for asset={leg.asset_id} wallet={leg.wallet_id} leg={leg.id} "
             f"event={event.id} {event.event_type} @{event.timestamp.isoformat()} "
-            f"legs={legs_summary}"
+            f"legs={legs_summary}",
+            leg=leg,
+            event=event,
+            quantity_needed=quantity_needed,
         )
 
     def _append_open_lot_state(

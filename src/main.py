@@ -13,6 +13,7 @@ from services.price_sources import HybridPriceSource
 from services.price_store import JsonlPriceStore
 from utils.debug_dump import dump_inventory_debug
 from utils.inventory_summary import compute_inventory_summary, render_inventory_summary
+from utils.seed_events import load_seed_events
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -31,12 +32,15 @@ def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int)
     return PriceService(source=source, store=store)
 
 
-def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int) -> None:
+def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int, seed_csv: Path) -> None:
     importer = KrakenImporter(str(csv_path))
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     engine = InventoryEngine(price_provider=price_service)
 
-    events = importer.load_events()
+    seed_events = load_seed_events(seed_csv)
+    events = seed_events + importer.load_events()
+    events.sort(key=lambda event: event.timestamp)
+
     inventory = engine.process(events)
     tax_events = generate_tax_events(inventory, events)
 
@@ -63,8 +67,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "kraken_prices")
     parser.add_argument("--market", default="kraken")
     parser.add_argument("--aggregate", type=int, default=60)
+    parser.add_argument("--seed-csv", type=Path, default=Path("data/seed_lots.csv"))
     args = parser.parse_args(argv)
-    run(args.csv, args.price_cache_dir, market=args.market, aggregate_minutes=args.aggregate)
+    run(args.csv, args.price_cache_dir, market=args.market, aggregate_minutes=args.aggregate, seed_csv=args.seed_csv)
 
 
 if __name__ == "__main__":
