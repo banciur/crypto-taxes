@@ -74,3 +74,4 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Automatically create lots for acquisitions and link disposals via `InventoryEngine.process` (FIFO only; other lot policies are future work).
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
 - CLI inventory summary groups open holdings by asset with current EUR values and separates quantities/values that are already past the 1-year tax-free window from those still inside it.
+- Tax events derive from disposal links whose holding period is under 1 year; each tax event stores the disposal link ID plus its taxable gain, and weekly tax views aggregate those tax events by ISO week.

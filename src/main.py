@@ -12,6 +12,7 @@ from services.price_service import PriceService
 from services.price_sources import HybridPriceSource
 from services.price_store import JsonlPriceStore
 from utils.inventory_summary import compute_inventory_summary, render_inventory_summary
+from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -39,9 +40,12 @@ def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int)
 
     inventory = engine.process(events)
     inventory_summary = compute_inventory_summary(inventory.open_inventory, price_provider=price_service)
+    tax_events = generate_tax_events(inventory, events)
+    weekly_tax = compute_weekly_tax_summary(tax_events, inventory, events)
 
     print_base_inventory_summary(inventory)
     render_inventory_summary(inventory_summary)
+    render_weekly_tax_summary(weekly_tax)
 
 
 def print_base_inventory_summary(result: InventoryResult) -> None:
