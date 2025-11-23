@@ -50,12 +50,13 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 ## Behavioral Notes
 
-- Inventory processing is automated: the `InventoryEngine` creates `AcquisitionLot`s and `DisposalLink`s from ordered events using FIFO matching. Alternate policies (`HIFO`, `SPEC_ID`) are planned but not yet implemented.
+- Inventory processing is automated: the `InventoryEngine` creates `AcquisitionLot`s and `DisposalLink`s from ordered events using FIFO matching.
 - EUR legs on an event take precedence for valuing acquisitions/disposals. Only when no unambiguous EUR leg exists do we fall back to the injected `PriceProvider` for EUR pricing.
 - Unbalanced events are allowed.
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
 - Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine.
+- Transfers (`EventType.TRANSFER`) move existing lots between wallets: outbound legs consume open inventory; inbound legs reopen the same lot IDs with original acquisition timestamp and cost in the destination wallet. No new acquisitions/disposals are created.
 
 ---
 

@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from domain.inventory import InventoryEngine
+from domain.inventory import InventoryEngine, InventoryError
 from domain.ledger import EventType, LedgerEvent, LedgerLeg
 from tests.helpers.test_price_service import TestPriceService
 
@@ -178,3 +178,91 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
 
     assert open_lot_spk.lot_id == lot_2.id
     assert open_lot_spk.quantity_remaining == t2_amount_dropped
+
+
+def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) -> None:
+    events: list[LedgerEvent] = []
+    kraken_wallet = "kraken"
+    hardware_wallet = "ledger"
+
+    buy_amount = Decimal("1.5")
+    transfer_amount = Decimal("0.5")
+    buy_spent_eur = Decimal("3000")
+    buy_leg = LedgerLeg(asset_id="ETH", quantity=buy_amount, wallet_id=kraken_wallet)
+    events.append(
+        LedgerEvent(
+            timestamp=datetime(2024, 5, 1, 10, tzinfo=timezone.utc),
+            event_type=EventType.TRADE,
+            legs=[
+                buy_leg,
+                LedgerLeg(asset_id="EUR", quantity=-buy_spent_eur, wallet_id=kraken_wallet),
+            ],
+        )
+    )
+
+    events.append(
+        LedgerEvent(
+            timestamp=datetime(2024, 5, 2, 15, tzinfo=timezone.utc),
+            event_type=EventType.TRANSFER,
+            legs=[
+                LedgerLeg(asset_id="ETH", quantity=transfer_amount, wallet_id=hardware_wallet),
+                LedgerLeg(asset_id="ETH", quantity=-transfer_amount, wallet_id=kraken_wallet),
+            ],
+        )
+    )
+
+    result = inventory_engine.process(events)
+
+    assert len(result.acquisition_lots) == 1
+    acquisition_lot = result.acquisition_lots[0]
+    assert acquisition_lot.acquired_event_id == events[0].id
+    assert acquisition_lot.acquired_leg_id == buy_leg.id
+    assert acquisition_lot.cost_eur_per_unit == buy_spent_eur / buy_amount
+
+    assert result.disposal_links == []
+
+    assert len(result.open_inventory) == 2
+    kraken_lot = result.open_inventory[0]
+    ledger_lot = result.open_inventory[1]
+
+    assert kraken_lot.acquired_timestamp == events[0].timestamp
+    assert kraken_lot.lot_id == acquisition_lot.id
+    assert kraken_lot.wallet_id == kraken_wallet
+    assert kraken_lot.quantity_remaining == buy_amount - transfer_amount
+
+    assert ledger_lot.acquired_timestamp == events[0].timestamp
+    assert ledger_lot.lot_id == acquisition_lot.id
+    assert ledger_lot.wallet_id == hardware_wallet
+    assert ledger_lot.quantity_remaining == transfer_amount
+
+
+def test_disposal_without_inventory_raises(inventory_engine: InventoryEngine) -> None:
+    events = [
+        LedgerEvent(
+            timestamp=datetime(2024, 5, 3, 12, tzinfo=timezone.utc),
+            event_type=EventType.TRADE,
+            legs=[
+                LedgerLeg(asset_id="ETH", quantity=Decimal("-1.0"), wallet_id=WALLET_ID),
+                LedgerLeg(asset_id="EUR", quantity=Decimal("2500"), wallet_id=WALLET_ID),
+            ],
+        )
+    ]
+
+    with pytest.raises(InventoryError):
+        inventory_engine.process(events)
+
+
+def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) -> None:
+    events = [
+        LedgerEvent(
+            timestamp=datetime(2024, 5, 3, 15, tzinfo=timezone.utc),
+            event_type=EventType.TRANSFER,
+            legs=[
+                LedgerLeg(asset_id="ETH", quantity=Decimal("1.0"), wallet_id="ledger"),
+                LedgerLeg(asset_id="ETH", quantity=Decimal("-1.0"), wallet_id="kraken"),
+            ],
+        )
+    ]
+
+    with pytest.raises(InventoryError):
+        inventory_engine.process(events)

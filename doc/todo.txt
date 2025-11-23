@@ -2,6 +2,7 @@ First stage: compute german taxes
 TODO: snapshot mechanism to catch changes in time. Start with value.
 TODO: first attempt of taxes computation.
 TODO: kraken importer create fake accuisition events
+TODO: Make tests more readable by automatically generating timestamps
 
 TODO: Add original transaction place and id ex (Ethereum, tx hash) to the LedgerEvent
 TODO: Import data from as this should be very easy:
