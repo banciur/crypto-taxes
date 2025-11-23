@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
 
-from domain.inventory import InventoryEngine
-from domain.ledger import EventType, LedgerEvent, LedgerLeg
+from domain.inventory import InventoryEngine, InventoryError
+from domain.ledger import EventType, LedgerLeg
 from tests.helpers.test_price_service import TestPriceService
+from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
 
 
 @pytest.fixture(scope="function")
@@ -19,28 +19,24 @@ WALLET_ID = "wallet"
 
 
 def test_fifo(inventory_engine: InventoryEngine) -> None:
-    events: list[LedgerEvent] = []
-
     t1_amount_bought = Decimal("1.0")
     t1_amount_spent = Decimal(2000)
     t1_leg = LedgerLeg(asset_id="ETH", quantity=t1_amount_bought, wallet_id=WALLET_ID)
-    events.append(
-        LedgerEvent(
-            timestamp=datetime(2024, 9, 2, 12, tzinfo=timezone.utc),
+    events = [
+        make_event(
             event_type=EventType.TRADE,
             legs=[
                 t1_leg,
                 LedgerLeg(asset_id="EUR", quantity=-t1_amount_spent, wallet_id=WALLET_ID),
             ],
         )
-    )
+    ]
 
     t2_amount_bought = Decimal("0.5")
     t2_amount_spent = Decimal(2200)
     t2_leg = LedgerLeg(asset_id="ETH", quantity=t2_amount_bought, wallet_id=WALLET_ID)
     events.append(
-        LedgerEvent(
-            timestamp=datetime(2024, 9, 3, 12, tzinfo=timezone.utc),
+        make_event(
             event_type=EventType.TRADE,
             legs=[
                 t2_leg,
@@ -53,8 +49,7 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
     t3_amount_bought = Decimal(2040)
     t3_leg = LedgerLeg(asset_id="ETH", quantity=-t3_amount_spent, wallet_id=WALLET_ID)
     events.append(
-        LedgerEvent(
-            timestamp=datetime(2024, 9, 10, 12, tzinfo=timezone.utc),
+        make_event(
             event_type=EventType.TRADE,
             legs=[
                 t3_leg,
@@ -68,8 +63,7 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
     t4_amount_bought = Decimal(1900)
     t4_leg = LedgerLeg(asset_id="ETH", quantity=-t4_amount_spent, wallet_id=WALLET_ID)
     events.append(
-        LedgerEvent(
-            timestamp=datetime(2024, 9, 10, 12, tzinfo=timezone.utc),
+        make_event(
             event_type=EventType.TRADE,
             legs=[
                 t4_leg,
@@ -121,37 +115,25 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
 
 
 def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> None:
-    events: list[LedgerEvent] = []
-
     t1_amount_bought = Decimal("1.0")
     t1_amount_spent = Decimal(2000)
     t1_leg = LedgerLeg(asset_id="ETH", quantity=t1_amount_bought, wallet_id=WALLET_ID)
-    events.append(
-        LedgerEvent(
-            timestamp=datetime(2024, 9, 2, 12, tzinfo=timezone.utc),
+    events = [
+        make_event(
             event_type=EventType.TRADE,
             legs=[
                 t1_leg,
                 LedgerLeg(asset_id="EUR", quantity=-t1_amount_spent, wallet_id=WALLET_ID),
             ],
         )
-    )
+    ]
 
-    t2_time = datetime(2024, 10, 5, 10, tzinfo=timezone.utc)
+    t2_time = DEFAULT_TIME_GEN.next()
     t2_amount_dropped = Decimal("0.6")
     t2_amount_fee = Decimal("0.0001")
     t2_drop_leg = LedgerLeg(asset_id="SPK", quantity=t2_amount_dropped, wallet_id=WALLET_ID)
-    t2_fee_leg = LedgerLeg(asset_id="ETH", quantity=-t2_amount_fee, wallet_id=WALLET_ID)
-    events.append(
-        LedgerEvent(
-            timestamp=t2_time,
-            event_type=EventType.REWARD,
-            legs=[
-                t2_drop_leg,
-                t2_fee_leg,
-            ],
-        )
-    )
+    t2_fee_leg = LedgerLeg(asset_id="ETH", quantity=-t2_amount_fee, wallet_id=WALLET_ID, is_fee=True)
+    events.append(make_event(event_type=EventType.REWARD, legs=[t2_drop_leg, t2_fee_leg], timestamp=t2_time))
     result = inventory_engine.process(events)
 
     assert len(result.acquisition_lots) == 2
@@ -178,3 +160,83 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
 
     assert open_lot_spk.lot_id == lot_2.id
     assert open_lot_spk.quantity_remaining == t2_amount_dropped
+
+
+def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) -> None:
+    kraken_wallet = "kraken"
+    hardware_wallet = "ledger"
+
+    buy_amount = Decimal("1.5")
+    transfer_amount = Decimal("0.5")
+    buy_spent_eur = Decimal("3000")
+    buy_leg = LedgerLeg(asset_id="ETH", quantity=buy_amount, wallet_id=kraken_wallet)
+    events = [
+        make_event(
+            event_type=EventType.TRADE,
+            legs=[
+                buy_leg,
+                LedgerLeg(asset_id="EUR", quantity=-buy_spent_eur, wallet_id=kraken_wallet),
+            ],
+        ),
+        make_event(
+            event_type=EventType.TRANSFER,
+            legs=[
+                LedgerLeg(asset_id="ETH", quantity=transfer_amount, wallet_id=hardware_wallet),
+                LedgerLeg(asset_id="ETH", quantity=-transfer_amount, wallet_id=kraken_wallet),
+            ],
+        ),
+    ]
+
+    result = inventory_engine.process(events)
+
+    assert len(result.acquisition_lots) == 1
+    acquisition_lot = result.acquisition_lots[0]
+    assert acquisition_lot.acquired_event_id == events[0].id
+    assert acquisition_lot.acquired_leg_id == buy_leg.id
+    assert acquisition_lot.cost_eur_per_unit == buy_spent_eur / buy_amount
+
+    assert result.disposal_links == []
+
+    assert len(result.open_inventory) == 2
+    kraken_lot = result.open_inventory[0]
+    ledger_lot = result.open_inventory[1]
+
+    assert kraken_lot.acquired_timestamp == events[0].timestamp
+    assert kraken_lot.lot_id == acquisition_lot.id
+    assert kraken_lot.wallet_id == kraken_wallet
+    assert kraken_lot.quantity_remaining == buy_amount - transfer_amount
+
+    assert ledger_lot.acquired_timestamp == events[0].timestamp
+    assert ledger_lot.lot_id == acquisition_lot.id
+    assert ledger_lot.wallet_id == hardware_wallet
+    assert ledger_lot.quantity_remaining == transfer_amount
+
+
+def test_disposal_without_inventory_raises(inventory_engine: InventoryEngine) -> None:
+    events = [
+        make_event(
+            event_type=EventType.TRADE,
+            legs=[
+                LedgerLeg(asset_id="ETH", quantity=Decimal("-1.0"), wallet_id=WALLET_ID),
+                LedgerLeg(asset_id="EUR", quantity=Decimal("2500"), wallet_id=WALLET_ID),
+            ],
+        )
+    ]
+
+    with pytest.raises(InventoryError):
+        inventory_engine.process(events)
+
+
+def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) -> None:
+    events = [
+        make_event(
+            event_type=EventType.TRANSFER,
+            legs=[
+                LedgerLeg(asset_id="ETH", quantity=Decimal("1.0"), wallet_id="ledger"),
+                LedgerLeg(asset_id="ETH", quantity=Decimal("-1.0"), wallet_id="kraken"),
+            ],
+        )
+    ]
+
+    with pytest.raises(InventoryError):
+        inventory_engine.process(events)

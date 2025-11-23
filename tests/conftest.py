@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from db.models import Base
 from tests.helpers.test_price_service import TestPriceService
+from tests.helpers.time_utils import DEFAULT_TIME_GEN
 
 engine: Engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 session_factory = sessionmaker(engine)
@@ -22,6 +23,11 @@ def reset_db() -> Generator[None, None, None]:
     Base.metadata.create_all(engine)
     yield
     Base.metadata.drop_all(engine)
+
+
+@pytest.fixture(autouse=True)
+def _reset_default_time_gen() -> None:
+    DEFAULT_TIME_GEN.reset()
 
 
 @pytest.fixture(scope="function")
