@@ -11,6 +11,7 @@ from services.open_exchange_rates_source import OpenExchangeRatesSource
 from services.price_service import PriceService
 from services.price_sources import HybridPriceSource
 from services.price_store import JsonlPriceStore
+from utils.debug_dump import dump_inventory_debug
 from utils.inventory_summary import compute_inventory_summary, render_inventory_summary
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
@@ -32,19 +33,20 @@ def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int)
 
 def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int) -> None:
     importer = KrakenImporter(str(csv_path))
-    events = importer.load_events()
-    print(f"Imported {len(events)} events from {csv_path}")
-
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     engine = InventoryEngine(price_provider=price_service)
 
+    events = importer.load_events()
     inventory = engine.process(events)
-    inventory_summary = compute_inventory_summary(inventory.open_inventory, price_provider=price_service)
     tax_events = generate_tax_events(inventory, events)
-    weekly_tax = compute_weekly_tax_summary(tax_events, inventory, events)
 
+    dump_inventory_debug(events, inventory)
+
+    print(f"Imported {len(events)} events from {csv_path}")
     print_base_inventory_summary(inventory)
+    inventory_summary = compute_inventory_summary(inventory.open_inventory, price_provider=price_service)
     render_inventory_summary(inventory_summary)
+    weekly_tax = compute_weekly_tax_summary(tax_events, inventory, events)
     render_weekly_tax_summary(weekly_tax)
 
 
