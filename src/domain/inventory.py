@@ -60,8 +60,6 @@ class InventoryEngine:
     def __init__(self, *, price_provider: PriceProvider) -> None:
         self._price_provider = price_provider
 
-    IGNORED_WALLETS = {"outside"}
-
     def process(self, events: Iterable[LedgerEvent]) -> InventoryResult:
         """Caller must provide events in chronological order."""
         acquisitions: list[AcquisitionLot] = []
