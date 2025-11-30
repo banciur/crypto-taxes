@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from itertools import count
 from random import Random
 from typing import Callable, Iterable
 
-from domain.ledger import EventType, LedgerEvent, LedgerLeg
+from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
 
 
 @dataclass
@@ -31,6 +32,7 @@ class TimeGenerator:
 
 
 DEFAULT_TIME_GEN = TimeGenerator()
+_EVENT_COUNTER = count()
 
 
 def make_event(
@@ -39,6 +41,8 @@ def make_event(
     legs: Iterable[LedgerLeg],
     timestamp: datetime | None = None,
     ts_gen: Callable[[], datetime] | None = None,
+    origin: EventOrigin | None = None,
+    ingestion: str = "test",
 ) -> LedgerEvent:
     """Helper to create a LedgerEvent with an auto-generated timestamp."""
     if timestamp is None:
@@ -46,8 +50,13 @@ def make_event(
             ts_gen = DEFAULT_TIME_GEN
         timestamp = ts_gen()
 
+    if origin is None:
+        origin = EventOrigin(location=EventLocation.INTERNAL, external_id=f"test-event-{next(_EVENT_COUNTER)}")
+
     return LedgerEvent(
         timestamp=timestamp,
+        origin=origin,
+        ingestion=ingestion,
         event_type=event_type,
         legs=list(legs),
     )

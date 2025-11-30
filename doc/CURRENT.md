@@ -19,6 +19,8 @@ This document captures the currently implemented domain for modeling crypto ledg
 - LedgerEvent
   - `id: UUID`
   - `timestamp: datetime`
+  - `origin: EventOrigin` (upstream location + external transaction id)
+  - `ingestion: str` (import pipeline label, e.g., `kraken_ledger_csv`, `seed_csv`)
   - `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`)
   - `legs: list[LedgerLeg]`
 
@@ -42,6 +44,10 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `quantity_used: Decimal`
   - `proceeds_total_eur: Decimal`
 
+- EventOrigin
+  - `location: EventLocation` (`ETHEREUM`, `ARBITRUM`, `KRAKEN`, `COINBASE`...)
+  - `external_id: str`
+
 - PriceProvider (protocol)
   - `rate(base_id: str, quote_id: str, timestamp: datetime) -> Decimal`
   - Current runtime wiring: `PriceService` composes a CoinDesk spot source for any pair touching crypto assets and an Open Exchange Rates source for fiat↔fiat pairs (EUR, PLN, USD), persisting snapshots via the JSONL store so downstream components can stay stateless.
@@ -58,6 +64,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine.
 - Transfers (`EventType.TRANSFER`) move existing lots between wallets: outbound legs consume open inventory; inbound legs reopen the same lot IDs with original acquisition timestamp and cost in the destination wallet. No new acquisitions/disposals are created.
 - Synthetic seed lots can be injected ahead of importer output to satisfy transfers from `outside` when historical sources are missing. The CLI accepts `--seed-csv` (default `data/seed_lots.csv`) with rows `asset_id,wallet_id,quantity[,timestamp,cost_total_eur]`; these are modeled as tiny-cost trades (default cost 0.0001 EUR, timestamp defaults to 2000-01-01Z) so FIFO can move them like any other lot. Missing inventory will surface as an error during processing and should be resolved by updating the seed CSV manually.
+- Each event captures `origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 
 ---
 

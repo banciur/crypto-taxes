@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from domain.ledger import EventType, LedgerEvent, LedgerLeg
+from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
 
 DEFAULT_SEED_TIMESTAMP = datetime(2000, 1, 1, tzinfo=timezone.utc)
 DEFAULT_SEED_COST_TOTAL_EUR = Decimal("0.0001")
@@ -32,21 +32,22 @@ def load_seed_events(csv_path: Path) -> list[LedgerEvent]:
             raise ValueError(f"Seed CSV {csv_path} missing required columns: {', '.join(sorted(missing))}")
 
         events: list[LedgerEvent] = []
-        for row in reader:
-            asset_id = row["asset_id"].strip()
+        for row_idx, row in enumerate(reader, start=1):
             wallet_id = row["wallet_id"].strip()
-            quantity = Decimal(row["quantity"])
-
-            ts = _parse_timestamp(row.get("timestamp") or row.get("acquired_timestamp"))
-            cost_total_eur = _parse_cost(row.get("cost_total_eur"))
 
             events.append(
                 LedgerEvent(
-                    timestamp=ts,
+                    timestamp=_parse_timestamp(row.get("timestamp") or row.get("acquired_timestamp")),
+                    origin=EventOrigin(location=EventLocation.INTERNAL, external_id=f"seed_csv_row:{row_idx}"),
+                    ingestion="seed_csv",
                     event_type=EventType.TRADE,
                     legs=[
-                        LedgerLeg(asset_id=asset_id, quantity=quantity, wallet_id=wallet_id),
-                        LedgerLeg(asset_id="EUR", quantity=-cost_total_eur, wallet_id=wallet_id),
+                        LedgerLeg(
+                            asset_id=row["asset_id"].strip(), quantity=Decimal(row["quantity"]), wallet_id=wallet_id
+                        ),
+                        LedgerLeg(
+                            asset_id="EUR", quantity=-_parse_cost(row.get("cost_total_eur")), wallet_id=wallet_id
+                        ),
                     ],
                 )
             )

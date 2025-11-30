@@ -10,9 +10,10 @@ from typing import Iterable
 
 from pydantic import BaseModel, Field, field_validator
 
-from domain.ledger import EventType, LedgerEvent, LedgerLeg
+from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
 
 logger = logging.getLogger(__name__)
+KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"
 
 FIAT_ASSETS = {"EUR", "USD"}
 ASSET_ALIASES = {
@@ -106,6 +107,9 @@ def _ledger_leg(
 class KrakenImporter:
     def __init__(self, source_path: str) -> None:
         self._source_path = Path(source_path)
+
+    def _build_origin(self, refid: str) -> EventOrigin:
+        return EventOrigin(location=EventLocation.KRAKEN, external_id=refid)
 
     def load_events(self) -> list[LedgerEvent]:
         entries = self._read_entries()
@@ -314,6 +318,8 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
+            origin=self._build_origin(entry.refid),
+            ingestion=KRAKEN_INGESTION_SOURCE,
             event_type=event_type,
             legs=legs,
         )
@@ -336,6 +342,8 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
+            origin=self._build_origin(entry.refid),
+            ingestion=KRAKEN_INGESTION_SOURCE,
             event_type=event_type,
             legs=legs,
         )
@@ -354,6 +362,8 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=min(entry.time for entry in entries),
+            origin=self._build_origin(entries[0].refid),
+            ingestion=KRAKEN_INGESTION_SOURCE,
             event_type=EventType.TRADE,
             legs=legs,
         )
@@ -368,6 +378,8 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
+            origin=self._build_origin(entry.refid),
+            ingestion=KRAKEN_INGESTION_SOURCE,
             event_type=EventType.REWARD,
             legs=legs,
         )
@@ -381,6 +393,8 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
+            origin=self._build_origin(entry.refid),
+            ingestion=KRAKEN_INGESTION_SOURCE,
             event_type=EventType.REWARD,
             legs=legs,
         )
@@ -395,6 +409,8 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
+            origin=self._build_origin(entry.refid),
+            ingestion=KRAKEN_INGESTION_SOURCE,
             event_type=EventType.REWARD,
             legs=[_ledger_leg(entry, quantity)],
         )

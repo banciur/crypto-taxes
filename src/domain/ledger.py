@@ -16,6 +16,28 @@ class EventType(StrEnum):
     REWARD = "REWARD"
 
 
+class EventLocation(StrEnum):
+    ETHEREUM = "ETHEREUM"
+    ARBITRUM = "ARBITRUM"
+    BASE = "BASE"
+    OPTIMISM = "OPTIMISM"
+    KRAKEN = "KRAKEN"
+    COINBASE = "COINBASE"
+    BINANCE = "BINANCE"
+    INTERNAL = "INTERNAL"
+
+
+class EventOrigin(BaseModel):
+    location: EventLocation
+    external_id: str
+
+    @model_validator(mode="after")
+    def _validate_external_id(self) -> EventOrigin:
+        if not self.external_id:
+            raise ValueError("external_id must be non-empty")
+        return self
+
+
 class LedgerLeg(BaseModel):
     """A single leg within an event.
 
@@ -42,13 +64,17 @@ class LedgerEvent(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     timestamp: datetime
 
+    origin: EventOrigin
+    ingestion: str
     event_type: EventType
     legs: list[LedgerLeg]
 
     @model_validator(mode="after")
-    def _validate_legs(self) -> LedgerEvent:
+    def _validate_fields(self) -> LedgerEvent:
         if not self.legs:
             raise ValueError("LedgerEvent must have at least one leg")
+        if not self.ingestion:
+            raise ValueError("LedgerEvent.ingestion must be non-empty")
         return self
 
 

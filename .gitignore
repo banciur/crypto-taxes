@@ -7,3 +7,5 @@ data
 .cache
 .env
 .tmp
+
+private.txt

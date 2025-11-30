@@ -4,9 +4,11 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from domain.inventory import InventoryEngine
-from domain.ledger import EventType, LedgerEvent, LedgerLeg
+from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
 from tests.helpers.test_price_service import TestPriceService
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events
+
+TEST_ORIGIN = EventOrigin(location=EventLocation.INTERNAL, external_id="tax-fixture")
 
 
 def test_weekly_tax_summary_skips_tax_free_disposals() -> None:
@@ -16,6 +18,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals() -> None:
     events = [
         LedgerEvent(
             timestamp=datetime(2023, 1, 1, 12, tzinfo=timezone.utc),
+            origin=TEST_ORIGIN,
+            ingestion="manual_test",
             event_type=EventType.TRADE,
             legs=[
                 LedgerLeg(asset_id="BTC", quantity=Decimal("0.6"), wallet_id="spot"),
@@ -24,6 +28,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals() -> None:
         ),
         LedgerEvent(
             timestamp=datetime(2024, 12, 1, 12, tzinfo=timezone.utc),
+            origin=TEST_ORIGIN,
+            ingestion="manual_test",
             event_type=EventType.TRADE,
             legs=[
                 LedgerLeg(asset_id="BTC", quantity=Decimal("0.4"), wallet_id="spot"),
@@ -32,6 +38,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals() -> None:
         ),
         LedgerEvent(
             timestamp=datetime(2024, 12, 15, 12, tzinfo=timezone.utc),
+            origin=TEST_ORIGIN,
+            ingestion="manual_test",
             event_type=EventType.TRADE,
             legs=[
                 LedgerLeg(asset_id="BTC", quantity=Decimal("-0.3"), wallet_id="spot"),
@@ -40,6 +48,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals() -> None:
         ),
         LedgerEvent(
             timestamp=datetime(2025, 1, 10, 12, tzinfo=timezone.utc),
+            origin=TEST_ORIGIN,
+            ingestion="manual_test",
             event_type=EventType.TRADE,
             legs=[
                 LedgerLeg(asset_id="BTC", quantity=Decimal("-0.4"), wallet_id="spot"),
@@ -48,6 +58,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals() -> None:
         ),
         LedgerEvent(
             timestamp=datetime(2025, 1, 17, 12, tzinfo=timezone.utc),
+            origin=TEST_ORIGIN,
+            ingestion="manual_test",
             event_type=EventType.TRADE,
             legs=[
                 LedgerLeg(asset_id="BTC", quantity=Decimal("-0.2"), wallet_id="spot"),

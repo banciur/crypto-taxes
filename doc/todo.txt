@@ -1,20 +1,20 @@
 First stage: compute german taxes
+TODO: On-chain events, what could be the source
+TODO: Manual adjustments to filter out spam transactions
+TODO: how to combine different sources of transactions
+
 TODO: I'm suspicious of the tax calculations. Think how we can debug it better.
 TODO: Maybe time to change implementation and add connections to objects, not just id's. Or maybe create object repos so we could query them easily. Or just good old SQLAlchemy?
 TODO: Do we need extra snapshot mechanism to, for example, output value of wallets?
-TODO: does core model handle transfers against own wallets. Shouldn't be able to spend from a wallet that doesn't exist or doesn't have enough funds.
+TODO: Review inventory again. I don't like those intermediate objects also ones in taxes.
 
-TODO: Add original transaction place and id ex (Ethereum, tx hash) to the LedgerEvent
 TODO: Import data from as this should be very easy:
   - Coinbase
   - Lido
   - Stakewise
-TODO: On-chain events, what could be the source
-TODO: how to combine different sources of transactions
-TODO: Probably will have to introduce manual adjustments
 TODO: Verify against my own spreadsheet
 
-TODO; question how to calculate income in case when I'm partly leaving the farm.
+TODO: How to calculate income and taxes in case when I'm partly leaving the farm.
   Initial idea (from old model review)
   - ctokens only when token is sold compute gain as difference of value when bought (FIFO used for computing buy price)
   - atokens compute tax / gain every time it rebases and when selling no tax
@@ -60,7 +60,21 @@ Some loose ideas
     - putting it into farm 40acres USDC Vault through vaults.fyi
     - occasionally get some money from the farm and repay part of the debt to decrease debt
 
-Other similar projects
+
+- Polish bonds income
+
+Other projects
 ------------------
 - https://github.com/eprbell/rp2
 - https://github.com/BittyTax
+
+- https://app.koinly.io/p/transactions
+- https://cointracking.info/
+
+
+Source of onchain transactions
+------------------
+https://docs.etherscan.io/introduction
+https://docs.cloud.debank.com/en/
+
+https://docs.moralis.com/

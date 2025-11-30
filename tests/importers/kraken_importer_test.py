@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from domain.ledger import EventType
+from domain.ledger import EventLocation, EventType
 from importers.kraken_importer import KrakenImporter, KrakenLedgerEntry
 
 FIELDNAMES = [
@@ -98,6 +98,29 @@ def _preprocess_entry(
         fee=Decimal("0"),
         balance=Decimal("0"),
     )
+
+
+def test_importer_sets_origin_and_ingestion(tmp_path: Path) -> None:
+    refid = "REF-META-1"
+    file = tmp_path / "origin.csv"
+    write_csv(
+        file,
+        [
+            ledger_row(
+                refid=refid,
+                ts=DEFAULT_TS,
+                tx_type="deposit",
+                asset="EUR",
+                amount="10",
+            )
+        ],
+    )
+
+    event = KrakenImporter(str(file)).load_events()[0]
+
+    assert event.origin.location == EventLocation.KRAKEN
+    assert event.origin.external_id == refid
+    assert event.ingestion == "kraken_ledger_csv"
 
 
 def test_deposit_fiat_becomes_deposit_event(tmp_path: Path) -> None:
