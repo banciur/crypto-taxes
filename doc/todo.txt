@@ -1,6 +1,9 @@
 First stage: compute german taxes
+TODO: Compute tax on staking, drops.
+TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
+
 TODO: On-chain events, what could be the source
-TODO: Manual adjustments to filter out spam transactions
+TODO: Manual adjustments to filter out spam transactions?
 TODO: how to combine different sources of transactions
 
 TODO: I'm suspicious of the tax calculations. Think how we can debug it better.
@@ -74,6 +77,7 @@ Other projects
 
 Source of onchain transactions
 ------------------
+https://thegraph.com/
 https://docs.etherscan.io/introduction
 https://docs.cloud.debank.com/en/
 

@@ -1,32 +1,41 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from enum import StrEnum
 from typing import Iterable
 from uuid import UUID
 
 from domain.inventory import InventoryResult
-from domain.ledger import AcquisitionLot, LedgerEvent
+from domain.ledger import AcquisitionLot, EventType, LedgerEvent, LedgerLeg
 
 from .formatting import format_currency
 
 
+class TaxEventKind(StrEnum):
+    DISPOSAL = "DISPOSAL"
+    REWARD = "REWARD"
+
+
 @dataclass
 class TaxEvent:
-    disposal_link_id: UUID
+    source_id: UUID
+    kind: TaxEventKind
     taxable_gain: Decimal
 
 
 def generate_tax_events(
     inventory_result: InventoryResult, events: Iterable[LedgerEvent], *, tax_free_days: int = 365
 ) -> list[TaxEvent]:
-    """Create per-disposal tax events, skipping links that are past the tax-free window."""
+    """Create taxable events from disposals and reward acquisitions."""
     events_by_id = {event.id: event for event in events}
+    legs_by_id: dict[UUID, LedgerLeg] = {}
     legs_to_event: dict[UUID, LedgerEvent] = {}
     for event in events_by_id.values():
         for leg in event.legs:
             legs_to_event[leg.id] = event
+            legs_by_id[leg.id] = leg
 
     lots_by_id: dict[UUID, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
     tax_free_threshold = timedelta(days=tax_free_days)
@@ -52,8 +61,38 @@ def generate_tax_events(
             continue
 
         cost_basis = link.quantity_used * lot.cost_eur_per_unit
-        gain = link.proceeds_total_eur - cost_basis
-        tax_events.append(TaxEvent(disposal_link_id=link.id, taxable_gain=gain))
+        proceeds = link.proceeds_total_eur
+        gain = proceeds - cost_basis
+        tax_events.append(
+            TaxEvent(
+                source_id=link.id,
+                kind=TaxEventKind.DISPOSAL,
+                taxable_gain=gain,
+            )
+        )
+
+    for lot in inventory_result.acquisition_lots:
+        acquisition_event = events_by_id.get(lot.acquired_event_id)
+        if acquisition_event is None:
+            msg = f"Unknown acquisition event {lot.acquired_event_id} for lot {lot.id}"
+            raise ValueError(msg)
+
+        if acquisition_event.event_type != EventType.REWARD:
+            continue
+
+        acquisition_leg = legs_by_id.get(lot.acquired_leg_id)
+        if acquisition_leg is None:
+            msg = f"Unknown acquisition leg {lot.acquired_leg_id} for lot {lot.id}"
+            raise ValueError(msg)
+
+        proceeds = acquisition_leg.quantity * lot.cost_eur_per_unit
+        tax_events.append(
+            TaxEvent(
+                source_id=lot.id,
+                kind=TaxEventKind.REWARD,
+                taxable_gain=proceeds,
+            )
+        )
 
     return tax_events
 
@@ -62,7 +101,7 @@ def generate_tax_events(
 class WeeklyTaxSummary:
     week_start: date
     week_end: date
-    taxable_disposals: int
+    taxable_events: int
     proceeds: Decimal
     cost_basis: Decimal
     taxable_gain: Decimal
@@ -73,54 +112,89 @@ def compute_weekly_tax_summary(
     inventory_result: InventoryResult,
     events: Iterable[LedgerEvent],
 ) -> list[WeeklyTaxSummary]:
-    """Aggregate taxable disposals per ISO week, skipping weeks with no events."""
+    """Aggregate taxable events per ISO week, recomputing valuations from inventory and events."""
     weekly_totals: dict[date, tuple[int, Decimal, Decimal, Decimal]] = {}
     lots_by_id: dict[UUID, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
     links_by_id = {link.id: link for link in inventory_result.disposal_links}
-    legs_to_event: dict[UUID, LedgerEvent] = {}
+    legs_by_id: dict[UUID, LedgerLeg] = {}
+    leg_to_event: dict[UUID, LedgerEvent] = {}
+    events_by_id: dict[UUID, LedgerEvent] = {}
     for event in events:
+        events_by_id[event.id] = event
         for leg in event.legs:
-            legs_to_event[leg.id] = event
+            legs_by_id[leg.id] = leg
+            leg_to_event[leg.id] = event
 
     for tax_event in tax_events:
-        link = links_by_id.get(tax_event.disposal_link_id)
-        if link is None:
-            msg = f"Unknown disposal link {tax_event.disposal_link_id}"
-            raise ValueError(msg)
+        proceeds: Decimal
+        cost_basis: Decimal
+        gain: Decimal
+        timestamp: datetime
 
-        disposal_event = legs_to_event.get(link.disposal_leg_id)
-        if disposal_event is None:
-            msg = f"Unknown disposal leg {link.disposal_leg_id}"
-            raise ValueError(msg)
+        if tax_event.kind == TaxEventKind.DISPOSAL:
+            link = links_by_id.get(tax_event.source_id)
+            if link is None:
+                msg = f"Unknown disposal link {tax_event.source_id}"
+                raise ValueError(msg)
 
-        lot = lots_by_id.get(link.lot_id)
-        if lot is None:
-            msg = f"Unknown lot {link.lot_id} for disposal {link.id}"
-            raise ValueError(msg)
+            lot = lots_by_id.get(link.lot_id)
+            if lot is None:
+                msg = f"Unknown lot {link.lot_id} for disposal {link.id}"
+                raise ValueError(msg)
 
-        week_start = disposal_event.timestamp.date() - timedelta(days=disposal_event.timestamp.weekday())
-        proceeds_eur = link.proceeds_total_eur
-        cost_basis_eur = link.quantity_used * lot.cost_eur_per_unit
-        gain_eur = tax_event.taxable_gain
+            disposal_event = leg_to_event.get(link.disposal_leg_id)
+            if disposal_event is None:
+                msg = f"Unknown disposal leg {link.disposal_leg_id}"
+                raise ValueError(msg)
+
+            proceeds = link.proceeds_total_eur
+            cost_basis = link.quantity_used * lot.cost_eur_per_unit
+            gain = proceeds - cost_basis
+            timestamp = disposal_event.timestamp
+        elif tax_event.kind == TaxEventKind.REWARD:
+            lot = lots_by_id.get(tax_event.source_id)
+            if lot is None:
+                msg = f"Unknown reward lot {tax_event.source_id}"
+                raise ValueError(msg)
+
+            acquisition_event = events_by_id.get(lot.acquired_event_id)
+            if acquisition_event is None:
+                msg = f"Unknown acquisition event {lot.acquired_event_id} for lot {lot.id}"
+                raise ValueError(msg)
+            if acquisition_event.event_type != EventType.REWARD:
+                msg = f"Lot {lot.id} not linked to REWARD event {acquisition_event.id}"
+                raise ValueError(msg)
+
+            acquisition_leg = legs_by_id.get(lot.acquired_leg_id)
+            if acquisition_leg is None:
+                msg = f"Unknown acquisition leg {lot.acquired_leg_id} for lot {lot.id}"
+                raise ValueError(msg)
+
+            proceeds = acquisition_leg.quantity * lot.cost_eur_per_unit
+            cost_basis = Decimal("0")
+            gain = proceeds
+            timestamp = acquisition_event.timestamp
+
+        week_start = timestamp.date() - timedelta(days=timestamp.weekday())
 
         totals = weekly_totals.get(week_start, (0, Decimal("0"), Decimal("0"), Decimal("0")))
-        disposals, proceeds, costs, gains = totals
+        count, proceeds_total, costs_total, gains_total = totals
         weekly_totals[week_start] = (
-            disposals + 1,
-            proceeds + proceeds_eur,
-            costs + cost_basis_eur,
-            gains + gain_eur,
+            count + 1,
+            proceeds_total + proceeds,
+            costs_total + cost_basis,
+            gains_total + gain,
         )
 
     summaries: list[WeeklyTaxSummary] = []
-    for week_start, (disposals, proceeds, costs, gains) in sorted(weekly_totals.items()):
-        if disposals == 0:
+    for week_start, (count, proceeds, costs, gains) in sorted(weekly_totals.items()):
+        if count == 0:
             continue
         summaries.append(
             WeeklyTaxSummary(
                 week_start=week_start,
                 week_end=week_start + timedelta(days=6),
-                taxable_disposals=disposals,
+                taxable_events=count,
                 proceeds=proceeds,
                 cost_basis=costs,
                 taxable_gain=gains,
@@ -132,15 +206,15 @@ def compute_weekly_tax_summary(
 
 def render_weekly_tax_summary(weeks: Iterable[WeeklyTaxSummary]) -> None:
     weeks_list = list(weeks)
-    print("Weekly taxable gains (EUR):")
+    print("Weekly taxable totals (EUR):")
     if not weeks_list:
-        print("  (no taxable disposals)")
+        print("  (no taxable events)")
         return
 
     week_label_width = max(
         len("Week"), max((len(f"{row.week_start} → {row.week_end}") for row in weeks_list), default=0)
     )
-    count_width = max(len("Disposals"), max((len(str(row.taxable_disposals)) for row in weeks_list), default=0))
+    count_width = max(len("Events"), max((len(str(row.taxable_events)) for row in weeks_list), default=0))
     proceeds_width = max(len("Proceeds"), max((len(format_currency(row.proceeds)) for row in weeks_list), default=0))
     cost_width = max(len("Cost basis"), max((len(format_currency(row.cost_basis)) for row in weeks_list), default=0))
     gain_width = max(
@@ -149,7 +223,7 @@ def render_weekly_tax_summary(weeks: Iterable[WeeklyTaxSummary]) -> None:
 
     header = (
         f"{'Week':<{week_label_width}} "
-        f"{'Disposals':>{count_width}} "
+        f"{'Events':>{count_width}} "
         f"{'Proceeds':>{proceeds_width}} "
         f"{'Cost basis':>{cost_width}} "
         f"{'Taxable gain':>{gain_width}}"
@@ -160,7 +234,7 @@ def render_weekly_tax_summary(weeks: Iterable[WeeklyTaxSummary]) -> None:
         week_label = f"{row.week_start} → {row.week_end}"
         lines.append(
             f"{week_label:<{week_label_width}} "
-            f"{row.taxable_disposals:>{count_width}} "
+            f"{row.taxable_events:>{count_width}} "
             f"{format_currency(row.proceeds):>{proceeds_width}} "
             f"{format_currency(row.cost_basis):>{cost_width}} "
             f"{format_currency(row.taxable_gain):>{gain_width}}"
