@@ -38,7 +38,7 @@ def test_compute_inventory_summary_breaks_down_tax_free_holdings(price_service: 
             wallet_id="test",
             acquired_timestamp=datetime(2023, 12, 1, tzinfo=timezone.utc),
             quantity_remaining=btc_tax_free_qty,
-            cost_eur_per_unit=Decimal("15000"),
+            cost_per_unit=Decimal("15000"),
         ),
         OpenLotSnapshot(
             lot_id=uuid4(),
@@ -46,7 +46,7 @@ def test_compute_inventory_summary_breaks_down_tax_free_holdings(price_service: 
             wallet_id="test",
             acquired_timestamp=datetime(2024, 9, 1, tzinfo=timezone.utc),
             quantity_remaining=btc_recent_qty,
-            cost_eur_per_unit=Decimal("25000"),
+            cost_per_unit=Decimal("25000"),
         ),
         OpenLotSnapshot(
             lot_id=uuid4(),
@@ -54,7 +54,7 @@ def test_compute_inventory_summary_breaks_down_tax_free_holdings(price_service: 
             wallet_id="test",
             acquired_timestamp=datetime(2023, 6, 15, tzinfo=timezone.utc),
             quantity_remaining=eth_qty,
-            cost_eur_per_unit=Decimal("1200"),
+            cost_per_unit=Decimal("1200"),
         ),
     ]
 

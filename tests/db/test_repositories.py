@@ -79,14 +79,12 @@ def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: Ledg
     acquisition_event = repo.create(_sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc)))
     lots = [
         AcquisitionLot(
-            acquired_event_id=acquisition_event.id,
             acquired_leg_id=acquisition_event.legs[0].id,
-            cost_eur_per_unit=Decimal("1.23"),
+            cost_per_unit=Decimal("1.23"),
         ),
         AcquisitionLot(
-            acquired_event_id=acquisition_event.id,
             acquired_leg_id=acquisition_event.legs[1].id,
-            cost_eur_per_unit=Decimal("2.34"),
+            cost_per_unit=Decimal("2.34"),
         ),
     ]
 
@@ -97,8 +95,8 @@ def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: Ledg
     stored_by_id = {lot.id: lot for lot in stored}
     for original in lots:
         reloaded = stored_by_id[original.id]
-        assert reloaded.acquired_event_id == original.acquired_event_id
-        assert reloaded.cost_eur_per_unit == original.cost_eur_per_unit
+        assert reloaded.acquired_leg_id == original.acquired_leg_id
+        assert reloaded.cost_per_unit == original.cost_per_unit
 
 
 def test_persist_disposal_links(
@@ -107,14 +105,12 @@ def test_persist_disposal_links(
     acquisition_event = repo.create(_sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc)))
     lots = [
         AcquisitionLot(
-            acquired_event_id=acquisition_event.id,
             acquired_leg_id=acquisition_event.legs[0].id,
-            cost_eur_per_unit=Decimal("1.23"),
+            cost_per_unit=Decimal("1.23"),
         ),
         AcquisitionLot(
-            acquired_event_id=acquisition_event.id,
             acquired_leg_id=acquisition_event.legs[1].id,
-            cost_eur_per_unit=Decimal("2.34"),
+            cost_per_unit=Decimal("2.34"),
         ),
     ]
     lot_repo.create_many(lots)
@@ -127,13 +123,13 @@ def test_persist_disposal_links(
             disposal_leg_id=disposal_leg_id,
             lot_id=lots[0].id,
             quantity_used=Decimal("0.5"),
-            proceeds_total_eur=Decimal("100"),
+            proceeds_total=Decimal("100"),
         ),
         DisposalLink(
             disposal_leg_id=disposal_leg_id,
             lot_id=lots[1].id,
             quantity_used=Decimal("1.25"),
-            proceeds_total_eur=Decimal("250.75"),
+            proceeds_total=Decimal("250.75"),
         ),
     ]
 
@@ -145,4 +141,4 @@ def test_persist_disposal_links(
     for original in links:
         reloaded = stored_by_id[original.id]
         assert reloaded.quantity_used == original.quantity_used
-        assert reloaded.proceeds_total_eur == original.proceeds_total_eur
+        assert reloaded.proceeds_total == original.proceeds_total

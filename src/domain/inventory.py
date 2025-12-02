@@ -43,7 +43,7 @@ class OpenLotSnapshot(BaseModel):
     wallet_id: str
     acquired_timestamp: datetime
     quantity_remaining: Decimal
-    cost_eur_per_unit: Decimal
+    cost_per_unit: Decimal
 
 
 class InventoryResult(BaseModel):
@@ -75,9 +75,8 @@ class InventoryEngine:
             acquisition_legs = [leg for leg in event.legs if leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID]
             for leg in acquisition_legs:
                 lot = AcquisitionLot(
-                    acquired_event_id=event.id,
                     acquired_leg_id=leg.id,
-                    cost_eur_per_unit=self._resolve_cost_per_unit(event, leg),
+                    cost_per_unit=self._resolve_cost_per_unit(event, leg),
                 )
                 acquisitions.append(lot)
 
@@ -107,7 +106,7 @@ class InventoryEngine:
                             disposal_leg_id=leg.id,
                             lot_id=lot_state.lot.id,
                             quantity_used=take_quantity,
-                            proceeds_total_eur=proceeds_total,
+                            proceeds_total=proceeds_total,
                         )
                     )
 
@@ -120,7 +119,7 @@ class InventoryEngine:
                 wallet_id=state.wallet_id,
                 acquired_timestamp=state.acquired_timestamp,
                 quantity_remaining=state.remaining_quantity,
-                cost_eur_per_unit=state.lot.cost_eur_per_unit,
+                cost_per_unit=state.lot.cost_per_unit,
             )
             for states in inventory.values()
             for state in states

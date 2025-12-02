@@ -1,4 +1,5 @@
 First stage: compute german taxes
+TODO: Inventory layer?
 TODO: Compute tax on staking, drops.
 TODO: DB migration.
   - use Enums

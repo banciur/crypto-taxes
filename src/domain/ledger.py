@@ -80,14 +80,13 @@ class LedgerEvent(BaseModel):
 
 class AcquisitionLot(BaseModel):
     id: UUID = Field(default_factory=uuid4)
-    acquired_event_id: UUID
     acquired_leg_id: UUID
-    cost_eur_per_unit: Decimal
+    cost_per_unit: Decimal
 
     @model_validator(mode="after")
     def _validate_fields(self) -> AcquisitionLot:
-        if self.cost_eur_per_unit < 0:
-            raise ValueError("cost_eur_per_unit must be >= 0")
+        if self.cost_per_unit < 0:
+            raise ValueError("cost_per_unit must be >= 0")
         return self
 
 
@@ -96,12 +95,12 @@ class DisposalLink(BaseModel):
     disposal_leg_id: UUID
     lot_id: UUID
     quantity_used: Decimal
-    proceeds_total_eur: Decimal
+    proceeds_total: Decimal
 
     @model_validator(mode="after")
     def _validate(self) -> DisposalLink:
         if self.quantity_used <= 0:
             raise ValueError("quantity_used must be > 0")
-        if self.proceeds_total_eur < 0:
-            raise ValueError("proceeds_total_eur must be >= 0")
+        if self.proceeds_total < 0:
+            raise ValueError("proceeds_total must be >= 0")
         return self

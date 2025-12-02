@@ -33,16 +33,15 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - AcquisitionLot
   - `id: UUID`
-  - `acquired_event_id: UUID`
   - `acquired_leg_id: UUID`
-  - `cost_eur_per_unit: Decimal`
+  - `cost_per_unit: Decimal`
 
 - DisposalLink
   - `id: UUID`
   - `disposal_leg_id: UUID`
   - `lot_id: UUID`
   - `quantity_used: Decimal`
-  - `proceeds_total_eur: Decimal`
+  - `proceeds_total: Decimal`
 
 - EventOrigin
   - `location: EventLocation` (`ETHEREUM`, `ARBITRUM`, `KRAKEN`, `COINBASE`...)
@@ -62,7 +61,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
 - Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine.
-- Transfers (`EventType.TRANSFER`) move existing lots between wallets: outbound legs consume open inventory; inbound legs reopen the same lot IDs with original acquisition timestamp and cost in the destination wallet. No new acquisitions/disposals are created.
+- Transfers (`EventType.TRANSFER`) move existing lots between wallets, no new acquisitions/disposals are created.
 - Synthetic seed lots can be injected ahead of importer output to satisfy transfers from `outside` when historical sources are missing. The CLI accepts `--seed-csv` (default `data/seed_lots.csv`) with rows `asset_id,wallet_id,quantity[,timestamp,cost_total_eur]`; these are modeled as tiny-cost trades (default cost 0.0001 EUR, timestamp defaults to 2000-01-01Z) so FIFO can move them like any other lot. Missing inventory will surface as an error during processing and should be resolved by updating the seed CSV manually.
 - Each event captures `origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 

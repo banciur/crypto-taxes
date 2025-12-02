@@ -31,20 +31,19 @@ def dump_inventory_debug(
 
     with lots_path.open("w", encoding="utf-8", newline="") as fp:
         writer = csv.writer(fp)
-        writer.writerow(["id", "acquired_event_id", "acquired_leg_id", "cost_eur_per_unit"])
+        writer.writerow(["id", "acquired_leg_id", "cost_per_unit"])
         for lot in inventory_result.acquisition_lots:
             writer.writerow(
                 [
                     str(lot.id),
-                    str(lot.acquired_event_id),
                     str(lot.acquired_leg_id),
-                    str(lot.cost_eur_per_unit),
+                    str(lot.cost_per_unit),
                 ]
             )
 
     with disposals_path.open("w", encoding="utf-8", newline="") as fp:
         writer = csv.writer(fp)
-        writer.writerow(["id", "disposal_leg_id", "lot_id", "quantity_used", "proceeds_total_eur"])
+        writer.writerow(["id", "disposal_leg_id", "lot_id", "quantity_used", "proceeds_total"])
         for link in inventory_result.disposal_links:
             writer.writerow(
                 [
@@ -52,7 +51,7 @@ def dump_inventory_debug(
                     str(link.disposal_leg_id),
                     str(link.lot_id),
                     str(link.quantity_used),
-                    str(link.proceeds_total_eur),
+                    str(link.proceeds_total),
                 ]
             )
 

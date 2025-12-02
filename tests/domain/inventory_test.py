@@ -78,34 +78,32 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
     assert len(result.disposal_links) == 3
 
     lot_1 = result.acquisition_lots[0]
-    assert lot_1.acquired_event_id == events[0].id
     assert lot_1.acquired_leg_id == t1_leg.id
-    assert lot_1.cost_eur_per_unit == t1_amount_spent / t1_amount_bought
+    assert lot_1.cost_per_unit == t1_amount_spent / t1_amount_bought
 
     lot_2 = result.acquisition_lots[1]
-    assert lot_2.acquired_event_id == events[1].id
     assert lot_2.acquired_leg_id == t2_leg.id
-    assert lot_2.cost_eur_per_unit == t2_amount_spent / t2_amount_bought
+    assert lot_2.cost_per_unit == t2_amount_spent / t2_amount_bought
 
     dl_1 = result.disposal_links[0]
     assert dl_1.lot_id == lot_1.id
     assert dl_1.disposal_leg_id == t3_leg.id
     assert dl_1.quantity_used == t3_amount_spent
-    assert dl_1.proceeds_total_eur == t3_amount_bought
+    assert dl_1.proceeds_total == t3_amount_bought
 
     dl_2 = result.disposal_links[1]
     assert dl_2.lot_id == lot_1.id
     assert dl_2.disposal_leg_id == t4_leg.id
     d2_expected_quantity = t1_amount_bought - t3_amount_spent
     assert dl_2.quantity_used == d2_expected_quantity
-    assert dl_2.proceeds_total_eur == d2_expected_quantity * (t4_amount_bought / t4_amount_spent)
+    assert dl_2.proceeds_total == d2_expected_quantity * (t4_amount_bought / t4_amount_spent)
 
     dl_3 = result.disposal_links[2]
     assert dl_3.lot_id == lot_2.id
     assert dl_3.disposal_leg_id == t4_leg.id
     d3_expected_quantity = t4_amount_spent - d2_expected_quantity
     assert dl_3.quantity_used == d3_expected_quantity
-    assert dl_3.proceeds_total_eur == d3_expected_quantity * (t4_amount_bought / t4_amount_spent)
+    assert dl_3.proceeds_total == d3_expected_quantity * (t4_amount_bought / t4_amount_spent)
 
     assert len(result.open_inventory) == 1
     open_lot = result.open_inventory[0]
@@ -140,16 +138,15 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
     assert len(result.disposal_links) == 1
 
     lot_2 = result.acquisition_lots[1]
-    assert lot_2.acquired_event_id == events[1].id
     assert lot_2.acquired_leg_id == t2_drop_leg.id
     drop_rate = inventory_engine._price_provider.rate("SPK", "EUR", t2_time)
-    assert lot_2.cost_eur_per_unit == drop_rate
+    assert lot_2.cost_per_unit == drop_rate
 
     disposal = result.disposal_links[0]
     assert disposal.disposal_leg_id == t2_fee_leg.id
     assert disposal.quantity_used == abs(t2_fee_leg.quantity)
     fee_rate = inventory_engine._price_provider.rate("ETH", "EUR", t2_time)
-    assert disposal.proceeds_total_eur == fee_rate * disposal.quantity_used
+    assert disposal.proceeds_total == fee_rate * disposal.quantity_used
 
     assert len(result.open_inventory) == 2
     open_lot_eth = result.open_inventory[0]
@@ -191,9 +188,8 @@ def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) ->
 
     assert len(result.acquisition_lots) == 1
     acquisition_lot = result.acquisition_lots[0]
-    assert acquisition_lot.acquired_event_id == events[0].id
     assert acquisition_lot.acquired_leg_id == buy_leg.id
-    assert acquisition_lot.cost_eur_per_unit == buy_spent_eur / buy_amount
+    assert acquisition_lot.cost_per_unit == buy_spent_eur / buy_amount
 
     assert result.disposal_links == []
 

@@ -41,9 +41,6 @@ class LedgerEventOrm(Base):
     legs: Mapped[list["LedgerLegOrm"]] = relationship(
         cascade="all, delete-orphan", back_populates="event", lazy="joined"
     )
-    acquisition_lots: Mapped[list["AcquisitionLotOrm"]] = relationship(
-        cascade="all, delete-orphan", back_populates="acquired_event"
-    )
 
 
 class LedgerLegOrm(Base):
@@ -57,7 +54,9 @@ class LedgerLegOrm(Base):
     is_fee: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     event: Mapped[LedgerEventOrm] = relationship(back_populates="legs")
-    acquired_lot: Mapped["AcquisitionLotOrm | None"] = relationship(back_populates="acquired_leg", uselist=False)
+    acquired_lot: Mapped["AcquisitionLotOrm | None"] = relationship(
+        back_populates="acquired_leg", cascade="all, delete-orphan", uselist=False
+    )
     disposal_links: Mapped[list["DisposalLinkOrm"]] = relationship(
         back_populates="disposal_leg", cascade="all, delete-orphan"
     )
@@ -67,13 +66,9 @@ class AcquisitionLotOrm(Base):
     __tablename__ = "acquisition_lots"
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
-    acquired_event_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("ledger_events.id"), nullable=False)
     acquired_leg_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("ledger_legs.id"), nullable=False)
-    cost_eur_per_unit: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
+    cost_per_unit: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
 
-    acquired_event: Mapped[LedgerEventOrm] = relationship(
-        back_populates="acquisition_lots", foreign_keys=[acquired_event_id]
-    )
     acquired_leg: Mapped[LedgerLegOrm] = relationship(back_populates="acquired_lot", foreign_keys=[acquired_leg_id])
     disposal_links: Mapped[list["DisposalLinkOrm"]] = relationship(back_populates="lot", cascade="all, delete-orphan")
 
@@ -85,7 +80,7 @@ class DisposalLinkOrm(Base):
     disposal_leg_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("ledger_legs.id"), nullable=False)
     lot_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("acquisition_lots.id"), nullable=False)
     quantity_used: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
-    proceeds_total_eur: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
+    proceeds_total: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
 
     disposal_leg: Mapped[LedgerLegOrm] = relationship(back_populates="disposal_links", foreign_keys=[disposal_leg_id])
     lot: Mapped[AcquisitionLotOrm] = relationship(back_populates="disposal_links")

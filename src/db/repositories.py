@@ -93,9 +93,8 @@ class AcquisitionLotRepository:
         orm_lots = [
             models.AcquisitionLotOrm(
                 id=lot.id,
-                acquired_event_id=lot.acquired_event_id,
                 acquired_leg_id=lot.acquired_leg_id,
-                cost_eur_per_unit=lot.cost_eur_per_unit,
+                cost_per_unit=lot.cost_per_unit,
             )
             for lot in lots
         ]
@@ -108,9 +107,8 @@ class AcquisitionLotRepository:
         return [
             AcquisitionLot(
                 id=lot.id,
-                acquired_event_id=lot.acquired_event_id,
                 acquired_leg_id=lot.acquired_leg_id,
-                cost_eur_per_unit=lot.cost_eur_per_unit,
+                cost_per_unit=lot.cost_per_unit,
             )
             for lot in orm_lots
         ]
@@ -127,7 +125,7 @@ class DisposalLinkRepository:
                 disposal_leg_id=link.disposal_leg_id,
                 lot_id=link.lot_id,
                 quantity_used=link.quantity_used,
-                proceeds_total_eur=link.proceeds_total_eur,
+                proceeds_total=link.proceeds_total,
             )
             for link in links
         ]
@@ -143,7 +141,7 @@ class DisposalLinkRepository:
                 disposal_leg_id=link.disposal_leg_id,
                 lot_id=link.lot_id,
                 quantity_used=link.quantity_used,
-                proceeds_total_eur=link.proceeds_total_eur,
+                proceeds_total=link.proceeds_total,
             )
             for link in orm_links
         ]
