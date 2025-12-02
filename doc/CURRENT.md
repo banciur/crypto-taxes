@@ -11,6 +11,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Represent basic events with legs, without enforcing double-entry balancing.
 - Minimal inventory structures for lots and disposals.
 - Unified price snapshots for crypto and fiat pairs.
+- Simple tax calculation for events with lots and disposals.
 
 ---
 

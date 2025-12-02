@@ -58,7 +58,7 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
         )
     )
 
-    # This should create two disposals as the amount is bigger than amount left in the first lot.
+    # This should create two disposals as the amount is bigger than the amount left in the first lot.
     t4_amount_spent = Decimal("0.7")
     t4_amount_bought = Decimal(1900)
     t4_leg = LedgerLeg(asset_id="ETH", quantity=-t4_amount_spent, wallet_id=WALLET_ID)
@@ -139,8 +139,7 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
 
     lot_2 = result.acquisition_lots[1]
     assert lot_2.acquired_leg_id == t2_drop_leg.id
-    drop_rate = inventory_engine._price_provider.rate("SPK", "EUR", t2_time)
-    assert lot_2.cost_per_unit == drop_rate
+    assert lot_2.cost_per_unit == inventory_engine._price_provider.rate("SPK", "EUR", t2_time)
 
     disposal = result.disposal_links[0]
     assert disposal.disposal_leg_id == t2_fee_leg.id
@@ -200,7 +199,7 @@ def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) ->
     assert open_lot.quantity_remaining == buy_amount
 
 
-def test_disposal_without_inventory_raises(inventory_engine: InventoryEngine) -> None:
+def test_disposal_without_acquisition_raises(inventory_engine: InventoryEngine) -> None:
     events = [
         make_event(
             event_type=EventType.TRADE,
@@ -215,7 +214,8 @@ def test_disposal_without_inventory_raises(inventory_engine: InventoryEngine) ->
         inventory_engine.process(events)
 
 
-def test_transfer_without_inventory_is_skipped(inventory_engine: InventoryEngine) -> None:
+def test_transfer_without_inventory(inventory_engine: InventoryEngine) -> None:
+    # TODO: This should raise. We skip lots but we should detect that we are sending from empty wallet
     events = [
         make_event(
             event_type=EventType.TRANSFER,
