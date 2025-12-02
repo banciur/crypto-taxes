@@ -1,4 +1,8 @@
 First stage: compute german taxes
+TODO: fix open lots now it contains 20k USDC
+TODO: Restore inventory taxable and free.
+TODO: compute_inventory_summary is super shitty to much vibing
+
 TODO: Inventory layer?
 TODO: Compute tax on staking, drops.
 TODO: DB migration.

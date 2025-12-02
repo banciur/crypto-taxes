@@ -73,9 +73,7 @@ def run(
 
     print(f"Imported {len(events)} events from {csv_path}")
     print_base_inventory_summary(inventory)
-    inventory_summary = compute_inventory_summary(
-        inventory.open_inventory, price_provider=price_service, owned_wallet_ids=owned_wallets, events=events
-    )
+    inventory_summary = compute_inventory_summary(events, owned_wallets, price_provider=price_service)
     render_inventory_summary(inventory_summary)
     weekly_tax = compute_weekly_tax_summary(tax_events, inventory, events)
     render_weekly_tax_summary(weekly_tax)

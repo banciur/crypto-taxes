@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Iterable
 
-from domain.inventory import InventoryEngine, OpenLotSnapshot
+from domain.inventory import InventoryEngine
 from domain.ledger import LedgerEvent
 from domain.pricing import PriceProvider
 
@@ -16,98 +16,54 @@ from .formatting import format_currency, format_decimal
 class AssetInventorySummary:
     asset_id: str
     total_quantity: Decimal
-    tax_free_quantity: Decimal
-    taxable_quantity: Decimal
     total_value_eur: Decimal
-    tax_free_value_eur: Decimal
-    taxable_value_eur: Decimal
-    lots: int
 
 
 @dataclass
 class InventorySummary:
     as_of: datetime
     assets: list[AssetInventorySummary] = field(default_factory=list)
-    total_value_eur: Decimal = Decimal("0")
-    total_tax_free_value_eur: Decimal = Decimal("0")
-
-    @property
-    def total_taxable_value_eur(self) -> Decimal:
-        return self.total_value_eur - self.total_tax_free_value_eur
 
 
 def compute_inventory_summary(
-    open_inventory: Iterable[OpenLotSnapshot],
+    events: Iterable[LedgerEvent],
+    owned_wallet_ids: set[str],
     *,
     price_provider: PriceProvider,
     as_of: datetime | None = None,
-    tax_free_days: int = 365,
-    owned_wallet_ids: set[str] | None = None,
-    events: Iterable[LedgerEvent] | None = None,
 ) -> InventorySummary:
     now = as_of or datetime.now(timezone.utc)
-    tax_free_cutoff = now - timedelta(days=tax_free_days)
 
-    accumulators: dict[str, tuple[Decimal, Decimal, int]] = {}
-    owned_assets: set[str] | None = None
-    if owned_wallet_ids is not None:
-        owned_assets = set()
-        if events is not None:
-            balances: dict[str, Decimal] = {}
-            for event in events:
-                for leg in event.legs:
-                    if leg.wallet_id in owned_wallet_ids:
-                        balances[leg.asset_id] = balances.get(leg.asset_id, Decimal("0")) + leg.quantity
-            owned_assets = {asset for asset, qty in balances.items() if qty > 0}
-
-    for lot in open_inventory:
-        if lot.quantity_remaining <= 0:
-            continue
-        if owned_assets is not None and owned_assets and lot.asset_id not in owned_assets:
-            continue
-        totals, tax_free_totals, lots = accumulators.get(lot.asset_id, (Decimal("0"), Decimal("0"), 0))
-        totals += lot.quantity_remaining
-        if lot.acquired_timestamp <= tax_free_cutoff:
-            tax_free_totals += lot.quantity_remaining
-        accumulators[lot.asset_id] = totals, tax_free_totals, lots + 1
+    balances: dict[str, Decimal] = {}
+    for event in events:
+        for leg in event.legs:
+            if leg.wallet_id not in owned_wallet_ids:
+                continue
+            balances[leg.asset_id] = balances.get(leg.asset_id, Decimal("0")) + leg.quantity
 
     asset_rates: dict[str, Decimal] = {}
-    for asset_id in accumulators:
-        asset_rates[asset_id] = price_provider.rate(asset_id, InventoryEngine.EUR_ASSET_ID, now)
+    for asset_id, quantity in balances.items():
+        if quantity > 0:
+            asset_rates[asset_id] = price_provider.rate(asset_id, InventoryEngine.EUR_ASSET_ID, now)
 
     summaries: list[AssetInventorySummary] = []
-    total_value = Decimal("0")
-    total_tax_free_value = Decimal("0")
 
-    for asset_id in sorted(accumulators):
-        total_qty, tax_free_qty, lots = accumulators[asset_id]
-        taxable_qty = total_qty - tax_free_qty
+    for asset_id in sorted(asset_rates):
+        total_qty = balances[asset_id]
         rate = asset_rates[asset_id]
         value_total = total_qty * rate
-        value_tax_free = tax_free_qty * rate
-        value_taxable = value_total - value_tax_free
-
-        total_value += value_total
-        total_tax_free_value += value_tax_free
 
         summaries.append(
             AssetInventorySummary(
                 asset_id=asset_id,
                 total_quantity=total_qty,
-                tax_free_quantity=tax_free_qty,
-                taxable_quantity=taxable_qty,
                 total_value_eur=value_total,
-                tax_free_value_eur=value_tax_free,
-                taxable_value_eur=value_taxable,
-                lots=lots,
             )
         )
 
     return InventorySummary(
         as_of=now,
         assets=summaries,
-        total_value_eur=total_value,
-        total_tax_free_value_eur=total_tax_free_value,
     )
 
 
@@ -117,44 +73,25 @@ def render_inventory_summary(summary: InventorySummary) -> None:
         print("  (empty)")
         return
 
-    quantity_label = "Quantity (total/free/taxable)"
-    value_label = "Value EUR (total/free/taxable)"
+    quantity_label = "Quantity"
+    value_label = "Value EUR"
 
-    rows: list[tuple[str, str, str, int]] = []
+    rows: list[tuple[str, str, str]] = []
     for asset in summary.assets:
-        quantities_text = (
-            f"{format_decimal(asset.total_quantity)} / "
-            f"{format_decimal(asset.tax_free_quantity)} / "
-            f"{format_decimal(asset.taxable_quantity)}"
-        )
-        values_text = (
-            f"{format_currency(asset.total_value_eur)} / "
-            f"{format_currency(asset.tax_free_value_eur)} / "
-            f"{format_currency(asset.taxable_value_eur)}"
-        )
-        rows.append((asset.asset_id, quantities_text, values_text, asset.lots))
+        quantities_text = f"{format_decimal(asset.total_quantity)}"
+        values_text = f"{format_currency(asset.total_value_eur)}"
+        rows.append((asset.asset_id, quantities_text, values_text))
 
-    asset_width = max(len("Asset"), max((len(asset) for asset, _, _, _ in rows), default=0))
-    quantity_width = max(len(quantity_label), max((len(qty) for _, qty, _, _ in rows), default=0))
-    value_width = max(len(value_label), max((len(val) for _, _, val, _ in rows), default=0))
-    lots_width = max(len("Lots"), max((len(str(lots)) for _, _, _, lots in rows), default=0))
+    asset_width = max(len("Asset"), max((len(asset) for asset, _, _ in rows), default=0))
+    quantity_width = max(len(quantity_label), max((len(qty) for _, qty, _ in rows), default=0))
+    value_width = max(len(value_label), max((len(val) for _, _, val in rows), default=0))
 
-    header = (
-        f"{'Asset':<{asset_width}} "
-        f"{quantity_label:>{quantity_width}} "
-        f"{value_label:>{value_width}} "
-        f"{'Lots':>{lots_width}}"
-    )
+    header = f"{'Asset':<{asset_width}} {quantity_label:>{quantity_width}} {value_label:>{value_width}}"
 
     lines = [header, "-" * len(header)]
 
-    for asset_id, quantities_text, values_text, lots in rows:
-        lines.append(
-            f"{asset_id:<{asset_width}} "
-            f"{quantities_text:>{quantity_width}} "
-            f"{values_text:>{value_width}} "
-            f"{lots:>{lots_width}}"
-        )
+    for asset_id, quantities_text, values_text in rows:
+        lines.append(f"{asset_id:<{asset_width}} {quantities_text:>{quantity_width}} {values_text:>{value_width}}")
 
     lines.append("-" * len(header))
     print("\n".join(lines))
