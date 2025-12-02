@@ -6,7 +6,15 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from db import models
-from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
+from domain.ledger import (
+    AcquisitionLot,
+    DisposalLink,
+    EventLocation,
+    EventOrigin,
+    EventType,
+    LedgerEvent,
+    LedgerLeg,
+)
 
 
 class LedgerEventRepository:
@@ -75,3 +83,67 @@ class LedgerEventRepository:
             event_type=EventType(orm_event.event_type),
             legs=legs,
         )
+
+
+class AcquisitionLotRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create_many(self, lots: list[AcquisitionLot]) -> list[AcquisitionLot]:
+        orm_lots = [
+            models.AcquisitionLotOrm(
+                id=lot.id,
+                acquired_event_id=lot.acquired_event_id,
+                acquired_leg_id=lot.acquired_leg_id,
+                cost_eur_per_unit=lot.cost_eur_per_unit,
+            )
+            for lot in lots
+        ]
+        self._session.add_all(orm_lots)
+        self._session.commit()
+        return lots
+
+    def list(self) -> list[AcquisitionLot]:
+        orm_lots = self._session.query(models.AcquisitionLotOrm).all()
+        return [
+            AcquisitionLot(
+                id=lot.id,
+                acquired_event_id=lot.acquired_event_id,
+                acquired_leg_id=lot.acquired_leg_id,
+                cost_eur_per_unit=lot.cost_eur_per_unit,
+            )
+            for lot in orm_lots
+        ]
+
+
+class DisposalLinkRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create_many(self, links: list[DisposalLink]) -> list[DisposalLink]:
+        orm_links = [
+            models.DisposalLinkOrm(
+                id=link.id,
+                disposal_leg_id=link.disposal_leg_id,
+                lot_id=link.lot_id,
+                quantity_used=link.quantity_used,
+                proceeds_total_eur=link.proceeds_total_eur,
+            )
+            for link in links
+        ]
+        self._session.add_all(orm_links)
+        self._session.commit()
+        return links
+
+    def list(self) -> list[DisposalLink]:
+        orm_links = self._session.query(models.DisposalLinkOrm).all()
+        return [
+            DisposalLink(
+                id=link.id,
+                disposal_leg_id=link.disposal_leg_id,
+                lot_id=link.lot_id,
+                quantity_used=link.quantity_used,
+                proceeds_total_eur=link.proceeds_total_eur,
+            )
+            for link in orm_links
+        ]

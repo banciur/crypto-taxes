@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Sequence
 
 from db.db import init_db
-from db.repositories import LedgerEventRepository
+from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository
 from domain.inventory import InventoryEngine, InventoryResult
 from importers.kraken_importer import KrakenImporter
 from services.coindesk_source import CoinDeskSource
@@ -36,7 +36,9 @@ def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int)
 
 def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int, seed_csv: Path) -> None:
     session = init_db(reset=True)
-    repository = LedgerEventRepository(session)
+    event_repository = LedgerEventRepository(session)
+    lot_repository = AcquisitionLotRepository(session)
+    disposal_repository = DisposalLinkRepository(session)
 
     importer = KrakenImporter(str(csv_path))
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
@@ -46,10 +48,14 @@ def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int,
     events = seed_events + importer.load_events()
     events.sort(key=lambda event: event.timestamp)
     for event in events:
-        repository.create(event)
-    events = repository.list()
+        event_repository.create(event)
+    events = event_repository.list()
 
     inventory = engine.process(events)
+    if inventory.acquisition_lots:
+        lot_repository.create_many(inventory.acquisition_lots)
+    if inventory.disposal_links:
+        disposal_repository.create_many(inventory.disposal_links)
     tax_events = generate_tax_events(inventory, events)
 
     dump_inventory_debug(events, inventory)
