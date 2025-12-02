@@ -7,7 +7,7 @@
 - `make test` runs the pytest suite (`uv run --group dev pytest -s`).
 
 ### Running commands and scripts
-- Use `uv run <command>` to execute project-aware tooling and Python scripts inside the managed virtualenv.
+- Use `uv run <command>` to execute project-aware tooling and Python scripts inside the managed virtualenv;
 - Reserve `uv run --group dev …` for commands that depend on dev-only packages (pytest, ruff, mypy, etc.); regular application scripts (e.g., under `scripts/`) work with plain `uv run python path/to/script.py`.
 
 ## Suggested workflow
@@ -21,7 +21,8 @@
 Ignore other files from the `doc` directory except for `CURRENT.md`.
 
 ## Implementation conventions
-- Python 3.13; Pydantic v2 models under `src/domain`.
+- Python 3.13; Pydantic v2 models under `src/domain`; tests written in `pytest` under `tests`.
+- Use `str` for identifiers (e.g., `asset_id: str`) and `UUID` for UUIDs (e.g., `asset_id: UUID`). Avoid `int` for identifiers.
 - Use `Decimal` for numeric quantities/rates; avoid floats.
 - Time fields use `datetime` named `timestamp` and are stored in UTC.
   - Convert inbound times to UTC at ingestion boundaries so internal models are always UTC.

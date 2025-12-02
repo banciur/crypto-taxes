@@ -1,60 +1,56 @@
+from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, DateTime, String, Text, TypeDecorator, Uuid
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Uuid
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.types import TypeDecorator
 
 
-class BigIntegerAsString(TypeDecorator):
-    impl = String  # under the hood, this will create a TEXT column
-    cache_ok = True  # recommended for SQLAlchemy 2.0+
+class DecimalAsString(TypeDecorator):
+    impl = String
+    cache_ok = True
 
-    def process_bind_param(self, value: int | None, dialect: Any) -> str | None:
+    def process_bind_param(self, value: Decimal | None, dialect: object) -> str | None:
         if value is None:
             return None
         return str(value)
 
-    def process_result_value(self, value: str | None, dialect: Any) -> int | None:
+    def process_result_value(self, value: str | None, dialect: object) -> Decimal | None:
         if value is None:
             return None
-        return int(value)
+        return Decimal(value)
 
 
 class Base(DeclarativeBase):
     pass
 
 
-class Ledger(Base):
-    __tablename__ = "ledger"
+class LedgerEventOrm(Base):
+    __tablename__ = "ledger_events"
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
-    external_id: Mapped[str | None]
-    date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ingestion: Mapped[str] = mapped_column(String, nullable=False)
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    origin_location: Mapped[str] = mapped_column(String, nullable=False)
+    origin_external_id: Mapped[str] = mapped_column(String, nullable=False)
 
-    in_currency: Mapped[str | None]
-    in_amount: Mapped[int | None] = mapped_column(BigIntegerAsString)
-
-    out_currency: Mapped[str | None]
-    out_amount: Mapped[int | None] = mapped_column(BigIntegerAsString)
-
-    fee: Mapped[int | None] = mapped_column(BigIntegerAsString)
-    fee_currency: Mapped[str | None]
-
-    # At this moment deposit, withdrawal, trade, earn
-    # TODO make operation_type Enum
-    operation_type: Mapped[str | None]
-    operation_place: Mapped[str | None]
-
-    note: Mapped[str | None] = mapped_column(Text)
-    transactions: Mapped[list[str] | None] = mapped_column(JSON)
+    legs: Mapped[list["LedgerLegOrm"]] = relationship(
+        cascade="all, delete-orphan", back_populates="event", lazy="joined"
+    )
 
 
-class Price(Base):
-    __tablename__ = "prices"
+class LedgerLegOrm(Base):
+    __tablename__ = "ledger_legs"
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
-    currency: Mapped[str] = mapped_column(String, nullable=False)
-    date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    price_usd: Mapped[Decimal]
+    event_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("ledger_events.id"), nullable=False)
+    asset_id: Mapped[str] = mapped_column(String, nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
+    wallet_id: Mapped[str] = mapped_column(String, nullable=False)
+    is_fee: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    event: Mapped[LedgerEventOrm] = relationship(back_populates="legs")

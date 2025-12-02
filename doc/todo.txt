@@ -1,5 +1,11 @@
 First stage: compute german taxes
 TODO: Compute tax on staking, drops.
+TODO: DB migration.
+  - use Enums
+  - make db time entries timezone aware
+  - use UUID type
+
+
 TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
 
 TODO: On-chain events, what could be the source

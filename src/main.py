@@ -4,6 +4,8 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
+from db.db import init_db
+from db.repositories import LedgerEventRepository
 from domain.inventory import InventoryEngine, InventoryResult
 from importers.kraken_importer import KrakenImporter
 from services.coindesk_source import CoinDeskSource
@@ -33,6 +35,9 @@ def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int)
 
 
 def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int, seed_csv: Path) -> None:
+    session = init_db(reset=True)
+    repository = LedgerEventRepository(session)
+
     importer = KrakenImporter(str(csv_path))
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     engine = InventoryEngine(price_provider=price_service)
@@ -40,6 +45,9 @@ def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int,
     seed_events = load_seed_events(seed_csv)
     events = seed_events + importer.load_events()
     events.sort(key=lambda event: event.timestamp)
+    for event in events:
+        repository.create(event)
+    events = repository.list()
 
     inventory = engine.process(events)
     tax_events = generate_tax_events(inventory, events)
@@ -62,6 +70,7 @@ def print_base_inventory_summary(result: InventoryResult) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
+    # logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     parser = argparse.ArgumentParser(description="Run Kraken importer and inventory engine.")
     parser.add_argument("--csv", type=Path, default=Path("data/kraken-ledger.csv"))
     parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "kraken_prices")
