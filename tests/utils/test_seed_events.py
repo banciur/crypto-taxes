@@ -3,7 +3,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from domain.ledger import EventLocation
-from utils.seed_events import DEFAULT_SEED_TIMESTAMP, load_seed_events
+from importers.seed_events import DEFAULT_SEED_TIMESTAMP, load_seed_events
 
 
 def test_load_seed_events_defaults(tmp_path: Path) -> None:

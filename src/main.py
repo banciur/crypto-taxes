@@ -8,6 +8,7 @@ from db.db import init_db
 from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository
 from domain.inventory import InventoryEngine, InventoryResult
 from importers.kraken_importer import KrakenImporter
+from importers.seed_events import load_seed_events
 from services.coindesk_source import CoinDeskSource
 from services.open_exchange_rates_source import OpenExchangeRatesSource
 from services.price_service import PriceService
@@ -15,7 +16,6 @@ from services.price_sources import HybridPriceSource
 from services.price_store import JsonlPriceStore
 from utils.debug_dump import dump_inventory_debug
 from utils.inventory_summary import compute_inventory_summary, render_inventory_summary
-from utils.seed_events import load_seed_events
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -34,19 +34,30 @@ def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int)
     return PriceService(source=source, store=store)
 
 
-def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int, seed_csv: Path) -> None:
+def run(
+    csv_path: Path,
+    cache_dir: Path,
+    *,
+    market: str,
+    aggregate_minutes: int,
+    seed_csv: Path,
+) -> None:
     session = init_db(reset=True)
     event_repository = LedgerEventRepository(session)
     lot_repository = AcquisitionLotRepository(session)
     disposal_repository = DisposalLinkRepository(session)
+    owned_wallets: set[str] = set()
 
     importer = KrakenImporter(str(csv_path))
+    owned_wallets.add(importer.WALLET_ID)
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     engine = InventoryEngine(price_provider=price_service)
 
     seed_events = load_seed_events(seed_csv)
-    events = seed_events + importer.load_events()
-    events.sort(key=lambda event: event.timestamp)
+    kraken_events = importer.load_events()
+
+    events = seed_events + kraken_events
+    events.sort(key=lambda e: e.timestamp)
     for event in events:
         event_repository.create(event)
     events = event_repository.list()
@@ -62,7 +73,9 @@ def run(csv_path: Path, cache_dir: Path, *, market: str, aggregate_minutes: int,
 
     print(f"Imported {len(events)} events from {csv_path}")
     print_base_inventory_summary(inventory)
-    inventory_summary = compute_inventory_summary(inventory.open_inventory, price_provider=price_service)
+    inventory_summary = compute_inventory_summary(
+        inventory.open_inventory, price_provider=price_service, owned_wallet_ids=owned_wallets, events=events
+    )
     render_inventory_summary(inventory_summary)
     weekly_tax = compute_weekly_tax_summary(tax_events, inventory, events)
     render_weekly_tax_summary(weekly_tax)
@@ -84,7 +97,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--aggregate", type=int, default=60)
     parser.add_argument("--seed-csv", type=Path, default=Path("data/seed_lots.csv"))
     args = parser.parse_args(argv)
-    run(args.csv, args.price_cache_dir, market=args.market, aggregate_minutes=args.aggregate, seed_csv=args.seed_csv)
+    run(
+        args.csv,
+        args.price_cache_dir,
+        market=args.market,
+        aggregate_minutes=args.aggregate,
+        seed_csv=args.seed_csv,
+    )
 
 
 if __name__ == "__main__":

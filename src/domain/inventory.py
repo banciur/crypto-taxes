@@ -32,7 +32,6 @@ class InventoryError(Exception):
 class _OpenLotState:
     lot: AcquisitionLot
     asset_id: str
-    wallet_id: str
     acquired_timestamp: datetime
     remaining_quantity: Decimal
 
@@ -40,7 +39,6 @@ class _OpenLotState:
 class OpenLotSnapshot(BaseModel):
     lot_id: UUID
     asset_id: str
-    wallet_id: str
     acquired_timestamp: datetime
     quantity_remaining: Decimal
     cost_per_unit: Decimal
@@ -65,11 +63,11 @@ class InventoryEngine:
         acquisitions: list[AcquisitionLot] = []
         disposals: list[DisposalLink] = []
 
-        inventory: dict[tuple[str, str], deque[_OpenLotState]] = defaultdict(deque)
+        inventory: dict[str, deque[_OpenLotState]] = defaultdict(deque)
 
         for event in events:
             if event.event_type == EventType.TRANSFER:
-                self._process_transfer_event(event, inventory)
+                # Wallet-agnostic tracking: transfers do not affect inventory state.
                 continue
 
             acquisition_legs = [leg for leg in event.legs if leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID]
@@ -83,7 +81,6 @@ class InventoryEngine:
                 state = _OpenLotState(
                     lot=lot,
                     asset_id=leg.asset_id,
-                    wallet_id=leg.wallet_id,
                     acquired_timestamp=event.timestamp,
                     remaining_quantity=leg.quantity,
                 )
@@ -116,7 +113,6 @@ class InventoryEngine:
             OpenLotSnapshot(
                 lot_id=state.lot.id,
                 asset_id=state.asset_id,
-                wallet_id=state.wallet_id,
                 acquired_timestamp=state.acquired_timestamp,
                 quantity_remaining=state.remaining_quantity,
                 cost_per_unit=state.lot.cost_per_unit,
@@ -125,7 +121,7 @@ class InventoryEngine:
             for state in states
         ]
 
-        open_inventory_snapshots.sort(key=lambda snap: (snap.asset_id, snap.wallet_id, snap.acquired_timestamp))
+        open_inventory_snapshots.sort(key=lambda snap: (snap.asset_id, snap.acquired_timestamp))
 
         return InventoryResult(
             acquisition_lots=acquisitions,
@@ -181,62 +177,15 @@ class InventoryEngine:
             return matches[0]
         return None
 
-    def _process_transfer_event(
-        self,
-        event: LedgerEvent,
-        inventory: dict[tuple[str, str], deque[_OpenLotState]],
-    ) -> None:
-        inbound_legs = [leg for leg in event.legs if leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID]
-        outbound_legs = [leg for leg in event.legs if leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID]
-
-        moved_lots: deque[tuple[_OpenLotState, Decimal]] = deque()
-
-        for leg in outbound_legs:
-            qty_to_move = abs(leg.quantity)
-            for lot_state, take_quantity in self._match_inventory(
-                leg=leg,
-                event=event,
-                quantity_needed=qty_to_move,
-                inventory=inventory,
-            ):
-                moved_lots.append((lot_state, take_quantity))
-
-        for leg in inbound_legs:
-            qty_remaining = leg.quantity
-            while qty_remaining > 0:
-                if not moved_lots:
-                    raise self._inventory_error(
-                        "Transfer lacks source inventory", leg=leg, event=event, quantity_needed=qty_remaining
-                    )
-
-                lot_state, available_qty = moved_lots[0]
-                take_quantity = min(qty_remaining, available_qty)
-                qty_remaining -= take_quantity
-                available_qty -= take_quantity
-
-                new_state = _OpenLotState(
-                    lot=lot_state.lot,
-                    asset_id=lot_state.asset_id,
-                    wallet_id=leg.wallet_id,
-                    acquired_timestamp=lot_state.acquired_timestamp,
-                    remaining_quantity=take_quantity,
-                )
-                self._append_open_lot_state(inventory, new_state)
-
-                if available_qty == 0:
-                    moved_lots.popleft()
-                else:
-                    moved_lots[0] = (lot_state, available_qty)
-
     def _match_inventory(
         self,
         *,
         leg: LedgerLeg,
         event: LedgerEvent,
         quantity_needed: Decimal,
-        inventory: dict[tuple[str, str], deque[_OpenLotState]],
+        inventory: dict[str, deque[_OpenLotState]],
     ) -> Iterable[tuple[_OpenLotState, Decimal]]:
-        open_lots = inventory.get((leg.asset_id, leg.wallet_id))
+        open_lots = inventory.get(leg.asset_id)
         if not open_lots:
             raise self._inventory_error("No open lots", leg=leg, event=event, quantity_needed=quantity_needed)
 
@@ -261,12 +210,10 @@ class InventoryEngine:
         event: LedgerEvent,
         quantity_needed: Decimal | None = None,
     ) -> InventoryError:
-        legs_summary = "; ".join(
-            f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}@{leg.wallet_id}" for leg in event.legs
-        )
+        legs_summary = "; ".join(f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}" for leg in event.legs)
         return InventoryError(
-            f"{reason} for asset={leg.asset_id} wallet={leg.wallet_id} leg={leg.id} "
-            f"event={event.id} {event.event_type} @{event.timestamp.isoformat()} "
+            f"{reason} for asset={leg.asset_id} wallet={leg.wallet_id} leg={leg.id} event={event.id} "
+            f"{event.event_type} @{event.timestamp.isoformat()} "
             f"legs={legs_summary}",
             leg=leg,
             event=event,
@@ -275,10 +222,10 @@ class InventoryEngine:
 
     def _append_open_lot_state(
         self,
-        inventory: dict[tuple[str, str], deque[_OpenLotState]],
+        inventory: dict[str, deque[_OpenLotState]],
         state: _OpenLotState,
     ) -> None:
-        open_lots = inventory[(state.asset_id, state.wallet_id)]
+        open_lots = inventory[state.asset_id]
         insert_at = None
         for idx, existing in enumerate(open_lots):
             if existing.acquired_timestamp > state.acquired_timestamp:

@@ -14,6 +14,7 @@ from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, Le
 
 logger = logging.getLogger(__name__)
 KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"
+KRAKEN_WALLET_ID = "kraken"
 
 FIAT_ASSETS = {"EUR", "USD"}
 ASSET_ALIASES = {
@@ -93,7 +94,7 @@ def _ledger_leg(
     quantity: Decimal,
     *,
     is_fee: bool = False,
-    wallet_id: str = "kraken",
+    wallet_id: str = KRAKEN_WALLET_ID,
 ) -> LedgerLeg:
     asset_id = _normalize_asset(entry.asset)
     return LedgerLeg(
@@ -105,6 +106,8 @@ def _ledger_leg(
 
 
 class KrakenImporter:
+    WALLET_ID = KRAKEN_WALLET_ID
+
     def __init__(self, source_path: str) -> None:
         self._source_path = Path(source_path)
 

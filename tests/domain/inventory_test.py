@@ -193,19 +193,11 @@ def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) ->
 
     assert result.disposal_links == []
 
-    assert len(result.open_inventory) == 2
-    kraken_lot = result.open_inventory[0]
-    ledger_lot = result.open_inventory[1]
-
-    assert kraken_lot.acquired_timestamp == events[0].timestamp
-    assert kraken_lot.lot_id == acquisition_lot.id
-    assert kraken_lot.wallet_id == kraken_wallet
-    assert kraken_lot.quantity_remaining == buy_amount - transfer_amount
-
-    assert ledger_lot.acquired_timestamp == events[0].timestamp
-    assert ledger_lot.lot_id == acquisition_lot.id
-    assert ledger_lot.wallet_id == hardware_wallet
-    assert ledger_lot.quantity_remaining == transfer_amount
+    assert len(result.open_inventory) == 1
+    open_lot = result.open_inventory[0]
+    assert open_lot.acquired_timestamp == events[0].timestamp
+    assert open_lot.lot_id == acquisition_lot.id
+    assert open_lot.quantity_remaining == buy_amount
 
 
 def test_disposal_without_inventory_raises(inventory_engine: InventoryEngine) -> None:
@@ -223,7 +215,7 @@ def test_disposal_without_inventory_raises(inventory_engine: InventoryEngine) ->
         inventory_engine.process(events)
 
 
-def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) -> None:
+def test_transfer_without_inventory_is_skipped(inventory_engine: InventoryEngine) -> None:
     events = [
         make_event(
             event_type=EventType.TRANSFER,
@@ -234,5 +226,7 @@ def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) ->
         )
     ]
 
-    with pytest.raises(InventoryError):
-        inventory_engine.process(events)
+    result = inventory_engine.process(events)
+    assert result.acquisition_lots == []
+    assert result.disposal_links == []
+    assert result.open_inventory == []
