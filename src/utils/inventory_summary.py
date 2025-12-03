@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -15,8 +16,8 @@ from .formatting import format_currency, format_decimal
 @dataclass
 class AssetInventorySummary:
     asset_id: str
-    total_quantity: Decimal
-    total_value_eur: Decimal
+    quantity: Decimal
+    value: Decimal
 
 
 @dataclass
@@ -34,30 +35,24 @@ def compute_inventory_summary(
 ) -> InventorySummary:
     now = as_of or datetime.now(timezone.utc)
 
-    balances: dict[str, Decimal] = {}
+    balances: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
     for event in events:
         for leg in event.legs:
             if leg.wallet_id not in owned_wallet_ids:
                 continue
-            balances[leg.asset_id] = balances.get(leg.asset_id, Decimal("0")) + leg.quantity
-
-    asset_rates: dict[str, Decimal] = {}
-    for asset_id, quantity in balances.items():
-        if quantity > 0:
-            asset_rates[asset_id] = price_provider.rate(asset_id, InventoryEngine.EUR_ASSET_ID, now)
+            balances[leg.asset_id] += leg.quantity
 
     summaries: list[AssetInventorySummary] = []
 
-    for asset_id in sorted(asset_rates):
-        total_qty = balances[asset_id]
-        rate = asset_rates[asset_id]
-        value_total = total_qty * rate
-
+    for asset_id, quantity in sorted(balances.items(), key=lambda item: item[0]):
+        if quantity <= 0:
+            continue
+        rate = price_provider.rate(asset_id, InventoryEngine.EUR_ASSET_ID, now)
         summaries.append(
             AssetInventorySummary(
                 asset_id=asset_id,
-                total_quantity=total_qty,
-                total_value_eur=value_total,
+                quantity=quantity,
+                value=quantity * rate,
             )
         )
 
@@ -78,8 +73,8 @@ def render_inventory_summary(summary: InventorySummary) -> None:
 
     rows: list[tuple[str, str, str]] = []
     for asset in summary.assets:
-        quantities_text = f"{format_decimal(asset.total_quantity)}"
-        values_text = f"{format_currency(asset.total_value_eur)}"
+        quantities_text = f"{format_decimal(asset.quantity)}"
+        values_text = f"{format_currency(asset.value)}"
         rows.append((asset.asset_id, quantities_text, values_text))
 
     asset_width = max(len("Asset"), max((len(asset) for asset, _, _ in rows), default=0))

@@ -1,11 +1,11 @@
 First stage: compute German taxes
-TODO: tool to print from db to printable version, event, legs etc
 TODO: Restore inventory taxable and free.
-TODO: compute_inventory_summary is super shitty after too much vibing
 
 TODO: Compute tax on staking, drops.
-TODO: DB migration.
+TODO: tool to print from db to printable version, event, legs etc
+TODO: add DB state
   - make db time entries timezone aware
+TODO: Review DB repositories
 
 TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
 

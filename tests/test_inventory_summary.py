@@ -61,12 +61,12 @@ def test_compute_inventory_summary_calculates_totals(price_service: TestPriceSer
     assets = {asset.asset_id: asset for asset in summary.assets}
 
     btc = assets["BTC"]
-    assert btc.total_quantity == btc_total_qty
-    assert btc.total_value_eur == btc_total_value
+    assert btc.quantity == btc_total_qty
+    assert btc.value == btc_total_value
 
     eth = assets["ETH"]
-    assert eth.total_quantity == eth_qty
-    assert eth.total_value_eur == eth_total_value
+    assert eth.quantity == eth_qty
+    assert eth.value == eth_total_value
 
 
 def test_inventory_summary_filters_owned_wallets(price_service: TestPriceService) -> None:
@@ -100,5 +100,5 @@ def test_inventory_summary_filters_owned_wallets(price_service: TestPriceService
     asset = summary.assets[0]
     btc_rate = price_service.rate("BTC", "EUR", as_of)
     assert asset.asset_id == "BTC"
-    assert asset.total_quantity == Decimal("1.0")
-    assert asset.total_value_eur == Decimal("1.0") * btc_rate
+    assert asset.quantity == Decimal("1.0")
+    assert asset.value == Decimal("1.0") * btc_rate
