@@ -1,10 +1,8 @@
 First stage: compute German taxes
-TODO: we need a check that we can't transfer from empty wallet
 TODO: tool to print from db to printable version, event, legs etc
 TODO: Restore inventory taxable and free.
 TODO: compute_inventory_summary is super shitty after too much vibing
 
-TODO: Inventory layer?
 TODO: Compute tax on staking, drops.
 TODO: DB migration.
   - make db time entries timezone aware

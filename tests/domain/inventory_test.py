@@ -214,8 +214,7 @@ def test_disposal_without_acquisition_raises(inventory_engine: InventoryEngine) 
         inventory_engine.process(events)
 
 
-def test_transfer_without_inventory(inventory_engine: InventoryEngine) -> None:
-    # TODO: This should raise. We skip lots but we should detect that we are sending from empty wallet
+def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) -> None:
     events = [
         make_event(
             event_type=EventType.TRANSFER,
@@ -226,7 +225,39 @@ def test_transfer_without_inventory(inventory_engine: InventoryEngine) -> None:
         )
     ]
 
+    with pytest.raises(InventoryError):
+        inventory_engine.process(events)
+
+
+def test_transfer_with_sufficient_balance_passes(inventory_engine: InventoryEngine) -> None:
+    asset_id = "ETH"
+    source_wallet = "kraken"
+    destination_wallet = "ledger"
+    acquired_quantity = Decimal("1.0")
+    purchase_cost = Decimal("2000")
+    transfer_quantity = Decimal("0.4")
+
+    events = [
+        make_event(
+            event_type=EventType.TRADE,
+            legs=[
+                LedgerLeg(asset_id=asset_id, quantity=acquired_quantity, wallet_id=source_wallet),
+                LedgerLeg(asset_id="EUR", quantity=-purchase_cost, wallet_id=source_wallet),
+            ],
+        ),
+        make_event(
+            event_type=EventType.TRANSFER,
+            legs=[
+                LedgerLeg(asset_id=asset_id, quantity=transfer_quantity, wallet_id=destination_wallet),
+                LedgerLeg(asset_id=asset_id, quantity=-transfer_quantity, wallet_id=source_wallet),
+            ],
+        ),
+    ]
+
     result = inventory_engine.process(events)
-    assert result.acquisition_lots == []
-    assert result.disposal_links == []
-    assert result.open_inventory == []
+
+    assert len(result.acquisition_lots) == 1
+    assert len(result.disposal_links) == 0
+    assert len(result.open_inventory) == 1
+    open_lot = result.open_inventory[0]
+    assert open_lot.quantity_remaining == acquired_quantity

@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from .ledger import AcquisitionLot, DisposalLink, EventType, LedgerEvent, LedgerLeg
 from .pricing import PriceProvider
+from .wallet_balance_tracker import WalletBalanceError, WalletBalanceTracker
 
 
 class InventoryError(Exception):
@@ -64,10 +65,12 @@ class InventoryEngine:
         disposals: list[DisposalLink] = []
 
         inventory: dict[str, deque[_OpenLotState]] = defaultdict(deque)
+        wallet_balances = WalletBalanceTracker()
 
         for event in events:
+            self._apply_wallet_movements(event, wallet_balances)
+
             if event.event_type == EventType.TRANSFER:
-                # Wallet-agnostic tracking: transfers do not affect inventory state.
                 continue
 
             acquisition_legs = [leg for leg in event.legs if leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID]
@@ -219,6 +222,32 @@ class InventoryEngine:
             event=event,
             quantity_needed=quantity_needed,
         )
+
+    def _apply_wallet_movements(
+        self,
+        event: LedgerEvent,
+        wallet_balances: WalletBalanceTracker,
+    ) -> None:
+        for leg in event.legs:
+            if leg.asset_id == self.EUR_ASSET_ID:
+                continue
+            try:
+                wallet_balances.apply_movement(
+                    asset_id=leg.asset_id,
+                    wallet_id=leg.wallet_id,
+                    quantity=leg.quantity,
+                )
+            except WalletBalanceError as err:
+                quantity_needed = None
+                if leg.quantity < 0:
+                    missing = abs(leg.quantity) - err.available_balance
+                    quantity_needed = missing if missing > 0 else abs(leg.quantity)
+                raise self._inventory_error(
+                    "Insufficient wallet balance",
+                    leg=leg,
+                    event=event,
+                    quantity_needed=quantity_needed,
+                ) from err
 
     def _append_open_lot_state(
         self,

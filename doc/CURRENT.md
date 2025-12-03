@@ -11,7 +11,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Represent basic events with legs, without enforcing double-entry balancing.
 - Minimal inventory structures for lots and disposals.
 - Unified price snapshots for crypto and fiat pairs.
-- Simple tax calculation for events with lots and disposals.
+- First take on tax calculation
 
 ---
 
@@ -63,6 +63,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
 - Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine.
 - Transfers (`EventType.TRANSFER`) move existing lots between wallets, no new acquisitions/disposals are created.
+- Per-wallet balances are tracked for all non-EUR legs; any debit that would push a wallet negative raises an error. Fix missing history by seeding lots or adding prior transfers into the source wallet before processing.
 - Synthetic seed lots can be injected ahead of importer output to satisfy transfers from `outside` when historical sources are missing. The CLI accepts `--seed-csv` (default `data/seed_lots.csv`) with rows `asset_id,wallet_id,quantity[,timestamp,cost_total_eur]`; these are modeled as tiny-cost trades (default cost 0.0001 EUR, timestamp defaults to 2000-01-01Z) so FIFO can move them like any other lot. Missing inventory will surface as an error during processing and should be resolved by updating the seed CSV manually.
 - Each event captures `origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 
