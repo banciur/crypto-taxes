@@ -5,16 +5,12 @@ from decimal import Decimal
 
 from domain.inventory import InventoryEngine
 from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
-from tests.helpers.test_price_service import TestPriceService
 from utils.tax_summary import TaxEventKind, compute_weekly_tax_summary, generate_tax_events
 
 TEST_ORIGIN = EventOrigin(location=EventLocation.INTERNAL, external_id="tax-fixture")
 
 
-def test_weekly_tax_summary_skips_tax_free_disposals() -> None:
-    price_service = TestPriceService()
-    engine = InventoryEngine(price_provider=price_service)
-
+def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: InventoryEngine) -> None:
     events = [
         LedgerEvent(
             timestamp=datetime(2023, 1, 1, 12, tzinfo=timezone.utc),
@@ -68,8 +64,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals() -> None:
         ),
     ]
 
-    result = engine.process(events)
-    tax_events = generate_tax_events(result, events, tax_free_days=365)
+    result = inventory_engine.process(events)
+    tax_events = generate_tax_events(result, events)
     assert len(tax_events) == 2
     assert all(event.kind == TaxEventKind.DISPOSAL for event in tax_events)
     taxable_link_ids = {event.source_id for event in tax_events}
@@ -97,10 +93,7 @@ def test_weekly_tax_summary_skips_tax_free_disposals() -> None:
     assert [summary.week_start for summary in summaries] == sorted(by_week)
 
 
-def test_reward_acquisitions_are_taxed_when_received() -> None:
-    price_service = TestPriceService()
-    engine = InventoryEngine(price_provider=price_service)
-
+def test_reward_acquisitions_are_taxed_when_received(inventory_engine: InventoryEngine) -> None:
     reward_time = datetime(2024, 5, 1, 12, tzinfo=timezone.utc)
     reward_quantity = Decimal("2.5")
     reward_leg = LedgerLeg(asset_id="ATOM", quantity=reward_quantity, wallet_id="earn")
@@ -114,14 +107,14 @@ def test_reward_acquisitions_are_taxed_when_received() -> None:
         )
     ]
 
-    result = engine.process(events)
-    tax_events = generate_tax_events(result, events, tax_free_days=365)
+    result = inventory_engine.process(events)
+    tax_events = generate_tax_events(result, events)
 
     assert len(tax_events) == 1
     reward_tax = tax_events[0]
     assert reward_tax.kind == TaxEventKind.REWARD
 
-    expected_rate = price_service.rate("ATOM", "EUR", reward_time)
+    expected_rate = inventory_engine._price_provider.rate("ATOM", "EUR", reward_time)
     expected_proceeds = reward_quantity * expected_rate
 
     assert reward_tax.taxable_gain == expected_proceeds

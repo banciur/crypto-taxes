@@ -56,8 +56,14 @@ class InventoryEngine:
 
     EUR_ASSET_ID = "EUR"
 
-    def __init__(self, *, price_provider: PriceProvider) -> None:
+    def __init__(
+        self,
+        *,
+        price_provider: PriceProvider,
+        wallet_balance_tracker: WalletBalanceTracker,
+    ) -> None:
         self._price_provider = price_provider
+        self._wallet_balances = wallet_balance_tracker
 
     def process(self, events: Iterable[LedgerEvent]) -> InventoryResult:
         """Caller must provide events in chronological order."""
@@ -65,10 +71,9 @@ class InventoryEngine:
         disposals: list[DisposalLink] = []
 
         inventory: dict[str, deque[_OpenLotState]] = defaultdict(deque)
-        wallet_balances = WalletBalanceTracker()
 
         for event in events:
-            self._apply_wallet_movements(event, wallet_balances)
+            self._apply_wallet_movements(event)
 
             if event.event_type == EventType.TRANSFER:
                 continue
@@ -165,7 +170,7 @@ class InventoryEngine:
     ) -> LedgerLeg | None:
         """Locate a single EUR leg matching the expected sign (+/-).
 
-        Returns None if none (or multiple) are found to avoid ambiguous matching.
+        Returns None if none (or multiple) is found to avoid ambiguous matching.
         """
         matches = [
             leg
@@ -205,8 +210,8 @@ class InventoryEngine:
                 open_lots.popleft()
             yield lot_state, take_quantity
 
+    @staticmethod
     def _inventory_error(
-        self,
         reason: str,
         *,
         leg: LedgerLeg,
@@ -223,16 +228,12 @@ class InventoryEngine:
             quantity_needed=quantity_needed,
         )
 
-    def _apply_wallet_movements(
-        self,
-        event: LedgerEvent,
-        wallet_balances: WalletBalanceTracker,
-    ) -> None:
+    def _apply_wallet_movements(self, event: LedgerEvent) -> None:
         for leg in event.legs:
             if leg.asset_id == self.EUR_ASSET_ID:
                 continue
             try:
-                wallet_balances.apply_movement(
+                self._wallet_balances.apply_movement(
                     asset_id=leg.asset_id,
                     wallet_id=leg.wallet_id,
                     quantity=leg.quantity,
@@ -249,8 +250,8 @@ class InventoryEngine:
                     quantity_needed=quantity_needed,
                 ) from err
 
+    @staticmethod
     def _append_open_lot_state(
-        self,
         inventory: dict[str, deque[_OpenLotState]],
         state: _OpenLotState,
     ) -> None:

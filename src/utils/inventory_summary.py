@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Iterable
 
 from domain.inventory import InventoryEngine
-from domain.ledger import LedgerEvent
 from domain.pricing import PriceProvider
+from domain.wallet_balance_tracker import WalletBalanceTracker
 
 from .formatting import format_currency, format_decimal
 
@@ -27,24 +25,20 @@ class InventorySummary:
 
 
 def compute_inventory_summary(
-    events: Iterable[LedgerEvent],
     owned_wallet_ids: set[str],
     *,
+    wallet_balance_tracker: WalletBalanceTracker,
     price_provider: PriceProvider,
     as_of: datetime | None = None,
 ) -> InventorySummary:
     now = as_of or datetime.now(timezone.utc)
 
-    balances: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
-    for event in events:
-        for leg in event.legs:
-            if leg.wallet_id not in owned_wallet_ids:
-                continue
-            balances[leg.asset_id] += leg.quantity
-
     summaries: list[AssetInventorySummary] = []
 
-    for asset_id, quantity in sorted(balances.items(), key=lambda item: item[0]):
+    for asset_id, quantity in sorted(
+        wallet_balance_tracker.asset_balances_for(owned_wallet_ids).items(),
+        key=lambda item: item[0],
+    ):
         if quantity <= 0:
             continue
         rate = price_provider.rate(asset_id, InventoryEngine.EUR_ASSET_ID, now)

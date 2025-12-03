@@ -4,12 +4,14 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
+from domain.inventory import InventoryEngine
 from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
-from tests.helpers.test_price_service import TestPriceService
 from utils.inventory_summary import compute_inventory_summary
 
 
-def test_compute_inventory_summary_calculates_totals(price_service: TestPriceService) -> None:
+def test_compute_inventory_summary_calculates_totals(inventory_engine: InventoryEngine) -> None:
+    price_service = inventory_engine._price_provider
+
     as_of = datetime(2025, 1, 10, tzinfo=timezone.utc)
     btc_lot_one_qty = Decimal("0.5")
     btc_lot_two_qty = Decimal("0.2")
@@ -55,7 +57,14 @@ def test_compute_inventory_summary_calculates_totals(price_service: TestPriceSer
         ),
     ]
 
-    summary = compute_inventory_summary(events, {"kraken"}, price_provider=price_service, as_of=as_of)
+    inventory_engine.process(events)
+
+    summary = compute_inventory_summary(
+        {"kraken"},
+        wallet_balance_tracker=inventory_engine._wallet_balances,
+        price_provider=price_service,
+        as_of=as_of,
+    )
     assert summary.as_of == as_of
 
     assets = {asset.asset_id: asset for asset in summary.assets}
@@ -69,7 +78,8 @@ def test_compute_inventory_summary_calculates_totals(price_service: TestPriceSer
     assert eth.value == eth_total_value
 
 
-def test_inventory_summary_filters_owned_wallets(price_service: TestPriceService) -> None:
+def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngine) -> None:
+    price_service = inventory_engine._price_provider
     as_of = datetime(2025, 1, 10, tzinfo=timezone.utc)
     events = [
         LedgerEvent(
@@ -94,7 +104,14 @@ def test_inventory_summary_filters_owned_wallets(price_service: TestPriceService
         ),
     ]
 
-    summary = compute_inventory_summary(events, owned_wallet_ids={"kraken"}, price_provider=price_service, as_of=as_of)
+    inventory_engine.process(events)
+
+    summary = compute_inventory_summary(
+        owned_wallet_ids={"kraken"},
+        wallet_balance_tracker=inventory_engine._wallet_balances,
+        price_provider=price_service,
+        as_of=as_of,
+    )
 
     assert len(summary.assets) == 1
     asset = summary.assets[0]

@@ -7,6 +7,7 @@ from typing import Sequence
 from db.db import init_db
 from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository
 from domain.inventory import InventoryEngine, InventoryResult
+from domain.wallet_balance_tracker import WalletBalanceTracker
 from importers.kraken_importer import KrakenImporter
 from importers.seed_events import load_seed_events
 from services.coindesk_source import CoinDeskSource
@@ -51,7 +52,8 @@ def run(
     importer = KrakenImporter(str(csv_path))
     owned_wallets.add(importer.WALLET_ID)
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
-    engine = InventoryEngine(price_provider=price_service)
+    wallet_balance_tracker = WalletBalanceTracker()
+    engine = InventoryEngine(price_provider=price_service, wallet_balance_tracker=wallet_balance_tracker)
 
     seed_events = load_seed_events(seed_csv)
     kraken_events = importer.load_events()
@@ -73,7 +75,11 @@ def run(
 
     print(f"Imported {len(events)} events from {csv_path}")
     print_base_inventory_summary(inventory)
-    inventory_summary = compute_inventory_summary(events, owned_wallets, price_provider=price_service)
+    inventory_summary = compute_inventory_summary(
+        owned_wallets,
+        wallet_balance_tracker=wallet_balance_tracker,
+        price_provider=price_service,
+    )
     render_inventory_summary(inventory_summary)
     weekly_tax = compute_weekly_tax_summary(tax_events, inventory, events)
     render_weekly_tax_summary(weekly_tax)

@@ -6,14 +6,7 @@ import pytest
 
 from domain.inventory import InventoryEngine, InventoryError
 from domain.ledger import EventType, LedgerLeg
-from tests.helpers.test_price_service import TestPriceService
 from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
-
-
-@pytest.fixture(scope="function")
-def inventory_engine(price_service: TestPriceService) -> InventoryEngine:
-    return InventoryEngine(price_provider=price_service)
-
 
 WALLET_ID = "wallet"
 
