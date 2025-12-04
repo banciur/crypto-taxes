@@ -44,36 +44,39 @@ def run(
     aggregate_minutes: int,
     seed_csv: Path,
 ) -> None:
+    # Setup components
     session = init_db(reset=True)
     event_repository = LedgerEventRepository(session)
     lot_repository = AcquisitionLotRepository(session)
     disposal_repository = DisposalLinkRepository(session)
-    owned_wallets: set[WalletId] = set()
 
-    importer = KrakenImporter(str(csv_path))
-    owned_wallets.add(importer.WALLET_ID)
-    price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     wallet_balance_tracker = WalletBalanceTracker()
+    price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     engine = InventoryEngine(price_provider=price_service, wallet_balance_tracker=wallet_balance_tracker)
 
+    importer = KrakenImporter(str(csv_path))
+
+    owned_wallets: set[WalletId] = set()
+    owned_wallets.add(KrakenImporter.WALLET_ID)
+
+    # Get data
     seed_events = load_seed_events(seed_csv)
     kraken_events = importer.load_events()
-
     events = seed_events + kraken_events
     events.sort(key=lambda e: e.timestamp)
     for event in events:
         event_repository.create(event)
     events = event_repository.list()
 
+    # Process stuff
     inventory = engine.process(events)
-    if inventory.acquisition_lots:
-        lot_repository.create_many(inventory.acquisition_lots)
-    if inventory.disposal_links:
-        disposal_repository.create_many(inventory.disposal_links)
+    lot_repository.create_many(inventory.acquisition_lots)
+    disposal_repository.create_many(inventory.disposal_links)
+    # dump_inventory_debug(events, inventory)
+
     tax_events = generate_tax_events(inventory, events)
 
-    dump_inventory_debug(events, inventory)
-
+    # Print summary
     print(f"Imported {len(events)} events from {csv_path}")
     print_base_inventory_summary(inventory)
     inventory_summary = compute_inventory_summary(
