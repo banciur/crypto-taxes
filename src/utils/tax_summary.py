@@ -4,11 +4,10 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
-from typing import Iterable
-from uuid import UUID
+from typing import Iterable, cast
 
 from domain.inventory import InventoryResult
-from domain.ledger import AcquisitionLot, EventType, LedgerEvent, LedgerLeg
+from domain.ledger import AcquisitionLot, DisposalId, DisposalLink, EventType, LedgerEvent, LedgerLeg, LegId, LotId
 
 from .formatting import format_currency
 
@@ -20,7 +19,7 @@ class TaxEventKind(StrEnum):
 
 @dataclass
 class TaxEvent:
-    source_id: UUID
+    source_id: DisposalId | LotId
     kind: TaxEventKind
     taxable_gain: Decimal
 
@@ -29,14 +28,14 @@ def generate_tax_events(
     inventory_result: InventoryResult, events: Iterable[LedgerEvent], *, tax_free_days: int = 365
 ) -> list[TaxEvent]:
     """Create taxable events from disposals and reward acquisitions."""
-    legs_by_id: dict[UUID, LedgerLeg] = {}
-    legs_to_event: dict[UUID, LedgerEvent] = {}
+    legs_by_id: dict[LegId, LedgerLeg] = {}
+    legs_to_event: dict[LegId, LedgerEvent] = {}
     for event in events:
         for leg in event.legs:
             legs_to_event[leg.id] = event
             legs_by_id[leg.id] = leg
 
-    lots_by_id: dict[UUID, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
+    lots_by_id: dict[LotId, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
     tax_free_threshold = timedelta(days=tax_free_days)
     tax_events: list[TaxEvent] = []
 
@@ -113,10 +112,10 @@ def compute_weekly_tax_summary(
 ) -> list[WeeklyTaxSummary]:
     """Aggregate taxable events per ISO week, recomputing valuations from inventory and events."""
     weekly_totals: dict[date, tuple[int, Decimal, Decimal, Decimal]] = {}
-    lots_by_id: dict[UUID, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
-    links_by_id = {link.id: link for link in inventory_result.disposal_links}
-    legs_by_id: dict[UUID, LedgerLeg] = {}
-    leg_to_event: dict[UUID, LedgerEvent] = {}
+    lots_by_id: dict[LotId, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
+    links_by_id: dict[DisposalId, DisposalLink] = {link.id: link for link in inventory_result.disposal_links}
+    legs_by_id: dict[LegId, LedgerLeg] = {}
+    leg_to_event: dict[LegId, LedgerEvent] = {}
     for event in events:
         for leg in event.legs:
             legs_by_id[leg.id] = leg
@@ -129,7 +128,8 @@ def compute_weekly_tax_summary(
         timestamp: datetime
 
         if tax_event.kind == TaxEventKind.DISPOSAL:
-            link = links_by_id.get(tax_event.source_id)
+            link_id = cast(DisposalId, tax_event.source_id)
+            link = links_by_id.get(link_id)
             if link is None:
                 msg = f"Unknown disposal link {tax_event.source_id}"
                 raise ValueError(msg)
@@ -149,7 +149,8 @@ def compute_weekly_tax_summary(
             gain = proceeds - cost_basis
             timestamp = disposal_event.timestamp
         elif tax_event.kind == TaxEventKind.REWARD:
-            lot = lots_by_id.get(tax_event.source_id)
+            lot_id = cast(LotId, tax_event.source_id)
+            lot = lots_by_id.get(lot_id)
             if lot is None:
                 msg = f"Unknown reward lot {tax_event.source_id}"
                 raise ValueError(msg)

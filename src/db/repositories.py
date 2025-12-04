@@ -9,12 +9,16 @@ from db import models
 from domain.ledger import (
     AcquisitionLot,
     AssetId,
+    DisposalId,
     DisposalLink,
     EventLocation,
     EventOrigin,
     EventType,
     LedgerEvent,
+    LedgerEventId,
     LedgerLeg,
+    LegId,
+    LotId,
     WalletId,
 )
 
@@ -69,7 +73,7 @@ class LedgerEventRepository:
         )
         legs = [
             LedgerLeg(
-                id=leg.id,
+                id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
                 wallet_id=WalletId(leg.wallet_id),
@@ -78,7 +82,7 @@ class LedgerEventRepository:
             for leg in orm_event.legs
         ]
         return LedgerEvent(
-            id=orm_event.id,
+            id=LedgerEventId(orm_event.id),
             timestamp=timestamp,
             origin=origin,
             ingestion=orm_event.ingestion,
@@ -108,8 +112,8 @@ class AcquisitionLotRepository:
         orm_lots = self._session.query(models.AcquisitionLotOrm).all()
         return [
             AcquisitionLot(
-                id=lot.id,
-                acquired_leg_id=lot.acquired_leg_id,
+                id=LotId(lot.id),
+                acquired_leg_id=LegId(lot.acquired_leg_id),
                 cost_per_unit=lot.cost_per_unit,
             )
             for lot in orm_lots
@@ -139,9 +143,9 @@ class DisposalLinkRepository:
         orm_links = self._session.query(models.DisposalLinkOrm).all()
         return [
             DisposalLink(
-                id=link.id,
-                disposal_leg_id=link.disposal_leg_id,
-                lot_id=link.lot_id,
+                id=DisposalId(link.id),
+                disposal_leg_id=LegId(link.disposal_leg_id),
+                lot_id=LotId(link.lot_id),
                 quantity_used=link.quantity_used,
                 proceeds_total=link.proceeds_total,
             )

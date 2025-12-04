@@ -9,6 +9,10 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, Field, model_validator
 
 AssetId = NewType("AssetId", str)
+LedgerEventId = NewType("LedgerEventId", UUID)
+LegId = NewType("LegId", UUID)
+LotId = NewType("LotId", UUID)
+DisposalId = NewType("DisposalId", UUID)
 WalletId = NewType("WalletId", str)
 
 
@@ -50,7 +54,7 @@ class LedgerLeg(BaseModel):
     - Negative quantity indicates an asset/position decrease.
     """
 
-    id: UUID = Field(default_factory=uuid4)
+    id: LegId = LegId(Field(default_factory=uuid4))
     asset_id: AssetId
     quantity: Decimal
     wallet_id: WalletId
@@ -65,7 +69,7 @@ class LedgerLeg(BaseModel):
 
 
 class LedgerEvent(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
+    id: LedgerEventId = LedgerEventId(Field(default_factory=uuid4))
     timestamp: datetime
 
     origin: EventOrigin
@@ -83,8 +87,8 @@ class LedgerEvent(BaseModel):
 
 
 class AcquisitionLot(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    acquired_leg_id: UUID
+    id: LotId = LotId(Field(default_factory=uuid4))
+    acquired_leg_id: LegId
     cost_per_unit: Decimal
 
     @model_validator(mode="after")
@@ -95,9 +99,9 @@ class AcquisitionLot(BaseModel):
 
 
 class DisposalLink(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    disposal_leg_id: UUID
-    lot_id: UUID
+    id: DisposalId = DisposalId(Field(default_factory=uuid4))
+    disposal_leg_id: LegId
+    lot_id: LotId
     quantity_used: Decimal
     proceeds_total: Decimal
 

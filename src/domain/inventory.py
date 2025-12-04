@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from .ledger import AcquisitionLot, DisposalLink, EventType, LedgerEvent, LedgerLeg
+from .ledger import AcquisitionLot, AssetId, DisposalLink, EventType, LedgerEvent, LedgerLeg
 from .pricing import PriceProvider
 from .wallet_balance_tracker import WalletBalanceError, WalletBalanceTracker
 
@@ -32,14 +32,14 @@ class InventoryError(Exception):
 @dataclass
 class _OpenLotState:
     lot: AcquisitionLot
-    asset_id: str
+    asset_id: AssetId
     acquired_timestamp: datetime
     remaining_quantity: Decimal
 
 
 class OpenLotSnapshot(BaseModel):
     lot_id: UUID
-    asset_id: str
+    asset_id: AssetId
     acquired_timestamp: datetime
     quantity_remaining: Decimal
     cost_per_unit: Decimal
@@ -54,7 +54,7 @@ class InventoryResult(BaseModel):
 class InventoryEngine:
     """Create acquisition lots and disposal links from ledger events."""
 
-    EUR_ASSET_ID = "EUR"
+    EUR_ASSET_ID = AssetId("EUR")
 
     def __init__(
         self,

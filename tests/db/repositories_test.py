@@ -6,13 +6,22 @@ import pytest
 from sqlalchemy.orm import Session
 
 from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository
-from domain.ledger import AcquisitionLot, DisposalLink, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
+from domain.ledger import (
+    AcquisitionLot,
+    DisposalLink,
+    EventLocation,
+    EventOrigin,
+    EventType,
+    LedgerEvent,
+    LedgerEventId,
+    LedgerLeg,
+)
 from tests.constants import BTC, EUR, KRAKEN_WALLET
 
 
 def _sample_event(external_id: str, timestamp: datetime) -> LedgerEvent:
     return LedgerEvent(
-        id=uuid4(),
+        id=LedgerEventId(uuid4()),
         timestamp=timestamp,
         origin=EventOrigin(location=EventLocation.KRAKEN, external_id=external_id),
         ingestion="test_ingestion",

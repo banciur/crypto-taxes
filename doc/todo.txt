@@ -1,19 +1,19 @@
 First stage: compute German taxes
 TODO: Continue fixing compute_inventory_summary as it uses very strange asset_balances_for from wallet tracker
 TODO: Compute tax on staking, drops.
-TODO: tool to print from db event, legs etc for debugging. After provided id print whole network of entities
+TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
 TODO: add DB state
   - make db time entries timezone aware
 TODO: Review DB repositories
-
-TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
 
 TODO: On-chain events, what could be the source
 TODO: Manual adjustments to filter out spam transactions?
 TODO: how to combine different sources of transactions
 
-TODO: Restore inventory taxable and free.
+TODO: tool to print from db event, legs etc for debugging. After provided id print whole network of entities
 TODO: I'm suspicious of the tax calculations. Think how we can debug it better.
+
+TODO: Restore inventory taxable and free.
 TODO: Maybe time to change implementation and add connections to objects, not just id's. Or maybe create object repos so we could query them easily. Or just good old SQLAlchemy?
 TODO: Do we need extra snapshot mechanism to, for example, output value of wallets?
 TODO: Review inventory again. I don't like those intermediate objects also ones in taxes.
