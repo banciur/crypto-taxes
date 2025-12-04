@@ -40,22 +40,11 @@ def generate_tax_events(
     tax_events: list[TaxEvent] = []
 
     for link in inventory_result.disposal_links:
-        disposal_event = legs_to_event.get(link.disposal_leg_id)
-        if disposal_event is None:
-            msg = f"Unknown disposal leg {link.disposal_leg_id}"
-            raise ValueError(msg)
-
+        disposal = legs_to_event.get(link.disposal_leg_id)
         lot = lots_by_id.get(link.lot_id)
-        if lot is None:
-            msg = f"Unknown lot {link.lot_id} for disposal {link.disposal_leg_id}"
-            raise ValueError(msg)
-
         acquisition_event = legs_to_event.get(lot.acquired_leg_id)
-        if acquisition_event is None:
-            msg = f"Unknown acquisition event for leg {lot.acquired_leg_id}"
-            raise ValueError(msg)
 
-        if (disposal_event.timestamp - acquisition_event.timestamp) >= tax_free_threshold:
+        if (disposal.timestamp - acquisition_event.timestamp) >= tax_free_threshold:
             continue
 
         cost_basis = link.quantity_used * lot.cost_per_unit
@@ -71,14 +60,7 @@ def generate_tax_events(
 
     for lot in inventory_result.acquisition_lots:
         acquisition_leg = legs_by_id.get(lot.acquired_leg_id)
-        if acquisition_leg is None:
-            msg = f"Unknown acquisition leg {lot.acquired_leg_id} for lot {lot.id}"
-            raise ValueError(msg)
-
         acquisition_event = legs_to_event.get(lot.acquired_leg_id)
-        if acquisition_event is None:
-            msg = f"Unknown acquisition event for leg {lot.acquired_leg_id}"
-            raise ValueError(msg)
 
         if acquisition_event.event_type != EventType.REWARD:
             continue
@@ -112,6 +94,7 @@ def compute_weekly_tax_summary(
 ) -> list[WeeklyTaxSummary]:
     """Aggregate taxable events per ISO week, recomputing valuations from inventory and events."""
     weekly_totals: dict[date, tuple[int, Decimal, Decimal, Decimal]] = {}
+
     lots_by_id: dict[LotId, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
     links_by_id: dict[DisposalId, DisposalLink] = {link.id: link for link in inventory_result.disposal_links}
     legs_by_id: dict[LegId, LedgerLeg] = {}
@@ -130,19 +113,8 @@ def compute_weekly_tax_summary(
         if tax_event.kind == TaxEventKind.DISPOSAL:
             link_id = cast(DisposalId, tax_event.source_id)
             link = links_by_id.get(link_id)
-            if link is None:
-                msg = f"Unknown disposal link {tax_event.source_id}"
-                raise ValueError(msg)
-
             lot = lots_by_id.get(link.lot_id)
-            if lot is None:
-                msg = f"Unknown lot {link.lot_id} for disposal {link.id}"
-                raise ValueError(msg)
-
             disposal_event = leg_to_event.get(link.disposal_leg_id)
-            if disposal_event is None:
-                msg = f"Unknown disposal leg {link.disposal_leg_id}"
-                raise ValueError(msg)
 
             proceeds = link.proceeds_total
             cost_basis = link.quantity_used * lot.cost_per_unit
@@ -151,27 +123,15 @@ def compute_weekly_tax_summary(
         elif tax_event.kind == TaxEventKind.REWARD:
             lot_id = cast(LotId, tax_event.source_id)
             lot = lots_by_id.get(lot_id)
-            if lot is None:
-                msg = f"Unknown reward lot {tax_event.source_id}"
-                raise ValueError(msg)
-
             acquisition_leg = legs_by_id.get(lot.acquired_leg_id)
-            if acquisition_leg is None:
-                msg = f"Unknown acquisition leg {lot.acquired_leg_id} for lot {lot.id}"
-                raise ValueError(msg)
-
             acquisition_event = leg_to_event.get(lot.acquired_leg_id)
-            if acquisition_event is None:
-                msg = f"Unknown acquisition event for leg {lot.acquired_leg_id}"
-                raise ValueError(msg)
-            if acquisition_event.event_type != EventType.REWARD:
-                msg = f"Lot {lot.id} not linked to REWARD event {acquisition_event.id}"
-                raise ValueError(msg)
 
             proceeds = acquisition_leg.quantity * lot.cost_per_unit
-            cost_basis = Decimal("0")
+            cost_basis = Decimal(0)
             gain = proceeds
             timestamp = acquisition_event.timestamp
+        else:
+            raise ValueError(f"Unexpected tax event kind: {tax_event.kind}")
 
         week_start = timestamp.date() - timedelta(days=timestamp.weekday())
 
