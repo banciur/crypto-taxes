@@ -44,6 +44,11 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `quantity_used: Decimal`
   - `proceeds_total: Decimal`
 
+- TaxEvent
+  - `source_id: UUID` (a `DisposalLink` for disposals, an `AcquisitionLot` for rewards)
+  - `kind: TaxEventKind` (`DISPOSAL`, `REWARD`)
+  - `taxable_gain: Decimal`
+
 - EventOrigin
   - `location: EventLocation` (`ETHEREUM`, `ARBITRUM`, `KRAKEN`, `COINBASE`...)
   - `external_id: str`
@@ -61,8 +66,8 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Unbalanced events are allowed.
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
-- Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine.
-- Transfers (`EventType.TRANSFER`) move existing lots between wallets, no new acquisitions/disposals are created.
+- Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine. Open lots are tracked per asset (not per wallet) and matched FIFO.
+- Transfers (`EventType.TRANSFER`) only update wallet balances so overspending is caught; they do not create or move lots.
 - Per-wallet balances are tracked for all non-EUR legs; any debit that would push a wallet negative raises an error. Fix missing history by seeding lots or adding prior transfers into the source wallet before processing.
 - Synthetic seed lots can be injected ahead of importer output to satisfy transfers from `outside` when historical sources are missing. The CLI accepts `--seed-csv` (default `data/seed_lots.csv`) with rows `asset_id,wallet_id,quantity[,timestamp,cost_total_eur]`; these are modeled as tiny-cost trades (default cost 0.0001 EUR, timestamp defaults to 2000-01-01Z) so FIFO can move them like any other lot. Missing inventory will surface as an error during processing and should be resolved by updating the seed CSV manually.
 - Each event captures `origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
@@ -83,5 +88,6 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Model simple trades and transfers with per-leg wallets and optional fee legs.
 - Automatically create lots for acquisitions and link disposals via `InventoryEngine.process` (FIFO only; other lot policies are future work).
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
-- CLI inventory summary groups open holdings by asset with current EUR values and separates quantities/values that are already past the 1-year tax-free window from those still inside it.
+- CLI inventory summary aggregates quantities and EUR values per asset across owned wallets (no tax-free window split).
 - Tax events cover disposals inside the 1-year window and `REWARD` acquisitions taxed at receipt using their EUR value.
+- CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
