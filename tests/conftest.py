@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from db.models import Base
 from domain.inventory import InventoryEngine
 from domain.wallet_balance_tracker import WalletBalanceTracker
-from tests.helpers.test_price_service import TestPriceService
+from tests.helpers.random_price_service import TestPriceService
 from tests.helpers.time_utils import DEFAULT_TIME_GEN
 
 engine: Engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})

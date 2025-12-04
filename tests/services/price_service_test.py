@@ -6,7 +6,7 @@ from pathlib import Path
 
 from services.price_service import PriceService
 from services.price_store import JsonlPriceStore
-from tests.helpers.test_price_service import DeterministicRandomPriceSource
+from tests.helpers.random_price_service import DeterministicRandomPriceSource
 
 
 def test_fetch_and_get_flow(tmp_path: Path) -> None:
