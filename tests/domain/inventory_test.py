@@ -5,48 +5,49 @@ from decimal import Decimal
 import pytest
 
 from domain.inventory import InventoryEngine, InventoryError
-from domain.ledger import EventType, LedgerLeg
+from domain.ledger import AssetId, EventType, LedgerLeg, WalletId
+from tests.constants import ETH, EUR, KRAKEN_WALLET, LEDGER_WALLET
 from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
 
-WALLET_ID = "wallet"
+WALLET_ID = WalletId("wallet")
 
 
 def test_fifo(inventory_engine: InventoryEngine) -> None:
     t1_amount_bought = Decimal("1.0")
     t1_amount_spent = Decimal(2000)
-    t1_leg = LedgerLeg(asset_id="ETH", quantity=t1_amount_bought, wallet_id=WALLET_ID)
+    t1_leg = LedgerLeg(asset_id=ETH, quantity=t1_amount_bought, wallet_id=WALLET_ID)
     events = [
         make_event(
             event_type=EventType.TRADE,
             legs=[
                 t1_leg,
-                LedgerLeg(asset_id="EUR", quantity=-t1_amount_spent, wallet_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=-t1_amount_spent, wallet_id=WALLET_ID),
             ],
         )
     ]
 
     t2_amount_bought = Decimal("0.5")
     t2_amount_spent = Decimal(2200)
-    t2_leg = LedgerLeg(asset_id="ETH", quantity=t2_amount_bought, wallet_id=WALLET_ID)
+    t2_leg = LedgerLeg(asset_id=ETH, quantity=t2_amount_bought, wallet_id=WALLET_ID)
     events.append(
         make_event(
             event_type=EventType.TRADE,
             legs=[
                 t2_leg,
-                LedgerLeg(asset_id="EUR", quantity=-t2_amount_spent, wallet_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=-t2_amount_spent, wallet_id=WALLET_ID),
             ],
         )
     )
 
     t3_amount_spent = Decimal("0.6")
     t3_amount_bought = Decimal(2040)
-    t3_leg = LedgerLeg(asset_id="ETH", quantity=-t3_amount_spent, wallet_id=WALLET_ID)
+    t3_leg = LedgerLeg(asset_id=ETH, quantity=-t3_amount_spent, wallet_id=WALLET_ID)
     events.append(
         make_event(
             event_type=EventType.TRADE,
             legs=[
                 t3_leg,
-                LedgerLeg(asset_id="EUR", quantity=t3_amount_bought, wallet_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=t3_amount_bought, wallet_id=WALLET_ID),
             ],
         )
     )
@@ -54,13 +55,13 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
     # This should create two disposals as the amount is bigger than the amount left in the first lot.
     t4_amount_spent = Decimal("0.7")
     t4_amount_bought = Decimal(1900)
-    t4_leg = LedgerLeg(asset_id="ETH", quantity=-t4_amount_spent, wallet_id=WALLET_ID)
+    t4_leg = LedgerLeg(asset_id=ETH, quantity=-t4_amount_spent, wallet_id=WALLET_ID)
     events.append(
         make_event(
             event_type=EventType.TRADE,
             legs=[
                 t4_leg,
-                LedgerLeg(asset_id="EUR", quantity=t4_amount_bought, wallet_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=t4_amount_bought, wallet_id=WALLET_ID),
             ],
         )
     )
@@ -108,13 +109,13 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
 def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> None:
     t1_amount_bought = Decimal("1.0")
     t1_amount_spent = Decimal(2000)
-    t1_leg = LedgerLeg(asset_id="ETH", quantity=t1_amount_bought, wallet_id=WALLET_ID)
+    t1_leg = LedgerLeg(asset_id=ETH, quantity=t1_amount_bought, wallet_id=WALLET_ID)
     events = [
         make_event(
             event_type=EventType.TRADE,
             legs=[
                 t1_leg,
-                LedgerLeg(asset_id="EUR", quantity=-t1_amount_spent, wallet_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=-t1_amount_spent, wallet_id=WALLET_ID),
             ],
         )
     ]
@@ -122,8 +123,8 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
     t2_time = DEFAULT_TIME_GEN.next()
     t2_amount_dropped = Decimal("0.6")
     t2_amount_fee = Decimal("0.0001")
-    t2_drop_leg = LedgerLeg(asset_id="SPK", quantity=t2_amount_dropped, wallet_id=WALLET_ID)
-    t2_fee_leg = LedgerLeg(asset_id="ETH", quantity=-t2_amount_fee, wallet_id=WALLET_ID, is_fee=True)
+    t2_drop_leg = LedgerLeg(asset_id=AssetId("SPK"), quantity=t2_amount_dropped, wallet_id=WALLET_ID)
+    t2_fee_leg = LedgerLeg(asset_id=ETH, quantity=-t2_amount_fee, wallet_id=WALLET_ID, is_fee=True)
     events.append(make_event(event_type=EventType.REWARD, legs=[t2_drop_leg, t2_fee_leg], timestamp=t2_time))
     result = inventory_engine.process(events)
 
@@ -152,26 +153,26 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
 
 
 def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) -> None:
-    kraken_wallet = "kraken"
-    hardware_wallet = "ledger"
+    kraken_wallet = WalletId("kraken")
+    hardware_wallet = WalletId("ledger")
 
     buy_amount = Decimal("1.5")
     transfer_amount = Decimal("0.5")
     buy_spent_eur = Decimal("3000")
-    buy_leg = LedgerLeg(asset_id="ETH", quantity=buy_amount, wallet_id=kraken_wallet)
+    buy_leg = LedgerLeg(asset_id=ETH, quantity=buy_amount, wallet_id=kraken_wallet)
     events = [
         make_event(
             event_type=EventType.TRADE,
             legs=[
                 buy_leg,
-                LedgerLeg(asset_id="EUR", quantity=-buy_spent_eur, wallet_id=kraken_wallet),
+                LedgerLeg(asset_id=EUR, quantity=-buy_spent_eur, wallet_id=kraken_wallet),
             ],
         ),
         make_event(
             event_type=EventType.TRANSFER,
             legs=[
-                LedgerLeg(asset_id="ETH", quantity=transfer_amount, wallet_id=hardware_wallet),
-                LedgerLeg(asset_id="ETH", quantity=-transfer_amount, wallet_id=kraken_wallet),
+                LedgerLeg(asset_id=ETH, quantity=transfer_amount, wallet_id=hardware_wallet),
+                LedgerLeg(asset_id=ETH, quantity=-transfer_amount, wallet_id=kraken_wallet),
             ],
         ),
     ]
@@ -197,8 +198,8 @@ def test_disposal_without_acquisition_raises(inventory_engine: InventoryEngine) 
         make_event(
             event_type=EventType.TRADE,
             legs=[
-                LedgerLeg(asset_id="ETH", quantity=Decimal("-1.0"), wallet_id=WALLET_ID),
-                LedgerLeg(asset_id="EUR", quantity=Decimal("2500"), wallet_id=WALLET_ID),
+                LedgerLeg(asset_id=ETH, quantity=Decimal("-1.0"), wallet_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("2500"), wallet_id=WALLET_ID),
             ],
         )
     ]
@@ -212,8 +213,8 @@ def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) ->
         make_event(
             event_type=EventType.TRANSFER,
             legs=[
-                LedgerLeg(asset_id="ETH", quantity=Decimal("1.0"), wallet_id="ledger"),
-                LedgerLeg(asset_id="ETH", quantity=Decimal("-1.0"), wallet_id="kraken"),
+                LedgerLeg(asset_id=ETH, quantity=Decimal("1.0"), wallet_id=LEDGER_WALLET),
+                LedgerLeg(asset_id=ETH, quantity=Decimal("-1.0"), wallet_id=KRAKEN_WALLET),
             ],
         )
     ]
@@ -223,9 +224,9 @@ def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) ->
 
 
 def test_transfer_with_sufficient_balance_passes(inventory_engine: InventoryEngine) -> None:
-    asset_id = "ETH"
-    source_wallet = "kraken"
-    destination_wallet = "ledger"
+    asset_id = ETH
+    source_wallet = KRAKEN_WALLET
+    destination_wallet = LEDGER_WALLET
     acquired_quantity = Decimal("1.0")
     purchase_cost = Decimal("2000")
     transfer_quantity = Decimal("0.4")
@@ -235,7 +236,7 @@ def test_transfer_with_sufficient_balance_passes(inventory_engine: InventoryEngi
             event_type=EventType.TRADE,
             legs=[
                 LedgerLeg(asset_id=asset_id, quantity=acquired_quantity, wallet_id=source_wallet),
-                LedgerLeg(asset_id="EUR", quantity=-purchase_cost, wallet_id=source_wallet),
+                LedgerLeg(asset_id=EUR, quantity=-purchase_cost, wallet_id=source_wallet),
             ],
         ),
         make_event(

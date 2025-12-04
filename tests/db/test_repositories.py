@@ -6,15 +6,8 @@ import pytest
 from sqlalchemy.orm import Session
 
 from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository
-from domain.ledger import (
-    AcquisitionLot,
-    DisposalLink,
-    EventLocation,
-    EventOrigin,
-    EventType,
-    LedgerEvent,
-    LedgerLeg,
-)
+from domain.ledger import AcquisitionLot, DisposalLink, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
+from tests.constants import BTC, EUR, KRAKEN_WALLET
 
 
 def _sample_event(external_id: str, timestamp: datetime) -> LedgerEvent:
@@ -25,8 +18,8 @@ def _sample_event(external_id: str, timestamp: datetime) -> LedgerEvent:
         ingestion="test_ingestion",
         event_type=EventType.TRADE,
         legs=[
-            LedgerLeg(asset_id="BTC", quantity=Decimal("0.1"), wallet_id="kraken", is_fee=False),
-            LedgerLeg(asset_id="EUR", quantity=Decimal("-2000"), wallet_id="kraken", is_fee=False),
+            LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), wallet_id=KRAKEN_WALLET, is_fee=False),
+            LedgerLeg(asset_id=EUR, quantity=Decimal("-2000"), wallet_id=KRAKEN_WALLET, is_fee=False),
         ],
     )
 

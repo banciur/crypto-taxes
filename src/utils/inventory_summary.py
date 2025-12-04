@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from domain.inventory import InventoryEngine
+from domain.ledger import AssetId, WalletId
 from domain.pricing import PriceProvider
 from domain.wallet_balance_tracker import WalletBalanceTracker
 
@@ -13,7 +14,7 @@ from .formatting import format_currency, format_decimal
 
 @dataclass
 class AssetInventorySummary:
-    asset_id: str
+    asset_id: AssetId
     quantity: Decimal
     value: Decimal
 
@@ -25,7 +26,7 @@ class InventorySummary:
 
 
 def compute_inventory_summary(
-    owned_wallet_ids: set[str],
+    owned_wallet_ids: set[WalletId],
     *,
     wallet_balance_tracker: WalletBalanceTracker,
     price_provider: PriceProvider,

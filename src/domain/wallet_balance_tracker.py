@@ -2,14 +2,20 @@ from __future__ import annotations
 
 from collections import defaultdict
 from decimal import Decimal
+from typing import DefaultDict
+
+from domain.ledger import AssetId, WalletId
+
+WalletBalances = DefaultDict[WalletId, Decimal]
+AssetBalances = DefaultDict[AssetId, WalletBalances]
 
 
 class WalletBalanceError(Exception):
     def __init__(
         self,
         *,
-        asset_id: str,
-        wallet_id: str,
+        asset_id: AssetId,
+        wallet_id: WalletId,
         attempted_quantity: Decimal,
         available_balance: Decimal,
     ) -> None:
@@ -26,9 +32,9 @@ class WalletBalanceError(Exception):
 
 class WalletBalanceTracker:
     def __init__(self) -> None:
-        self._balances: dict[str, dict[str, Decimal]] = defaultdict(lambda: defaultdict(lambda: Decimal(0)))
+        self._balances: AssetBalances = defaultdict(lambda: defaultdict(lambda: Decimal(0)))
 
-    def apply_movement(self, *, asset_id: str, wallet_id: str, quantity: Decimal) -> None:
+    def apply_movement(self, *, asset_id: AssetId, wallet_id: WalletId, quantity: Decimal) -> None:
         current_balance = self._balances[asset_id][wallet_id]
         new_balance = current_balance + quantity
         if new_balance < 0:
@@ -40,14 +46,14 @@ class WalletBalanceTracker:
             )
         self._balances[asset_id][wallet_id] = new_balance
 
-    def get_balance(self, *, asset_id: str, wallet_id: str) -> Decimal:
+    def get_balance(self, *, asset_id: AssetId, wallet_id: WalletId) -> Decimal:
         return self._balances[asset_id][wallet_id]
 
-    def has_available(self, *, asset_id: str, wallet_id: str, quantity: Decimal) -> bool:
+    def has_available(self, *, asset_id: AssetId, wallet_id: WalletId, quantity: Decimal) -> bool:
         return self._balances[asset_id][wallet_id] >= quantity
 
-    def asset_balances_for(self, wallet_ids: set[str] | None = None) -> dict[str, Decimal]:
-        totals: dict[str, Decimal] = {}
+    def asset_balances_for(self, wallet_ids: set[WalletId]) -> dict[AssetId, Decimal]:
+        totals: dict[AssetId, Decimal] = {}
         for asset_id, wallet_balances in self._balances.items():
             total = sum(
                 (

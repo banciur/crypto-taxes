@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from random import Random
 
-from domain.ledger import EventType, LedgerLeg
+from domain.ledger import EventType, LedgerLeg, WalletId
+from tests.constants import ETH
 from tests.helpers.time_utils import TimeGenerator, make_event
 
 
@@ -28,7 +29,7 @@ def test_time_generator_increases_with_seed() -> None:
 
 def test_make_event_uses_generator_when_timestamp_missing() -> None:
     gen = TimeGenerator(_rng=Random(1))
-    legs = [LedgerLeg(asset_id="ETH", quantity=Decimal("1"), wallet_id="w")]
+    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), wallet_id=WalletId("w"))]
 
     event1 = make_event(event_type=EventType.REWARD, legs=legs, ts_gen=gen)
     event2 = make_event(event_type=EventType.REWARD, legs=legs, ts_gen=gen)
@@ -39,7 +40,7 @@ def test_make_event_uses_generator_when_timestamp_missing() -> None:
 
 def test_make_event_respects_provided_timestamp() -> None:
     explicit_ts = datetime(2024, 2, 1, tzinfo=timezone.utc)
-    legs = [LedgerLeg(asset_id="ETH", quantity=Decimal("1"), wallet_id="w")]
+    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), wallet_id=WalletId("w"))]
 
     event = make_event(event_type=EventType.REWARD, legs=legs, timestamp=explicit_ts)
 
@@ -47,7 +48,7 @@ def test_make_event_respects_provided_timestamp() -> None:
 
 
 def test_make_event_uses_shared_generator_by_default() -> None:
-    legs = [LedgerLeg(asset_id="ETH", quantity=Decimal("1"), wallet_id="w")]
+    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), wallet_id=WalletId("w"))]
 
     first = make_event(event_type=EventType.REWARD, legs=legs)
     second = make_event(event_type=EventType.REWARD, legs=legs)
@@ -57,7 +58,7 @@ def test_make_event_uses_shared_generator_by_default() -> None:
 
 def test_default_generator_is_reset_between_tests() -> None:
     # After the autouse reset, we should start from the same baseline.
-    legs = [LedgerLeg(asset_id="ETH", quantity=Decimal("1"), wallet_id="w")]
+    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), wallet_id=WalletId("w"))]
 
     first = make_event(event_type=EventType.REWARD, legs=legs)
     second = make_event(event_type=EventType.REWARD, legs=legs)

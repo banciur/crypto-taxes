@@ -7,6 +7,7 @@ from typing import Sequence
 from db.db import init_db
 from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository
 from domain.inventory import InventoryEngine, InventoryResult
+from domain.ledger import WalletId
 from domain.wallet_balance_tracker import WalletBalanceTracker
 from importers.kraken_importer import KrakenImporter
 from importers.seed_events import load_seed_events
@@ -47,7 +48,7 @@ def run(
     event_repository = LedgerEventRepository(session)
     lot_repository = AcquisitionLotRepository(session)
     disposal_repository = DisposalLinkRepository(session)
-    owned_wallets: set[str] = set()
+    owned_wallets: set[WalletId] = set()
 
     importer = KrakenImporter(str(csv_path))
     owned_wallets.add(importer.WALLET_ID)

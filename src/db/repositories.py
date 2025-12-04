@@ -8,12 +8,14 @@ from sqlalchemy.orm import Session
 from db import models
 from domain.ledger import (
     AcquisitionLot,
+    AssetId,
     DisposalLink,
     EventLocation,
     EventOrigin,
     EventType,
     LedgerEvent,
     LedgerLeg,
+    WalletId,
 )
 
 
@@ -68,9 +70,9 @@ class LedgerEventRepository:
         legs = [
             LedgerLeg(
                 id=leg.id,
-                asset_id=leg.asset_id,
+                asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                wallet_id=leg.wallet_id,
+                wallet_id=WalletId(leg.wallet_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs

@@ -3,9 +3,13 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import NewType
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, model_validator
+
+AssetId = NewType("AssetId", str)
+WalletId = NewType("WalletId", str)
 
 
 class EventType(StrEnum):
@@ -47,9 +51,9 @@ class LedgerLeg(BaseModel):
     """
 
     id: UUID = Field(default_factory=uuid4)
-    asset_id: str
+    asset_id: AssetId
     quantity: Decimal
-    wallet_id: str
+    wallet_id: WalletId
     is_fee: bool = False
 
     @model_validator(mode="after")

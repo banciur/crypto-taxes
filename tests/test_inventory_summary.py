@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from domain.inventory import InventoryEngine
 from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
+from tests.constants import BTC, ETH, EUR, KRAKEN_WALLET, OUTSIDE_WALLET
 from utils.inventory_summary import compute_inventory_summary
 
 
@@ -31,8 +32,8 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
             ingestion="test",
             event_type=EventType.DEPOSIT,
             legs=[
-                LedgerLeg(asset_id="BTC", quantity=btc_lot_one_qty, wallet_id="kraken"),
-                LedgerLeg(asset_id="EUR", quantity=Decimal("-1.0"), wallet_id="kraken"),
+                LedgerLeg(asset_id=BTC, quantity=btc_lot_one_qty, wallet_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), wallet_id=KRAKEN_WALLET),
             ],
         ),
         LedgerEvent(
@@ -41,8 +42,8 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
             ingestion="test",
             event_type=EventType.DEPOSIT,
             legs=[
-                LedgerLeg(asset_id="BTC", quantity=btc_lot_two_qty, wallet_id="kraken"),
-                LedgerLeg(asset_id="EUR", quantity=Decimal("-1.0"), wallet_id="kraken"),
+                LedgerLeg(asset_id=BTC, quantity=btc_lot_two_qty, wallet_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), wallet_id=KRAKEN_WALLET),
             ],
         ),
         LedgerEvent(
@@ -51,8 +52,8 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
             ingestion="test",
             event_type=EventType.DEPOSIT,
             legs=[
-                LedgerLeg(asset_id="ETH", quantity=eth_qty, wallet_id="kraken"),
-                LedgerLeg(asset_id="EUR", quantity=Decimal("-1.0"), wallet_id="kraken"),
+                LedgerLeg(asset_id=ETH, quantity=eth_qty, wallet_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), wallet_id=KRAKEN_WALLET),
             ],
         ),
     ]
@@ -60,7 +61,7 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
     inventory_engine.process(events)
 
     summary = compute_inventory_summary(
-        {"kraken"},
+        {KRAKEN_WALLET},
         wallet_balance_tracker=inventory_engine._wallet_balances,
         price_provider=price_service,
         as_of=as_of,
@@ -69,11 +70,11 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
 
     assets = {asset.asset_id: asset for asset in summary.assets}
 
-    btc = assets["BTC"]
+    btc = assets[BTC]
     assert btc.quantity == btc_total_qty
     assert btc.value == btc_total_value
 
-    eth = assets["ETH"]
+    eth = assets[ETH]
     assert eth.quantity == eth_qty
     assert eth.value == eth_total_value
 
@@ -88,8 +89,8 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
             ingestion="test",
             event_type=EventType.DEPOSIT,
             legs=[
-                LedgerLeg(asset_id="BTC", quantity=Decimal("1.0"), wallet_id="kraken"),
-                LedgerLeg(asset_id="EUR", quantity=Decimal("-1.0"), wallet_id="kraken"),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("1.0"), wallet_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), wallet_id=KRAKEN_WALLET),
             ],
         ),
         LedgerEvent(
@@ -98,8 +99,8 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
             ingestion="test",
             event_type=EventType.DEPOSIT,
             legs=[
-                LedgerLeg(asset_id="ETH", quantity=Decimal("2.0"), wallet_id="outside"),
-                LedgerLeg(asset_id="EUR", quantity=Decimal("-1.0"), wallet_id="outside"),
+                LedgerLeg(asset_id=ETH, quantity=Decimal("2.0"), wallet_id=OUTSIDE_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), wallet_id=OUTSIDE_WALLET),
             ],
         ),
     ]
@@ -107,7 +108,7 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
     inventory_engine.process(events)
 
     summary = compute_inventory_summary(
-        owned_wallet_ids={"kraken"},
+        owned_wallet_ids={KRAKEN_WALLET},
         wallet_balance_tracker=inventory_engine._wallet_balances,
         price_provider=price_service,
         as_of=as_of,
@@ -116,6 +117,6 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
     assert len(summary.assets) == 1
     asset = summary.assets[0]
     btc_rate = price_service.rate("BTC", "EUR", as_of)
-    assert asset.asset_id == "BTC"
+    assert asset.asset_id == BTC
     assert asset.quantity == Decimal("1.0")
     assert asset.value == Decimal("1.0") * btc_rate

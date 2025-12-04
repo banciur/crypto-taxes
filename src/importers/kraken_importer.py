@@ -10,11 +10,12 @@ from typing import Iterable
 
 from pydantic import BaseModel, Field, field_validator
 
-from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
+from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
 
 logger = logging.getLogger(__name__)
 KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"
-KRAKEN_WALLET_ID = "kraken"
+KRAKEN_WALLET_ID = WalletId("kraken")
+OUTSIDE_WALLET_ID = WalletId("outside")
 
 FIAT_ASSETS = {"EUR", "USD"}
 ASSET_ALIASES = {
@@ -78,9 +79,9 @@ class KrakenLedgerEntry(BaseModel):
         return value
 
 
-def _normalize_asset(asset: str) -> str:
+def _normalize_asset(asset: str) -> AssetId:
     code = asset.upper()
-    return ASSET_ALIASES.get(code, code)
+    return AssetId(ASSET_ALIASES.get(code, code))
 
 
 def _net_quantity(entry: KrakenLedgerEntry) -> Decimal:
@@ -94,7 +95,7 @@ def _ledger_leg(
     quantity: Decimal,
     *,
     is_fee: bool = False,
-    wallet_id: str = KRAKEN_WALLET_ID,
+    wallet_id: WalletId = KRAKEN_WALLET_ID,
 ) -> LedgerLeg:
     asset_id = _normalize_asset(entry.asset)
     return LedgerLeg(
@@ -315,7 +316,7 @@ class KrakenImporter:
         event_type = EventType.DEPOSIT if asset_code in FIAT_ASSETS else EventType.TRANSFER
 
         legs = [
-            _ledger_leg(entry, -entry.amount, wallet_id="outside"),
+            _ledger_leg(entry, -entry.amount, wallet_id=OUTSIDE_WALLET_ID),
             _ledger_leg(entry, incoming_quantity),
         ]
 
@@ -340,7 +341,7 @@ class KrakenImporter:
 
         legs = [
             _ledger_leg(entry, sent_quantity),
-            _ledger_leg(entry, abs(entry.amount), wallet_id="outside"),
+            _ledger_leg(entry, abs(entry.amount), wallet_id=OUTSIDE_WALLET_ID),
         ]
 
         return LedgerEvent(
