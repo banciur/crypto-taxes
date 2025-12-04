@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Sequence
 
 from db.db import init_db
-from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository
+from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository, TaxEventRepository
 from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import WalletId
 from domain.wallet_balance_tracker import WalletBalanceTracker
@@ -16,7 +16,6 @@ from services.open_exchange_rates_source import OpenExchangeRatesSource
 from services.price_service import PriceService
 from services.price_sources import HybridPriceSource
 from services.price_store import JsonlPriceStore
-from utils.debug_dump import dump_inventory_debug
 from utils.inventory_summary import compute_inventory_summary, render_inventory_summary
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
@@ -49,6 +48,7 @@ def run(
     event_repository = LedgerEventRepository(session)
     lot_repository = AcquisitionLotRepository(session)
     disposal_repository = DisposalLinkRepository(session)
+    tax_event_repository = TaxEventRepository(session)
 
     wallet_balance_tracker = WalletBalanceTracker()
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
@@ -75,6 +75,8 @@ def run(
     # dump_inventory_debug(events, inventory)
 
     tax_events = generate_tax_events(inventory, events)
+    tax_event_repository.create_many(tax_events)
+    tax_events = tax_event_repository.list()
 
     # Print summary
     print(f"Imported {len(events)} events from {csv_path}")

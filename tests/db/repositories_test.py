@@ -5,9 +5,10 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.orm import Session
 
-from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository
+from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository, TaxEventRepository
 from domain.ledger import (
     AcquisitionLot,
+    DisposalId,
     DisposalLink,
     EventLocation,
     EventOrigin,
@@ -15,7 +16,9 @@ from domain.ledger import (
     LedgerEvent,
     LedgerEventId,
     LedgerLeg,
+    LotId,
 )
+from domain.tax_event import TaxEvent, TaxEventKind
 from tests.constants import BTC, EUR, KRAKEN_WALLET
 
 
@@ -46,6 +49,11 @@ def lot_repo(test_session: Session) -> AcquisitionLotRepository:
 @pytest.fixture()
 def disposal_repo(test_session: Session) -> DisposalLinkRepository:
     return DisposalLinkRepository(test_session)
+
+
+@pytest.fixture()
+def tax_repo(test_session: Session) -> TaxEventRepository:
+    return TaxEventRepository(test_session)
 
 
 def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
@@ -144,3 +152,28 @@ def test_persist_disposal_links(
         reloaded = stored_by_id[original.id]
         assert reloaded.quantity_used == original.quantity_used
         assert reloaded.proceeds_total == original.proceeds_total
+
+
+def test_persist_tax_events(tax_repo: TaxEventRepository) -> None:
+    taxable_events = [
+        TaxEvent(
+            source_id=DisposalId(uuid4()),
+            kind=TaxEventKind.DISPOSAL,
+            taxable_gain=Decimal("123.45"),
+        ),
+        TaxEvent(
+            source_id=LotId(uuid4()),
+            kind=TaxEventKind.REWARD,
+            taxable_gain=Decimal("67.89"),
+        ),
+    ]
+
+    saved = tax_repo.create_many(taxable_events)
+    assert {event.source_id for event in saved} == {event.source_id for event in taxable_events}
+
+    stored = tax_repo.list()
+    stored_by_source = {event.source_id: event for event in stored}
+    for expected in taxable_events:
+        reloaded = stored_by_source[expected.source_id]
+        assert reloaded.kind == expected.kind
+        assert reloaded.taxable_gain == expected.taxable_gain

@@ -84,3 +84,11 @@ class DisposalLinkOrm(Base):
 
     disposal_leg: Mapped[LedgerLegOrm] = relationship(back_populates="disposal_links", foreign_keys=[disposal_leg_id])
     lot: Mapped[AcquisitionLotOrm] = relationship(back_populates="disposal_links")
+
+
+class TaxEventOrm(Base):
+    __tablename__ = "tax_events"
+
+    source_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    kind: Mapped[str] = mapped_column(String, nullable=False)
+    taxable_gain: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)

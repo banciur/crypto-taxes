@@ -3,25 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from enum import StrEnum
 from typing import Iterable, cast
 
 from domain.inventory import InventoryResult
 from domain.ledger import AcquisitionLot, DisposalId, DisposalLink, EventType, LedgerEvent, LedgerLeg, LegId, LotId
+from domain.tax_event import TaxEvent, TaxEventKind
 
 from .formatting import format_currency
-
-
-class TaxEventKind(StrEnum):
-    DISPOSAL = "DISPOSAL"
-    REWARD = "REWARD"
-
-
-@dataclass
-class TaxEvent:
-    source_id: DisposalId | LotId
-    kind: TaxEventKind
-    taxable_gain: Decimal
 
 
 def generate_tax_events(
@@ -40,9 +28,9 @@ def generate_tax_events(
     tax_events: list[TaxEvent] = []
 
     for link in inventory_result.disposal_links:
-        disposal = legs_to_event.get(link.disposal_leg_id)
-        lot = lots_by_id.get(link.lot_id)
-        acquisition_event = legs_to_event.get(lot.acquired_leg_id)
+        disposal = legs_to_event[link.disposal_leg_id]
+        lot = lots_by_id[link.lot_id]
+        acquisition_event = legs_to_event[lot.acquired_leg_id]
 
         if (disposal.timestamp - acquisition_event.timestamp) >= tax_free_threshold:
             continue
@@ -59,8 +47,8 @@ def generate_tax_events(
         )
 
     for lot in inventory_result.acquisition_lots:
-        acquisition_leg = legs_by_id.get(lot.acquired_leg_id)
-        acquisition_event = legs_to_event.get(lot.acquired_leg_id)
+        acquisition_leg = legs_by_id[lot.acquired_leg_id]
+        acquisition_event = legs_to_event[lot.acquired_leg_id]
 
         if acquisition_event.event_type != EventType.REWARD:
             continue
@@ -112,9 +100,9 @@ def compute_weekly_tax_summary(
 
         if tax_event.kind == TaxEventKind.DISPOSAL:
             link_id = cast(DisposalId, tax_event.source_id)
-            link = links_by_id.get(link_id)
-            lot = lots_by_id.get(link.lot_id)
-            disposal_event = leg_to_event.get(link.disposal_leg_id)
+            link = links_by_id[link_id]
+            lot = lots_by_id[link.lot_id]
+            disposal_event = leg_to_event[link.disposal_leg_id]
 
             proceeds = link.proceeds_total
             cost_basis = link.quantity_used * lot.cost_per_unit
@@ -122,9 +110,9 @@ def compute_weekly_tax_summary(
             timestamp = disposal_event.timestamp
         elif tax_event.kind == TaxEventKind.REWARD:
             lot_id = cast(LotId, tax_event.source_id)
-            lot = lots_by_id.get(lot_id)
-            acquisition_leg = legs_by_id.get(lot.acquired_leg_id)
-            acquisition_event = leg_to_event.get(lot.acquired_leg_id)
+            lot = lots_by_id[lot_id]
+            acquisition_leg = legs_by_id[lot.acquired_leg_id]
+            acquisition_event = leg_to_event[lot.acquired_leg_id]
 
             proceeds = acquisition_leg.quantity * lot.cost_per_unit
             cost_basis = Decimal(0)
