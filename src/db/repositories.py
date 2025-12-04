@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import timezone
-from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -53,7 +52,7 @@ class LedgerEventRepository:
         self._session.refresh(orm_event)
         return self._to_domain(orm_event)
 
-    def get(self, event_id: UUID) -> LedgerEvent | None:
+    def get(self, event_id: LedgerEventId) -> LedgerEvent | None:
         orm_event = self._session.get(models.LedgerEventOrm, event_id)
         if orm_event is None:
             return None
