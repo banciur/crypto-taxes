@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
+from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
 
 DEFAULT_SEED_TIMESTAMP = datetime(2000, 1, 1, tzinfo=timezone.utc)
 DEFAULT_SEED_COST_TOTAL_EUR = Decimal("0.0001")
@@ -33,7 +33,8 @@ def load_seed_events(csv_path: Path) -> list[LedgerEvent]:
 
         events: list[LedgerEvent] = []
         for row_idx, row in enumerate(reader, start=1):
-            wallet_id = row["wallet_id"].strip()
+            wallet_id = WalletId(row["wallet_id"].strip())
+            asset_id = AssetId(row["asset_id"].strip())
 
             events.append(
                 LedgerEvent(
@@ -42,11 +43,11 @@ def load_seed_events(csv_path: Path) -> list[LedgerEvent]:
                     ingestion="seed_csv",
                     event_type=EventType.TRADE,
                     legs=[
+                        LedgerLeg(asset_id=asset_id, quantity=Decimal(row["quantity"]), wallet_id=wallet_id),
                         LedgerLeg(
-                            asset_id=row["asset_id"].strip(), quantity=Decimal(row["quantity"]), wallet_id=wallet_id
-                        ),
-                        LedgerLeg(
-                            asset_id="EUR", quantity=-_parse_cost(row.get("cost_total_eur")), wallet_id=wallet_id
+                            asset_id=AssetId("EUR"),
+                            quantity=-_parse_cost(row.get("cost_total_eur")),
+                            wallet_id=wallet_id,
                         ),
                     ],
                 )

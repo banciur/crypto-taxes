@@ -3,9 +3,17 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import NewType
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, model_validator
+
+AssetId = NewType("AssetId", str)
+LedgerEventId = NewType("LedgerEventId", UUID)
+LegId = NewType("LegId", UUID)
+LotId = NewType("LotId", UUID)
+DisposalId = NewType("DisposalId", UUID)
+WalletId = NewType("WalletId", str)
 
 
 class EventType(StrEnum):
@@ -46,10 +54,10 @@ class LedgerLeg(BaseModel):
     - Negative quantity indicates an asset/position decrease.
     """
 
-    id: UUID = Field(default_factory=uuid4)
-    asset_id: str
+    id: LegId = LegId(Field(default_factory=uuid4))
+    asset_id: AssetId
     quantity: Decimal
-    wallet_id: str
+    wallet_id: WalletId
     is_fee: bool = False
 
     @model_validator(mode="after")
@@ -61,7 +69,7 @@ class LedgerLeg(BaseModel):
 
 
 class LedgerEvent(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
+    id: LedgerEventId = LedgerEventId(Field(default_factory=uuid4))
     timestamp: datetime
 
     origin: EventOrigin
@@ -79,29 +87,28 @@ class LedgerEvent(BaseModel):
 
 
 class AcquisitionLot(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    acquired_event_id: UUID
-    acquired_leg_id: UUID
-    cost_eur_per_unit: Decimal
+    id: LotId = LotId(Field(default_factory=uuid4))
+    acquired_leg_id: LegId
+    cost_per_unit: Decimal
 
     @model_validator(mode="after")
     def _validate_fields(self) -> AcquisitionLot:
-        if self.cost_eur_per_unit < 0:
-            raise ValueError("cost_eur_per_unit must be >= 0")
+        if self.cost_per_unit < 0:
+            raise ValueError("cost_per_unit must be >= 0")
         return self
 
 
 class DisposalLink(BaseModel):
-    id: UUID = Field(default_factory=uuid4)
-    disposal_leg_id: UUID
-    lot_id: UUID
+    id: DisposalId = DisposalId(Field(default_factory=uuid4))
+    disposal_leg_id: LegId
+    lot_id: LotId
     quantity_used: Decimal
-    proceeds_total_eur: Decimal
+    proceeds_total: Decimal
 
     @model_validator(mode="after")
     def _validate(self) -> DisposalLink:
         if self.quantity_used <= 0:
             raise ValueError("quantity_used must be > 0")
-        if self.proceeds_total_eur < 0:
-            raise ValueError("proceeds_total_eur must be >= 0")
+        if self.proceeds_total < 0:
+            raise ValueError("proceeds_total must be >= 0")
         return self

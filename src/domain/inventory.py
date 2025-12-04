@@ -9,8 +9,9 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from .ledger import AcquisitionLot, DisposalLink, EventType, LedgerEvent, LedgerLeg
+from .ledger import AcquisitionLot, AssetId, DisposalLink, EventType, LedgerEvent, LedgerLeg
 from .pricing import PriceProvider
+from .wallet_balance_tracker import WalletBalanceError, WalletBalanceTracker
 
 
 class InventoryError(Exception):
@@ -31,19 +32,17 @@ class InventoryError(Exception):
 @dataclass
 class _OpenLotState:
     lot: AcquisitionLot
-    asset_id: str
-    wallet_id: str
+    asset_id: AssetId
     acquired_timestamp: datetime
     remaining_quantity: Decimal
 
 
 class OpenLotSnapshot(BaseModel):
     lot_id: UUID
-    asset_id: str
-    wallet_id: str
+    asset_id: AssetId
     acquired_timestamp: datetime
     quantity_remaining: Decimal
-    cost_eur_per_unit: Decimal
+    cost_per_unit: Decimal
 
 
 class InventoryResult(BaseModel):
@@ -55,36 +54,41 @@ class InventoryResult(BaseModel):
 class InventoryEngine:
     """Create acquisition lots and disposal links from ledger events."""
 
-    EUR_ASSET_ID = "EUR"
+    EUR_ASSET_ID = AssetId("EUR")
 
-    def __init__(self, *, price_provider: PriceProvider) -> None:
+    def __init__(
+        self,
+        *,
+        price_provider: PriceProvider,
+        wallet_balance_tracker: WalletBalanceTracker,
+    ) -> None:
         self._price_provider = price_provider
+        self._wallet_balances = wallet_balance_tracker
 
     def process(self, events: Iterable[LedgerEvent]) -> InventoryResult:
         """Caller must provide events in chronological order."""
         acquisitions: list[AcquisitionLot] = []
         disposals: list[DisposalLink] = []
 
-        inventory: dict[tuple[str, str], deque[_OpenLotState]] = defaultdict(deque)
+        inventory: dict[str, deque[_OpenLotState]] = defaultdict(deque)
 
         for event in events:
+            self._apply_wallet_movements(event)
+
             if event.event_type == EventType.TRANSFER:
-                self._process_transfer_event(event, inventory)
                 continue
 
             acquisition_legs = [leg for leg in event.legs if leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID]
             for leg in acquisition_legs:
                 lot = AcquisitionLot(
-                    acquired_event_id=event.id,
                     acquired_leg_id=leg.id,
-                    cost_eur_per_unit=self._resolve_cost_per_unit(event, leg),
+                    cost_per_unit=self._resolve_cost_per_unit(event, leg),
                 )
                 acquisitions.append(lot)
 
                 state = _OpenLotState(
                     lot=lot,
                     asset_id=leg.asset_id,
-                    wallet_id=leg.wallet_id,
                     acquired_timestamp=event.timestamp,
                     remaining_quantity=leg.quantity,
                 )
@@ -107,7 +111,7 @@ class InventoryEngine:
                             disposal_leg_id=leg.id,
                             lot_id=lot_state.lot.id,
                             quantity_used=take_quantity,
-                            proceeds_total_eur=proceeds_total,
+                            proceeds_total=proceeds_total,
                         )
                     )
 
@@ -117,16 +121,15 @@ class InventoryEngine:
             OpenLotSnapshot(
                 lot_id=state.lot.id,
                 asset_id=state.asset_id,
-                wallet_id=state.wallet_id,
                 acquired_timestamp=state.acquired_timestamp,
                 quantity_remaining=state.remaining_quantity,
-                cost_eur_per_unit=state.lot.cost_eur_per_unit,
+                cost_per_unit=state.lot.cost_per_unit,
             )
             for states in inventory.values()
             for state in states
         ]
 
-        open_inventory_snapshots.sort(key=lambda snap: (snap.asset_id, snap.wallet_id, snap.acquired_timestamp))
+        open_inventory_snapshots.sort(key=lambda snap: (snap.asset_id, snap.acquired_timestamp))
 
         return InventoryResult(
             acquisition_lots=acquisitions,
@@ -167,7 +170,7 @@ class InventoryEngine:
     ) -> LedgerLeg | None:
         """Locate a single EUR leg matching the expected sign (+/-).
 
-        Returns None if none (or multiple) are found to avoid ambiguous matching.
+        Returns None if none (or multiple) is found to avoid ambiguous matching.
         """
         matches = [
             leg
@@ -182,62 +185,15 @@ class InventoryEngine:
             return matches[0]
         return None
 
-    def _process_transfer_event(
-        self,
-        event: LedgerEvent,
-        inventory: dict[tuple[str, str], deque[_OpenLotState]],
-    ) -> None:
-        inbound_legs = [leg for leg in event.legs if leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID]
-        outbound_legs = [leg for leg in event.legs if leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID]
-
-        moved_lots: deque[tuple[_OpenLotState, Decimal]] = deque()
-
-        for leg in outbound_legs:
-            qty_to_move = abs(leg.quantity)
-            for lot_state, take_quantity in self._match_inventory(
-                leg=leg,
-                event=event,
-                quantity_needed=qty_to_move,
-                inventory=inventory,
-            ):
-                moved_lots.append((lot_state, take_quantity))
-
-        for leg in inbound_legs:
-            qty_remaining = leg.quantity
-            while qty_remaining > 0:
-                if not moved_lots:
-                    raise self._inventory_error(
-                        "Transfer lacks source inventory", leg=leg, event=event, quantity_needed=qty_remaining
-                    )
-
-                lot_state, available_qty = moved_lots[0]
-                take_quantity = min(qty_remaining, available_qty)
-                qty_remaining -= take_quantity
-                available_qty -= take_quantity
-
-                new_state = _OpenLotState(
-                    lot=lot_state.lot,
-                    asset_id=lot_state.asset_id,
-                    wallet_id=leg.wallet_id,
-                    acquired_timestamp=lot_state.acquired_timestamp,
-                    remaining_quantity=take_quantity,
-                )
-                self._append_open_lot_state(inventory, new_state)
-
-                if available_qty == 0:
-                    moved_lots.popleft()
-                else:
-                    moved_lots[0] = (lot_state, available_qty)
-
     def _match_inventory(
         self,
         *,
         leg: LedgerLeg,
         event: LedgerEvent,
         quantity_needed: Decimal,
-        inventory: dict[tuple[str, str], deque[_OpenLotState]],
+        inventory: dict[str, deque[_OpenLotState]],
     ) -> Iterable[tuple[_OpenLotState, Decimal]]:
-        open_lots = inventory.get((leg.asset_id, leg.wallet_id))
+        open_lots = inventory.get(leg.asset_id)
         if not open_lots:
             raise self._inventory_error("No open lots", leg=leg, event=event, quantity_needed=quantity_needed)
 
@@ -254,32 +210,52 @@ class InventoryEngine:
                 open_lots.popleft()
             yield lot_state, take_quantity
 
+    @staticmethod
     def _inventory_error(
-        self,
         reason: str,
         *,
         leg: LedgerLeg,
         event: LedgerEvent,
         quantity_needed: Decimal | None = None,
     ) -> InventoryError:
-        legs_summary = "; ".join(
-            f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}@{leg.wallet_id}" for leg in event.legs
-        )
+        legs_summary = "; ".join(f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}" for leg in event.legs)
         return InventoryError(
-            f"{reason} for asset={leg.asset_id} wallet={leg.wallet_id} leg={leg.id} "
-            f"event={event.id} {event.event_type} @{event.timestamp.isoformat()} "
+            f"{reason} for asset={leg.asset_id} wallet={leg.wallet_id} leg={leg.id} event={event.id} "
+            f"{event.event_type} @{event.timestamp.isoformat()} "
             f"legs={legs_summary}",
             leg=leg,
             event=event,
             quantity_needed=quantity_needed,
         )
 
+    def _apply_wallet_movements(self, event: LedgerEvent) -> None:
+        for leg in event.legs:
+            if leg.asset_id == self.EUR_ASSET_ID:
+                continue
+            try:
+                self._wallet_balances.apply_movement(
+                    asset_id=leg.asset_id,
+                    wallet_id=leg.wallet_id,
+                    quantity=leg.quantity,
+                )
+            except WalletBalanceError as err:
+                quantity_needed = None
+                if leg.quantity < 0:
+                    missing = abs(leg.quantity) - err.available_balance
+                    quantity_needed = missing if missing > 0 else abs(leg.quantity)
+                raise self._inventory_error(
+                    "Insufficient wallet balance",
+                    leg=leg,
+                    event=event,
+                    quantity_needed=quantity_needed,
+                ) from err
+
+    @staticmethod
     def _append_open_lot_state(
-        self,
-        inventory: dict[tuple[str, str], deque[_OpenLotState]],
+        inventory: dict[str, deque[_OpenLotState]],
         state: _OpenLotState,
     ) -> None:
-        open_lots = inventory[(state.asset_id, state.wallet_id)]
+        open_lots = inventory[state.asset_id]
         insert_at = None
         for idx, existing in enumerate(open_lots):
             if existing.acquired_timestamp > state.acquired_timestamp:
