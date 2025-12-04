@@ -1,5 +1,4 @@
 First stage: compute German taxes
-TODO: Continue fixing compute_inventory_summary as it uses very strange asset_balances_for from wallet tracker
 TODO: Compute tax on staking, drops.
 TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
 TODO: add DB state
@@ -54,7 +53,6 @@ https://github.com/openai/codex/releases
 
 Some loose ideas
 ------------------
-
 - Ability to compute / enter the current value of open positions.
 - Store history / snapshots of the state to catch changes in time
 

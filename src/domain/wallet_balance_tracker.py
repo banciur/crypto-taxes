@@ -52,7 +52,8 @@ class WalletBalanceTracker:
     def has_available(self, *, asset_id: AssetId, wallet_id: WalletId, quantity: Decimal) -> bool:
         return self._balances[asset_id][wallet_id] >= quantity
 
-    def asset_balances_for(self, wallet_ids: set[WalletId]) -> dict[AssetId, Decimal]:
+    def asset_balances_for(self, wallet_ids: set[WalletId] | None = None) -> dict[AssetId, Decimal]:
+        """Return per-asset totals limited to the provided wallets; None includes all wallets."""
         totals: dict[AssetId, Decimal] = {}
         for asset_id, wallet_balances in self._balances.items():
             total = sum(
