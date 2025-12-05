@@ -91,3 +91,14 @@ This document captures the currently implemented domain for modeling crypto ledg
 - CLI inventory summary aggregates quantities and EUR values per asset across owned wallets (no tax-free window split).
 - Tax events cover disposals inside the 1-year window and `REWARD` acquisitions taxed at receipt using their EUR value.
 - CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
+
+---
+
+## External data: on-chain transactions (via Moralis, cached)
+
+- Purpose: fetch on-chain wallet transaction history via Moralis with the caching feature.
+- Entry point: `MoralisService.get_transactions(mode)` in `src/clients/moralis.py`; loads accounts from `data/accounts.json`, ensures chains are synced, then returns all cached transactions ordered at the DB level.
+- Sync policy:
+  - `FRESH`: always fetch `(latest_cached_date - 1 day)` through now for any chain present in accounts.
+  - `BUDGET`: fetch only if a chain cache is stale (no data through yesterday); empty cache fetches all (no `from_date`).
+- Persistence: SQLite cache at `data/transactions_cache.db` with table `moralis_transactions`: `chain`, `hash`, `block_number`, `transaction_index`, `block_timestamp` (UTC), `payload` (full JSON); unique `(chain, hash)`; indexes on `(block_timestamp, block_number, transaction_index)` and `hash`.

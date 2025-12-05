@@ -12,9 +12,12 @@
 - `make code_fix` executes `ruff check --fix`, `ruff format`, and `mypy` to auto-fix linting and re-run types.
 - `make test` runs the pytest suite. If you want to test a single file use `uv run --group dev pytest -s tests/test_foo.py` 
 
-### Running commands and scripts
-- Use `uv run <command>` to execute project-aware tooling and Python scripts inside the managed virtualenv;
-- Reserve `uv run --group dev …` for commands that depend on dev-only packages (pytest, ruff, mypy, etc.); regular application scripts (e.g., under `scripts/`) work with plain `uv run python path/to/script.py`.
+### Running commands and scripts with uv
+- Use `uv run <command or path to python file>` to execute project-aware tooling and Python scripts inside the managed virtualenv;
+- Add `--group dev` ex. `uv run --group dev <command or path to python file>` for operations that depend on dev packages (pytest, ruff, mypy, etc.);
+- Examples:
+  - `uv run src/main.py` for running the main entrypoint;
+  - `uv run --group dev pytest -s tests/domain/inventory_test.py` for running the test file;
 
 ## Suggested workflow
 - ALWAYS after making code changes `make code_fix` to auto-apply lint fixes. Don't ask for permission, just run it.
