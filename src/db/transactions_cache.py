@@ -5,8 +5,10 @@ from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint, create_engine, select
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+
+from domain.ledger import ChainId
 
 CACHE_DB_PATH = Path("data/transactions_cache.db")
 
@@ -33,6 +35,13 @@ class MoralisTransactionOrm(TransactionsCacheBase):
     )
 
 
+class MoralisSyncStateOrm(TransactionsCacheBase):
+    __tablename__ = "moralis_sync_state"
+
+    chain: Mapped[str] = mapped_column(String, primary_key=True)
+    last_synced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class TransactionsCacheRepository:
     def __init__(self, session: Session):
         self.session = session
@@ -41,15 +50,15 @@ class TransactionsCacheRepository:
         if not records:
             return
 
-        stmt = sqlite_insert(MoralisTransactionOrm).values(records)
+        stmt = insert(MoralisTransactionOrm).values(records)
         stmt = stmt.on_conflict_do_nothing(index_elements=["chain", "hash"])
         self.session.execute(stmt)
         self.session.commit()
 
-    def latest_block_timestamp(self, chain: str) -> datetime | None:
+    def latest_block_timestamp(self, chain: ChainId) -> datetime | None:
         stmt = (
             select(MoralisTransactionOrm.block_timestamp)
-            .where(MoralisTransactionOrm.chain == chain)
+            .where(MoralisTransactionOrm.chain == str(chain))
             .order_by(MoralisTransactionOrm.block_timestamp.desc())
             .limit(1)
         )
@@ -63,6 +72,18 @@ class TransactionsCacheRepository:
         )
         rows = self.session.execute(stmt).scalars().all()
         return [json.loads(row.payload) for row in rows]
+
+    def last_synced_at(self, chain: ChainId) -> datetime | None:
+        stmt = select(MoralisSyncStateOrm.last_synced_at).where(MoralisSyncStateOrm.chain == str(chain)).limit(1)
+        return self.session.scalar(stmt)
+
+    def mark_synced(self, chain: ChainId, when: datetime) -> None:
+        stmt = insert(MoralisSyncStateOrm).values({"chain": str(chain), "last_synced_at": when})
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["chain"], set_={"last_synced_at": stmt.excluded.last_synced_at}
+        )
+        self.session.execute(stmt)
+        self.session.commit()
 
 
 def init_transactions_cache_db(

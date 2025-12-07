@@ -98,7 +98,5 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - Purpose: fetch on-chain wallet transaction history via Moralis with the caching feature.
 - Entry point: `MoralisService.get_transactions(mode)` in `src/clients/moralis.py`; loads accounts from `data/accounts.json`, ensures chains are synced, then returns all cached transactions ordered at the DB level.
-- Sync policy:
-  - `FRESH`: always fetch `(latest_cached_date - 1 day)` through now for any chain present in accounts.
-  - `BUDGET`: fetch only if a chain cache is stale (no data through yesterday); empty cache fetches all (no `from_date`).
-- Persistence: SQLite cache at `data/transactions_cache.db` with table `moralis_transactions`: `chain`, `hash`, `block_number`, `transaction_index`, `block_timestamp` (UTC), `payload` (full JSON); unique `(chain, hash)`; indexes on `(block_timestamp, block_number, transaction_index)` and `hash`.
+- Sync policy: supports `FRESH` (always refresh recent history) and `BUDGET` (skip chains already synced through yesterday; overlap by 1 day from the latest cached transaction when fetching).
+- Implementation and schema details live in `src/clients/AGENTS.md`.

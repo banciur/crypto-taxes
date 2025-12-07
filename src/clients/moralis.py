@@ -7,17 +7,15 @@ from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from time import sleep
-from typing import Any, Iterable, NewType, TypedDict, cast
+from typing import Any, Iterable, TypedDict, cast
 
 from moralis import evm_api  # type: ignore
 
 from config import config
 from db.transactions_cache import CACHE_DB_PATH, TransactionsCacheRepository, init_transactions_cache_db
+from domain.ledger import ChainId, WalletAddress
 
 logger = logging.getLogger(__name__)
-
-ChainId = NewType("ChainId", str)
-WalletAddress = NewType("WalletAddress", str)
 
 
 class Account(TypedDict):
@@ -123,20 +121,21 @@ class MoralisService:
         yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
 
         for chain, addresses in by_chain.items():
-            latest = self.cache.latest_block_timestamp(str(chain))
-            window_start = latest - timedelta(days=1) if latest else None
-            api_from_date = window_start.date() if window_start else None
-
+            last_synced_at = self.cache.last_synced_at(chain)
             should_fetch = mode == SyncMode.FRESH
-            if mode == SyncMode.BUDGET and (latest is None or latest.date() < yesterday):
+            if mode == SyncMode.BUDGET and (last_synced_at is None or last_synced_at.date() < yesterday):
                 should_fetch = True
 
             if not should_fetch:
                 logger.info("Chain %s already synced; skipping fetch", chain)
                 continue
 
+            latest_block = self.cache.latest_block_timestamp(chain)
+            api_from_date = (latest_block - timedelta(days=1)).date() if latest_block else None
+
             for address in addresses:
                 self._sync_account_chain(chain, address, api_from_date)
+            self.cache.mark_synced(chain, datetime.now(timezone.utc))
 
     def _sync_account_chain(self, chain: ChainId, address: WalletAddress, from_date: date | None) -> None:
         fetched = self.client.fetch_transactions(chain, address, from_date)

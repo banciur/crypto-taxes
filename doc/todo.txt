@@ -1,7 +1,7 @@
 First stage: compute German taxes
 TODO: On-chain events, Moralis
-  - review client and accounts structure
   - create ledger events, new type of event operation on chain for things like approvals, changin vfat settings etc
+  - review client and accounts structure, also think about wallet id (address_chain)
   - do we need native tokens?
 
 TODO: Manual adjustments to mark and filter out spam transactions.
