@@ -8,6 +8,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, model_validator
 
+ChainId = NewType("ChainId", str)
+WalletAddress = NewType("WalletAddress", str)
 AssetId = NewType("AssetId", str)
 LedgerEventId = NewType("LedgerEventId", UUID)
 LegId = NewType("LegId", UUID)
@@ -22,6 +24,7 @@ class EventType(StrEnum):
     WITHDRAWAL = "WITHDRAWAL"
     TRANSFER = "TRANSFER"
     REWARD = "REWARD"
+    OPERATION = "OPERATION"
 
 
 class EventLocation(StrEnum):

@@ -1,0 +1,10 @@
+[
+  {
+    "address": "0x1a5d4F9bb274D8333C794E7AffD55ADFA19b9187",
+    "chains": ["eth"]
+  },
+  {
+    "address": "0xcB1C1FdE09f811B294172696404e88E658659905",
+    "chains": ["eth", "bsc"]
+  }
+]

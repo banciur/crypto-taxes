@@ -9,7 +9,7 @@ from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, Le
 from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import WalletId
 from domain.wallet_balance_tracker import WalletBalanceTracker
-from importers.kraken_importer import KrakenImporter
+from importers.kraken import KrakenImporter
 from importers.seed_events import load_seed_events
 from services.coindesk_source import CoinDeskSource
 from services.open_exchange_rates_source import OpenExchangeRatesSource

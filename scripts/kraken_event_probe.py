@@ -18,7 +18,7 @@ if str(SRC_DIR) not in sys.path:
 from collections import Counter
 
 from domain.ledger import LedgerEvent
-from importers.kraken_importer import KrakenImporter, KrakenLedgerEntry
+from importers.kraken import KrakenImporter, KrakenLedgerEntry
 
 UNKNOWN_PRINT_LIMIT = 150
 # Set to a Kraken ledger row type (e.g., "deposit") to list all unresolved groups containing that type.

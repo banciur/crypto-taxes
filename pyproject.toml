@@ -5,6 +5,7 @@ requires-python = ">= 3.13"
 
 dependencies = [
     "alembic==1.16.5",
+    "moralis>=0.1.49",
     "pydantic==2.11.9",
     "pydantic-settings>=2.11.0",
     "requests==2.32.4",

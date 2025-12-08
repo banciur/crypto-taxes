@@ -22,7 +22,7 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `timestamp: datetime`
   - `origin: EventOrigin` (upstream location + external transaction id)
   - `ingestion: str` (import pipeline label, e.g., `kraken_ledger_csv`, `seed_csv`)
-  - `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`)
+  - `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`, `OPERATION`)
   - `legs: list[LedgerLeg]`
 
 - LedgerLeg
@@ -91,3 +91,12 @@ This document captures the currently implemented domain for modeling crypto ledg
 - CLI inventory summary aggregates quantities and EUR values per asset across owned wallets (no tax-free window split).
 - Tax events cover disposals inside the 1-year window and `REWARD` acquisitions taxed at receipt using their EUR value.
 - CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
+
+---
+
+## External data: on-chain transactions (via Moralis, cached)
+
+- Purpose: fetch on-chain wallet transaction history via Moralis with the caching feature.
+- Entry point: `MoralisService.get_transactions(mode)` in `src/clients/moralis.py`; loads accounts from `data/accounts.json`, ensures chains are synced, then returns all cached transactions ordered at the DB level.
+- Sync policy: supports `FRESH` (always refresh recent history) and `BUDGET` (skip chains already synced through yesterday; overlap by 1 day from the latest cached transaction when fetching).
+- Implementation and schema details live in `src/clients/AGENTS.md`.

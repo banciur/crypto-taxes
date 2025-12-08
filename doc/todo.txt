@@ -1,7 +1,20 @@
 First stage: compute German taxes
-TODO: On-chain events, what could be the source
-TODO: Manual adjustments to filter out spam transactions?
-TODO: how to combine different sources of transactions
+TODO: FE part to display ledger events and manual adjustment
+  - three "lanes" for ledger events adjustments. From top to bottom by timestamps
+    - original
+    - adjustments
+    - final
+
+TODO: On-chain events, Moralis
+  - not finished with a break for the UI.
+  - client is morels ready but importer just some vibed crap
+  - review client and accounts structure, also think about wallet id (address_chain)
+  - do we need native tokens?
+TODO: Import data from Coinbase hopefully through API
+
+TODO: Manual adjustments to mark and filter out spam transactions.
+TODO: Import data from Coinbase hopefully through API
+
 
 TODO: tool to print from db event, legs etc for debugging. After provided id print whole network of entities
 TODO: I'm suspicious of the tax calculations. Think how we can debug it better.
@@ -13,7 +26,6 @@ TODO: Do we need extra snapshot mechanism to, for example, output value of walle
 TODO: Review inventory again. I don't like those intermediate objects also ones in taxes.
 
 TODO: Import data from as this should be very easy:
-  - Coinbase
   - Lido
   - Stakewise
 TODO: Verify against my own spreadsheet
