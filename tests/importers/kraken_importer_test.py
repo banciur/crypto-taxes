@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from domain.ledger import EventLocation, EventType
-from importers.kraken_importer import KrakenImporter, KrakenLedgerEntry
+from importers.kraken import KrakenImporter, KrakenLedgerEntry
 
 FIELDNAMES = [
     "txid",

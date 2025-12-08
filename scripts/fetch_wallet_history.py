@@ -15,6 +15,7 @@ if str(SRC_DIR) not in sys.path:
 
 
 from clients.moralis import SyncMode, build_default_service
+from importers.moralis import MoralisImporter
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -32,19 +33,22 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=SyncMode.BUDGET,
         help="Sync mode: fresh hits API each time; budget uses cache when possible (default: budget).",
     )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("moralis_events.json"),
+        help="Where to write emitted LedgerEvents as JSON (default: moralis_events.json)",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
     service = build_default_service(accounts_path=args.accounts)
-    transactions = service.get_transactions(args.mode)
-    print(f"Synced {len(transactions)} transactions (cached in DB).")
-    preview = transactions[-5:] if len(transactions) >= 5 else transactions
-    if preview:
-        print("Last 5 transactions:")
-        for tx in preview:
-            print(json.dumps(tx, indent=2))
+    importer = MoralisImporter(service=service, mode=args.mode)
+    events = importer.load_events()
+    args.output.write_text(json.dumps([event.model_dump() for event in events], indent=2, default=str))
+    print(f"Synced {len(events)} events (cached in DB) and wrote to {args.output}")
 
 
 if __name__ == "__main__":

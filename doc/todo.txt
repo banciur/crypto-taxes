@@ -1,13 +1,20 @@
 First stage: compute German taxes
+TODO: FE part to display ledger events and manual adjustment
+  - three "lanes" for ledger events adjustments. From top to bottom by timestamps
+    - original
+    - adjustments
+    - final
+
 TODO: On-chain events, Moralis
-  - create ledger events, new type of event operation on chain for things like approvals, changin vfat settings etc
+  - not finished with a break for the UI.
+  - client is morels ready but importer just some vibed crap
   - review client and accounts structure, also think about wallet id (address_chain)
   - do we need native tokens?
+TODO: Import data from Coinbase hopefully through API
 
 TODO: Manual adjustments to mark and filter out spam transactions.
 TODO: Import data from Coinbase hopefully through API
 
-TODO: how to combine different sources of transactions
 
 TODO: tool to print from db event, legs etc for debugging. After provided id print whole network of entities
 TODO: I'm suspicious of the tax calculations. Think how we can debug it better.

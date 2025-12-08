@@ -22,7 +22,7 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `timestamp: datetime`
   - `origin: EventOrigin` (upstream location + external transaction id)
   - `ingestion: str` (import pipeline label, e.g., `kraken_ledger_csv`, `seed_csv`)
-  - `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`)
+  - `event_type: EventType` (currently includes `TRADE`, `DEPOSIT`, `WITHDRAWAL`, `TRANSFER`, `REWARD`, `OPERATION`)
   - `legs: list[LedgerLeg]`
 
 - LedgerLeg

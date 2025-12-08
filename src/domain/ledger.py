@@ -24,6 +24,7 @@ class EventType(StrEnum):
     WITHDRAWAL = "WITHDRAWAL"
     TRANSFER = "TRANSFER"
     REWARD = "REWARD"
+    OPERATION = "OPERATION"
 
 
 class EventLocation(StrEnum):
