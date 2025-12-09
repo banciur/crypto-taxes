@@ -24,6 +24,14 @@
 - ALWAYS after making code changes run `make test` to ensure the suite passes before committing. Don't ask for permission, just run it.
 - When changing domain logic/semantics, update `doc/CURRENT.md` to keep the domain reference in sync.
 
+## Directory structure
+- `src/`: Python application code and domain modules.
+- `tests/`: pytest suite.
+- `doc/`: domain reference (`CURRENT.md` is source of truth).
+- `frontend/`: Next.js app providing the UI for the project.
+- `scripts/`: helper scripts.
+- `data/`: project data artifacts (e.g., seeds, fixtures).
+
 ## Project Practices
 - Python 3.13; Pydantic v2 models under `src/domain`; Tests written in `pytest` under `tests`.
 - Use `str` for identifiers (e.g., `asset_id: str`) and `UUID` for UUIDs (e.g., `asset_id: UUID`). Avoid `int` for identifiers.
@@ -34,15 +42,13 @@
 
 ## Domain reference
 - Domain semantics and data model are defined in `doc/CURRENT.md`.
-- Ignore other files from the `doc` directory except for `CURRENT.md`.
+- Ignore other files from the `doc` directory except for `CURRENT.md` and `WEALTH_MODEL.md`.
 
 ## Domain modules
 - Ledger and lots: `src/domain/ledger.py`
-- Inventory engine + lot matching: `src/domain/inventory.py`
+- Inventory engine and lot matching: `src/domain/inventory.py`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
 
 ## Price services
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
 
-## Legacy implementation (ignore those files)
-- `src/reports.py`
