@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "better-sqlite3": "^12.5.0",
     "bootstrap": ">=5.3.8 <6.0.0",
+    "drizzle-orm": "^0.45.0",
     "next": "16.0.8",
     "react": "19.2.1",
     "react-bootstrap": ">=3.0.0-beta.5 <4.0.0",
@@ -19,6 +21,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.8",
     "eslint": "^9",
     "eslint-config-next": "16.0.8",
     "typescript": "^5"
