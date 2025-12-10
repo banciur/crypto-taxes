@@ -33,12 +33,17 @@
 - `data/`: project data artifacts (e.g., seeds, fixtures).
 
 ## Project Practices
+### Data layer
 - Python 3.13; Pydantic v2 models under `src/domain`; Tests written in `pytest` under `tests`.
 - Use `str` for identifiers (e.g., `asset_id: str`) and `UUID` for UUIDs (e.g., `asset_id: UUID`). Avoid `int` for identifiers.
 - Use `Decimal` for numeric quantities/rates; avoid floats.
 - Time fields use `datetime` named `timestamp` and are stored in UTC.
   - Convert inbound times to UTC at ingestion boundaries so internal models are always UTC.
 - IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`).
+### Presentation layer
+- Next.js 16 (React 19) app under `frontend` path; 
+- Twitter bootstrap 5 used through `react-bootstrap` package for styling.
+
 
 ## Domain reference
 - Domain semantics and data model are defined in `doc/CURRENT.md`.
