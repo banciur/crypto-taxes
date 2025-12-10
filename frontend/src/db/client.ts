@@ -12,7 +12,7 @@ const databaseFile = path.join(process.cwd(), "..", "crypto_taxes.db");
 type LedgerEvent = typeof schema.ledgerEvents.$inferSelect;
 type LedgerLeg = typeof schema.ledgerLegs.$inferSelect;
 
-type LedgerEventWithLegs = LedgerEvent & {
+export type LedgerEventWithLegs = LedgerEvent & {
   ledgerLegs: LedgerLeg[];
 };
 
@@ -30,7 +30,7 @@ function getClient(): DB {
   return client;
 }
 
-export async function getLatestLedgerEvents(limit = 10): Promise<LedgerEventWithLegs[]> {
+export async function getLatestLedgerEvents(limit = 100): Promise<LedgerEventWithLegs[]> {
   const db = getClient();
   return db.query.ledgerEvents.findMany({
     limit,
