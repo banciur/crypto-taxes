@@ -2,19 +2,14 @@
 import { Badge, Card, ListGroup } from "react-bootstrap";
 
 import type { LedgerEventWithLegs } from "@/db/client";
+import { formatDateISO} from "@/lib/dateFormatter";
 
 type LedgerEventProps = {
   event: LedgerEventWithLegs;
 };
 
-const timestampFormatter = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "UTC",
-});
-
 export function LedgerEvent({ event }: LedgerEventProps) {
-  const timestampLabel = timestampFormatter.format(new Date(event.timestamp));
+  const timestampLabel = formatDateISO(new Date(event.timestamp));
 
   return (
     <Card className="shadow-sm h-100">

@@ -30,10 +30,9 @@ function getClient(): DB {
   return client;
 }
 
-export async function getLatestLedgerEvents(limit = 100): Promise<LedgerEventWithLegs[]> {
+export async function getLatestLedgerEvents(): Promise<LedgerEventWithLegs[]> {
   const db = getClient();
   return db.query.ledgerEvents.findMany({
-    limit,
     orderBy: desc(schema.ledgerEvents.timestamp),
     with: {
       ledgerLegs: {
