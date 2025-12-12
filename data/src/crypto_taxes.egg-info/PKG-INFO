@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: crypto-taxes
+Version: 0.0.0
+Requires-Python: >=3.13
+Requires-Dist: alembic==1.16.5
+Requires-Dist: moralis>=0.1.49
+Requires-Dist: pydantic==2.11.9
+Requires-Dist: pydantic-settings>=2.11.0
+Requires-Dist: requests==2.32.4
+Requires-Dist: SQLAlchemy==2.0.43
