@@ -5,11 +5,10 @@ Also, it's 100% vibed by Codex — you've been warned :)
 
 ## Docs
 - Current domain model: `doc/CURRENT.md`
-- Developer/agent workflow: `AGENTS.md`
+- Contributing and agent workflow: `AGENTS.md`
 
-## Quickstart
-Project uses [uv](https://docs.astral.sh/uv/) with Python 3.13.
-
-- Setup: `make deps`
-- Run tests: `make test`
-- Code quality: `make code_fix` (autofix) or `make code_check` (lint+types)
+## Repository layout
+- `data/`: Python project (domain + ingestion/transforms + tests).
+- `ui/`: Next.js app (web UI).
+- `artifacts/`: local artifacts and caches (CSV exports, `accounts.json`, `transactions_cache.db`, etc.).
+- `doc/`: domain reference and notes.

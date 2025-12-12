@@ -21,7 +21,6 @@
 ## Directory structure
 - `src/`: Python application code and domain modules.
 - `tests/`: pytest suite.
-- `doc/`: domain reference (`CURRENT.md` is source of truth).
 - `scripts/`: helper scripts.
 - `../artifacts/`: project data artifacts (e.g., seeds, fixtures).
 

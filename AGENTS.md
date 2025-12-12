@@ -6,12 +6,9 @@
 - Tests should derive expected values from the inputs defined in the test (shared variables/constants) instead of retyping literals in assertions to keep cases DRY and less brittle.
 - Do not leave unused code or data "for future use"; remove unused pieces and avoid implementing speculative features.
 
-## Directory structure
-- `artifacts/`: project data artifacts (e.g., seeds, fixtures).
-- `data/`: 
-- `doc/`: project reference (`CURRENT.md` is source of truth).
-- `ui/`: Next.js app providing the UI for the project.
-
+## Project scoping
+Follow the nearest `AGENTS.md` for project-specific workflow and commands (notably `data/AGENTS.md` and `ui/AGENTS.md`).
+For repository overview and layout, see `README.md`.
 
 ## Domain reference
 - Domain semantics and data model are defined in `doc/CURRENT.md`.
