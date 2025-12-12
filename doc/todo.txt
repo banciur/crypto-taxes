@@ -1,8 +1,6 @@
 First stage: compute German taxes
 TODO: FE part to display ledger events and manual adjustments
  - two "lanes" for ledger events and adjustments. From top to bottom by timestamps
- - original
- - adjustments
 
 TODO: Review Agents files again. I think every of those need short intreoduction of purpose of directory.
 
@@ -45,6 +43,10 @@ TODO: DB improvements.
  - use UUID type
 
 TODO: Export data in a format that can be used by Steuerberater
+
+TODO: Date chooser could be improved (in far futuren when I will need to make it nice)
+ - it could follow (open/close) when the main section is being scrolled
+ - active state of year and month should be properly stated
 
 TODO: Is there a possibility to have a whitelist of commands for codex?
 
