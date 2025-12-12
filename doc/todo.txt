@@ -4,7 +4,9 @@ TODO: FE part to display ledger events and manual adjustments
  - original
  - adjustments
 
-TODO: move python data part into a separate directory, adjust AGENTS files flow etc
+TODO: Review Agents files again. I think every of those need short intreoduction of purpose of directory.
+
+TODO: introduce events transformations layer, where raw data will be adjusted.
 
 TODO: On-chain events, Moralis
  - not finished with a break for the UI.

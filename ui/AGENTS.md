@@ -1,4 +1,4 @@
-# Frontend Guidelines
+# UI Guidelines
 
 - Next.js 16 (React 19, TypeScript) app using the App Router; source lives in `ui/src` with `@/*` aliasing to `src/*`.
 - Styling is Bootstrap 5, consumed through `react-bootstrap` (global import in `src/app/layout.tsx`); prefer `react-bootstrap` components and scoped styles (CSS modules or `globals.css`) for custom tweaks.
