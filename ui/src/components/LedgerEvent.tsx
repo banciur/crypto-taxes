@@ -2,14 +2,15 @@
 import { Badge, Card, ListGroup } from "react-bootstrap";
 
 import type { LedgerEventWithLegs } from "@/db/client";
-import { formatDateISO } from "@/lib/dateFormatter";
 
 type LedgerEventProps = {
   event: LedgerEventWithLegs;
 };
 
 export function LedgerEvent({ event }: LedgerEventProps) {
-  const timestampLabel = formatDateISO(new Date(event.timestamp));
+  const timestampLabel = new Date(event.timestamp).toLocaleString("en-GB", {
+    timeZone: "UTC",
+  });
 
   return (
     <Card className="shadow-sm h-100">
@@ -25,19 +26,17 @@ export function LedgerEvent({ event }: LedgerEventProps) {
           {event.ledgerLegs.map((leg) => (
             <ListGroup.Item
               key={leg.id}
-              className="d-flex align-items-center gap-3"
+              className="d-flex align-items-center gap-2"
             >
               <Badge
                 bg={leg.isFee ? "danger" : "info"}
                 className="text-uppercase"
               >
-                {leg.isFee ? "Fee" : "Leg"}
+                {leg.isFee ? "fee" : "leg"}
               </Badge>
-              <div className="flex-grow-1">
-                <div className="fw-semibold">{leg.assetId}</div>
-                <div className="text-muted small">Wallet {leg.walletId}</div>
-              </div>
-              <div className="text-nowrap fw-semibold">{leg.quantity}</div>
+              <span>{leg.assetId}</span>
+              <span>{leg.walletId}</span>
+              <span>{leg.quantity}</span>
             </ListGroup.Item>
           ))}
         </ListGroup>

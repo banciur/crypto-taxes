@@ -44,29 +44,17 @@ export default async function Home() {
             <DateChooser dates={dateSections} />
           </Col>
           <Col md={9} lg={10} className={styles.layoutColumn}>
-            {grouped.order.map((dateKey) => {
-              const dateEvents = grouped.eventsByDate[dateKey];
-              const label = formatDateISO(new Date(`${dateKey}T00:00:00Z`));
-              return (
-                <section
-                  id={`day-${dateKey}`}
-                  key={dateKey}
-                  className="d-flex flex-column gap-3"
-                >
-                  <div className="d-flex align-items-baseline gap-3">
-                    <h2 className="h4 mb-0">{label}</h2>
-                    <span className="text-muted small">
-                      {dateEvents.length} events
-                    </span>
-                  </div>
-                  <div className="d-flex flex-column gap-3">
-                    {dateEvents.map((event) => (
-                      <LedgerEvent event={event} key={event.id} />
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
+            {grouped.order.map((dateKey) => (
+              <section
+                id={`day-${dateKey}`}
+                key={dateKey}
+                className="d-flex flex-column gap-3 mb-3"
+              >
+                {grouped.eventsByDate[dateKey].map((event) => (
+                  <LedgerEvent event={event} key={event.id} />
+                ))}
+              </section>
+            ))}
           </Col>
         </Row>
       </Container>

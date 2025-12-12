@@ -22,5 +22,4 @@
 .layoutColumn {
   height: 100%;
   overflow-y: auto;
-  scroll-behavior: smooth;
 }
