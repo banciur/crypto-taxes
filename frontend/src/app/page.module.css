@@ -1,0 +1,25 @@
+.layoutContainer{
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.layoutHeader {
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.layoutContent {
+  flex: 1;
+  overflow: hidden;
+}
+
+.layoutRow {
+  height: 100%;
+}
+
+.layoutColumn {
+  height: 100%;
+  overflow-y: auto;
+}
