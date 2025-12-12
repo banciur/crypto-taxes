@@ -11,6 +11,7 @@ from typing import Any, Iterable, TypedDict, cast
 
 from moralis import evm_api  # type: ignore
 
+from accounts import DEFAULT_ACCOUNTS_PATH
 from config import config
 from db.transactions_cache import CACHE_DB_PATH, TransactionsCacheRepository, init_transactions_cache_db
 from domain.ledger import ChainId, WalletAddress
@@ -92,7 +93,7 @@ class MoralisService:
     ):
         self.client = client
         self.cache = cache_repo
-        self.accounts_path = accounts_path or Path("data/accounts.json")
+        self.accounts_path = accounts_path or DEFAULT_ACCOUNTS_PATH
 
     def _persist(self, chain: ChainId, records: Iterable[dict[str, Any]]) -> None:
         rows: list[dict[str, object]] = []

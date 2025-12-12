@@ -1,5 +1,5 @@
 # flake8: noqa: E402
-# uv run scripts/kraken_row_range_import.py 10 25 --csv data/kraken-ledger.csv
+# uv run scripts/kraken_row_range_import.py 10 25 --csv artifacts/kraken-ledger.csv
 from __future__ import annotations
 
 import argparse
@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = PROJECT_ROOT.parent
+ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -114,8 +116,8 @@ def main(argv: Iterable[str] | None = None) -> None:
     parser.add_argument(
         "--csv",
         type=Path,
-        default=Path("data/kraken-ledger.csv"),
-        help="Path to the Kraken ledger CSV (default: data/kraken-ledger.csv).",
+        default=ARTIFACTS_DIR / "kraken-ledger.csv",
+        help="Path to the Kraken ledger CSV (default: artifacts/kraken-ledger.csv).",
     )
     args = parser.parse_args(argv)
     run(args.csv, args.start_row, args.end_row)

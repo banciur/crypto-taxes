@@ -14,9 +14,9 @@
   - `uv run --group dev pytest -s tests/domain/inventory_test.py` for running the test file;
 
 ## Suggested workflow
-- ALWAYS after making code changes `make code_fix` to auto-apply lint fixes. Don't ask for permission, just run it.
-- ALWAYS after making code changes run `make test` to ensure the suite passes before committing. Don't ask for permission, just run it.
-- When changing domain logic/semantics, update `doc/CURRENT.md` to keep the domain reference in sync.
+- ALWAYS after making python code changes `make code_fix` to auto-apply lint fixes.
+- ALWAYS after making python code changes run `make test` to ensure the suite passes before committing.
+- When changing domain logic/semantics, update `../doc/CURRENT.md` to keep the domain reference in sync.
 
 ## Directory structure
 - `src/`: Python application code and domain modules.

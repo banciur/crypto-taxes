@@ -20,6 +20,8 @@ from utils.inventory_summary import compute_inventory_summary, render_inventory_
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = PROJECT_ROOT.parent
+ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 
 
 def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int) -> PriceService:
@@ -101,11 +103,11 @@ def print_base_inventory_summary(result: InventoryResult) -> None:
 def main(argv: Sequence[str] | None = None) -> None:
     # logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     parser = argparse.ArgumentParser(description="Run Kraken importer and inventory engine.")
-    parser.add_argument("--csv", type=Path, default=Path("data/kraken-ledger.csv"))
+    parser.add_argument("--csv", type=Path, default=ARTIFACTS_DIR / "kraken-ledger.csv")
     parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "kraken_prices")
     parser.add_argument("--market", default="kraken")
     parser.add_argument("--aggregate", type=int, default=60)
-    parser.add_argument("--seed-csv", type=Path, default=Path("data/seed_lots.csv"))
+    parser.add_argument("--seed-csv", type=Path, default=ARTIFACTS_DIR / "seed_lots.csv")
     args = parser.parse_args(argv)
     run(
         args.csv,

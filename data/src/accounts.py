@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-DEFAULT_ACCOUNTS_PATH = Path("data/accounts.json")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_ACCOUNTS_PATH = REPO_ROOT / "artifacts" / "accounts.json"
 
 
 @dataclass(frozen=True)
