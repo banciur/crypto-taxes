@@ -4,7 +4,6 @@ import { DateChooser } from "@/components/DateChooser";
 import { LedgerEvent } from "@/components/LedgerEvent";
 import type { LedgerEventWithLegs } from "@/db/client";
 import { getLatestLedgerEvents } from "@/db/client";
-import { formatDateISO } from "@/lib/dateFormatter";
 
 import styles from "./page.module.css";
 
@@ -45,15 +44,14 @@ export default async function Home() {
           </Col>
           <Col md={9} lg={10} className={styles.layoutColumn}>
             {grouped.order.map((dateKey) => (
-              <section
-                id={`day-${dateKey}`}
-                key={dateKey}
-                className="d-flex flex-column gap-3 mb-3"
-              >
-                {grouped.eventsByDate[dateKey].map((event) => (
-                  <LedgerEvent event={event} key={event.id} />
-                ))}
-              </section>
+              <Row id={`day-${dateKey}`} key={dateKey}>
+                <Col className="d-flex flex-column gap-3 mb-3">
+                  {grouped.eventsByDate[dateKey].map((event) => (
+                    <LedgerEvent event={event} key={event.id} />
+                  ))}
+                </Col>
+                <Col></Col>
+              </Row>
             ))}
           </Col>
         </Row>

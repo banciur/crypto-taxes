@@ -1,10 +1,14 @@
 First stage: compute German taxes
-TODO: FE part to display ledger events and manual adjustments
- - two "lanes" for ledger events and adjustments. From top to bottom by timestamps
-
 TODO: Review Agents files again. I think every of those need short intreoduction of purpose of directory.
 
 TODO: introduce events transformations layer, where raw data will be adjusted.
+ - mark spam events (can be automatic?)
+ - mark non-taxable events (income)
+ - seed events used to balance ledger (already implemnted)
+ - combine two (or more?) events into one
+
+TODO: Render transformations layer events in the UI - second column
+TODO: Maybe third "outcome" column in the UI
 
 TODO: On-chain events, Moralis
  - not finished with a break for the UI.
