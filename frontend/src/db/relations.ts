@@ -1,6 +1,12 @@
 import { relations } from "drizzle-orm";
 
-import { acquisitionLots, disposalLinks, ledgerEvents, ledgerLegs, taxEvents } from "./schema";
+import {
+  acquisitionLots,
+  disposalLinks,
+  ledgerEvents,
+  ledgerLegs,
+  taxEvents,
+} from "./schema";
 
 export const ledgerLegsRelations = relations(ledgerLegs, ({ one, many }) => ({
   ledgerEvent: one(ledgerEvents, {
@@ -18,13 +24,16 @@ export const ledgerEventsRelations = relations(ledgerEvents, ({ many }) => ({
   ledgerLegs: many(ledgerLegs),
 }));
 
-export const acquisitionLotsRelations = relations(acquisitionLots, ({ one, many }) => ({
-  ledgerLeg: one(ledgerLegs, {
-    fields: [acquisitionLots.acquiredLegId],
-    references: [ledgerLegs.id],
+export const acquisitionLotsRelations = relations(
+  acquisitionLots,
+  ({ one, many }) => ({
+    ledgerLeg: one(ledgerLegs, {
+      fields: [acquisitionLots.acquiredLegId],
+      references: [ledgerLegs.id],
+    }),
+    disposalLinks: many(disposalLinks),
   }),
-  disposalLinks: many(disposalLinks),
-}));
+);
 
 export const disposalLinksRelations = relations(disposalLinks, ({ one }) => ({
   acquisitionLot: one(acquisitionLots, {

@@ -2,7 +2,7 @@
 import { Badge, Card, ListGroup } from "react-bootstrap";
 
 import type { LedgerEventWithLegs } from "@/db/client";
-import { formatDateISO} from "@/lib/dateFormatter";
+import { formatDateISO } from "@/lib/dateFormatter";
 
 type LedgerEventProps = {
   event: LedgerEventWithLegs;
@@ -18,9 +18,7 @@ export function LedgerEvent({ event }: LedgerEventProps) {
           {event.eventType}
         </Badge>
         <span className="text-muted small">{timestampLabel}</span>
-        <span className="ms-auto text-muted small">
-          {event.originLocation}
-        </span>
+        <span className="ms-auto text-muted small">{event.originLocation}</span>
       </Card.Header>
       <Card.Body>
         <ListGroup variant="flush" className="border rounded">
@@ -29,7 +27,10 @@ export function LedgerEvent({ event }: LedgerEventProps) {
               key={leg.id}
               className="d-flex align-items-center gap-3"
             >
-              <Badge bg={leg.isFee ? "danger" : "info"} className="text-uppercase">
+              <Badge
+                bg={leg.isFee ? "danger" : "info"}
+                className="text-uppercase"
+              >
                 {leg.isFee ? "Fee" : "Leg"}
               </Badge>
               <div className="flex-grow-1">

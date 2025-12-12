@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import Database from "better-sqlite3";
-import {BetterSQLite3Database, drizzle} from "drizzle-orm/better-sqlite3";
+import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
 import { asc, desc } from "drizzle-orm";
 
 import * as schema from "./schema";
@@ -15,7 +15,6 @@ type LedgerLeg = typeof schema.ledgerLegs.$inferSelect;
 export type LedgerEventWithLegs = LedgerEvent & {
   ledgerLegs: LedgerLeg[];
 };
-
 
 type DB = BetterSQLite3Database<typeof schema & typeof relations>;
 
