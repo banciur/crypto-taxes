@@ -1,5 +1,4 @@
 First stage: compute German taxes
-TODO: Review Agents files again. I think every of those need short intreoduction of purpose of directory.
 
 TODO: introduce events transformations layer, where raw data will be adjusted.
  - mark spam events (can be automatic?)
@@ -7,6 +6,9 @@ TODO: introduce events transformations layer, where raw data will be adjusted.
  - seed events used to balance ledger (already implemnted)
  - combine two (or more?) events into one
 
+TODO: Add to my ~/.codex/AGENTS.md  instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
+
+TODO: Fix codex not being able to run pnpm commands
 TODO: Render transformations layer events in the UI - second column
 TODO: Maybe third "outcome" column in the UI
 

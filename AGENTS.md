@@ -1,15 +1,26 @@
-# Repository Guidelines
+# Crypto Taxes Project
 
-## Coding conventions / best practices
-- Keep comments/docstrings lean: only retain them when they convey non-obvious intent or context. Remove and avoid boilerplate comments that simply restate what the code already says.
-- Avoid defensive programming inside the system: assume in-process data and types already satisfy invariants and only perform validation/repairs at ingestion boundaries. When docs/typings guarantee an invariant, do not re-normalize or re-validate it within domain/services code.
-- Tests should derive expected values from the inputs defined in the test (shared variables/constants) instead of retyping literals in assertions to keep cases DRY and less brittle.
-- Do not leave unused code or data "for future use"; remove unused pieces and avoid implementing speculative features.
+## Introduction
+This repository builds a local-first pipeline for ingesting crypto activity, transforming it into a consistent ledger/inventory model, and presenting the results in a UI for review and manual follow-up. The implemented domain model and current capabilities live in `doc/CURRENT.md` (canonical) and `doc/WEALTH_MODEL.md` (supporting)
+Treat other files under `doc/` as background/templates unless explicitly referenced.
 
-## Project scoping
-Follow the nearest `AGENTS.md` for project-specific workflow and commands (notably `data/AGENTS.md` and `ui/AGENTS.md`).
-For repository overview and layout, see `README.md`.
+## Repository layout
+- `data/`: Python project (domain, ingestion/importers, transforms, tests, DB schema).
+- `ui/`: Next.js app (presentation and inspection against the local DB).
+- `doc/`: canonical domain reference and supporting notes/templates.
+- `artifacts/`: local-only inputs/outputs and caches (e.g., `accounts.json`, `seed_lots.csv`, transaction caches).
 
-## Domain reference
-- Domain semantics and data model are defined in `doc/CURRENT.md`.
-- Ignore other files from the `doc` directory except for `CURRENT.md` and `WEALTH_MODEL.md`.
+## Working conventions
+- When working in `data/` or `ui/`, read and follow the nearest component `AGENTS.md` (`data/AGENTS.md`, `ui/AGENTS.md`, and any deeper scoped ones) for the authoritative commands and coding guidelines.
+- When reading unfamiliar code, check for `README.md` in the current directory and then walk upward toward the repo root, reading any `README.md` files on that direct path for additional context.
+
+## Component interface (data ↔ ui)
+- Shared contract: the SQLite database file `crypto_taxes.db` at the repo root.
+- Schema source of truth: SQLAlchemy models under `data/`. The UI should treat the schema as read-only and avoid introducing a divergent model.
+
+## Docs and drift control
+- When changing domain semantics, ingestion behavior, DB schema, or UI expectations, update `doc/CURRENT.md` and any relevant `AGENTS.md` files to keep the “how to work here” guidance accurate.
+
+## Secrets and local artifacts
+- API keys/config live in `data/.env` (see `data/.env.example`); do not commit secrets.
+- `artifacts/` and `crypto_taxes.db` are local outputs/inputs and are not committed.
