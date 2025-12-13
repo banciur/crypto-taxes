@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = PROJECT_ROOT.parent
+ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -23,8 +25,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--accounts",
         type=Path,
-        default=Path("data/accounts.json"),
-        help="Path to accounts JSON (default: data/accounts.json)",
+        default=ARTIFACTS_DIR / "accounts.json",
+        help="Path to accounts JSON (default: artifacts/accounts.json)",
     )
     parser.add_argument(
         "--mode",

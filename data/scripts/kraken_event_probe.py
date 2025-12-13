@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Iterable, Iterator, Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = PROJECT_ROOT.parent
+ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -141,8 +143,8 @@ def main(argv: Iterable[str] | None = None) -> None:
         "path",
         type=Path,
         nargs="?",
-        default=Path("data/kraken-ledger.csv"),
-        help="Path to Kraken ledger CSV (default: data/kraken-ledger.csv)",
+        default=ARTIFACTS_DIR / "kraken-ledger.csv",
+        help="Path to Kraken ledger CSV (default: artifacts/kraken-ledger.csv)",
     )
     args = parser.parse_args(argv)
     summarize(args.path)

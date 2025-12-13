@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.cache/
+.idea/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.env
+
+moralis_events.json

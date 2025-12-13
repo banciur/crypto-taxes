@@ -1,11 +1,5 @@
 *.db
 *.csv
-*.egg-info
-__pycache__
-build
-data
-.cache
-.env
-.tmp
+artifacts
 
 private.txt

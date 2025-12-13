@@ -10,7 +10,8 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sess
 
 from domain.ledger import ChainId
 
-CACHE_DB_PATH = Path("data/transactions_cache.db")
+REPO_ROOT = Path(__file__).resolve().parents[3]
+CACHE_DB_PATH = REPO_ROOT / "artifacts" / "transactions_cache.db"
 
 
 class TransactionsCacheBase(DeclarativeBase):
