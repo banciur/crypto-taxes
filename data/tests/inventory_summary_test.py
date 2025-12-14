@@ -4,8 +4,9 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
+from domain.base_types import EventLocation, LedgerLeg
 from domain.inventory import InventoryEngine
-from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
+from domain.ledger import EventOrigin, EventType, LedgerEvent
 from tests.constants import BTC, ETH, EUR, KRAKEN_WALLET, OUTSIDE_WALLET
 from utils.inventory_summary import compute_inventory_summary
 

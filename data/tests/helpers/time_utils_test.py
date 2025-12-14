@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from random import Random
 
-from domain.ledger import EventType, LedgerLeg, WalletId
+from domain.base_types import LedgerLeg, WalletId
+from domain.ledger import EventType
 from tests.constants import ETH
 from tests.helpers.time_utils import TimeGenerator, make_event
 

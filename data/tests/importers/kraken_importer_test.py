@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from domain.ledger import EventLocation, EventType
+from domain.base_types import EventLocation
+from domain.ledger import EventType
 from importers.kraken import KrakenImporter, KrakenLedgerEntry
 
 FIELDNAMES = [

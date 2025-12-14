@@ -69,6 +69,13 @@ npm list -g @openai/codex
 npm install -g @openai/codex@latest
 https://github.com/openai/codex/releases
 
+Libraries docs
+------------------
+https://getbootstrap.com/docs/5.3
+https://react-bootstrap.netlify.app
+https://orm.drizzle.team/docs/overview
+https://react.dev/reference/react
+
 Some loose ideas
 ------------------
 - Ability to compute / enter the current value of open positions.

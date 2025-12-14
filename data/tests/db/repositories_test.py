@@ -6,16 +6,15 @@ import pytest
 from sqlalchemy.orm import Session
 
 from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository, TaxEventRepository
+from domain.base_types import EventLocation, LedgerLeg
 from domain.ledger import (
     AcquisitionLot,
     DisposalId,
     DisposalLink,
-    EventLocation,
     EventOrigin,
     EventType,
     LedgerEvent,
     LedgerEventId,
-    LedgerLeg,
     LotId,
 )
 from domain.tax_event import TaxEvent, TaxEventKind

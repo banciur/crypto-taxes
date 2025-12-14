@@ -10,7 +10,8 @@ from typing import Iterable
 
 from pydantic import BaseModel, Field, field_validator
 
-from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
+from domain.base_types import AssetId, EventLocation, LedgerLeg, WalletId
+from domain.ledger import EventOrigin, EventType, LedgerEvent
 
 logger = logging.getLogger(__name__)
 KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"

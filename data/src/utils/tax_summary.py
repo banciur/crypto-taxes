@@ -5,8 +5,9 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Iterable, cast
 
+from domain.base_types import LedgerLeg
 from domain.inventory import InventoryResult
-from domain.ledger import AcquisitionLot, DisposalId, DisposalLink, EventType, LedgerEvent, LedgerLeg, LegId, LotId
+from domain.ledger import AcquisitionLot, DisposalId, DisposalLink, EventType, LedgerEvent, LegId, LotId
 from domain.tax_event import TaxEvent, TaxEventKind
 
 from .formatting import format_currency

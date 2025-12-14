@@ -3,8 +3,9 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
+from domain.base_types import AssetId, EventLocation, LedgerLeg, WalletId
 from domain.inventory import InventoryEngine
-from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
+from domain.ledger import EventOrigin, EventType, LedgerEvent
 from tests.constants import BTC, EUR, SPOT_WALLET
 from utils.tax_summary import TaxEventKind, compute_weekly_tax_summary, generate_tax_events
 

@@ -9,7 +9,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from .ledger import AcquisitionLot, AssetId, DisposalLink, EventType, LedgerEvent, LedgerLeg
+from .base_types import AssetId, LedgerLeg
+from .ledger import AcquisitionLot, DisposalLink, EventType, LedgerEvent
 from .pricing import PriceProvider
 from .wallet_balance_tracker import WalletBalanceError, WalletBalanceTracker
 

@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from domain.ledger import EventLocation
+from domain.base_types import EventLocation
 from importers.seed_events import DEFAULT_SEED_TIMESTAMP, load_seed_events
 
 

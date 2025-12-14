@@ -6,7 +6,8 @@ from itertools import count
 from random import Random
 from typing import Callable, Iterable
 
-from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
+from domain.base_types import EventLocation, LedgerLeg
+from domain.ledger import EventOrigin, EventType, LedgerEvent
 
 
 @dataclass

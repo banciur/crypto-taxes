@@ -4,8 +4,9 @@ from decimal import Decimal
 
 import pytest
 
+from domain.base_types import AssetId, LedgerLeg, WalletId
 from domain.inventory import InventoryEngine, InventoryError
-from domain.ledger import AssetId, EventType, LedgerLeg, WalletId
+from domain.ledger import EventType
 from tests.constants import ETH, EUR, KRAKEN_WALLET, LEDGER_WALLET
 from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
 

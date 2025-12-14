@@ -6,8 +6,8 @@ from typing import Sequence
 
 from db.db import init_db
 from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository, TaxEventRepository
+from domain.base_types import WalletId
 from domain.inventory import InventoryEngine, InventoryResult
-from domain.ledger import WalletId
 from domain.wallet_balance_tracker import WalletBalanceTracker
 from importers.kraken import KrakenImporter
 from importers.seed_events import load_seed_events

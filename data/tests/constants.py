@@ -1,4 +1,4 @@
-from domain.ledger import AssetId, WalletId
+from domain.base_types import AssetId, WalletId
 
 BTC = AssetId("BTC")
 ETH = AssetId("ETH")

@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
+from domain.base_types import AssetId, EventLocation, LedgerLeg, WalletId
+from domain.ledger import EventOrigin, EventType, LedgerEvent
 
 DEFAULT_SEED_TIMESTAMP = datetime(2000, 1, 1, tzinfo=timezone.utc)
 DEFAULT_SEED_COST_TOTAL_EUR = Decimal("0.0001")
