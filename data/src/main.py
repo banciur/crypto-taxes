@@ -4,8 +4,16 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
+from corrections.seed_events import apply_seed_event_corrections
 from db.db import init_db
-from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository, TaxEventRepository
+from db.repositories import (
+    AcquisitionLotRepository,
+    CorrectedLedgerEventRepository,
+    DisposalLinkRepository,
+    LedgerEventRepository,
+    SeedEventRepository,
+    TaxEventRepository,
+)
 from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import WalletId
 from domain.wallet_balance_tracker import WalletBalanceTracker
@@ -22,6 +30,7 @@ from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, r
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = PROJECT_ROOT.parent
 ARTIFACTS_DIR = REPO_ROOT / "artifacts"
+DB_FILE = REPO_ROOT / "crypto_taxes.db"
 
 
 def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int) -> PriceService:
@@ -46,8 +55,10 @@ def run(
     seed_csv: Path,
 ) -> None:
     # Setup components
-    session = init_db(reset=True)
+    session = init_db(reset=True, db_file=DB_FILE)
     event_repository = LedgerEventRepository(session)
+    corrected_event_repository = CorrectedLedgerEventRepository(session)
+    seed_event_repository = SeedEventRepository(session)
     lot_repository = AcquisitionLotRepository(session)
     disposal_repository = DisposalLinkRepository(session)
     tax_event_repository = TaxEventRepository(session)
@@ -61,17 +72,25 @@ def run(
     owned_wallets: set[WalletId] = set()
     owned_wallets.add(KrakenImporter.WALLET_ID)
 
-    # Get data
+    # Get corrections
     seed_events = load_seed_events(seed_csv)
-    kraken_events = importer.load_events()
-    events = seed_events + kraken_events
+    seed_event_repository.create_many(seed_events)
+
+    # Get raw events
+    events = importer.load_events()
     events.sort(key=lambda e: e.timestamp)
     for event in events:
         event_repository.create(event)
-    events = event_repository.list()
+    raw_events = event_repository.list()
 
+    # Apply corrections
+    corrected_events = apply_seed_event_corrections(raw_events=raw_events, seed_events=seed_events)
+
+    # Save corrections
+    corrected_event_repository.create_many(corrected_events)
+    return  # just for now
     # Process stuff
-    inventory = engine.process(events)
+    inventory = engine.process(events)  # type: ignore[unreachable]
     lot_repository.create_many(inventory.acquisition_lots)
     disposal_repository.create_many(inventory.disposal_links)
     # dump_inventory_debug(events, inventory)

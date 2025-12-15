@@ -1,29 +1,31 @@
 First stage: compute German taxes
 
-TODO: introduce events transformations layer, where raw data will be adjusted.
- - mark spam events (can be automatic?)
- - mark non-taxable events (income)
- - seed events used to balance ledger (already implemnted)
- - combine two (or more?) events into one
-
-TODO: Add to my ~/.codex/AGENTS.md  instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
+TODO: Render transformations layer events in the UI as second column
+TODO: Maybe third "outcome" column in the UI
 
 TODO: Fix codex not being able to run pnpm commands
-TODO: Render transformations layer events in the UI - second column
-TODO: Maybe third "outcome" column in the UI
+TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
 
 TODO: On-chain events, Moralis
  - not finished with a break for the UI.
  - client is morels ready but importer just some vibed crap
  - review client and accounts structure, also think about wallet id (address_chain)
  - do we need native tokens?
-TODO: Import data from Coinbase hopefully through API
 
+TODO: Improve how events are displayed in the UI. Add chains transaction ids, tokens names etc
 TODO: Manual adjustments to mark and filter out spam transactions.
+
+TODO: we will end with multiple ledger legs tables - maybe combine them into one with a discriminator column?
+
+TODO: additional correction elements
+ - mark spam events (can be automatic?)
+ - mark non-taxable events (income)
+ - combine two (or more?) events into one
+ - I'm not sure about the corrections directory and which code should go where.
+
 TODO: Import data from Coinbase hopefully through API
 
-
-TODO: tool to print from db event, legs etc for debugging. After provided id print whole network of entities
+TODO: still need it? Maybe good UI is enough? tool to print from db event, legs etc for debugging. After provided id print whole network of entities
 TODO: I'm suspicious of the tax calculations. Think how we can debug it better.
 
 TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
@@ -68,6 +70,13 @@ Codex commands
 npm list -g @openai/codex
 npm install -g @openai/codex@latest
 https://github.com/openai/codex/releases
+
+Libraries docs
+------------------
+https://getbootstrap.com/docs/5.3
+https://react-bootstrap.netlify.app
+https://orm.drizzle.team/docs/overview
+https://react.dev/reference/react
 
 Some loose ideas
 ------------------

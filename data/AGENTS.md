@@ -24,7 +24,7 @@
 - Current importers:
   - Kraken CSV ledger: `src/importers/kraken/kraken_importer.py`
   - on-chain trancations through Moralis service (ERC20-only currently): `src/importers/moralis/moralis_importer.py` 
-  - Seed CSV events (for missing history): `src/importers/seed_events.py` loads synthetic acquisition events from `artifacts/seed_lots.csv` by default.
+  - Seed CSV events (for missing history): `src/importers/seed_events.py` loads `SeedEvent`s from `artifacts/seed_lots.csv` (corrections layer, not `LedgerEvent`s).
 
 ### Running commands and scripts with uv
 - Use `uv run <command or path to python file>` to execute project-aware tooling and Python scripts inside the managed virtualenv;

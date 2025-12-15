@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -8,13 +9,13 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, model_validator
 
-ChainId = NewType("ChainId", str)
-WalletAddress = NewType("WalletAddress", str)
 AssetId = NewType("AssetId", str)
+ChainId = NewType("ChainId", str)
+DisposalId = NewType("DisposalId", UUID)
 LedgerEventId = NewType("LedgerEventId", UUID)
 LegId = NewType("LegId", UUID)
 LotId = NewType("LotId", UUID)
-DisposalId = NewType("DisposalId", UUID)
+WalletAddress = NewType("WalletAddress", str)
 WalletId = NewType("WalletId", str)
 
 
@@ -65,25 +66,31 @@ class LedgerLeg(BaseModel):
 
     @model_validator(mode="after")
     def _validate_quantity(self) -> LedgerLeg:
-        # Zero-quantity legs are not meaningful in the ledger.
         if self.quantity == 0:
             raise ValueError("LedgerLeg.quantity must be non-zero")
         return self
 
 
-class LedgerEvent(BaseModel):
-    id: LedgerEventId = LedgerEventId(Field(default_factory=uuid4))
+class AbstractEvent(BaseModel, ABC):
     timestamp: datetime
+    legs: list[LedgerLeg]
+
+    @model_validator(mode="after")
+    def _validate_fields(self) -> AbstractEvent:
+        if not self.legs:
+            raise ValueError("Event must have at least one leg")
+        return self
+
+
+class LedgerEvent(AbstractEvent):
+    id: LedgerEventId = LedgerEventId(Field(default_factory=uuid4))
 
     origin: EventOrigin
     ingestion: str
     event_type: EventType
-    legs: list[LedgerLeg]
 
     @model_validator(mode="after")
     def _validate_fields(self) -> LedgerEvent:
-        if not self.legs:
-            raise ValueError("LedgerEvent must have at least one leg")
         if not self.ingestion:
             raise ValueError("LedgerEvent.ingestion must be non-empty")
         return self

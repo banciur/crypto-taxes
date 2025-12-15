@@ -5,7 +5,15 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.orm import Session
 
-from db.repositories import AcquisitionLotRepository, DisposalLinkRepository, LedgerEventRepository, TaxEventRepository
+from db.repositories import (
+    AcquisitionLotRepository,
+    CorrectedLedgerEventRepository,
+    DisposalLinkRepository,
+    LedgerEventRepository,
+    SeedEventRepository,
+    TaxEventRepository,
+)
+from domain.correction import SeedEvent
 from domain.ledger import (
     AcquisitionLot,
     DisposalId,
@@ -54,6 +62,16 @@ def disposal_repo(test_session: Session) -> DisposalLinkRepository:
 @pytest.fixture()
 def tax_repo(test_session: Session) -> TaxEventRepository:
     return TaxEventRepository(test_session)
+
+
+@pytest.fixture()
+def seed_repo(test_session: Session) -> SeedEventRepository:
+    return SeedEventRepository(test_session)
+
+
+@pytest.fixture()
+def corrected_repo(test_session: Session) -> CorrectedLedgerEventRepository:
+    return CorrectedLedgerEventRepository(test_session)
 
 
 def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
@@ -177,3 +195,44 @@ def test_persist_tax_events(tax_repo: TaxEventRepository) -> None:
         reloaded = stored_by_source[expected.source_id]
         assert reloaded.kind == expected.kind
         assert reloaded.taxable_gain == expected.taxable_gain
+
+
+def test_persist_seed_events(seed_repo: SeedEventRepository) -> None:
+    timestamp = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+    price_per_token = Decimal("1.23")
+    quantity = Decimal("0.5")
+    seed_event = SeedEvent(
+        timestamp=timestamp,
+        price_per_token=price_per_token,
+        legs=[LedgerLeg(asset_id=BTC, quantity=quantity, wallet_id=KRAKEN_WALLET, is_fee=False)],
+    )
+
+    seed_repo.create_many([seed_event])
+
+    stored = seed_repo.list()
+    assert len(stored) == 1
+    (reloaded,) = stored
+    assert reloaded.id == seed_event.id
+    assert reloaded.timestamp == timestamp
+    assert reloaded.price_per_token == price_per_token
+    assert len(reloaded.legs) == 1
+    (leg,) = reloaded.legs
+    assert leg.asset_id == BTC
+    assert leg.quantity == quantity
+    assert leg.wallet_id == KRAKEN_WALLET
+
+
+def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRepository) -> None:
+    external_id = "corrected-ext"
+    timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    event = _sample_event(external_id, timestamp)
+
+    corrected_repo.create_many([event])
+
+    stored = corrected_repo.list()
+    assert len(stored) == 1
+    (reloaded,) = stored
+    assert reloaded.id == event.id
+    assert reloaded.timestamp == timestamp
+    assert reloaded.origin.external_id == external_id
+    assert {leg.id for leg in reloaded.legs} == {leg.id for leg in event.legs}

@@ -24,7 +24,7 @@ lint_fix: ## code quality tools: format, lint
 	uv run --group dev ruff format
 
 test: ## run tests
-	uv run --group dev pytest -s
+	uv run --group dev pytest -s -qq --no-header
 
 types: ## check typings
 	uv run --group dev mypy src tests

@@ -5,6 +5,7 @@ from datetime import timezone
 from sqlalchemy.orm import Session
 
 from db import models
+from domain.correction import CorrectionId, SeedEvent
 from domain.ledger import (
     AcquisitionLot,
     AssetId,
@@ -64,6 +65,74 @@ class LedgerEventRepository:
 
     @staticmethod
     def _to_domain(orm_event: models.LedgerEventOrm) -> LedgerEvent:
+        timestamp = orm_event.timestamp
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+        origin = EventOrigin(
+            location=EventLocation(orm_event.origin_location), external_id=orm_event.origin_external_id
+        )
+        legs = [
+            LedgerLeg(
+                id=LegId(leg.id),
+                asset_id=AssetId(leg.asset_id),
+                quantity=leg.quantity,
+                wallet_id=WalletId(leg.wallet_id),
+                is_fee=leg.is_fee,
+            )
+            for leg in orm_event.legs
+        ]
+        return LedgerEvent(
+            id=LedgerEventId(orm_event.id),
+            timestamp=timestamp,
+            origin=origin,
+            ingestion=orm_event.ingestion,
+            event_type=EventType(orm_event.event_type),
+            legs=legs,
+        )
+
+
+class CorrectedLedgerEventRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create_many(self, events: list[LedgerEvent]) -> list[LedgerEvent]:
+        orm_events: list[models.CorrectedLedgerEventOrm] = []
+        for event in events:
+            orm_event = models.CorrectedLedgerEventOrm(
+                id=event.id,
+                timestamp=event.timestamp,
+                ingestion=event.ingestion,
+                event_type=event.event_type.value,
+                origin_location=event.origin.location.value,
+                origin_external_id=event.origin.external_id,
+            )
+            orm_event.legs = [
+                models.CorrectedLedgerLegOrm(
+                    id=leg.id,
+                    asset_id=leg.asset_id,
+                    quantity=leg.quantity,
+                    wallet_id=leg.wallet_id,
+                    is_fee=leg.is_fee,
+                )
+                for leg in event.legs
+            ]
+            orm_events.append(orm_event)
+
+        self._session.add_all(orm_events)
+        self._session.commit()
+        return events
+
+    def list(self) -> list[LedgerEvent]:
+        orm_events = (
+            self._session.query(models.CorrectedLedgerEventOrm)
+            .order_by(models.CorrectedLedgerEventOrm.timestamp.asc())
+            .all()
+        )
+        return [self._to_domain(event) for event in orm_events]
+
+    @staticmethod
+    def _to_domain(orm_event: models.CorrectedLedgerEventOrm) -> LedgerEvent:
         timestamp = orm_event.timestamp
         if timestamp.tzinfo is None:
             timestamp = timestamp.replace(tzinfo=timezone.utc)
@@ -183,3 +252,57 @@ class TaxEventRepository:
 
             persisted.append(TaxEvent(source_id=source_id, kind=kind, taxable_gain=tax_event.taxable_gain))
         return persisted
+
+
+class SeedEventRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create_many(self, events: list[SeedEvent]) -> list[SeedEvent]:
+        orm_events: list[models.SeedEventOrm] = []
+        for event in events:
+            orm_event = models.SeedEventOrm(
+                id=event.id, timestamp=event.timestamp, price_per_token=event.price_per_token
+            )
+            orm_event.legs = [
+                models.SeedEventLegOrm(
+                    id=leg.id,
+                    asset_id=leg.asset_id,
+                    quantity=leg.quantity,
+                    wallet_id=leg.wallet_id,
+                    is_fee=leg.is_fee,
+                )
+                for leg in event.legs
+            ]
+            orm_events.append(orm_event)
+
+        self._session.add_all(orm_events)
+        self._session.commit()
+        return events
+
+    def list(self) -> list[SeedEvent]:
+        orm_events = self._session.query(models.SeedEventOrm).order_by(models.SeedEventOrm.timestamp.asc()).all()
+        return [self._to_domain(event) for event in orm_events]
+
+    @staticmethod
+    def _to_domain(orm_event: models.SeedEventOrm) -> SeedEvent:
+        timestamp = orm_event.timestamp
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+        legs = [
+            LedgerLeg(
+                id=LegId(leg.id),
+                asset_id=AssetId(leg.asset_id),
+                quantity=leg.quantity,
+                wallet_id=WalletId(leg.wallet_id),
+                is_fee=leg.is_fee,
+            )
+            for leg in orm_event.legs
+        ]
+        return SeedEvent(
+            id=CorrectionId(orm_event.id),
+            timestamp=timestamp,
+            price_per_token=orm_event.price_per_token,
+            legs=legs,
+        )
