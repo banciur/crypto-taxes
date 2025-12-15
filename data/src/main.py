@@ -101,15 +101,13 @@ def run(
     events.sort(key=lambda e: e.timestamp)
     logger.info("Persisting %d raw events", len(events))
     persist_started = perf_counter()
-    for event in events:
-        event_repository.create(event)
+    event_repository.create_many(events)
     logger.info("Persisted raw events in %.2fs", perf_counter() - persist_started)
-    raw_events = event_repository.list()
 
     # Apply corrections
-    logger.info("Applying seed event corrections to %d raw events", len(raw_events))
+    logger.info("Applying seed event corrections to %d raw events", len(events))
     corrections_started = perf_counter()
-    corrected_events = apply_seed_event_corrections(raw_events=raw_events, seed_events=seed_events)
+    corrected_events = apply_seed_event_corrections(raw_events=events, seed_events=seed_events)
     logger.info(
         "Applied corrections: %d corrected events in %.2fs",
         len(corrected_events),
