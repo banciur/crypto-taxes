@@ -2,9 +2,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from domain.base_types import EventLocation, LedgerLeg
 from domain.correction import SeedEvent
-from domain.ledger import EventType
+from domain.ledger import EventLocation, EventType, LedgerLeg
 from importers.seed_events import (
     DEFAULT_SEED_TIMESTAMP,
     SEED_CSV_INGESTION,

@@ -5,9 +5,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from domain.base_types import AssetId, EventLocation, LedgerLeg, WalletId
 from domain.correction import SeedEvent
-from domain.ledger import EventOrigin, EventType, LedgerEvent
+from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
 
 DEFAULT_SEED_TIMESTAMP = datetime(2000, 1, 1, tzinfo=timezone.utc)
 SEED_CSV_INGESTION = "seed_csv"

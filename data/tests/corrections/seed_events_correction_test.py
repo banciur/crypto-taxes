@@ -3,9 +3,8 @@ from decimal import Decimal
 from uuid import uuid4
 
 from corrections.seed_events import apply_seed_event_corrections
-from domain.base_types import EventLocation, LedgerLeg
 from domain.correction import SeedEvent
-from domain.ledger import EventOrigin, EventType, LedgerEvent, LedgerEventId
+from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerEventId, LedgerLeg
 from tests.constants import BTC, KRAKEN_WALLET
 
 

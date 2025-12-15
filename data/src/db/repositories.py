@@ -5,17 +5,21 @@ from datetime import timezone
 from sqlalchemy.orm import Session
 
 from db import models
-from domain.base_types import AssetId, EventLocation, LedgerLeg, LegId, WalletId
 from domain.correction import CorrectionId, SeedEvent
 from domain.ledger import (
     AcquisitionLot,
+    AssetId,
     DisposalId,
     DisposalLink,
+    EventLocation,
     EventOrigin,
     EventType,
     LedgerEvent,
     LedgerEventId,
+    LedgerLeg,
+    LegId,
     LotId,
+    WalletId,
 )
 from domain.tax_event import TaxEvent, TaxEventKind
 

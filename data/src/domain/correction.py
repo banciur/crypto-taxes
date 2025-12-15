@@ -7,8 +7,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from domain.base_types import AbstractEvent
-from domain.ledger import EventOrigin, EventType
+from domain.ledger import AbstractEvent, EventOrigin, EventType
 
 CorrectionId = NewType("CorrectionId", UUID)
 

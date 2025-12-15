@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from domain.base_types import AssetId, WalletId
 from domain.inventory import InventoryEngine
+from domain.ledger import AssetId, WalletId
 from domain.pricing import PriceProvider
 from domain.wallet_balance_tracker import WalletBalanceTracker
 

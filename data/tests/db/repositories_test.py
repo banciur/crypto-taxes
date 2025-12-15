@@ -13,16 +13,17 @@ from db.repositories import (
     SeedEventRepository,
     TaxEventRepository,
 )
-from domain.base_types import EventLocation, LedgerLeg
 from domain.correction import SeedEvent
 from domain.ledger import (
     AcquisitionLot,
     DisposalId,
     DisposalLink,
+    EventLocation,
     EventOrigin,
     EventType,
     LedgerEvent,
     LedgerEventId,
+    LedgerLeg,
     LotId,
 )
 from domain.tax_event import TaxEvent, TaxEventKind

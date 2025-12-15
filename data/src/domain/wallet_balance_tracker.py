@@ -4,7 +4,7 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import DefaultDict
 
-from domain.base_types import AssetId, WalletId
+from domain.ledger import AssetId, WalletId
 
 WalletBalances = DefaultDict[WalletId, Decimal]
 AssetBalances = DefaultDict[AssetId, WalletBalances]

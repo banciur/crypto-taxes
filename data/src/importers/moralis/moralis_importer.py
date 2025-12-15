@@ -6,8 +6,7 @@ from decimal import Decimal
 from typing import Any, Iterable, cast
 
 from clients.moralis import Account, MoralisService, SyncMode, build_default_service, load_accounts
-from domain.base_types import AssetId, EventLocation, LedgerLeg, WalletId
-from domain.ledger import EventOrigin, EventType, LedgerEvent
+from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
 
 logger = logging.getLogger(__name__)
 
