@@ -69,7 +69,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine. Open lots are tracked per asset (not per wallet) and matched FIFO.
 - Transfers (`EventType.TRANSFER`) only update wallet balances so overspending is caught; they do not create or move lots.
 - Per-wallet balances are tracked for all non-EUR legs; any debit that would push a wallet negative raises an error. Fix missing history by seeding lots or adding prior transfers into the source wallet before processing.
-- Synthetic seed lots can be injected ahead of importer output to satisfy transfers from `outside` when historical sources are missing. The CLI accepts `--seed-csv` (default `artifacts/seed_lots.csv`) with rows `asset_id,wallet_id,quantity[,timestamp,cost_total_eur]`; these are modeled as tiny-cost trades (default cost 0.0001 EUR, timestamp defaults to 2000-01-01Z) so FIFO can move them like any other lot. Missing inventory will surface as an error during processing and should be resolved by updating the seed CSV manually.
+- Synthetic seed lots can be injected ahead of importer output to satisfy transfers from `outside` when historical sources are missing. The CLI accepts `--seed-csv` (default `artifacts/seed_lots.csv`) with rows `asset_id,wallet_id,quantity[,timestamp,price_per_token]`; `timestamp` defaults to `2000-01-01T00:00:00Z` and `price_per_token` defaults to `0`.
 - Each event captures `origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 
 ---

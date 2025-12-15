@@ -44,7 +44,7 @@ From `doc/CURRENT.md`:
 
 Existing “corrections” are currently scattered:
 
-- Seed lots via `artifacts/seed_lots.csv` (synthetic acquisition events) to fix missing history.
+- Seed lots via `artifacts/seed_lots.csv` (loaded as `SeedEvent`s and persisted to the DB) to fix missing history.
 - Kraken importer does source-specific ignores and cleanup.
 - On-chain importer currently maps:
   - `wallet_id` = address (not chain-scoped yet)
@@ -192,7 +192,7 @@ The initial set should match `data/src/domain/correction.py` (kept intentionally
 2. **Already-taxed marker**
    - suppress reward income taxation keyed by `event_origin`, while keeping balances/lots intact.
 
-3. **Seed marker (synthetic event)**
+3. **Seed event (synthetic event)**
    - a minimal “insert event” shape (`timestamp` + `legs`) to fix missing history and allow processing to continue.
 
 4. **Link marker (derived effective event)**
@@ -322,7 +322,7 @@ We have two viable approaches for storing corrections; start with DB-backed stor
 - Add tables for correction primitives that map closely to `data/src/domain/correction.py`:
   - spam markers (`Spam`)
   - already-taxed markers (`AlreadyTaxed`)
-  - seed markers (`SeedMarker` events)
+  - seed events (`SeedEvent` events)
   - link markers (`LinkMarker` events + their consumed `event_origins`)
   - asset registry / mappings (canonical asset ids; spam classification)
 - Derived tables remain rebuildable (effective events, lots, disposals, tax events).
@@ -353,7 +353,7 @@ Acceptance:
 - Define correction primitives:
   - `Spam` (ignore event)
   - `AlreadyTaxed` (reward tax override)
-  - `SeedMarker` (insert synthetic event)
+  - `SeedEvent` (insert synthetic event)
   - `LinkMarker` (insert derived effective event and record consumed origins)
 - Implement deterministic transformation pipeline:
   - input raw events

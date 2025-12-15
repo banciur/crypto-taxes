@@ -3,6 +3,7 @@ First stage: compute German taxes
 TODO: introduce events transformations layer, where raw data will be adjusted.
  - mark spam events (can be automatic?)
  - seed events used to balance ledger (already implemnted)
+TODO: we will end with multiple ledger legs tables - maybe combine them into one with discriminator field?
 
 TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
 

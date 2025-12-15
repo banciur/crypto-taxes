@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from decimal import Decimal
 from typing import NewType
 from uuid import UUID, uuid4
 
@@ -23,11 +24,14 @@ class Marker(Correction, ABC):
 class Spam(Marker):
     pass
 
+
 class AlreadyTaxed(Marker):
     pass
 
-class SeedMarker(Correction, AbstractEvent):
-    pass
+
+class SeedEvent(Correction, AbstractEvent):
+    price_per_token: Decimal = Decimal("0")
+
 
 class LinkMarker(Correction, AbstractEvent):
     event_origins: list[EventOrigin]

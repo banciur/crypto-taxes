@@ -6,17 +6,18 @@ from decimal import Decimal
 from pathlib import Path
 
 from domain.base_types import AssetId, EventLocation, LedgerLeg, WalletId
+from domain.correction import SeedEvent
 from domain.ledger import EventOrigin, EventType, LedgerEvent
 
 DEFAULT_SEED_TIMESTAMP = datetime(2000, 1, 1, tzinfo=timezone.utc)
-DEFAULT_SEED_COST_TOTAL_EUR = Decimal("0.0001")
+SEED_CSV_INGESTION = "seed_csv"
 
 
-def load_seed_events(csv_path: Path) -> list[LedgerEvent]:
-    """Load synthetic acquisition events seeded via CSV.
+def load_seed_events(csv_path: Path) -> list[SeedEvent]:
+    """Load seed lots (manual history) as correction events.
 
-    Each row should contain: asset_id,wallet_id,quantity[,timestamp][,cost_total_eur][,note]
-    Timestamps default to a distant past date (UTC) and cost defaults to 0.0001 EUR.
+    Each row should contain: asset_id,wallet_id,quantity[,timestamp,price_per_token]
+    Timestamp defaults to a distant past date (UTC).
     """
 
     if not csv_path.exists():
@@ -32,24 +33,24 @@ def load_seed_events(csv_path: Path) -> list[LedgerEvent]:
         if missing:
             raise ValueError(f"Seed CSV {csv_path} missing required columns: {', '.join(sorted(missing))}")
 
-        events: list[LedgerEvent] = []
-        for row_idx, row in enumerate(reader, start=1):
+        events: list[SeedEvent] = []
+        for row in reader:
             wallet_id = WalletId(row["wallet_id"].strip())
             asset_id = AssetId(row["asset_id"].strip())
+            quantity = Decimal(row["quantity"].strip())
+            if quantity <= 0:
+                raise ValueError("Seed lot quantity must be positive")
 
             events.append(
-                LedgerEvent(
+                SeedEvent(
                     timestamp=_parse_timestamp(row.get("timestamp") or row.get("acquired_timestamp")),
-                    origin=EventOrigin(location=EventLocation.INTERNAL, external_id=f"seed_csv_row:{row_idx}"),
-                    ingestion="seed_csv",
-                    event_type=EventType.TRADE,
+                    price_per_token=_parse_price_per_token(row.get("price_per_token")),
                     legs=[
-                        LedgerLeg(asset_id=asset_id, quantity=Decimal(row["quantity"]), wallet_id=wallet_id),
                         LedgerLeg(
-                            asset_id=AssetId("EUR"),
-                            quantity=-_parse_cost(row.get("cost_total_eur")),
+                            asset_id=asset_id,
+                            quantity=quantity,
                             wallet_id=wallet_id,
-                        ),
+                        )
                     ],
                 )
             )
@@ -58,18 +59,45 @@ def load_seed_events(csv_path: Path) -> list[LedgerEvent]:
 
 
 def _parse_timestamp(raw: str | None) -> datetime:
-    if not raw:
+    if raw is None:
         return DEFAULT_SEED_TIMESTAMP
-    ts = datetime.fromisoformat(raw)
+    normalized = raw.strip()
+    if not normalized:
+        return DEFAULT_SEED_TIMESTAMP
+    if normalized.endswith(("Z", "z")):
+        normalized = f"{normalized[:-1]}+00:00"
+    ts = datetime.fromisoformat(normalized)
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=timezone.utc)
     return ts.astimezone(timezone.utc)
 
 
-def _parse_cost(raw: str | None) -> Decimal:
-    if raw is None or raw.strip() == "":
-        return DEFAULT_SEED_COST_TOTAL_EUR
-    cost = Decimal(raw)
-    if cost <= 0:
-        raise ValueError("Seed lot cost_total_eur must be positive")
-    return cost
+def _parse_price_per_token(raw: str | None) -> Decimal:
+    if raw is None:
+        return Decimal("0")
+    normalized = raw.strip()
+    if not normalized:
+        return Decimal("0")
+    value = Decimal(normalized)
+    if value < 0:
+        raise ValueError("Seed price_per_token must be >= 0")
+    return value
+
+
+def ledger_events_from_seed_events(seed_events: list[SeedEvent]) -> list[LedgerEvent]:
+    events: list[LedgerEvent] = []
+    for seed_event in seed_events:
+        (leg,) = seed_event.legs
+        events.append(
+            LedgerEvent(
+                timestamp=seed_event.timestamp,
+                origin=EventOrigin(
+                    location=EventLocation.INTERNAL,
+                    external_id=f"seed:{seed_event.id}",
+                ),
+                ingestion=SEED_CSV_INGESTION,
+                event_type=EventType.REWARD,
+                legs=[leg],
+            )
+        )
+    return events

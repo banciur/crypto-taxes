@@ -92,3 +92,28 @@ class TaxEventOrm(Base):
     source_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
     kind: Mapped[str] = mapped_column(String, nullable=False)
     taxable_gain: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
+
+
+class SeedEventOrm(Base):
+    __tablename__ = "seed_events"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    price_per_token: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False, default=Decimal("0"))
+
+    legs: Mapped[list["SeedEventLegOrm"]] = relationship(
+        cascade="all, delete-orphan", back_populates="event", lazy="joined"
+    )
+
+
+class SeedEventLegOrm(Base):
+    __tablename__ = "seed_event_legs"
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    seed_event_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("seed_events.id"), nullable=False)
+    asset_id: Mapped[str] = mapped_column(String, nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
+    wallet_id: Mapped[str] = mapped_column(String, nullable=False)
+    is_fee: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    event: Mapped[SeedEventOrm] = relationship(back_populates="legs")
