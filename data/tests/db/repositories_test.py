@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from db.repositories import (
     AcquisitionLotRepository,
+    CorrectedLedgerEventRepository,
     DisposalLinkRepository,
     LedgerEventRepository,
     SeedEventRepository,
@@ -65,6 +66,11 @@ def tax_repo(test_session: Session) -> TaxEventRepository:
 @pytest.fixture()
 def seed_repo(test_session: Session) -> SeedEventRepository:
     return SeedEventRepository(test_session)
+
+
+@pytest.fixture()
+def corrected_repo(test_session: Session) -> CorrectedLedgerEventRepository:
+    return CorrectedLedgerEventRepository(test_session)
 
 
 def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
@@ -213,3 +219,19 @@ def test_persist_seed_events(seed_repo: SeedEventRepository) -> None:
     assert leg.asset_id == BTC
     assert leg.quantity == quantity
     assert leg.wallet_id == KRAKEN_WALLET
+
+
+def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRepository) -> None:
+    external_id = "corrected-ext"
+    timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    event = _sample_event(external_id, timestamp)
+
+    corrected_repo.create_many([event])
+
+    stored = corrected_repo.list()
+    assert len(stored) == 1
+    (reloaded,) = stored
+    assert reloaded.id == event.id
+    assert reloaded.timestamp == timestamp
+    assert reloaded.origin.external_id == external_id
+    assert {leg.id for leg in reloaded.legs} == {leg.id for leg in event.legs}

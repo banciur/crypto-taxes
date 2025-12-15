@@ -1,15 +1,10 @@
 First stage: compute German taxes
 
-TODO: introduce events transformations layer, where raw data will be adjusted.
- - mark spam events (can be automatic?)
- - seed events used to balance ledger (already implemnted)
-TODO: we will end with multiple ledger legs tables - maybe combine them into one with discriminator field?
-
-TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
-
-TODO: Fix codex not being able to run pnpm commands
 TODO: Render transformations layer events in the UI as second column
 TODO: Maybe third "outcome" column in the UI
+
+TODO: Fix codex not being able to run pnpm commands
+TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
 
 TODO: On-chain events, Moralis
  - not finished with a break for the UI.
@@ -20,9 +15,13 @@ TODO: On-chain events, Moralis
 TODO: Improve how events are displayed in the UI. Add chains transaction ids, tokens names etc
 TODO: Manual adjustments to mark and filter out spam transactions.
 
+TODO: we will end with multiple ledger legs tables - maybe combine them into one with a discriminator column?
+
 TODO: additional correction elements
+ - mark spam events (can be automatic?)
  - mark non-taxable events (income)
  - combine two (or more?) events into one
+ - I'm not sure about the corrections directory and which code should go where.
 
 TODO: Import data from Coinbase hopefully through API
 

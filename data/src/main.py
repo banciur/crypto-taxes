@@ -4,9 +4,11 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
+from corrections.seed_events import apply_seed_event_corrections
 from db.db import init_db
 from db.repositories import (
     AcquisitionLotRepository,
+    CorrectedLedgerEventRepository,
     DisposalLinkRepository,
     LedgerEventRepository,
     SeedEventRepository,
@@ -55,6 +57,7 @@ def run(
     # Setup components
     session = init_db(reset=True, db_file=DB_FILE)
     event_repository = LedgerEventRepository(session)
+    corrected_event_repository = CorrectedLedgerEventRepository(session)
     seed_event_repository = SeedEventRepository(session)
     lot_repository = AcquisitionLotRepository(session)
     disposal_repository = DisposalLinkRepository(session)
@@ -69,15 +72,22 @@ def run(
     owned_wallets: set[WalletId] = set()
     owned_wallets.add(KrakenImporter.WALLET_ID)
 
-    # Get data
+    # Get corrections
     seed_events = load_seed_events(seed_csv)
     seed_event_repository.create_many(seed_events)
 
+    # Get raw events
     events = importer.load_events()
     events.sort(key=lambda e: e.timestamp)
     for event in events:
         event_repository.create(event)
-    events = event_repository.list()
+    raw_events = event_repository.list()
+
+    # Apply corrections
+    corrected_events = apply_seed_event_corrections(raw_events=raw_events, seed_events=seed_events)
+
+    # Save corrections
+    corrected_event_repository.create_many(corrected_events)
     return  # just for now
     # Process stuff
     inventory = engine.process(events)  # type: ignore[unreachable]
