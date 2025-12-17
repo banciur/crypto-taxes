@@ -1,10 +1,12 @@
 First stage: compute German taxes
 
+TODO: Timing of drizzle. Why rendering takes 6 seconds. Db connection or computations
 TODO: Render transformations layer events in the UI as second column
 TODO: Maybe third "outcome" column in the UI
 
 TODO: Fix codex not being able to run pnpm commands
 TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
+TODO: Correct drizzle flow. Why it has some wrong types and I had to adjust it mannually prepare Agents info about this. Command `pnpm drizzle-kit introspect --config drizzle.config.ts`
 
 TODO: On-chain events, Moralis
  - not finished with a break for the UI.
