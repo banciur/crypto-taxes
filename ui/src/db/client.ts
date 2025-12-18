@@ -2,10 +2,11 @@ import path from "node:path";
 
 import Database from "better-sqlite3";
 import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
-import { asc, desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import * as schema from "./schema";
 import * as relations from "./relations";
+import { ledgerEvents, ledgerLegs } from "./schema";
 
 const databaseFile = path.join(process.cwd(), "..", "crypto_taxes.db");
 
@@ -29,14 +30,30 @@ function getClient(): DB {
   return client;
 }
 
-export async function getLatestLedgerEvents(): Promise<LedgerEventWithLegs[]> {
+export async function getLedgerEvents(): Promise<LedgerEventWithLegs[]> {
   const db = getClient();
-  return db.query.ledgerEvents.findMany({
-    orderBy: desc(schema.ledgerEvents.timestamp),
-    with: {
-      ledgerLegs: {
-        orderBy: asc(schema.ledgerLegs.id),
-      },
-    },
-  });
+
+  const rows = await db
+    .select({ event: ledgerEvents, leg: ledgerLegs })
+    .from(ledgerEvents)
+    .leftJoin(ledgerLegs, eq(ledgerEvents.id, ledgerLegs.eventId))
+    .orderBy(desc(ledgerEvents.timestamp), ledgerEvents.id, ledgerLegs.id);
+
+  const eventsById = new Map<string, LedgerEventWithLegs>();
+  const orderedEvents: LedgerEventWithLegs[] = [];
+
+  for (const { event, leg } of rows) {
+    let eventWithLegs = eventsById.get(event.id);
+    if (!eventWithLegs) {
+      eventWithLegs = { ...event, ledgerLegs: [] };
+      eventsById.set(event.id, eventWithLegs);
+      orderedEvents.push(eventWithLegs);
+    }
+
+    if (leg) {
+      eventWithLegs.ledgerLegs.push(leg);
+    }
+  }
+
+  return orderedEvents;
 }

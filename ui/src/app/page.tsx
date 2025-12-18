@@ -3,14 +3,16 @@ import { Col, Container, Row } from "react-bootstrap";
 import { DateChooser } from "@/components/DateChooser";
 import { LedgerEvent } from "@/components/LedgerEvent";
 import type { LedgerEventWithLegs } from "@/db/client";
-import { getLatestLedgerEvents } from "@/db/client";
+import { getLedgerEvents } from "@/db/client";
 
 import styles from "./page.module.css";
 
 export default async function Home() {
-  const events = await getLatestLedgerEvents();
+  console.time("get raw events");
+  const rawEvents = await getLedgerEvents();
+  console.timeEnd("get raw events");
 
-  const grouped = events.reduce<{
+  const grouped = rawEvents.reduce<{
     order: string[];
     eventsByDate: Record<string, LedgerEventWithLegs[]>;
   }>(
