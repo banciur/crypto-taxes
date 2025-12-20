@@ -13,7 +13,7 @@ export function LedgerEvent({ event }: LedgerEventProps) {
   });
 
   return (
-    <Card className="shadow-sm h-100">
+    <Card className="shadow-sm">
       <Card.Header className="d-flex flex-wrap align-items-center gap-2">
         <Badge bg="primary" className="text-uppercase">
           {event.eventType}

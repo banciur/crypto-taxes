@@ -41,18 +41,24 @@ export default async function Home() {
 
       <Container fluid className={styles.layoutContent}>
         <Row className={styles.layoutRow}>
-          <Col md={3} lg={2} className={styles.layoutColumn}>
+          <Col xs={2} className={styles.layoutColumn}>
             <DateChooser dates={dateSections} />
           </Col>
-          <Col md={9} lg={10} className={styles.layoutColumn}>
+          <Col xs={10} className={styles.layoutColumn}>
             {grouped.order.map((dateKey) => (
               <Row id={`day-${dateKey}`} key={dateKey}>
-                <Col className="d-flex flex-column gap-3 mb-3">
+                <Col>
                   {grouped.eventsByDate[dateKey].map((event) => (
-                    <LedgerEvent event={event} key={event.id} />
+                    <Row key={event.id}>
+                      <Col xs={6}>
+                        <LedgerEvent event={event} />
+                      </Col>
+                      <Col xs={6}>
+                        <div>column two</div>
+                      </Col>
+                    </Row>
                   ))}
                 </Col>
-                <Col></Col>
               </Row>
             ))}
           </Col>
