@@ -1,36 +1,61 @@
 import { Col, Container, Row } from "react-bootstrap";
 
+import { CorrectedEvent } from "@/components/CorrectedEvent";
 import { DateChooser } from "@/components/DateChooser";
-import { LedgerEvent } from "@/components/LedgerEvent";
-import type { LedgerEventWithLegs } from "@/db/client";
-import { getLedgerEvents } from "@/db/client";
+import { RawEvent } from "@/components/RawEvent";
+import { SeedEvent } from "@/components/SeedEvent";
+import {
+  getCorrectedLedgerEvents,
+  getLedgerEvents,
+  getSeedEvents,
+} from "@/db/client";
 
 import styles from "./page.module.css";
 
+const dateKeyFor = (timestamp: string) =>
+  new Date(timestamp).toISOString().slice(0, 10);
+
+const groupEventsByDate = <T extends { timestamp: string }>(events: T[]) => {
+  const eventsByDate: Record<string, T[]> = {};
+
+  for (const event of events) {
+    const dateKey = dateKeyFor(event.timestamp);
+    const bucket = eventsByDate[dateKey];
+    if (bucket) {
+      bucket.push(event);
+    } else {
+      eventsByDate[dateKey] = [event];
+    }
+  }
+
+  return eventsByDate;
+};
+
 export default async function Home() {
-  console.time("get raw events");
-  const rawEvents = await getLedgerEvents();
-  console.timeEnd("get raw events");
+  const [ledgerEvents, seedEvents, correctedLedgerEvents] = await Promise.all([
+    getLedgerEvents(),
+    getSeedEvents(),
+    getCorrectedLedgerEvents(),
+  ]);
 
-  const grouped = rawEvents.reduce<{
-    order: string[];
-    eventsByDate: Record<string, LedgerEventWithLegs[]>;
-  }>(
-    (acc, event) => {
-      const dateKey = new Date(event.timestamp).toISOString().slice(0, 10);
-      if (!acc.eventsByDate[dateKey]) {
-        acc.eventsByDate[dateKey] = [];
-        acc.order.push(dateKey);
-      }
-      acc.eventsByDate[dateKey].push(event);
-      return acc;
-    },
-    { order: [], eventsByDate: {} },
-  );
+  const ledgerEventsByDate = groupEventsByDate(ledgerEvents);
+  const seedEventsByDate = groupEventsByDate(seedEvents);
+  const correctedEventsByDate = groupEventsByDate(correctedLedgerEvents);
 
-  const dateSections = grouped.order.map((dateKey) => ({
+  const orderedDates = Array.from(
+    new Set([
+      ...Object.keys(ledgerEventsByDate),
+      ...Object.keys(seedEventsByDate),
+      ...Object.keys(correctedEventsByDate),
+    ]),
+  ).sort((a, b) => b.localeCompare(a));
+
+  const dateSections = orderedDates.map((dateKey) => ({
     key: dateKey,
-    count: grouped.eventsByDate[dateKey].length,
+    count:
+      (ledgerEventsByDate[dateKey]?.length ?? 0) +
+      (seedEventsByDate[dateKey]?.length ?? 0) +
+      (correctedEventsByDate[dateKey]?.length ?? 0),
   }));
 
   return (
@@ -45,22 +70,39 @@ export default async function Home() {
             <DateChooser dates={dateSections} />
           </Col>
           <Col xs={10} className={styles.layoutColumn}>
-            {grouped.order.map((dateKey) => (
-              <Row id={`day-${dateKey}`} key={dateKey}>
-                <Col>
-                  {grouped.eventsByDate[dateKey].map((event) => (
-                    <Row key={event.id}>
-                      <Col xs={6}>
-                        <LedgerEvent event={event} />
-                      </Col>
-                      <Col xs={6}>
-                        <div>column two</div>
-                      </Col>
-                    </Row>
-                  ))}
-                </Col>
-              </Row>
-            ))}
+            {orderedDates.map((dateKey) => {
+              const ledgerEventsForDay = ledgerEventsByDate[dateKey] ?? [];
+              const seedEventsForDay = seedEventsByDate[dateKey] ?? [];
+              const correctedEventsForDay =
+                correctedEventsByDate[dateKey] ?? [];
+
+              return (
+                <section
+                  id={`day-${dateKey}`}
+                  key={dateKey}
+                  className="mb-4 pb-3 border-bottom"
+                >
+                  <h5>{dateKey}</h5>
+                  <Row>
+                    <Col xs={4}>
+                      {ledgerEventsForDay.map((event) => (
+                        <RawEvent key={event.id} event={event} />
+                      ))}
+                    </Col>
+                    <Col xs={4}>
+                      {seedEventsForDay.map((event) => (
+                        <SeedEvent key={event.id} event={event} />
+                      ))}
+                    </Col>
+                    <Col xs={4}>
+                      {correctedEventsForDay.map((event) => (
+                        <CorrectedEvent key={event.id} event={event} />
+                      ))}
+                    </Col>
+                  </Row>
+                </section>
+              );
+            })}
           </Col>
         </Row>
       </Container>

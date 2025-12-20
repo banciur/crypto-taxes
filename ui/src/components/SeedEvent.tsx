@@ -1,13 +1,14 @@
 "use client";
+
 import { Badge, Card, ListGroup } from "react-bootstrap";
 
-import type { LedgerEventWithLegs } from "@/db/client";
+import type { SeedEventWithLegs } from "@/db/client";
 
-type LedgerEventProps = {
-  event: LedgerEventWithLegs;
+type SeedEventProps = {
+  event: SeedEventWithLegs;
 };
 
-export function LedgerEvent({ event }: LedgerEventProps) {
+export function SeedEvent({ event }: SeedEventProps) {
   const timestampLabel = new Date(event.timestamp).toLocaleString("en-GB", {
     timeZone: "UTC",
   });
@@ -15,15 +16,17 @@ export function LedgerEvent({ event }: LedgerEventProps) {
   return (
     <Card className="shadow-sm">
       <Card.Header className="d-flex flex-wrap align-items-center gap-2">
-        <Badge bg="primary" className="text-uppercase">
-          {event.eventType}
+        <Badge bg="success" className="text-uppercase">
+          seed
         </Badge>
         <span className="text-muted small">{timestampLabel}</span>
-        <span className="ms-auto text-muted small">{event.originLocation}</span>
+        <span className="ms-auto text-muted small">
+          price/token {event.pricePerToken}
+        </span>
       </Card.Header>
       <Card.Body>
         <ListGroup variant="flush" className="border rounded">
-          {event.ledgerLegs.map((leg) => (
+          {event.seedEventLegs.map((leg) => (
             <ListGroup.Item
               key={leg.id}
               className="d-flex align-items-center gap-2"
