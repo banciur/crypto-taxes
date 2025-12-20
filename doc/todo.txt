@@ -1,9 +1,15 @@
 First stage: compute German taxes
 
-TODO: Timing of drizzle. Why rendering takes 6 seconds. Db connection or computations
+TODO: Group by day
 TODO: Render transformations layer events in the UI as second column
 TODO: Maybe third "outcome" column in the UI
 
+TODO: Improve how events are displayed in the UI.
+ - change markup
+ - Add:
+    - chains icons? with popup with chain name
+    - shortened tx id with clickable url to tracker
+    - tokens names
 
 TODO: On-chain events, Moralis
  - not finished with a break for the UI.
@@ -11,8 +17,8 @@ TODO: On-chain events, Moralis
  - review client and accounts structure, also think about wallet id (address_chain)
  - do we need native tokens?
 
-TODO: Improve how events are displayed in the UI. Add chains transaction ids, tokens names etc
 TODO: Manual adjustments to mark and filter out spam transactions.
+TODO: Create layout where I can choose which columns to display by checkboxes. Group by date
 
 TODO: I think I need standard api backend and ditching drizzle completely.
 TODO: Fix codex not being able to run pnpm commands

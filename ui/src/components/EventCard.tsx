@@ -2,31 +2,41 @@
 
 import { Badge, Card, ListGroup } from "react-bootstrap";
 
-import type { SeedEventWithLegs } from "@/db/client";
-
-type SeedEventProps = {
-  event: SeedEventWithLegs;
+export type EventLeg = {
+  id: string;
+  assetId: string;
+  walletId: string;
+  quantity: string;
+  isFee: boolean;
 };
 
-export function SeedEvent({ event }: SeedEventProps) {
-  const timestampLabel = new Date(event.timestamp).toLocaleString("en-GB", {
+type EventCardProps = {
+  timestamp: string;
+  eventType: string;
+  place: string;
+  legs: EventLeg[];
+};
+
+export function EventCard({
+  timestamp,
+  eventType,
+  place,
+  legs,
+}: EventCardProps) {
+  const timestampLabel = new Date(timestamp).toLocaleString("en-GB", {
     timeZone: "UTC",
   });
 
   return (
     <Card className="shadow-sm">
       <Card.Header className="d-flex flex-wrap align-items-center gap-2">
-        <Badge bg="success" className="text-uppercase">
-          seed
-        </Badge>
+        <Badge className="text-uppercase">{eventType}</Badge>
         <span className="text-muted small">{timestampLabel}</span>
-        <span className="ms-auto text-muted small">
-          price/token {event.pricePerToken}
-        </span>
+        <span className="ms-auto text-muted small">{place}</span>
       </Card.Header>
       <Card.Body>
         <ListGroup variant="flush" className="border rounded">
-          {event.seedEventLegs.map((leg) => (
+          {legs.map((leg) => (
             <ListGroup.Item
               key={leg.id}
               className="d-flex align-items-center gap-2"

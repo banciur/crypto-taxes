@@ -1,9 +1,6 @@
 import { Col, Container, Row } from "react-bootstrap";
-
-import { CorrectedEvent } from "@/components/CorrectedEvent";
 import { DateChooser } from "@/components/DateChooser";
-import { RawEvent } from "@/components/RawEvent";
-import { SeedEvent } from "@/components/SeedEvent";
+
 import {
   getCorrectedLedgerEvents,
   getLedgerEvents,
@@ -11,6 +8,7 @@ import {
 } from "@/db/client";
 
 import styles from "./page.module.css";
+import { EventCard } from "@/components/EventCard";
 
 const dateKeyFor = (timestamp: string) =>
   new Date(timestamp).toISOString().slice(0, 10);
@@ -86,17 +84,35 @@ export default async function Home() {
                   <Row>
                     <Col xs={4}>
                       {ledgerEventsForDay.map((event) => (
-                        <RawEvent key={event.id} event={event} />
+                        <EventCard
+                          key={event.id}
+                          timestamp={event.timestamp}
+                          eventType={event.eventType}
+                          place={event.originLocation}
+                          legs={event.ledgerLegs}
+                        />
                       ))}
                     </Col>
                     <Col xs={4}>
                       {seedEventsForDay.map((event) => (
-                        <SeedEvent key={event.id} event={event} />
+                        <EventCard
+                          key={event.id}
+                          timestamp={event.timestamp}
+                          eventType="seed"
+                          place=""
+                          legs={event.seedEventLegs}
+                        />
                       ))}
                     </Col>
                     <Col xs={4}>
                       {correctedEventsForDay.map((event) => (
-                        <CorrectedEvent key={event.id} event={event} />
+                        <EventCard
+                          key={event.id}
+                          timestamp={event.timestamp}
+                          eventType={event.eventType}
+                          place={event.originLocation}
+                          legs={event.correctedLedgerLegs}
+                        />
                       ))}
                     </Col>
                   </Row>
