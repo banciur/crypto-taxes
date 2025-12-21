@@ -2,6 +2,9 @@
 
 import { Badge, Card, ListGroup } from "react-bootstrap";
 
+import { clsx } from "clsx";
+import styles from "./EventCard.module.css";
+
 export type EventLeg = {
   id: string;
   assetId: string;
@@ -26,6 +29,17 @@ export function EventCard({
   const timestampLabel = new Date(timestamp).toLocaleString("en-GB", {
     timeZone: "UTC",
   });
+  const legQuantityClassName = (leg: EventLeg) => {
+    if (leg.isFee) {
+      return "text-info";
+    }
+    const quantityValue = Number(leg.quantity);
+    if (quantityValue < 0) {
+      return "text-danger";
+    } else {
+      return "text-success";
+    }
+  };
 
   return (
     <Card className="shadow-sm">
@@ -39,17 +53,15 @@ export function EventCard({
           {legs.map((leg) => (
             <ListGroup.Item
               key={leg.id}
-              className="d-flex align-items-center gap-2"
+              className={clsx("d-flex align-items-center gap-1", styles.leg)}
             >
-              <Badge
-                bg={leg.isFee ? "danger" : "info"}
-                className="text-uppercase"
-              >
-                {leg.isFee ? "fee" : "leg"}
-              </Badge>
               <span>{leg.assetId}</span>
               <span>{leg.walletId}</span>
-              <span>{leg.quantity}</span>
+              <span
+                className={clsx("flex-shrink-0", legQuantityClassName(leg))}
+              >
+                {leg.quantity}
+              </span>
             </ListGroup.Item>
           ))}
         </ListGroup>
