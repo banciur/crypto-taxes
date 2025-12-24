@@ -1,5 +1,4 @@
-import { Col, Container, Row } from "react-bootstrap";
-import { DateChooser } from "@/components/DateChooser";
+import { Container } from "react-bootstrap";
 
 import {
   getCorrectedLedgerEvents,
@@ -8,7 +7,7 @@ import {
 } from "@/db/client";
 
 import styles from "./page.module.css";
-import { EventCard } from "@/components/EventCard";
+import { LedgerEventsView } from "@/components/LedgerEventsView";
 
 const dateKeyFor = (timestamp: string) =>
   new Date(timestamp).toISOString().slice(0, 10);
@@ -56,6 +55,13 @@ export default async function Home() {
       (correctedEventsByDate[dateKey]?.length ?? 0),
   }));
 
+  const eventSections = orderedDates.map((dateKey) => ({
+    key: dateKey,
+    ledgerEvents: ledgerEventsByDate[dateKey] ?? [],
+    seedEvents: seedEventsByDate[dateKey] ?? [],
+    correctedEvents: correctedEventsByDate[dateKey] ?? [],
+  }));
+
   return (
     <div className={styles.layoutContainer}>
       <header className={styles.layoutHeader}>
@@ -63,64 +69,10 @@ export default async function Home() {
       </header>
 
       <Container fluid className={styles.layoutContent}>
-        <Row className={styles.layoutRow}>
-          <Col xs={2} className={styles.layoutColumn}>
-            <DateChooser dates={dateSections} />
-          </Col>
-          <Col xs={10} className={styles.layoutColumn}>
-            {orderedDates.map((dateKey) => {
-              const ledgerEventsForDay = ledgerEventsByDate[dateKey] ?? [];
-              const seedEventsForDay = seedEventsByDate[dateKey] ?? [];
-              const correctedEventsForDay =
-                correctedEventsByDate[dateKey] ?? [];
-
-              return (
-                <section
-                  id={`day-${dateKey}`}
-                  key={dateKey}
-                  className="mb-4 pb-3 border-bottom"
-                >
-                  <h5>{dateKey}</h5>
-                  <Row>
-                    <Col xs={4}>
-                      {ledgerEventsForDay.map((event) => (
-                        <EventCard
-                          key={event.id}
-                          timestamp={event.timestamp}
-                          eventType={event.eventType}
-                          place={event.originLocation}
-                          legs={event.ledgerLegs}
-                        />
-                      ))}
-                    </Col>
-                    <Col xs={4}>
-                      {seedEventsForDay.map((event) => (
-                        <EventCard
-                          key={event.id}
-                          timestamp={event.timestamp}
-                          eventType="seed"
-                          place=""
-                          legs={event.seedEventLegs}
-                        />
-                      ))}
-                    </Col>
-                    <Col xs={4}>
-                      {correctedEventsForDay.map((event) => (
-                        <EventCard
-                          key={event.id}
-                          timestamp={event.timestamp}
-                          eventType={event.eventType}
-                          place={event.originLocation}
-                          legs={event.correctedLedgerLegs}
-                        />
-                      ))}
-                    </Col>
-                  </Row>
-                </section>
-              );
-            })}
-          </Col>
-        </Row>
+        <LedgerEventsView
+          dateSections={dateSections}
+          sections={eventSections}
+        />
       </Container>
     </div>
   );
