@@ -1,16 +1,9 @@
 "use client";
 
 import { Form } from "react-bootstrap";
-
-import type { ColumnKey } from "@/types/columns";
-
-export type ColumnOption = {
-  key: ColumnKey;
-  label: string;
-};
+import { COLUMN_NAMES, ColumnKey } from "@/consts";
 
 type ColumnChooserProps = {
-  columns: ColumnOption[];
   selected: Set<ColumnKey>;
   minSelected?: number;
   maxSelected?: number;
@@ -19,7 +12,6 @@ type ColumnChooserProps = {
 };
 
 export function ColumnChooser({
-  columns,
   selected,
   minSelected = 1,
   maxSelected = 4,
@@ -29,19 +21,19 @@ export function ColumnChooser({
   return (
     <Form className="mb-4">
       <div className="text-uppercase text-muted small mb-2">{title}</div>
-      {columns.map((column) => {
-        const isSelected = selected.has(column.key);
+      {Array.from(COLUMN_NAMES, ([columnKey, columnLabel]) => {
+        const isSelected = selected.has(columnKey);
         const disableUncheck = isSelected && selected.size <= minSelected;
         const disableCheck = !isSelected && selected.size >= maxSelected;
 
         return (
           <Form.Check
-            key={column.key}
+            key={columnKey}
             type="checkbox"
-            id={`column-toggle-${column.key}`}
-            label={column.label}
+            id={`column-toggle-${columnKey}`}
+            label={columnLabel}
             checked={isSelected}
-            onChange={() => onToggle(column.key)}
+            onChange={() => onToggle(columnKey)}
             disabled={disableUncheck || disableCheck}
             className="mb-1"
             style={{ userSelect: "none" }}

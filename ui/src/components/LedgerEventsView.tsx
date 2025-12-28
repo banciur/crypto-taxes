@@ -8,11 +8,10 @@ import { EventCard } from "@/components/EventCard";
 import {
   UrlColumnSelectionProvider,
   useUrlColumnSelection,
-  type UrlColumnSelectionConfig,
 } from "@/contexts/UrlColumnSelectionContext";
-import type { ColumnKey } from "@/types/columns";
 import styles from "@/app/page.module.css";
 import { ColumnChooser } from "@/components/ColumnChooser";
+import { ColumnKey } from "@/consts";
 
 type DateEntry = { key: string; count: number };
 
@@ -65,7 +64,6 @@ type ColumnDefinition = {
 };
 
 const MAX_COLUMNS = 4;
-const DEFAULT_COLUMN: ColumnKey = "corrected";
 
 const columnDefinitions: ColumnDefinition[] = [
   {
@@ -112,23 +110,12 @@ const columnDefinitions: ColumnDefinition[] = [
   },
 ];
 
-const columnOptions = columnDefinitions.map(({ key, label }) => ({
-  key,
-  label,
-}));
-
 export function LedgerEventsView({
   dateSections,
   sections,
 }: LedgerEventsViewProps) {
-  const selectionConfig: UrlColumnSelectionConfig = {
-    availableColumns: new Set(columnDefinitions.map((column) => column.key)),
-    defaultSelected: DEFAULT_COLUMN,
-    paramName: "columns",
-  };
-
   return (
-    <UrlColumnSelectionProvider config={selectionConfig}>
+    <UrlColumnSelectionProvider>
       <LedgerEventsLayout dateSections={dateSections} sections={sections} />
     </UrlColumnSelectionProvider>
   );
@@ -151,7 +138,6 @@ function LedgerEventsLayout({
     <Row className={styles.layoutRow}>
       <Col xs={2} className={styles.layoutColumn}>
         <ColumnChooser
-          columns={columnOptions}
           selected={selected}
           minSelected={1}
           maxSelected={MAX_COLUMNS}
