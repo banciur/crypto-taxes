@@ -1,6 +1,11 @@
-"use client";
-
-import { Badge, Card, ListGroup } from "react-bootstrap";
+import {
+  Badge,
+  Card,
+  CardBody,
+  CardHeader,
+  ListGroup,
+  ListGroupItem,
+} from "react-bootstrap";
 
 import { clsx } from "clsx";
 import styles from "./EventCard.module.css";
@@ -43,15 +48,15 @@ export function EventCard({
 
   return (
     <Card className="shadow-sm">
-      <Card.Header className="d-flex flex-wrap align-items-center gap-2">
+      <CardHeader className="d-flex flex-wrap align-items-center gap-2">
         <Badge className="text-uppercase">{eventType}</Badge>
         <span className="text-muted small">{timestampLabel}</span>
         <span className="ms-auto text-muted small">{place}</span>
-      </Card.Header>
-      <Card.Body>
+      </CardHeader>
+      <CardBody>
         <ListGroup variant="flush" className="border rounded">
           {legs.map((leg) => (
-            <ListGroup.Item
+            <ListGroupItem
               key={leg.id}
               className={clsx("d-flex align-items-center gap-1", styles.leg)}
             >
@@ -62,10 +67,10 @@ export function EventCard({
               >
                 {leg.quantity}
               </span>
-            </ListGroup.Item>
+            </ListGroupItem>
           ))}
         </ListGroup>
-      </Card.Body>
+      </CardBody>
     </Card>
   );
 }

@@ -1,23 +1,25 @@
 "use client";
 
 import { Form } from "react-bootstrap";
-import { COLUMN_NAMES, ColumnKey } from "@/consts";
+import { COLUMN_NAMES } from "@/consts";
+import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
+
+const MAX_COLUMNS = 4;
 
 type ColumnChooserProps = {
-  selected: Set<ColumnKey>;
   minSelected?: number;
   maxSelected?: number;
-  onToggle: (key: ColumnKey) => void;
   title?: string;
 };
 
 export function ColumnChooser({
-  selected,
   minSelected = 1,
-  maxSelected = 4,
-  onToggle,
+  maxSelected = MAX_COLUMNS,
   title = "Columns",
 }: ColumnChooserProps) {
+  // TODO: as now events are generated on the backend here is only usage of context which is overkill
+  const { selected, toggle } = useUrlColumnSelection();
+
   return (
     <Form className="mb-4">
       <div className="text-uppercase text-muted small mb-2">{title}</div>
@@ -33,7 +35,7 @@ export function ColumnChooser({
             id={`column-toggle-${columnKey}`}
             label={columnLabel}
             checked={isSelected}
-            onChange={() => onToggle(columnKey)}
+            onChange={() => toggle(columnKey)}
             disabled={disableUncheck || disableCheck}
             className="mb-1"
             style={{ userSelect: "none" }}

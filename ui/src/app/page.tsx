@@ -1,10 +1,8 @@
 import { Container } from "react-bootstrap";
 
-import {
-  getCorrectedLedgerEvents,
-  getLedgerEvents,
-  getSeedEvents,
-} from "@/db/client";
+import { COLUMNS_PARAM_NAME } from "@/consts";
+import { resolveSelectedColumns } from "@/lib/columnSelection";
+import { COLUMN_DEFINITIONS } from "@/lib/ledgerColumns.server";
 
 import styles from "./page.module.css";
 import { LedgerEventsView } from "@/components/LedgerEventsView";
@@ -28,39 +26,46 @@ const groupEventsByDate = <T extends { timestamp: string }>(events: T[]) => {
   return eventsByDate;
 };
 
-export default async function Home() {
-  const [ledgerEvents, seedEvents, correctedLedgerEvents] = await Promise.all([
-    getLedgerEvents(),
-    getSeedEvents(),
-    getCorrectedLedgerEvents(),
-  ]);
+export default async function Home({ searchParams }: PageProps<"/">) {
+  const query = await searchParams;
+  const selectedColumns = resolveSelectedColumns(query[COLUMNS_PARAM_NAME]);
 
-  const ledgerEventsByDate = groupEventsByDate(ledgerEvents);
-  const seedEventsByDate = groupEventsByDate(seedEvents);
-  const correctedEventsByDate = groupEventsByDate(correctedLedgerEvents);
+  const selectedDefinitions = COLUMN_DEFINITIONS.filter((definition) =>
+    selectedColumns.has(definition.key),
+  );
+
+  const loadedColumns = await Promise.all(
+    selectedDefinitions.map(async (definition) => ({
+      definition,
+      events: await definition.load(),
+    })),
+  );
+
+  const eventsByDateByColumn = new Map(
+    loadedColumns.map(
+      ({ definition, events }) =>
+        [definition.key, groupEventsByDate(events)] as const,
+    ),
+  );
 
   const orderedDates = Array.from(
-    new Set([
-      ...Object.keys(ledgerEventsByDate),
-      ...Object.keys(seedEventsByDate),
-      ...Object.keys(correctedEventsByDate),
-    ]),
+    new Set(
+      loadedColumns.flatMap(({ definition }) =>
+        Object.keys(eventsByDateByColumn.get(definition.key)!),
+      ),
+    ),
   ).sort((a, b) => b.localeCompare(a));
 
   const dateSections = orderedDates.map((dateKey) => ({
     key: dateKey,
-    count:
-      (ledgerEventsByDate[dateKey]?.length ?? 0) +
-      (seedEventsByDate[dateKey]?.length ?? 0) +
-      (correctedEventsByDate[dateKey]?.length ?? 0),
+    count: loadedColumns.reduce((total, { definition }) => {
+      const eventsByDate = eventsByDateByColumn.get(definition.key)!;
+      return total + (eventsByDate[dateKey]?.length ?? 0);
+    }, 0),
   }));
 
-  const eventSections = orderedDates.map((dateKey) => ({
-    key: dateKey,
-    ledgerEvents: ledgerEventsByDate[dateKey] ?? [],
-    seedEvents: seedEventsByDate[dateKey] ?? [],
-    correctedEvents: correctedEventsByDate[dateKey] ?? [],
-  }));
+  const columnSpan = 12 / selectedDefinitions.length;
+  const columnClassName = `col-${columnSpan}`;
 
   return (
     <div className={styles.layoutContainer}>
@@ -69,10 +74,31 @@ export default async function Home() {
       </header>
 
       <Container fluid className={styles.layoutContent}>
-        <LedgerEventsView
-          dateSections={dateSections}
-          sections={eventSections}
-        />
+        <LedgerEventsView dateSections={dateSections}>
+          {orderedDates.map((dateKey) => (
+            <section
+              id={`day-${dateKey}`}
+              key={dateKey}
+              className="mb-4 pb-3 border-bottom"
+            >
+              <h5>{dateKey}</h5>
+              <div className="row">
+                {selectedDefinitions.map((definition) => {
+                  const eventsByDate = eventsByDateByColumn.get(
+                    definition.key,
+                  )!;
+                  const events = eventsByDate[dateKey] ?? [];
+
+                  return (
+                    <div className={columnClassName} key={definition.key}>
+                      {definition.render(events)}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </LedgerEventsView>
       </Container>
     </div>
   );
