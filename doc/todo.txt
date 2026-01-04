@@ -1,15 +1,14 @@
 First stage: compute German taxes
 
-TODO: Group by day
-TODO: Render transformations layer events in the UI as second column
-TODO: Maybe third "outcome" column in the UI
-
 TODO: Improve how events are displayed in the UI.
  - change markup
  - Add:
     - chains icons? with popup with chain name
     - shortened tx id with clickable url to tracker
     - tokens names
+
+TODO: Properly order columns now it depends on order in the URL
+TODO: Current UI is slow when there are many events.
 
 TODO: On-chain events, Moralis
  - not finished with a break for the UI.

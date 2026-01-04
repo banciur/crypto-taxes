@@ -57,7 +57,7 @@ export async function getLedgerEvents(): Promise<LedgerEventWithLegs[]> {
     .from(ledgerEvents)
     .leftJoin(ledgerLegs, eq(ledgerEvents.id, ledgerLegs.eventId))
     .orderBy(desc(ledgerEvents.timestamp), ledgerEvents.id, ledgerLegs.id)
-    .limit(100);
+    .limit(300);
 
   const eventsById = new Map<string, LedgerEventWithLegs>();
   const orderedEvents: LedgerEventWithLegs[] = [];
@@ -86,7 +86,7 @@ export async function getSeedEvents(): Promise<SeedEventWithLegs[]> {
     .from(seedEvents)
     .leftJoin(seedEventLegs, eq(seedEvents.id, seedEventLegs.eventId))
     .orderBy(desc(seedEvents.timestamp), seedEvents.id, seedEventLegs.id)
-    .limit(100);
+    .limit(300);
 
   const eventsById = new Map<string, SeedEventWithLegs>();
   const orderedEvents: SeedEventWithLegs[] = [];
@@ -124,7 +124,7 @@ export async function getCorrectedLedgerEvents(): Promise<
       correctedLedgerEvents.id,
       correctedLedgerLegs.id,
     )
-    .limit(100);
+    .limit(300);
 
   const eventsById = new Map<string, CorrectedLedgerEventWithLegs>();
   const orderedEvents: CorrectedLedgerEventWithLegs[] = [];
