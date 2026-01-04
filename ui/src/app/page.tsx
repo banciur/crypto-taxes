@@ -1,8 +1,9 @@
 import { Container } from "react-bootstrap";
 
 import { COLUMNS_PARAM_NAME } from "@/consts";
+import { EventCard } from "@/components/EventCard";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
-import { COLUMN_DEFINITIONS } from "@/lib/ledgerColumns.server";
+import { COLUMN_DEFINITIONS } from "@/consts.server";
 
 import styles from "./page.module.css";
 import { LedgerEventsView } from "@/components/LedgerEventsView";
@@ -30,42 +31,32 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const query = await searchParams;
   const selectedColumns = resolveSelectedColumns(query[COLUMNS_PARAM_NAME]);
 
-  const selectedDefinitions = COLUMN_DEFINITIONS.filter((definition) =>
-    selectedColumns.has(definition.key),
-  );
-
   const loadedColumns = await Promise.all(
-    selectedDefinitions.map(async (definition) => ({
-      definition,
-      events: await definition.load(),
+    selectedColumns.values().map(async (key) => ({
+      key,
+      events: await COLUMN_DEFINITIONS[key].load(),
     })),
   );
 
   const eventsByDateByColumn = new Map(
-    loadedColumns.map(
-      ({ definition, events }) =>
-        [definition.key, groupEventsByDate(events)] as const,
-    ),
+    loadedColumns.map(({ key, events }) => [key, groupEventsByDate(events)]),
   );
 
   const orderedDates = Array.from(
     new Set(
-      loadedColumns.flatMap(({ definition }) =>
-        Object.keys(eventsByDateByColumn.get(definition.key)!),
+      loadedColumns.flatMap(({ key }) =>
+        Object.keys(eventsByDateByColumn.get(key)!),
       ),
     ),
   ).sort((a, b) => b.localeCompare(a));
 
   const dateSections = orderedDates.map((dateKey) => ({
     key: dateKey,
-    count: loadedColumns.reduce((total, { definition }) => {
-      const eventsByDate = eventsByDateByColumn.get(definition.key)!;
+    count: loadedColumns.reduce((total, { key }) => {
+      const eventsByDate = eventsByDateByColumn.get(key)!;
       return total + (eventsByDate[dateKey]?.length ?? 0);
     }, 0),
   }));
-
-  const columnSpan = 12 / selectedDefinitions.length;
-  const columnClassName = `col-${columnSpan}`;
 
   return (
     <div className={styles.layoutContainer}>
@@ -83,18 +74,18 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             >
               <h5>{dateKey}</h5>
               <div className="row">
-                {selectedDefinitions.map((definition) => {
-                  const eventsByDate = eventsByDateByColumn.get(
-                    definition.key,
-                  )!;
-                  const events = eventsByDate[dateKey] ?? [];
-
-                  return (
-                    <div className={columnClassName} key={definition.key}>
-                      {definition.render(events)}
-                    </div>
-                  );
-                })}
+                {Array.from(selectedColumns).map((key) => (
+                  <div className={`col-${12 / selectedColumns.size}`} key={key}>
+                    {(eventsByDateByColumn.get(key)![dateKey] ?? []).map(
+                      (event) => (
+                        <EventCard
+                          key={(event as { id: string }).id}
+                          {...COLUMN_DEFINITIONS[key].transform(event)}
+                        />
+                      ),
+                    )}
+                  </div>
+                ))}
               </div>
             </section>
           ))}

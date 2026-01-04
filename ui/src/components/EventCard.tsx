@@ -18,7 +18,7 @@ export type EventLeg = {
   isFee: boolean;
 };
 
-type EventCardProps = {
+export type EventCardProps = {
   timestamp: string;
   eventType: string;
   place: string;

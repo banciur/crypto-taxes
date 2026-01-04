@@ -1,17 +1,20 @@
-const mapping = {
-  raw: "Raw events",
-  corrections: "Corrections",
-  corrected: "Corrected events",
+export const COLUMN_METADATA = {
+  raw: { label: "Raw events" },
+  corrections: { label: "Corrections" },
+  corrected: { label: "Corrected events" },
 } as const;
 
-export type ColumnKey = keyof typeof mapping;
+export type ColumnKey = keyof typeof COLUMN_METADATA;
 
 export const COLUMN_NAMES: ReadonlyMap<ColumnKey, string> = new Map(
-  Object.entries(mapping) as Array<[ColumnKey, string]>,
+  Object.entries(COLUMN_METADATA).map(([key, value]) => [
+    key as ColumnKey,
+    value.label,
+  ]),
 );
 
 export const AVAILABLE_COLUMNS: ReadonlySet<ColumnKey> = new Set(
-  Object.keys(mapping) as ColumnKey[],
+  Object.keys(COLUMN_METADATA) as ColumnKey[],
 );
 
 export const DEFAULT_COLUMN: ColumnKey = "corrected";
