@@ -1,11 +1,13 @@
-import { relations } from "drizzle-orm";
-
+import { relations } from "drizzle-orm/relations";
 import {
-  acquisitionLots,
-  disposalLinks,
   ledgerEvents,
   ledgerLegs,
-  taxEvents,
+  correctedLedgerEvents,
+  correctedLedgerLegs,
+  seedEvents,
+  seedEventLegs,
+  acquisitionLots,
+  disposalLinks,
 } from "./schema";
 
 export const ledgerLegsRelations = relations(ledgerLegs, ({ one, many }) => ({
@@ -13,15 +15,40 @@ export const ledgerLegsRelations = relations(ledgerLegs, ({ one, many }) => ({
     fields: [ledgerLegs.eventId],
     references: [ledgerEvents.id],
   }),
-  acquisitionLot: one(acquisitionLots, {
-    fields: [ledgerLegs.id],
-    references: [acquisitionLots.acquiredLegId],
-  }),
+  acquisitionLots: many(acquisitionLots),
   disposalLinks: many(disposalLinks),
 }));
 
 export const ledgerEventsRelations = relations(ledgerEvents, ({ many }) => ({
   ledgerLegs: many(ledgerLegs),
+}));
+
+export const correctedLedgerLegsRelations = relations(
+  correctedLedgerLegs,
+  ({ one }) => ({
+    correctedLedgerEvent: one(correctedLedgerEvents, {
+      fields: [correctedLedgerLegs.eventId],
+      references: [correctedLedgerEvents.id],
+    }),
+  }),
+);
+
+export const correctedLedgerEventsRelations = relations(
+  correctedLedgerEvents,
+  ({ many }) => ({
+    correctedLedgerLegs: many(correctedLedgerLegs),
+  }),
+);
+
+export const seedEventLegsRelations = relations(seedEventLegs, ({ one }) => ({
+  seedEvent: one(seedEvents, {
+    fields: [seedEventLegs.eventId],
+    references: [seedEvents.id],
+  }),
+}));
+
+export const seedEventsRelations = relations(seedEvents, ({ many }) => ({
+  seedEventLegs: many(seedEventLegs),
 }));
 
 export const acquisitionLotsRelations = relations(
@@ -43,18 +70,5 @@ export const disposalLinksRelations = relations(disposalLinks, ({ one }) => ({
   ledgerLeg: one(ledgerLegs, {
     fields: [disposalLinks.disposalLegId],
     references: [ledgerLegs.id],
-  }),
-}));
-
-export const taxEventsRelations = relations(taxEvents, ({ one }) => ({
-  // Tax events attach to a disposal link or acquisition lot via source_id.
-  // We keep it loose because both tables share the UUID domain.
-  disposalLink: one(disposalLinks, {
-    fields: [taxEvents.sourceId],
-    references: [disposalLinks.id],
-  }),
-  acquisitionLot: one(acquisitionLots, {
-    fields: [taxEvents.sourceId],
-    references: [acquisitionLots.id],
   }),
 }));

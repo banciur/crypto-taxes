@@ -28,30 +28,32 @@ class LedgerEventRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def create(self, event: LedgerEvent) -> LedgerEvent:
-        orm_event = models.LedgerEventOrm(
-            id=event.id,
-            timestamp=event.timestamp,
-            ingestion=event.ingestion,
-            event_type=event.event_type.value,
-            origin_location=event.origin.location.value,
-            origin_external_id=event.origin.external_id,
-        )
-        orm_event.legs = [
-            models.LedgerLegOrm(
-                id=leg.id,
-                asset_id=leg.asset_id,
-                quantity=leg.quantity,
-                wallet_id=leg.wallet_id,
-                is_fee=leg.is_fee,
+    def create_many(self, events: list[LedgerEvent]) -> list[LedgerEvent]:
+        orm_events: list[models.LedgerEventOrm] = []
+        for event in events:
+            orm_event = models.LedgerEventOrm(
+                id=event.id,
+                timestamp=event.timestamp,
+                ingestion=event.ingestion,
+                event_type=event.event_type.value,
+                origin_location=event.origin.location.value,
+                origin_external_id=event.origin.external_id,
             )
-            for leg in event.legs
-        ]
+            orm_event.legs = [
+                models.LedgerLegOrm(
+                    id=leg.id,
+                    asset_id=leg.asset_id,
+                    quantity=leg.quantity,
+                    wallet_id=leg.wallet_id,
+                    is_fee=leg.is_fee,
+                )
+                for leg in event.legs
+            ]
+            orm_events.append(orm_event)
 
-        self._session.add(orm_event)
+        self._session.add_all(orm_events)
         self._session.commit()
-        self._session.refresh(orm_event)
-        return self._to_domain(orm_event)
+        return events
 
     def get(self, event_id: LedgerEventId) -> LedgerEvent | None:
         orm_event = self._session.get(models.LedgerEventOrm, event_id)

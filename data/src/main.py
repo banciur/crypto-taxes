@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
+from time import perf_counter
 from typing import Sequence
 
 from corrections.seed_events import apply_seed_event_corrections
@@ -18,6 +20,7 @@ from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import WalletId
 from domain.wallet_balance_tracker import WalletBalanceTracker
 from importers.kraken import KrakenImporter
+from importers.moralis import MoralisImporter
 from importers.seed_events import load_seed_events
 from services.coindesk_source import CoinDeskSource
 from services.open_exchange_rates_source import OpenExchangeRatesSource
@@ -31,6 +34,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = PROJECT_ROOT.parent
 ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 DB_FILE = REPO_ROOT / "crypto_taxes.db"
+
+logger = logging.getLogger(__name__)
 
 
 def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int) -> PriceService:
@@ -55,6 +60,7 @@ def run(
     seed_csv: Path,
 ) -> None:
     # Setup components
+    logger.info("Initializing DB at %s", DB_FILE)
     session = init_db(reset=True, db_file=DB_FILE)
     event_repository = LedgerEventRepository(session)
     corrected_event_repository = CorrectedLedgerEventRepository(session)
@@ -67,27 +73,52 @@ def run(
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     engine = InventoryEngine(price_provider=price_service, wallet_balance_tracker=wallet_balance_tracker)
 
-    importer = KrakenImporter(str(csv_path))
+    kraken_importer = KrakenImporter(str(csv_path))
+    moralis_importer = MoralisImporter()
 
     owned_wallets: set[WalletId] = set()
     owned_wallets.add(KrakenImporter.WALLET_ID)
 
     # Get corrections
+    logger.info("Loading seed events from %s", seed_csv)
+    seed_started = perf_counter()
     seed_events = load_seed_events(seed_csv)
     seed_event_repository.create_many(seed_events)
+    logger.info("Loaded and stored %d seed events in %.2fs", len(seed_events), perf_counter() - seed_started)
 
     # Get raw events
-    events = importer.load_events()
+    logger.info("Importing Kraken events from %s", csv_path)
+    kraken_started = perf_counter()
+    kraken_events = kraken_importer.load_events()
+    logger.info("Imported %d Kraken events in %.2fs", len(kraken_events), perf_counter() - kraken_started)
+
+    logger.info("Importing Moralis events")
+    moralis_started = perf_counter()
+    moralis_events = moralis_importer.load_events()
+    logger.info("Imported %d Moralis events in %.2fs", len(moralis_events), perf_counter() - moralis_started)
+
+    events = [*kraken_events, *moralis_events]
     events.sort(key=lambda e: e.timestamp)
-    for event in events:
-        event_repository.create(event)
-    raw_events = event_repository.list()
+    logger.info("Persisting %d raw events", len(events))
+    persist_started = perf_counter()
+    event_repository.create_many(events)
+    logger.info("Persisted raw events in %.2fs", perf_counter() - persist_started)
 
     # Apply corrections
-    corrected_events = apply_seed_event_corrections(raw_events=raw_events, seed_events=seed_events)
+    logger.info("Applying seed event corrections to %d raw events", len(events))
+    corrections_started = perf_counter()
+    corrected_events = apply_seed_event_corrections(raw_events=events, seed_events=seed_events)
+    logger.info(
+        "Applied corrections: %d corrected events in %.2fs",
+        len(corrected_events),
+        perf_counter() - corrections_started,
+    )
 
     # Save corrections
+    logger.info("Persisting corrected events")
+    corrected_started = perf_counter()
     corrected_event_repository.create_many(corrected_events)
+    logger.info("Persisted corrected events in %.2fs", perf_counter() - corrected_started)
     return  # just for now
     # Process stuff
     inventory = engine.process(events)  # type: ignore[unreachable]
@@ -120,7 +151,6 @@ def print_base_inventory_summary(result: InventoryResult) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    # logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     parser = argparse.ArgumentParser(description="Run Kraken importer and inventory engine.")
     parser.add_argument("--csv", type=Path, default=ARTIFACTS_DIR / "kraken-ledger.csv")
     parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "kraken_prices")
@@ -138,4 +168,5 @@ def main(argv: Sequence[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     main()

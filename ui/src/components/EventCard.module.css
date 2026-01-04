@@ -1,0 +1,7 @@
+.leg {
+  span {
+    overflow-x: hidden;
+    white-space: nowrap;
+    font-size: 0.75rem;
+  }
+}

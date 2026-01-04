@@ -7,14 +7,16 @@
     "build": "next build",
     "start": "next start",
     "prettier": "prettier . --write",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "better-sqlite3": "^12.5.0",
     "bootstrap": ">=5.3.8 <6.0.0",
+    "clsx": "2.1.1",
     "drizzle-orm": "^0.45.0",
-    "next": "16.0.8",
+    "next": "16.1.0",
     "react": "19.2.1",
     "react-bootstrap": ">=3.0.0-beta.5 <4.0.0",
     "react-dom": "19.2.1"
@@ -29,5 +31,6 @@
     "eslint-config-prettier": "^10.1.8",
     "prettier": "3.7.4",
     "typescript": "^5"
-  }
+  },
+  "packageManager": "pnpm@10.26.1+sha512.664074abc367d2c9324fdc18037097ce0a8f126034160f709928e9e9f95d98714347044e5c3164d65bd5da6c59c6be362b107546292a8eecb7999196e5ce58fa"
 }

@@ -77,25 +77,23 @@ def corrected_repo(test_session: Session) -> CorrectedLedgerEventRepository:
 def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
     event = _sample_event("ext-1", datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
 
-    created = repo.create(event)
+    repo.create_many([event])
 
-    assert created.id == event.id
-    assert created.timestamp == event.timestamp
-    assert created.event_type == EventType.TRADE
-    assert created.origin.location == EventLocation.KRAKEN
-    assert len(created.legs) == 2
-    assert {leg.asset_id for leg in created.legs} == {"BTC", "EUR"}
-
-    fetched = repo.get(created.id)
-    assert fetched == created
+    fetched = repo.get(event.id)
+    assert fetched is not None
+    assert fetched.id == event.id
+    assert fetched.timestamp == event.timestamp
+    assert fetched.event_type == event.event_type
+    assert fetched.origin.location == event.origin.location
+    assert len(fetched.legs) == len(event.legs)
+    assert {leg.asset_id for leg in fetched.legs} == {leg.asset_id for leg in event.legs}
 
 
 def test_list_ledger_events(repo: LedgerEventRepository) -> None:
     first = _sample_event("first-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=timezone.utc))
     second = _sample_event("second-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc))
 
-    repo.create(first)
-    repo.create(second)
+    repo.create_many([first, second])
 
     records = repo.list()
 
@@ -104,14 +102,18 @@ def test_list_ledger_events(repo: LedgerEventRepository) -> None:
 
 
 def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: LedgerEventRepository) -> None:
-    acquisition_event = repo.create(_sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc)))
+    acquisition_event = _sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
+    repo.create_many([acquisition_event])
+    stored_acquisition_event = repo.get(acquisition_event.id)
+    assert stored_acquisition_event is not None
+
     lots = [
         AcquisitionLot(
-            acquired_leg_id=acquisition_event.legs[0].id,
+            acquired_leg_id=stored_acquisition_event.legs[0].id,
             cost_per_unit=Decimal("1.23"),
         ),
         AcquisitionLot(
-            acquired_leg_id=acquisition_event.legs[1].id,
+            acquired_leg_id=stored_acquisition_event.legs[1].id,
             cost_per_unit=Decimal("2.34"),
         ),
     ]
@@ -130,21 +132,29 @@ def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: Ledg
 def test_persist_disposal_links(
     disposal_repo: DisposalLinkRepository, lot_repo: AcquisitionLotRepository, repo: LedgerEventRepository
 ) -> None:
-    acquisition_event = repo.create(_sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc)))
+    acquisition_event = _sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
+    repo.create_many([acquisition_event])
+    stored_acquisition_event = repo.get(acquisition_event.id)
+    assert stored_acquisition_event is not None
+
     lots = [
         AcquisitionLot(
-            acquired_leg_id=acquisition_event.legs[0].id,
+            acquired_leg_id=stored_acquisition_event.legs[0].id,
             cost_per_unit=Decimal("1.23"),
         ),
         AcquisitionLot(
-            acquired_leg_id=acquisition_event.legs[1].id,
+            acquired_leg_id=stored_acquisition_event.legs[1].id,
             cost_per_unit=Decimal("2.34"),
         ),
     ]
     lot_repo.create_many(lots)
 
-    disposal_event = repo.create(_sample_event("disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=timezone.utc)))
-    disposal_leg_id = disposal_event.legs[0].id
+    disposal_event = _sample_event("disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=timezone.utc))
+    repo.create_many([disposal_event])
+    stored_disposal_event = repo.get(disposal_event.id)
+    assert stored_disposal_event is not None
+
+    disposal_leg_id = stored_disposal_event.legs[0].id
 
     links = [
         DisposalLink(

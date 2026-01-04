@@ -138,7 +138,7 @@ class SeedEventLegOrm(Base):
     __tablename__ = "seed_event_legs"
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
-    seed_event_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("seed_events.id"), nullable=False)
+    event_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("seed_events.id"), nullable=False)
     asset_id: Mapped[str] = mapped_column(String, nullable=False)
     quantity: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
     wallet_id: Mapped[str] = mapped_column(String, nullable=False)
