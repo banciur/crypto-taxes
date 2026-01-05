@@ -100,3 +100,4 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Entry point: `MoralisService.get_transactions(mode)` in `data/src/clients/moralis.py`; loads accounts from `artifacts/accounts.json`, ensures chains are synced, then returns all cached transactions ordered at the DB level.
 - Sync policy: supports `FRESH` (always refresh recent history) and `BUDGET` (skip chains already synced through yesterday; overlap by 1 day from the latest cached transaction when fetching).
 - Implementation and schema details live in `data/src/clients/AGENTS.md`.
+- Importer output currently covers ERC20 and native transfers, NFTs are ignored.

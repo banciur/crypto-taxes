@@ -1,20 +1,20 @@
 First stage: compute German taxes
 
-TODO: Improve how events are displayed in the UI.
- - change markup
- - Add:
-    - chains icons? with popup with chain name
-    - shortened tx id with clickable url to tracker
-    - tokens names
+TODO: On-chain events, Moralis:
+ - client is morels ready but importer just some vibed crap
+ - review client and accounts structure, also think about wallet id (address_chain)
+ - do we need native tokens
+ - handle fees
+ - code that creates legs for native and erc20 is similar
+ - do we need a token registry and mapping symbol to address and multichain addresses
+
+TODO: Improve EventCard
+ - chains icons, with popup with chain name
+ - shortened tx id with clickable url to tracker
+ - tokens names?
 
 TODO: Properly order columns now it depends on order in the URL
 TODO: Current UI is slow when there are many events.
-
-TODO: On-chain events, Moralis
- - not finished with a break for the UI.
- - client is morels ready but importer just some vibed crap
- - review client and accounts structure, also think about wallet id (address_chain)
- - do we need native tokens?
 
 TODO: Manual adjustments to mark and filter out spam transactions.
 TODO: Create layout where I can choose which columns to display by checkboxes. Group by date
@@ -80,6 +80,8 @@ Codex commands
 npm list -g @openai/codex
 npm install -g @openai/codex@latest
 https://github.com/openai/codex/releases
+
+npm list -g @openai/codex && npm install -g @openai/codex@latest && npm list -g @openai/codex && codex
 
 Libraries docs
 ------------------
