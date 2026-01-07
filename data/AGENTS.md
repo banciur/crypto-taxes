@@ -23,7 +23,7 @@
 - Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `origin`/`ingestion` metadata.
 - Current importers:
   - Kraken CSV ledger: `src/importers/kraken/kraken_importer.py`
-  - on-chain trancations through Moralis service (ERC20-only currently): `src/importers/moralis/moralis_importer.py` 
+  - on-chain transactions through Moralis service: `src/importers/moralis/moralis_importer.py`
   - Seed CSV events (for missing history): `src/importers/seed_events.py` loads `SeedEvent`s from `artifacts/seed_lots.csv` (corrections layer, not `LedgerEvent`s).
 
 ### Running commands and scripts with uv
