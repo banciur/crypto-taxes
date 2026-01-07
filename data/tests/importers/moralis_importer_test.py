@@ -13,13 +13,20 @@ WALLET = WalletAddress("0x3c9219f44ead8154dee4e0854d67601fc2334c67")
 SENDER = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
 
 
-def _build_tx(*, native_transfers: list[dict[str, object]]) -> dict[str, object]:
+def _build_tx(
+    *,
+    native_transfers: list[dict[str, object]],
+    from_address: str = SENDER,
+    transaction_fee: str = "0",
+) -> dict[str, object]:
     return {
         "block_timestamp": BLOCK_TS,
         "chain": CHAIN,
         "hash": TX_HASH,
+        "from_address": from_address,
         "native_transfers": native_transfers,
         "erc20_transfers": [],
+        "transaction_fee": transaction_fee,
     }
 
 
@@ -81,3 +88,24 @@ def test_native_transfer_dedupes_internal_and_external() -> None:
     assert event is not None
     assert len(event.legs) == 1
     assert event.legs[0].quantity == amount
+
+
+def test_fee_leg_added_for_outgoing_tx() -> None:
+    fee = Decimal("0.0025")
+    tx = _build_tx(
+        native_transfers=[],
+        from_address=WALLET,
+        transaction_fee=str(fee),
+    )
+
+    importer = MoralisImporter.__new__(MoralisImporter)
+    event = importer._build_event(tx, {WALLET})
+
+    assert event is not None
+    assert event.event_type == EventType.OPERATION
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.asset_id == AssetId("ETH")
+    assert leg.quantity == -fee
+    assert leg.wallet_id == WALLET
+    assert leg.is_fee is True

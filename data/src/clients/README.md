@@ -12,11 +12,4 @@
 - Types: `ChainId`/`WalletAddress` are `NewType(str, ...)`; accounts are `{"address": ..., "chains": [...]}`.
 
 ## Moralis → LedgerEvent parsing (current)
-- Inputs: cached transaction payloads from `get_transactions` (include added `chain`), wallet addresses from `artifacts/accounts.json` (lowercased for matching).
-- Event envelope: one `LedgerEvent` per tx hash; `timestamp` from `block_timestamp` (UTC); `ingestion="moralis"`; `origin_external_id`=hash; `origin_location` via chain→EventLocation map.
-- Transfers handled now: ERC20 (asset id = contract) and native (asset id = `ETH`, asserts if a non-ETH symbol appears). NFT transfers are ignored. Outgoing if `from_address` is ours and `to_address` not ours; incoming if `to_address` is ours and `from_address` not ours.
-- Self transfers: if a transaction has both outgoing and incoming involving our wallets, treat the whole tx as a trade (emit both legs accordingly).
-- EventType: if both incoming and outgoing transfers → `TRADE`; only incoming → `REWARD`; only outgoing → `WITHDRAWAL`. If no transfers/legs, drop the tx.
-- Asset mapping: native asset per chain (ETH for ethereum, arbitrum, optimism, base). ERC20 decimals from `token_decimals` to scale `value`/`value_formatted` into `Decimal`.
-- Quantities: use `value_formatted` when present, else `Decimal(value)`; always `Decimal`.
-- Normalize addresses lower-case for comparisons; keep payload in cache for traceability.
+- Parsing rules live in `data/src/importers/moralis/README.md`.

@@ -100,7 +100,7 @@ class MoralisImporter:
         events.sort(key=lambda evt: evt.timestamp)
         return events
 
-    def _build_event(self, tx: dict[str, Any], my_wallet_addresses: set[WalletAddress]) -> LedgerEvent:
+    def _build_event(self, tx: dict[str, Any], my_wallet_addresses: set[WalletAddress]) -> LedgerEvent | None:
         legs: list[LedgerLeg] = []
 
         has_incoming = False
@@ -185,16 +185,31 @@ class MoralisImporter:
                 )
                 has_incoming = True
 
-        if not legs:
-            # This is incorrect as after fees this won't be the case
+        from_addr_tx = tx["from_address"].lower()
+        is_my_tx = from_addr_tx in my_wallet_addresses
+        if is_my_tx:
+            fee = Decimal(str(tx["transaction_fee"]))
+            assert fee.is_normal(), f"Unexpected transaction_fee: {tx['transaction_fee']}"
+            legs.append(
+                LedgerLeg(
+                    asset_id=NATIVE_ASSET_ID,
+                    quantity=-fee,
+                    wallet_id=WalletId(from_addr_tx),
+                    is_fee=True,
+                )
+            )
+
+        if has_incoming and has_outgoing:
+            event_type = EventType.TRADE
+        elif has_incoming:
+            event_type = EventType.REWARD
+        elif has_outgoing:
+            event_type = EventType.WITHDRAWAL
+        elif is_my_tx:
             event_type = EventType.OPERATION
         else:
-            if has_incoming and has_outgoing:
-                event_type = EventType.TRADE
-            elif has_incoming:
-                event_type = EventType.REWARD
-            else:
-                event_type = EventType.WITHDRAWAL
+            # This could be NFT drop probably (probably spam)
+            return None
 
         return LedgerEvent(
             timestamp=_parse_timestamp(str(tx["block_timestamp"])),
