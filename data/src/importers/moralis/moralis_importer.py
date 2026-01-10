@@ -124,7 +124,6 @@ class MoralisImporter:
                 continue
 
             quantity = _obtain_value(transfer)
-
             if quantity == 0:
                 continue
 
@@ -158,11 +157,10 @@ class MoralisImporter:
                 continue
 
             quantity = _obtain_value(transfer)
-
-            if quantity is None or quantity == 0:
+            if quantity == 0:
                 continue
 
-            asset_id = AssetId(transfer["address"].lower())
+            asset_id = AssetId(transfer["token_symbol"] if transfer["token_symbol"] else transfer["address"])
 
             if ours_from:
                 legs.append(

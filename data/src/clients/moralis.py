@@ -96,6 +96,7 @@ class MoralisService:
         self.accounts_path = accounts_path or DEFAULT_ACCOUNTS_PATH
 
     def _persist(self, chain: ChainId, records: Iterable[dict[str, Any]]) -> None:
+        # TODO: there is property "chain": "optimism" in the record. Remove chain parameter
         rows: list[dict[str, object]] = []
         for record in records:
             block_timestamp = _parse_block_timestamp(str(record["block_timestamp"]))

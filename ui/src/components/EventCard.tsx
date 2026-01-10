@@ -22,6 +22,7 @@ export type EventCardProps = {
   timestamp: string;
   eventType: string;
   place: string;
+  txHash: string;
   legs: EventLeg[];
 };
 
@@ -29,6 +30,7 @@ export function EventCard({
   timestamp,
   eventType,
   place,
+  txHash,
   legs,
 }: EventCardProps) {
   const timestampLabel = new Date(timestamp).toLocaleString("en-GB", {
@@ -54,6 +56,7 @@ export function EventCard({
         <span className="ms-auto text-muted small">{place}</span>
       </CardHeader>
       <CardBody>
+        <p>tx: { txHash } </p>
         <ListGroup variant="flush" className="border rounded">
           {legs.map((leg) => (
             <ListGroupItem

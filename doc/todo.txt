@@ -1,31 +1,28 @@
 First stage: compute German taxes
 
-TODO: On-chain events, Moralis:
- - client is morels ready but importer just some vibed crap
- - review client and accounts structure, also think about wallet id (address_chain)
- - do we need native tokens
- - handle fees
- - code that creates legs for native and erc20 is similar
- - do we need a token registry and mapping symbol to address and multichain addresses
-
 TODO: Improve EventCard
  - chains icons, with popup with chain name
  - shortened tx id with clickable url to tracker
+ - shortened address elispsis and popup with full address
  - tokens names?
 
 TODO: Properly order columns now it depends on order in the URL
 TODO: Current UI is slow when there are many events.
 
+TODO: Go back to backend side na Moralis importer:
+ - sync and track by address and chain not only chain
+ - review client and accounts structure, also think about wallet id (address_chain)
+ - code that creates legs for native and erc20 is similar to one for native transfers we could improve
+ - do we need a token registry and mapping symbol to address and multichain address?
+
 TODO: Manual adjustments to mark and filter out spam transactions.
-TODO: Create layout where I can choose which columns to display by checkboxes. Group by date
 
 TODO: I think I need standard api backend and ditching drizzle completely.
 TODO: Fix codex not being able to run pnpm commands
 TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
 TODO: Correct drizzle flow. Why it has some wrong types and I had to adjust it mannually prepare Agents info about this. Command `pnpm drizzle-kit introspect --config drizzle.config.ts`
 
-
-TODO: we will end with multiple ledger legs tables - maybe combine them into one with a discriminator column?
+TODO: we will end with multiple ledger legs tables in the database - maybe combine them into one with a discriminator column?
 
 TODO: additional correction elements
  - mark spam events (can be automatic?)
