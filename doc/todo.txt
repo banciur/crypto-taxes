@@ -1,9 +1,10 @@
 First stage: compute German taxes
 
 TODO: Improve EventCard
- - chains icons, with popup with chain name
  - shortened tx id with clickable url to tracker
  - shortened address elispsis and popup with full address
+ - add popup with place of transaction place name
+ - recognize my own wallets on legs and don't use address but name
  - tokens names?
 
 TODO: Properly order columns now it depends on order in the URL

@@ -34,8 +34,11 @@ export function EventCard({
   txHash,
   legs,
 }: EventCardProps) {
-  const timestampLabel = new Date(timestamp).toLocaleString("en-GB", {
+  const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
     timeZone: "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
   const legQuantityClassName = (leg: EventLeg) => {
     if (leg.isFee) {

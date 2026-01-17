@@ -2,7 +2,6 @@ import Image from "next/image";
 
 import { CHAIN_METADATA, type ChainKey } from "@/consts";
 
-
 export type ChainIconProps = {
   place: string;
   size?: number;
