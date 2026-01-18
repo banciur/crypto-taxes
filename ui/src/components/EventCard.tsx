@@ -10,6 +10,7 @@ import {
 import { clsx } from "clsx";
 import styles from "./EventCard.module.css";
 import { ChainIcon } from "@/components/ChainIcon";
+import { TxHash } from "@/components/TxHash";
 
 export type EventLeg = {
   id: string;
@@ -56,11 +57,13 @@ export function EventCard({
     <Card className="shadow-sm">
       <CardHeader className="d-flex flex-wrap align-items-center gap-2">
         <Badge className="text-uppercase">{eventType}</Badge>
+        {txHash && (
+          <TxHash hash={txHash} place={place} className="text-muted small" />
+        )}
         <span className="text-muted small">{timestampLabel}</span>
         <ChainIcon place={place} className="ms-auto flex-shrink-0" />
       </CardHeader>
       <CardBody>
-        <p>tx: {txHash} </p>
         <ListGroup variant="flush" className="border rounded">
           {legs.map((leg) => (
             <ListGroupItem
