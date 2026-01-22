@@ -1,13 +1,16 @@
 First stage: compute German taxes
 
+TODO: Fast API backend
+
 TODO: Improve EventCard
- - shortened tx id with clickable url to tracker
- - shortened address elispsis and popup with full address
- - add popup with place of transaction place name
+ - don't use "hash" name in the event card, for kraken and coinbase those are not tx hashes. Also rename TxHash to something else.
+ - handle size of place, mighe stop be relevant after migration to fast api
+ - shortened address elispsis and popup with full address?
+ - add popup with place of transaction place name?
  - recognize my own wallets on legs and don't use address but name
  - tokens names?
 
-TODO: Properly order columns now it depends on order in the URL
+TODO: Properly order columns, now it depends on order in the URL
 TODO: Current UI is slow when there are many events.
 
 TODO: Go back to backend side na Moralis importer:

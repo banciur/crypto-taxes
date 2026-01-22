@@ -22,7 +22,7 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
     transform: (obj: LedgerEventWithLegs) => ({
       timestamp: obj.timestamp,
       eventType: obj.eventType,
-      place: obj.originLocation,
+      place: obj.originLocation.toLowerCase(),
       txHash: obj.originExternalId,
       legs: obj.ledgerLegs,
     }),

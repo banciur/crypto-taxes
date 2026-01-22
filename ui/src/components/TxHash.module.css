@@ -1,0 +1,38 @@
+.container {
+  display: inline-flex;
+  align-items: center;
+}
+
+.copyButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--bs-secondary-color);
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.copyButton svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  display: block;
+}
+
+.copyButtonCopied {
+  color: #198754;
+  transform: scale(1.1);
+}
+
+.popoverBody {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.popover {
+  width: max-content;
+  max-width: min(90vw, 48rem);
+}
