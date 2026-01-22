@@ -9,6 +9,8 @@ import {
 
 import { clsx } from "clsx";
 import styles from "./EventCard.module.css";
+import { ChainIcon } from "@/components/ChainIcon";
+import { TxHash } from "@/components/TxHash";
 
 export type EventLeg = {
   id: string;
@@ -22,6 +24,7 @@ export type EventCardProps = {
   timestamp: string;
   eventType: string;
   place: string;
+  txHash: string;
   legs: EventLeg[];
 };
 
@@ -29,10 +32,14 @@ export function EventCard({
   timestamp,
   eventType,
   place,
+  txHash,
   legs,
 }: EventCardProps) {
-  const timestampLabel = new Date(timestamp).toLocaleString("en-GB", {
+  const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
     timeZone: "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
   const legQuantityClassName = (leg: EventLeg) => {
     if (leg.isFee) {
@@ -50,8 +57,11 @@ export function EventCard({
     <Card className="shadow-sm">
       <CardHeader className="d-flex flex-wrap align-items-center gap-2">
         <Badge className="text-uppercase">{eventType}</Badge>
+        {txHash && (
+          <TxHash hash={txHash} place={place} className="text-muted small" />
+        )}
         <span className="text-muted small">{timestampLabel}</span>
-        <span className="ms-auto text-muted small">{place}</span>
+        <ChainIcon place={place} className="ms-auto flex-shrink-0" />
       </CardHeader>
       <CardBody>
         <ListGroup variant="flush" className="border rounded">
