@@ -8,10 +8,10 @@ from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint,
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
+from config import ARTIFACTS_DIR
 from domain.ledger import ChainId
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CACHE_DB_PATH = REPO_ROOT / "artifacts" / "transactions_cache.db"
+CACHE_DB_PATH = ARTIFACTS_DIR / "transactions_cache.db"
 
 
 class TransactionsCacheBase(DeclarativeBase):
