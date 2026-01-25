@@ -91,6 +91,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - CLI inventory summary aggregates quantities and EUR values per asset across owned wallets (no tax-free window split).
 - Tax events cover disposals inside the 1-year window and `REWARD` acquisitions taxed at receipt using their EUR value.
 - CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
+- There is UI in progress to visualize the data. It collects data via the FastAPI service in `data/src/api/`.
 
 ---
 

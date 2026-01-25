@@ -6,7 +6,7 @@ Treat other files under `doc/` as background/templates unless explicitly referen
 
 ## Repository layout
 - `data/`: Python project (domain, ingestion/importers, transforms, tests, DB schema).
-- `ui/`: Next.js app (presentation and inspection against the local DB).
+- `ui/`: Next.js app (presentation layer consuming the data API).
 - `doc/`: canonical domain reference and supporting notes/templates.
 - `artifacts/`: local-only inputs/outputs and caches (e.g., `accounts.json`, `seed_lots.csv`, transaction caches).
 
@@ -15,8 +15,9 @@ Treat other files under `doc/` as background/templates unless explicitly referen
 - When reading unfamiliar code, check for `README.md` in the current directory and then walk upward toward the repo root, reading any `README.md` files on that direct path for additional context.
 
 ## Component interface (data ↔ ui)
-- Shared contract: the SQLite database file `crypto_taxes.db` at the repo root.
-- Schema source of truth: SQLAlchemy models under `data/`. The UI should treat the schema as read-only and avoid introducing a divergent model.
+- Shared contract: FastAPI endpoints exposed by `data/src/api/`.
+- Base URL is configured via `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000` for local dev).
+- Event endpoints: `GET /raw-events`, `GET /seed-events`, `GET /corrected-events`.
 
 ## Docs and drift control
 - When changing domain semantics, ingestion behavior, DB schema, or UI expectations, update `doc/CURRENT.md` and any relevant `AGENTS.md` files to keep the “how to work here” guidance accurate.

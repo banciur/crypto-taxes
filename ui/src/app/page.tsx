@@ -1,3 +1,5 @@
+import { performance } from "node:perf_hooks";
+
 import { Container } from "react-bootstrap";
 
 import { COLUMNS_PARAM_NAME } from "@/consts";
@@ -10,6 +12,13 @@ import { LedgerEventsView } from "@/components/LedgerEventsView";
 
 const dateKeyFor = (timestamp: string) =>
   new Date(timestamp).toISOString().slice(0, 10);
+
+const formatDuration = (durationMs: number) => {
+  if (durationMs < 1000) {
+    return `${Math.round(durationMs)} ms`;
+  }
+  return `${(durationMs / 1000).toFixed(2)} s`;
+};
 
 const groupEventsByDate = <T extends { timestamp: string }>(events: T[]) => {
   const eventsByDate: Record<string, T[]> = {};
@@ -31,11 +40,17 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const query = await searchParams;
   const selectedColumns = resolveSelectedColumns(query[COLUMNS_PARAM_NAME]);
 
+  const loadStart = performance.now();
+
   const loadedColumns = await Promise.all(
     selectedColumns.values().map(async (key) => ({
       key,
       events: await COLUMN_DEFINITIONS[key].load(),
     })),
+  );
+
+  console.log(
+    `Data fetch took: ${formatDuration(performance.now() - loadStart)}`,
   );
 
   const eventsByDateByColumn = new Map(
