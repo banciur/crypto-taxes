@@ -11,11 +11,8 @@
     "types": "tsc --noEmit"
   },
   "dependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "better-sqlite3": "^12.5.0",
     "bootstrap": ">=5.3.8 <6.0.0",
     "clsx": "2.1.1",
-    "drizzle-orm": "^0.45.0",
     "next": "16.1.0",
     "react": "19.2.1",
     "react-bootstrap": ">=3.0.0-beta.5 <4.0.0",
@@ -25,12 +22,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "drizzle-kit": "^0.31.8",
     "eslint": "^9",
     "eslint-config-next": "16.0.8",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "3.7.4",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@10.26.1+sha512.664074abc367d2c9324fdc18037097ce0a8f126034160f709928e9e9f95d98714347044e5c3164d65bd5da6c59c6be362b107546292a8eecb7999196e5ce58fa"
+  "packageManager": "pnpm@10.28.1+sha512.7d7dbbca9e99447b7c3bf7a73286afaaf6be99251eb9498baefa7d406892f67b879adb3a1d7e687fc4ccc1a388c7175fbaae567a26ab44d1067b54fcb0d6a316"
 }

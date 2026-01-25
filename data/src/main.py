@@ -6,6 +6,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Sequence
 
+from config import ARTIFACTS_DIR, DB_FILE, PROJECT_ROOT
 from corrections.seed_events import apply_seed_event_corrections
 from db.db import init_db
 from db.repositories import (
@@ -29,11 +30,6 @@ from services.price_sources import HybridPriceSource
 from services.price_store import JsonlPriceStore
 from utils.inventory_summary import compute_inventory_summary, render_inventory_summary
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-REPO_ROOT = PROJECT_ROOT.parent
-ARTIFACTS_DIR = REPO_ROOT / "artifacts"
-DB_FILE = REPO_ROOT / "crypto_taxes.db"
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +57,7 @@ def run(
 ) -> None:
     # Setup components
     logger.info("Initializing DB at %s", DB_FILE)
-    session = init_db(reset=True, db_file=DB_FILE)
+    session = init_db(reset=True, db_path=DB_FILE)
     event_repository = LedgerEventRepository(session)
     corrected_event_repository = CorrectedLedgerEventRepository(session)
     seed_event_repository = SeedEventRepository(session)

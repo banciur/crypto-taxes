@@ -6,12 +6,11 @@ from sqlalchemy.orm import Session, sessionmaker
 from db.models import Base
 
 
-def init_db(echo: bool = False, *, db_file: str | Path = "crypto_taxes.db", reset: bool = False) -> Session:
-    path = Path(db_file)
-    if reset and path.exists():
-        path.unlink()
+def init_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
+    if reset and db_path.exists():
+        db_path.unlink()
 
-    engine: Engine = create_engine(f"sqlite:///{path}", echo=echo)
+    engine: Engine = create_engine(f"sqlite:///{db_path}", echo=echo)
 
     Base.metadata.create_all(engine)
     return sessionmaker(engine)()

@@ -15,6 +15,9 @@ code_fix: lint_fix types ## lint and format the code
 deps: ## install dependencies
 	uv sync --group dev
 
+dev: ## starts api server in dev mode
+	uv run fastapi dev src/api/api.py
+
 lint_check: ## code quality tools: format, lint
 	uv run --group dev ruff check
 	uv run --group dev ruff format --check

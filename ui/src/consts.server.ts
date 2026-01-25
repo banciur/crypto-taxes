@@ -1,50 +1,55 @@
 import "server-only";
 
 import {
-  getCorrectedLedgerEvents,
-  getLedgerEvents,
+  getCorrectedEvents,
+  getRawEvents,
   getSeedEvents,
-  type CorrectedLedgerEventWithLegs,
-  type LedgerEventWithLegs,
-  type SeedEventWithLegs,
-} from "@/db/client";
+  type ApiLedgerEvent,
+  type ApiLedgerLeg,
+  type ApiSeedEvent,
+} from "@/api/events";
 import { ColumnKey } from "@/consts";
-import { EventCardProps } from "@/components/EventCard";
+import { EventCardProps, type EventLeg } from "@/components/EventCard";
 
 type ColumnDefinition = {
   load: () => Promise<any[]>; // eslint-disable-line @typescript-eslint/no-explicit-any
   transform: (obj: any) => EventCardProps; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
 
+const mapLegs = (legs: ApiLedgerLeg[]): EventLeg[] =>
+  legs.map((leg) => ({
+    id: leg.id,
+    assetId: leg.asset_id,
+    walletId: leg.wallet_id,
+    quantity: leg.quantity,
+    isFee: leg.is_fee,
+  }));
+
+const mapLedgerEvent = (event: ApiLedgerEvent): EventCardProps => ({
+  timestamp: event.timestamp,
+  eventType: event.event_type,
+  place: event.origin.location.toLowerCase(),
+  txHash: event.origin.external_id,
+  legs: mapLegs(event.legs),
+});
+
 export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   raw: {
-    load: getLedgerEvents,
-    transform: (obj: LedgerEventWithLegs) => ({
-      timestamp: obj.timestamp,
-      eventType: obj.eventType,
-      place: obj.originLocation.toLowerCase(),
-      txHash: obj.originExternalId,
-      legs: obj.ledgerLegs,
-    }),
+    load: getRawEvents,
+    transform: (event: ApiLedgerEvent) => mapLedgerEvent(event),
   },
   corrections: {
     load: getSeedEvents,
-    transform: (obj: SeedEventWithLegs) => ({
-      timestamp: obj.timestamp,
+    transform: (event: ApiSeedEvent) => ({
+      timestamp: event.timestamp,
       eventType: "seed",
       place: "",
       txHash: "",
-      legs: obj.seedEventLegs,
+      legs: mapLegs(event.legs),
     }),
   },
   corrected: {
-    load: getCorrectedLedgerEvents,
-    transform: (obj: CorrectedLedgerEventWithLegs) => ({
-      timestamp: obj.timestamp,
-      eventType: obj.eventType,
-      place: obj.originLocation.toLowerCase(),
-      txHash: obj.originExternalId,
-      legs: obj.correctedLedgerLegs,
-    }),
+    load: getCorrectedEvents,
+    transform: (event: ApiLedgerEvent) => mapLedgerEvent(event),
   },
 } as const;
