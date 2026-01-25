@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
-from typing import Annotated, AsyncGenerator
+from time import perf_counter
+from typing import Annotated, AsyncGenerator, Awaitable, Callable
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request, Response
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -21,6 +22,15 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def print_process_time(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    start_time = perf_counter()
+    response = await call_next(request)
+    process_time = perf_counter() - start_time
+    print(f"Request time: {request.method} {request.url}: {process_time:.4f}s")
+    return response
 
 
 @app.get("/raw-events")
