@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Badge,
   Card,
@@ -11,22 +13,7 @@ import { clsx } from "clsx";
 import styles from "./EventCard.module.css";
 import { ChainIcon } from "@/components/ChainIcon";
 import { TxHash } from "@/components/TxHash";
-
-export type EventLeg = {
-  id: string;
-  assetId: string;
-  walletId: string;
-  quantity: string;
-  isFee: boolean;
-};
-
-export type EventCardProps = {
-  timestamp: string;
-  eventType: string;
-  place: string;
-  txHash: string;
-  legs: EventLeg[];
-};
+import type { EventCardProps, EventLeg } from "@/types/events";
 
 export function EventCard({
   timestamp,

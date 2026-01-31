@@ -1,14 +1,17 @@
 import { performance } from "node:perf_hooks";
 
-import { Container } from "react-bootstrap";
+import { Col, Container, Row } from "react-bootstrap";
 
-import { COLUMNS_PARAM_NAME } from "@/consts";
-import { EventCard } from "@/components/EventCard";
+import { ColumnKey, COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
 import { COLUMN_DEFINITIONS } from "@/consts.server";
+import type { LedgerDateSection } from "@/types/events";
 
 import styles from "./page.module.css";
 import { LedgerEventsView } from "@/components/LedgerEventsView";
+import { ColumnChooser } from "@/components/ColumnChooser";
+import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext";
+import { DateChooser } from "@/components/DateChooser";
 
 const dateKeyFor = (timestamp: string) =>
   new Date(timestamp).toISOString().slice(0, 10);
@@ -38,14 +41,18 @@ const groupEventsByDate = <T extends { timestamp: string }>(events: T[]) => {
 
 export default async function Home({ searchParams }: PageProps<"/">) {
   const query = await searchParams;
-  const selectedColumns = resolveSelectedColumns(query[COLUMNS_PARAM_NAME]);
+  const selectedColumns = Array.from(
+    resolveSelectedColumns(query[COLUMNS_PARAM_NAME]),
+  );
 
   const loadStart = performance.now();
 
   const loadedColumns = await Promise.all(
-    selectedColumns.values().map(async (key) => ({
+    selectedColumns.map(async (key) => ({
       key,
-      events: await COLUMN_DEFINITIONS[key].load(),
+      events: (await COLUMN_DEFINITIONS[key].load()).map(
+        COLUMN_DEFINITIONS[key].transform,
+      ),
     })),
   );
 
@@ -53,25 +60,73 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     `Data fetch took: ${formatDuration(performance.now() - loadStart)}`,
   );
 
-  const eventsByDateByColumn = new Map(
-    loadedColumns.map(({ key, events }) => [key, groupEventsByDate(events)]),
+  // Transforming loadedColumns into a structure that matches how the UI renders.
+  const unorderedEventsByDate = loadedColumns.reduce(
+    (acc, { key, events }) => {
+      const groupedByDate = groupEventsByDate(events);
+      for (const [dateKey, dateEvents] of Object.entries(groupedByDate)) {
+        const bucket = acc[dateKey];
+        if (bucket) {
+          bucket[key] = dateEvents;
+        } else {
+          acc[dateKey] = { [key]: dateEvents };
+        }
+      }
+      return acc;
+    },
+    {} as Record<string, Partial<Record<ColumnKey, object[]>>>,
   );
 
-  const orderedDates = Array.from(
-    new Set(
-      loadedColumns.flatMap(({ key }) =>
-        Object.keys(eventsByDateByColumn.get(key)!),
-      ),
-    ),
-  ).sort((a, b) => b.localeCompare(a));
+  const orderedDates = Object.keys(unorderedEventsByDate).sort((a, b) =>
+    b.localeCompare(a),
+  );
 
-  const dateSections = orderedDates.map((dateKey) => ({
-    key: dateKey,
-    count: loadedColumns.reduce((total, { key }) => {
-      const eventsByDate = eventsByDateByColumn.get(key)!;
-      return total + (eventsByDate[dateKey]?.length ?? 0);
-    }, 0),
-  }));
+  const eventsByDate = orderedDates.reduce(
+    (acc, dateKey) => {
+      acc[dateKey] = unorderedEventsByDate[dateKey];
+      return acc;
+    },
+    {} as Record<string, Partial<Record<ColumnKey, object[]>>>,
+  );
+
+  const eventCountsByDate = orderedDates.reduce(
+    (acc, dateKey) => {
+      acc[dateKey] = selectedColumns.reduce(
+        (total, columnKey) =>
+          total + (eventsByDate[dateKey][columnKey]?.length ?? 0),
+        0,
+      );
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  // const eventsByDateByColumn = new Map(
+  //   loadedColumns.map(({ key, events }) => [key, groupEventsByDate(events)]),
+  // );
+  //
+  // const orderedDates = Array.from(
+  //   new Set(
+  //     loadedColumns.flatMap(({ key }) =>
+  //       Object.keys(eventsByDateByColumn.get(key)!),
+  //     ),
+  //   ),
+  // ).sort((a, b) => b.localeCompare(a));
+
+  // const sections: LedgerDateSection[] = orderedDates.map((dateKey) => {
+  //   const columns = selectedColumns.map((key) => ({
+  //     key,
+  //     events: eventsByDateByColumn.get(key)![dateKey] ?? [],
+  //   }));
+  //   const count = columns.reduce(
+  //     (total, column) => total + column.events.length,
+  //     0,
+  //   );
+  //
+  //   return { key: dateKey, count, columns };
+  // });
+
+  // const dateSections = sections.map(({ key, count }) => ({ key, count }));
 
   return (
     <div className={styles.layoutContainer}>
@@ -80,31 +135,23 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       </header>
 
       <Container fluid className={styles.layoutContent}>
-        <LedgerEventsView dateSections={dateSections}>
-          {orderedDates.map((dateKey) => (
-            <section
-              id={`day-${dateKey}`}
-              key={dateKey}
-              className="mb-4 pb-3 border-bottom"
-            >
-              <h5>{dateKey}</h5>
-              <div className="row">
-                {Array.from(selectedColumns).map((key) => (
-                  <div className={`col-${12 / selectedColumns.size}`} key={key}>
-                    {(eventsByDateByColumn.get(key)![dateKey] ?? []).map(
-                      (event) => (
-                        <EventCard
-                          key={(event as { id: string }).id}
-                          {...COLUMN_DEFINITIONS[key].transform(event)}
-                        />
-                      ),
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
-        </LedgerEventsView>
+        <UrlColumnSelectionProvider>
+          <Row className={styles.layoutRow}>
+            <Col xs={2} className={styles.layoutColumn}>
+              <ColumnChooser />
+              <DateChooser dates={eventCountsByDate} />
+            </Col>
+            <Col xs={10} className={styles.layoutColumn}>
+              <p>no hejka</p>
+            </Col>
+          </Row>
+        </UrlColumnSelectionProvider>
+
+        {/*<LedgerEventsView*/}
+        {/*  dateSections={dateSections}*/}
+        {/*  sections={sections}*/}
+        {/*  columnCount={selectedColumns.length}*/}
+        {/*/>*/}
       </Container>
     </div>
   );

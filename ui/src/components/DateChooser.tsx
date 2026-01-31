@@ -8,7 +8,7 @@ import { ListGroup } from "react-bootstrap";
 type DateEntry = { key: string; count: number };
 
 type DateChooserProps = {
-  dates: DateEntry[];
+  dates: Record<string, number>;
 };
 
 type MonthNode = {
@@ -25,23 +25,23 @@ type YearNode = {
   months: MonthNode[];
 };
 
-function buildHierarchy(dates: DateEntry[]): YearNode[] {
+function buildHierarchy(dates: Record<string, number>): YearNode[] {
   const years: YearNode[] = [];
   const yearsByKey = new Map<
     string,
     { year: YearNode; monthsByKey: Map<string, MonthNode> }
   >();
 
-  for (const day of dates) {
-    const yearKey = day.key.slice(0, 4);
-    const monthKey = day.key.slice(0, 7);
+  for (const [key, count] of Object.entries(dates)) {
+    const yearKey = key.slice(0, 4);
+    const monthKey = key.slice(0, 7);
 
     let yearEntry = yearsByKey.get(yearKey);
     if (!yearEntry) {
       const yearNode: YearNode = {
         key: yearKey,
         count: 0,
-        topDayKey: day.key,
+        topDayKey: key,
         months: [],
       };
       yearEntry = { year: yearNode, monthsByKey: new Map() };
@@ -51,14 +51,14 @@ function buildHierarchy(dates: DateEntry[]): YearNode[] {
 
     let monthNode = yearEntry.monthsByKey.get(monthKey);
     if (!monthNode) {
-      monthNode = { key: monthKey, count: 0, topDayKey: day.key, days: [] };
+      monthNode = { key: monthKey, count: 0, topDayKey: key, days: [] };
       yearEntry.monthsByKey.set(monthKey, monthNode);
       yearEntry.year.months.push(monthNode);
     }
 
-    monthNode.days.push(day);
-    monthNode.count += day.count;
-    yearEntry.year.count += day.count;
+    monthNode.days.push({ key, count });
+    monthNode.count += count;
+    yearEntry.year.count += count;
   }
 
   return years;
