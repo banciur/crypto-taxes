@@ -2,8 +2,7 @@ First stage: compute German taxes
 
 
 TODO: Making it faster
- - Properly order columns, now it depends on order in the URL
- - Add scrolling
+ - Add scrolling on click
  - Some styling improvements
  - Fix lint errors
 

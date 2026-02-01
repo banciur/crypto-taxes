@@ -1,7 +1,9 @@
 "use client";
 
-import type { ColumnKey } from "@/consts";
 import { useMemo, useRef } from "react";
+
+import type { ColumnKey } from "@/consts";
+import { orderColumnKeys } from "@/consts";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EventCard } from "@/components/EventCard";
@@ -18,6 +20,11 @@ export function Events({ eventsByDate }: EventsProps) {
   const { selected } = useUrlColumnSelection();
 
   const dates = useMemo(() => Object.keys(eventsByDate), [eventsByDate]);
+  const orderedSelectedColumns = useMemo(
+    () => orderColumnKeys(selected),
+    [selected],
+  );
+  const columnSpan = 12 / orderedSelectedColumns.length;
 
   const virtualizer = useVirtualizer({
     count: dates.length,
@@ -61,9 +68,9 @@ export function Events({ eventsByDate }: EventsProps) {
             >
               <h5>{dateKey}</h5>
               <div className="row">
-                {Array.from(selected).map((columnKey) => (
+                {orderedSelectedColumns.map((columnKey) => (
                   <div
-                    className={`col-${12 / selected.size}`}
+                    className={`col-${columnSpan}`}
                     key={`row-${virtualRow.index}-${columnKey}`}
                   >
                     {eventsByDate[dateKey][columnKey]?.map((event) => (
