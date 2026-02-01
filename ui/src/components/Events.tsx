@@ -8,9 +8,10 @@ import { orderColumnKeys } from "@/consts";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EventCard } from "@/components/EventCard";
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
+import type { EventCardData } from "@/types/events";
 import { Col, Row } from "react-bootstrap";
 
-type EventsByDate = Record<string, Partial<Record<ColumnKey, object[]>>>;
+type EventsByDate = Record<string, Partial<Record<ColumnKey, EventCardData[]>>>;
 
 type EventsProps = {
   eventsByDate: EventsByDate;
@@ -33,6 +34,7 @@ export function Events({ eventsByDate }: EventsProps) {
     [selected],
   );
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: dates.length,
     getScrollElement: () => containerRef.current,

@@ -5,6 +5,7 @@ import { Col, Container, Row } from "react-bootstrap";
 import { ColumnKey, COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
 import { COLUMN_DEFINITIONS } from "@/consts.server";
+import type { EventCardData } from "@/types/events";
 
 import styles from "./page.module.css";
 import { ColumnChooser } from "@/components/ColumnChooser";
@@ -73,7 +74,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       }
       return acc;
     },
-    {} as Record<string, Partial<Record<ColumnKey, object[]>>>,
+    {} as Record<string, Partial<Record<ColumnKey, EventCardData[]>>>,
   );
 
   const orderedDates = Object.keys(unorderedEventsByDate).sort((a, b) =>
@@ -85,7 +86,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       acc[dateKey] = unorderedEventsByDate[dateKey];
       return acc;
     },
-    {} as Record<string, Partial<Record<ColumnKey, object[]>>>,
+    {} as Record<string, Partial<Record<ColumnKey, EventCardData[]>>>,
   );
 
   const eventCountsByDate = orderedDates.reduce(

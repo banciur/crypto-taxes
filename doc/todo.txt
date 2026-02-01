@@ -1,8 +1,5 @@
 First stage: compute German taxes
 
-TODO: Making it faster
- - Fix lint errors
-
 TODO: Improve EventCard
  - don't use "hash" name in the event card, for kraken and coinbase those are not tx hashes. Also rename TxHash to something else.
  - handle size of place, mighe stop be relevant after migration to fast api

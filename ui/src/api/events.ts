@@ -1,6 +1,5 @@
 const DEFAULT_API_BASE_URL = "http://localhost:8000";
 const API_BASE_URL = process.env.CRYPTO_TAXES_API_URL ?? DEFAULT_API_BASE_URL;
-const MAX_EVENTS = 300;
 
 export type ApiEventOrigin = {
   location: string;
