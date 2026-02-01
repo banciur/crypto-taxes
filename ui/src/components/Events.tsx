@@ -8,6 +8,7 @@ import { orderColumnKeys } from "@/consts";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EventCard } from "@/components/EventCard";
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
+import { Col, Row } from "react-bootstrap";
 
 type EventsByDate = Record<string, Partial<Record<ColumnKey, object[]>>>;
 
@@ -31,12 +32,12 @@ export function Events({ eventsByDate }: EventsProps) {
     () => orderColumnKeys(selected),
     [selected],
   );
-  const columnSpan = 12 / orderedSelectedColumns.length;
 
   const virtualizer = useVirtualizer({
     count: dates.length,
     getScrollElement: () => containerRef.current,
     estimateSize: () => 110,
+    gap: 16,
     overscan: 5,
     onChange: (instance, sync) => {
       if (!sync) return;
@@ -123,12 +124,11 @@ export function Events({ eventsByDate }: EventsProps) {
         {items.map((virtualRow) => {
           const dateKey = dates[virtualRow.index];
           return (
-            <div
+            <Row
               key={dateKey}
               id={`day-${dateKey}`}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
-              className="row"
               style={{
                 position: "absolute",
                 top: 0,
@@ -137,18 +137,22 @@ export function Events({ eventsByDate }: EventsProps) {
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <h5>{dateKey}</h5>
-              {orderedSelectedColumns.map((columnKey) => (
-                <div
-                  className={`col-${columnSpan}`}
-                  key={`row-${virtualRow.index}-${columnKey}`}
-                >
-                  {eventsByDate[dateKey][columnKey]?.map((event) => (
-                    <EventCard key={event.id} {...event} />
+              <Col>
+                <h5>{dateKey}</h5>
+                <Row>
+                  {orderedSelectedColumns.map((columnKey) => (
+                    <Col
+                      className="d-flex flex-column gap-2"
+                      key={`row-${virtualRow.index}-${columnKey}`}
+                    >
+                      {eventsByDate[dateKey][columnKey]?.map((event) => (
+                        <EventCard key={event.id} {...event} />
+                      ))}
+                    </Col>
                   ))}
-                </div>
-              ))}
-            </div>
+                </Row>
+              </Col>
+            </Row>
           );
         })}
       </div>

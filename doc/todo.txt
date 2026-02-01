@@ -1,7 +1,6 @@
 First stage: compute German taxes
 
 TODO: Making it faster
- - Styling improvements
  - Fix lint errors
 
 TODO: Improve EventCard
