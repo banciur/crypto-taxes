@@ -1,6 +1,5 @@
 const DEFAULT_API_BASE_URL = "http://localhost:8000";
 const API_BASE_URL = process.env.CRYPTO_TAXES_API_URL ?? DEFAULT_API_BASE_URL;
-const MAX_EVENTS = 300;
 
 export type ApiEventOrigin = {
   location: string;
@@ -51,16 +50,14 @@ const fetchApi = async <T>(path: string): Promise<T> => {
 const orderEvents = <T extends { id: string; timestamp: string }>(
   events: T[],
 ) =>
-  [...events]
-    .sort((a, b) => {
-      const aTime = Date.parse(a.timestamp);
-      const bTime = Date.parse(b.timestamp);
-      if (aTime !== bTime) {
-        return bTime - aTime;
-      }
-      return a.id.localeCompare(b.id);
-    })
-    .slice(0, MAX_EVENTS);
+  [...events].sort((a, b) => {
+    const aTime = Date.parse(a.timestamp);
+    const bTime = Date.parse(b.timestamp);
+    if (aTime !== bTime) {
+      return bTime - aTime;
+    }
+    return a.id.localeCompare(b.id);
+  });
 
 export const getRawEvents = async (): Promise<ApiLedgerEvent[]> => {
   const events = await fetchApi<ApiLedgerEvent[]>("/raw-events");

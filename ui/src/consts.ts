@@ -1,10 +1,17 @@
 export const COLUMN_METADATA = {
-  raw: { label: "Raw events" },
-  corrections: { label: "Corrections" },
-  corrected: { label: "Corrected events" },
+  raw: { label: "Raw events", order: 1 },
+  corrections: { label: "Corrections", order: 2 },
+  corrected: { label: "Corrected events", order: 3 },
 } as const;
 
 export type ColumnKey = keyof typeof COLUMN_METADATA;
+
+const columnOrders = Object.values(COLUMN_METADATA).map(
+  (column) => column.order,
+);
+if (new Set(columnOrders).size !== columnOrders.length) {
+  throw new Error("COLUMN_METADATA order values must be unique.");
+}
 
 export const COLUMN_NAMES: ReadonlyMap<ColumnKey, string> = new Map(
   Object.entries(COLUMN_METADATA).map(([key, value]) => [
@@ -18,8 +25,16 @@ export const AVAILABLE_COLUMNS: ReadonlySet<ColumnKey> = new Set(
 );
 
 export const DEFAULT_COLUMN: ColumnKey = "corrected";
+if (!Object.keys(COLUMN_METADATA).includes(DEFAULT_COLUMN)) {
+  throw new Error("DEFAULT_COLUMN must exist in COLUMN_METADATA.");
+}
 
 export const COLUMNS_PARAM_NAME = "columns";
+
+export const orderColumnKeys = (keys: Iterable<ColumnKey>): ColumnKey[] =>
+  Array.from(keys).sort(
+    (left, right) => COLUMN_METADATA[left].order - COLUMN_METADATA[right].order,
+  );
 
 export type ChainMetadata = {
   tracker: string;

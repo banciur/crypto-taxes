@@ -8,12 +8,12 @@ import {
   type ApiLedgerLeg,
   type ApiSeedEvent,
 } from "@/api/events";
-import { ColumnKey } from "@/consts";
-import { EventCardProps, type EventLeg } from "@/components/EventCard";
+import type { ColumnKey } from "@/consts";
+import type { EventCardData, EventLeg } from "@/types/events";
 
 type ColumnDefinition = {
   load: () => Promise<any[]>; // eslint-disable-line @typescript-eslint/no-explicit-any
-  transform: (obj: any) => EventCardProps; // eslint-disable-line @typescript-eslint/no-explicit-any
+  transform: (obj: any) => EventCardData; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
 
 const mapLegs = (legs: ApiLedgerLeg[]): EventLeg[] =>
@@ -25,7 +25,8 @@ const mapLegs = (legs: ApiLedgerLeg[]): EventLeg[] =>
     isFee: leg.is_fee,
   }));
 
-const mapLedgerEvent = (event: ApiLedgerEvent): EventCardProps => ({
+const mapLedgerEvent = (event: ApiLedgerEvent): EventCardData => ({
+  id: event.id,
   timestamp: event.timestamp,
   eventType: event.event_type,
   place: event.origin.location.toLowerCase(),
@@ -41,6 +42,7 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   corrections: {
     load: getSeedEvents,
     transform: (event: ApiSeedEvent) => ({
+      id: event.id,
       timestamp: event.timestamp,
       eventType: "seed",
       place: "",
