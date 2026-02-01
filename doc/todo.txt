@@ -1,7 +1,12 @@
 First stage: compute German taxes
 
-TODO: Current UI is slow when there are many events.
-TODO: Properly order columns, now it depends on order in the URL
+
+TODO: Making it faster
+ - Properly order columns, now it depends on order in the URL
+ - Add scrolling
+ - Some styling improvements
+ - Fix lint errors
+
 
 TODO: Improve EventCard
  - don't use "hash" name in the event card, for kraken and coinbase those are not tx hashes. Also rename TxHash to something else.

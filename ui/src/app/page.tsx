@@ -5,13 +5,12 @@ import { Col, Container, Row } from "react-bootstrap";
 import { ColumnKey, COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
 import { COLUMN_DEFINITIONS } from "@/consts.server";
-import type { LedgerDateSection } from "@/types/events";
 
 import styles from "./page.module.css";
-import { LedgerEventsView } from "@/components/LedgerEventsView";
 import { ColumnChooser } from "@/components/ColumnChooser";
 import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext";
 import { DateChooser } from "@/components/DateChooser";
+import { Events } from "@/components/Events";
 
 const dateKeyFor = (timestamp: string) =>
   new Date(timestamp).toISOString().slice(0, 10);
@@ -101,33 +100,6 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     {} as Record<string, number>,
   );
 
-  // const eventsByDateByColumn = new Map(
-  //   loadedColumns.map(({ key, events }) => [key, groupEventsByDate(events)]),
-  // );
-  //
-  // const orderedDates = Array.from(
-  //   new Set(
-  //     loadedColumns.flatMap(({ key }) =>
-  //       Object.keys(eventsByDateByColumn.get(key)!),
-  //     ),
-  //   ),
-  // ).sort((a, b) => b.localeCompare(a));
-
-  // const sections: LedgerDateSection[] = orderedDates.map((dateKey) => {
-  //   const columns = selectedColumns.map((key) => ({
-  //     key,
-  //     events: eventsByDateByColumn.get(key)![dateKey] ?? [],
-  //   }));
-  //   const count = columns.reduce(
-  //     (total, column) => total + column.events.length,
-  //     0,
-  //   );
-  //
-  //   return { key: dateKey, count, columns };
-  // });
-
-  // const dateSections = sections.map(({ key, count }) => ({ key, count }));
-
   return (
     <div className={styles.layoutContainer}>
       <header className={styles.layoutHeader}>
@@ -142,16 +114,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
               <DateChooser dates={eventCountsByDate} />
             </Col>
             <Col xs={10} className={styles.layoutColumn}>
-              <p>no hejka</p>
+              <Events eventsByDate={eventsByDate} />
             </Col>
           </Row>
         </UrlColumnSelectionProvider>
-
-        {/*<LedgerEventsView*/}
-        {/*  dateSections={dateSections}*/}
-        {/*  sections={sections}*/}
-        {/*  columnCount={selectedColumns.length}*/}
-        {/*/>*/}
       </Container>
     </div>
   );

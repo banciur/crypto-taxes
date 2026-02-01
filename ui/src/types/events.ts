@@ -1,5 +1,3 @@
-import type { ColumnKey } from "@/consts";
-
 export type EventLeg = {
   id: string;
   assetId: string;
@@ -18,15 +16,4 @@ export type EventCardProps = {
 
 export type EventCardData = EventCardProps & {
   id: string;
-};
-
-export type ColumnEvents = {
-  key: ColumnKey;
-  events: EventCardData[];
-};
-
-export type LedgerDateSection = {
-  key: string;
-  count: number;
-  columns: ColumnEvents[];
 };
