@@ -26,6 +26,8 @@ TODO: Manual adjustments to mark and filter out spam transactions.
 TODO: Fix codex not being able to run pnpm commands
 TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
 
+TODO: add loaders to UI when data is being fetched especially when changing visible columns
+
 TODO: we will end with multiple ledger legs tables in the database - maybe combine them into one with a discriminator column?
 
 TODO: additional correction elements

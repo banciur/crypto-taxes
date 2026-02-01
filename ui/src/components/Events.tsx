@@ -55,9 +55,10 @@ export function Events({ eventsByDate }: EventsProps) {
           const dateKey = dates[virtualRow.index];
           return (
             <div
-              key={virtualRow.index}
+              key={dateKey}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
+              className="row"
               style={{
                 position: "absolute",
                 top: 0,
@@ -67,18 +68,16 @@ export function Events({ eventsByDate }: EventsProps) {
               }}
             >
               <h5>{dateKey}</h5>
-              <div className="row">
-                {orderedSelectedColumns.map((columnKey) => (
-                  <div
-                    className={`col-${columnSpan}`}
-                    key={`row-${virtualRow.index}-${columnKey}`}
-                  >
-                    {eventsByDate[dateKey][columnKey]?.map((event) => (
-                      <EventCard key={event.id} {...event} />
-                    ))}
-                  </div>
-                ))}
-              </div>
+              {orderedSelectedColumns.map((columnKey) => (
+                <div
+                  className={`col-${columnSpan}`}
+                  key={`row-${virtualRow.index}-${columnKey}`}
+                >
+                  {eventsByDate[dateKey][columnKey]?.map((event) => (
+                    <EventCard key={event.id} {...event} />
+                  ))}
+                </div>
+              ))}
             </div>
           );
         })}
