@@ -7,7 +7,9 @@ import { orderColumnKeys } from "@/consts";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EventCard } from "@/components/EventCard";
+import { useVisibleDay } from "@/contexts/VisibleDayContext";
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
+import { dayIdFor } from "@/lib/dayHash";
 import type { EventCardData } from "@/types/events";
 import { Col, Row } from "react-bootstrap";
 
@@ -17,16 +19,10 @@ type EventsProps = {
   eventsByDate: EventsByDate;
 };
 
-const dateKeyFromHash = (hash: string) => {
-  if (!hash.startsWith("#day-")) return null;
-  const key = hash.slice("#day-".length);
-  return key.length > 0 ? key : null;
-};
-
 export function Events({ eventsByDate }: EventsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const lastHashRef = useRef<string | null>(null);
   const { selected } = useUrlColumnSelection();
+  const { activeDayKey, activeDaySource, setActiveDayKey } = useVisibleDay();
 
   const dates = useMemo(() => Object.keys(eventsByDate), [eventsByDate]);
   const orderedSelectedColumns = useMemo(
@@ -42,12 +38,12 @@ export function Events({ eventsByDate }: EventsProps) {
     gap: 16,
     overscan: 5,
     onChange: (instance, sync) => {
-      if (!sync) return;
-      updateHash(instance.getVirtualItems());
+      if (sync) return;
+      updateVisibleDay(instance.getVirtualItems());
     },
   });
 
-  const updateHash = useCallback(
+  const updateVisibleDay = useCallback(
     (items: ReturnType<typeof virtualizer.getVirtualItems>) => {
       const scrollElement = containerRef.current;
       if (!scrollElement || items.length === 0) return;
@@ -71,39 +67,24 @@ export function Events({ eventsByDate }: EventsProps) {
 
       const dateKey = dates[visibleItem.index];
       if (!dateKey) return;
-
-      const nextHash = `#day-${dateKey}`;
-      if (lastHashRef.current === nextHash) return;
-      lastHashRef.current = nextHash;
-
-      const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
-      history.replaceState(null, "", nextUrl);
+      setActiveDayKey(dateKey, "scroll");
     },
-    [dates, virtualizer],
-  );
-
-  const scrollToDate = useCallback(
-    (dateKey: string) => {
-      if (!containerRef.current) return;
-      const index = dates.findIndex((element) => element === dateKey);
-      if (index === -1) return;
-      virtualizer.scrollToIndex(index, { align: "start" });
-    },
-    [dates, virtualizer],
+    [dates, setActiveDayKey, virtualizer],
   );
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const dateKey = dateKeyFromHash(window.location.hash);
-      if (!dateKey) return;
-      lastHashRef.current = window.location.hash;
-      scrollToDate(dateKey);
-    };
+    if (
+      !activeDayKey ||
+      activeDaySource === "scroll" ||
+      !containerRef.current
+    ) {
+      return;
+    }
 
-    handleHashChange();
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
-  }, [scrollToDate]);
+    const index = dates.findIndex((element) => element === activeDayKey);
+    if (index === -1) return;
+    virtualizer.scrollToIndex(index, { align: "start" });
+  }, [activeDayKey, activeDaySource, dates, virtualizer]);
 
   const items = virtualizer.getVirtualItems();
 
@@ -128,7 +109,7 @@ export function Events({ eventsByDate }: EventsProps) {
           return (
             <Row
               key={dateKey}
-              id={`day-${dateKey}`}
+              id={dayIdFor(dateKey)}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
               style={{

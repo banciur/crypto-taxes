@@ -15,12 +15,13 @@ TODO: Go back to backend side na Moralis importer:
  - review client and accounts structure, also think about wallet id (address_chain)
  - code that creates legs for native and erc20 is similar to one for native transfers we could improve
 
+TODO: Why I have to restart UI or API to see new data.
+
 TODO: Manual adjustments to mark and filter out spam transactions.
 
 TODO: Fix codex not being able to run pnpm commands
 TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
 
-TODO: DateChooser doesn't follow anchor changes when Events are scrolled.
 TODO: add loaders to the UI when data is being fetched, especially when changing visible columns
 
 TODO: we will end with multiple ledger legs tables in the database - maybe combine them into one with a discriminator column?
