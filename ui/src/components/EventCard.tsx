@@ -11,7 +11,7 @@ import {
 
 import { clsx } from "clsx";
 import styles from "./EventCard.module.css";
-import { ChainIcon } from "@/components/ChainIcon";
+import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
 import type { EventCardProps, EventLeg } from "@/types/events";
 
@@ -52,7 +52,7 @@ export function EventCard({
           />
         )}
         <span className="text-muted small">{timestampLabel}</span>
-        <ChainIcon place={place} className="ms-auto flex-shrink-0" />
+        <OriginIcon place={place} className="ms-auto flex-shrink-0" />
       </CardHeader>
       <CardBody>
         <ListGroup variant="flush" className="border rounded">
