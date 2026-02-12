@@ -11,20 +11,20 @@ import {
 import { Overlay, Popover } from "react-bootstrap";
 
 import { CHAIN_METADATA, type ChainKey } from "@/consts";
-import styles from "./TxHash.module.css";
+import styles from "./OriginId.module.css";
 
-export type TxHashProps = {
-  hash: string;
+export type OriginIdProps = {
+  originId: string;
   place: string;
   className?: string;
 };
 
-const formatTxHash = (hash: string): ReactNode => {
-  if (hash.length <= 8) {
-    return hash;
+const formatOriginId = (originId: string): ReactNode => {
+  if (originId.length <= 8) {
+    return originId;
   }
-  const prefix = hash.slice(0, 5);
-  const suffix = hash.slice(-3);
+  const prefix = originId.slice(0, 5);
+  const suffix = originId.slice(-3);
   return (
     <>
       {prefix}&hellip;{suffix}
@@ -32,7 +32,7 @@ const formatTxHash = (hash: string): ReactNode => {
   );
 };
 
-export function TxHash({ hash, place, className }: TxHashProps) {
+export function OriginId({ originId, place, className }: OriginIdProps) {
   const [show, setShow] = useState(false);
   const [copied, setCopied] = useState(false);
   const instanceId = useId();
@@ -41,7 +41,7 @@ export function TxHash({ hash, place, className }: TxHashProps) {
   const chainKey = Object.hasOwn(CHAIN_METADATA, place)
     ? (place as ChainKey)
     : null;
-  const label = formatTxHash(hash);
+  const label = formatOriginId(originId);
 
   useEffect(() => {
     const handleOpen = (event: Event) => {
@@ -51,9 +51,9 @@ export function TxHash({ hash, place, className }: TxHashProps) {
       }
     };
 
-    window.addEventListener("txhash:open", handleOpen);
+    window.addEventListener("originid:open", handleOpen);
     return () => {
-      window.removeEventListener("txhash:open", handleOpen);
+      window.removeEventListener("originid:open", handleOpen);
     };
   }, [instanceId]);
 
@@ -67,7 +67,7 @@ export function TxHash({ hash, place, className }: TxHashProps) {
 
   const openPopover = () => {
     window.dispatchEvent(
-      new CustomEvent("txhash:open", { detail: { id: instanceId } }),
+      new CustomEvent("originid:open", { detail: { id: instanceId } }),
     );
     setShow(true);
   };
@@ -75,7 +75,7 @@ export function TxHash({ hash, place, className }: TxHashProps) {
   const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    await navigator.clipboard.writeText(hash);
+    await navigator.clipboard.writeText(originId);
     setCopied(true);
     if (copyTimeoutRef.current !== null) {
       window.clearTimeout(copyTimeoutRef.current);
@@ -89,15 +89,15 @@ export function TxHash({ hash, place, className }: TxHashProps) {
     ? `${styles.copyButton} ${styles.copyButtonCopied}`
     : styles.copyButton;
   const popover = (
-    <Popover id={`tx-hash-${hash}`} className={styles.popover}>
+    <Popover id={`origin-id-${originId}`} className={styles.popover}>
       <Popover.Body className={styles.popoverBody}>
-        <span className="text-nowrap">{hash}</span>
+        <span className="text-nowrap">{originId}</span>
         <button
           type="button"
           className={copyButtonClassName}
           onClick={handleCopy}
-          aria-label="Copy transaction hash"
-          title="Copy hash"
+          aria-label="Copy origin id"
+          title="Copy origin id"
         >
           {copied ? (
             <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -128,7 +128,7 @@ export function TxHash({ hash, place, className }: TxHashProps) {
   const labelElement = chainKey ? (
     <a
       className={className}
-      href={`${CHAIN_METADATA[chainKey].tracker}tx/${hash}`}
+      href={`${CHAIN_METADATA[chainKey].tracker}tx/${originId}`}
       target="_blank"
       rel="noreferrer"
     >
