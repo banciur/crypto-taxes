@@ -11,15 +11,15 @@ import {
 
 import { clsx } from "clsx";
 import styles from "./EventCard.module.css";
-import { ChainIcon } from "@/components/ChainIcon";
-import { TxHash } from "@/components/TxHash";
+import { OriginIcon } from "@/components/OriginIcon";
+import { OriginId } from "@/components/OriginId";
 import type { EventCardProps, EventLeg } from "@/types/events";
 
 export function EventCard({
   timestamp,
   eventType,
   place,
-  txHash,
+  originId,
   legs,
 }: EventCardProps) {
   const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
@@ -44,11 +44,15 @@ export function EventCard({
     <Card className="shadow-sm">
       <CardHeader className="d-flex flex-wrap align-items-center gap-2">
         <Badge className="text-uppercase">{eventType}</Badge>
-        {txHash && (
-          <TxHash hash={txHash} place={place} className="text-muted small" />
+        {originId && (
+          <OriginId
+            originId={originId}
+            place={place}
+            className="text-muted small"
+          />
         )}
         <span className="text-muted small">{timestampLabel}</span>
-        <ChainIcon place={place} className="ms-auto flex-shrink-0" />
+        <OriginIcon place={place} className="ms-auto flex-shrink-0" />
       </CardHeader>
       <CardBody>
         <ListGroup variant="flush" className="border rounded">

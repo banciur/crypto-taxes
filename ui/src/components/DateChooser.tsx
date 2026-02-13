@@ -1,9 +1,12 @@
 "use client";
 
-// Vibed and doesn't have all the features but for now this is enough
+// Vibed and crappy, but for now this is enough
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ListGroup } from "react-bootstrap";
+
+import { useVisibleDay } from "@/contexts/VisibleDayContext";
+import { hashForDay } from "@/lib/dayHash";
 
 type DateEntry = { key: string; count: number };
 
@@ -64,20 +67,23 @@ function buildHierarchy(dates: Record<string, number>): YearNode[] {
   return years;
 }
 
-const hashForDay = (dayKey: string) => `#day-${dayKey}`;
-
 export function DateChooser({ dates }: DateChooserProps) {
-  const [openYear, setOpenYear] = useState<string | null>(null);
-  const [openMonth, setOpenMonth] = useState<string | null>(null);
+  const { activeDayKey, setActiveDayKey } = useVisibleDay();
 
   const years = useMemo(() => buildHierarchy(dates), [dates]);
+  const activeDay =
+    activeDayKey && Object.prototype.hasOwnProperty.call(dates, activeDayKey)
+      ? activeDayKey
+      : null;
+  const openYearKey = activeDay ? activeDay.slice(0, 4) : null;
+  const openMonthKey = activeDay ? activeDay.slice(0, 7) : null;
 
   return (
     <>
       <h2 className="h6 text-uppercase text-muted mb-3">Jump to date</h2>
       <ListGroup>
         {years.map((year) => {
-          const isYearOpen = openYear === year.key;
+          const isYearOpen = openYearKey === year.key;
 
           return (
             <div key={year.key}>
@@ -85,14 +91,8 @@ export function DateChooser({ dates }: DateChooserProps) {
                 action
                 href={hashForDay(year.topDayKey)}
                 onClick={(e) => {
-                  if (isYearOpen) {
-                    e.preventDefault();
-                    setOpenYear(null);
-                    setOpenMonth(null);
-                    return;
-                  }
-                  setOpenYear(year.key);
-                  setOpenMonth(null);
+                  e.preventDefault();
+                  setActiveDayKey(year.topDayKey, "chooser");
                 }}
                 className="d-flex align-items-center justify-content-between"
               >
@@ -103,7 +103,7 @@ export function DateChooser({ dates }: DateChooserProps) {
               {isYearOpen && (
                 <ListGroup className="ms-3 mt-2">
                   {year.months.map((month) => {
-                    const isMonthOpen = openMonth === month.key;
+                    const isMonthOpen = openMonthKey === month.key;
 
                     return (
                       <div key={month.key}>
@@ -111,12 +111,8 @@ export function DateChooser({ dates }: DateChooserProps) {
                           action
                           href={hashForDay(month.topDayKey)}
                           onClick={(e) => {
-                            if (isMonthOpen) {
-                              e.preventDefault();
-                              setOpenMonth(null);
-                              return;
-                            }
-                            setOpenMonth(month.key);
+                            e.preventDefault();
+                            setActiveDayKey(month.topDayKey, "chooser");
                           }}
                           className="d-flex align-items-center justify-content-between"
                           style={{ fontSize: "0.875rem" }}
@@ -134,6 +130,11 @@ export function DateChooser({ dates }: DateChooserProps) {
                                 action
                                 key={day.key}
                                 href={hashForDay(day.key)}
+                                active={activeDay === day.key}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setActiveDayKey(day.key, "chooser");
+                                }}
                                 className="d-flex align-items-center justify-content-between"
                                 style={{ fontSize: "0.75rem" }}
                               >

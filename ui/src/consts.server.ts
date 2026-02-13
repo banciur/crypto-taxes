@@ -30,7 +30,7 @@ const mapLedgerEvent = (event: ApiLedgerEvent): EventCardData => ({
   timestamp: event.timestamp,
   eventType: event.event_type,
   place: event.origin.location.toLowerCase(),
-  txHash: event.origin.external_id,
+  originId: event.origin.external_id,
   legs: mapLegs(event.legs),
 });
 
@@ -46,7 +46,7 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
       timestamp: event.timestamp,
       eventType: "seed",
       place: "",
-      txHash: "",
+      originId: "",
       legs: mapLegs(event.legs),
     }),
   },

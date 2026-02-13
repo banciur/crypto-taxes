@@ -10,7 +10,7 @@ export type EventCardProps = {
   timestamp: string;
   eventType: string;
   place: string;
-  txHash: string;
+  originId: string;
   legs: EventLeg[];
 };
 

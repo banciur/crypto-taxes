@@ -12,6 +12,7 @@ import { ColumnChooser } from "@/components/ColumnChooser";
 import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext";
 import { DateChooser } from "@/components/DateChooser";
 import { Events } from "@/components/Events";
+import { VisibleDayProvider } from "@/contexts/VisibleDayContext";
 
 const dateKeyFor = (timestamp: string) =>
   new Date(timestamp).toISOString().slice(0, 10);
@@ -109,15 +110,17 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
       <Container fluid className={styles.layoutContent}>
         <UrlColumnSelectionProvider>
-          <Row className={styles.layoutRow}>
-            <Col xs={2} className={styles.layoutColumn}>
-              <ColumnChooser />
-              <DateChooser dates={eventCountsByDate} />
-            </Col>
-            <Col xs={10} className={styles.layoutColumn}>
-              <Events eventsByDate={eventsByDate} />
-            </Col>
-          </Row>
+          <VisibleDayProvider>
+            <Row className={styles.layoutRow}>
+              <Col xs={2} className={styles.layoutColumn}>
+                <ColumnChooser />
+                <DateChooser dates={eventCountsByDate} />
+              </Col>
+              <Col xs={10} className={styles.layoutColumn}>
+                <Events eventsByDate={eventsByDate} />
+              </Col>
+            </Row>
+          </VisibleDayProvider>
         </UrlColumnSelectionProvider>
       </Container>
     </div>
