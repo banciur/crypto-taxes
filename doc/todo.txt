@@ -1,18 +1,20 @@
 First stage: compute German taxes
 
-TODO: Improve EventCard
- - add popup or just "alt" attribute with a place of transaction
- - shortened address elispsis and popup with full address?
- - recognize my own wallets on legs and don't use address but name
- - tokens names?
+TODO: Improvements around wallets, tokens better structure etc. Broader topic to think through.
+ - FE
+  - shortened address elispsis and popup with full address?
+  - recognize my own wallets on legs and don't use address but name
+  - tokens names?
+ - BE
+  - do we need a token registry and mapping symbol to address and multichain address?
+  - some tokens can have the same symbol on different chains, but in reality there are different tokens, and it's not a mistake. Example fGHO in fluid different price on different chains (to be confirmed)
+  - review client and accounts structure, also think about wallet id (address_chain)
 
-TODO: Go back to backend side na Moralis importer:
- - sync and track by address and chain not only chain
- - do we need a token registry and mapping symbol to address and multichain address?
- - some tokens can have the same symbol on different chains, but in reality there are different tokens, and it's not a mistake. Example fGHO in fluid different price on different chains (to be confirmed)
- - review client and accounts structure, also think about wallet id (address_chain)
- - code that creates legs for native and erc20 is similar to one for native transfers we could improve
+review the rest of todos
 
+TODO: tooltip on OrginIcon doesn't work for corrections - probably doesn't have to? Or maybe it should. Actually doest correcntion have a place where they are added?
+TODO: sync and track by address and chain not only chain so we can add new addresses on the fly
+TODO: code that creates legs for native and erc20 is similar to one for native transfers we could improve
 TODO: Why I have to restart UI or API to see new data.
 
 TODO: Manual adjustments to mark and filter out spam transactions.

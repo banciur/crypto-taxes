@@ -1,4 +1,8 @@
+"use client";
+
+import { useId } from "react";
 import Image from "next/image";
+import { OverlayTrigger, Tooltip } from "react-bootstrap";
 
 import { CHAIN_METADATA, type ChainKey } from "@/consts";
 
@@ -19,12 +23,17 @@ export function OriginIcon({ place, size = 24, className }: OriginIconProps) {
   const src = originKey ? `/${originKey}-logo.svg` : "/question-mark.svg";
 
   return (
-    <Image
-      src={src}
-      alt={label}
-      width={size}
-      height={size}
-      {...(className ? { className } : {})}
-    />
+    <OverlayTrigger
+      placement="top"
+      overlay={<Tooltip id={useId()}>{place}</Tooltip>}
+    >
+      <Image
+        src={src}
+        alt={label}
+        width={size}
+        height={size}
+        {...(className ? { className } : {})}
+      />
+    </OverlayTrigger>
   );
 }
