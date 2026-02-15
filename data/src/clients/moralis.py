@@ -111,6 +111,9 @@ class MoralisService:
         yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
 
         for account in load_accounts(self.accounts_path):
+            if account.skip_sync:
+                logger.info("Address %s (%s) is marked skip_sync; skipping fetch", account.address, account.name)
+                continue
             address = account.address
             for chain in account.chains:
                 last_synced_at = self.cache.last_synced_at(chain, address)

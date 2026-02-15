@@ -9,7 +9,8 @@
 - Fetching: `MoralisClient.fetch_transactions(chain, address, from_date?)`, 1s delay per page, logs batch sizes/totals; results keep Moralis order; `chain` added to each record.
 - Persistence: SQLite `artifacts/transactions_cache.db` via `TransactionsCacheRepository`
 - Script: `scripts/fetch_wallet_history.py` accepts `--mode` and `--accounts`, syncs, prints last 5 transactions; storage is in DB (no file dump).
-- Types: `ChainId`/`WalletAddress` are `NewType(str, ...)`; accounts are `{"address": ..., "chains": [...]}`.
+- Types: `ChainId`/`WalletAddress` are `NewType(str, ...)`; accounts are `{"name": ..., "address": ..., "chains": [...], "skip_sync": ...}`.
+- Sync filter: accounts with `skip_sync=true` are excluded from Moralis fetches but remain valid tracked wallets for parsing cached transactions.
 
 ## Moralis → LedgerEvent parsing (current)
 - Parsing rules live in `data/src/importers/moralis/README.md`.

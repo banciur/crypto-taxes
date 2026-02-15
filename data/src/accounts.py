@@ -13,8 +13,10 @@ DEFAULT_ACCOUNTS_PATH = REPO_ROOT / "artifacts" / "accounts.json"
 
 @dataclass(frozen=True)
 class TrackedAccount:
+    name: str
     address: WalletAddress
     chains: list[ChainId]
+    skip_sync: bool
 
 
 def _normalize_address(address: str) -> WalletAddress:
@@ -32,27 +34,43 @@ def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[TrackedAccount]:
         raise ValueError(msg)
 
     addresses_in_order: list[WalletAddress] = []
-    chains_by_address: dict[WalletAddress, list[ChainId]] = {}
+    account_by_address: dict[WalletAddress, TrackedAccount] = {}
     for entry in payload:
         if not isinstance(entry, dict):
             msg = "Each account entry must be an object."
             raise ValueError(msg)
+        name = entry.get("name")
         address = entry.get("address")
         chains_raw = entry.get("chains")
-        if not isinstance(address, str) or not isinstance(chains_raw, list):
-            msg = "Each account entry must include 'address' (string) and 'chains' (list)."
+        skip_sync = entry.get("skip_sync")
+        if (
+            not isinstance(name, str)
+            or not isinstance(address, str)
+            or not isinstance(chains_raw, list)
+            or not isinstance(skip_sync, bool)
+        ):
+            msg = "Each account entry must include 'name' (string), 'address' (string), 'chains' (list), and 'skip_sync' (bool)."
             raise ValueError(msg)
         normalized_address = _normalize_address(address)
         normalized_chains = _normalize_chains(chains_raw)
-        if normalized_address not in chains_by_address:
+        if normalized_address not in account_by_address:
             addresses_in_order.append(normalized_address)
-            chains_by_address[normalized_address] = []
-        known_chains = chains_by_address[normalized_address]
+            account_by_address[normalized_address] = TrackedAccount(
+                name=name,
+                address=normalized_address,
+                chains=[],
+                skip_sync=skip_sync,
+            )
+        existing_account = account_by_address[normalized_address]
+        if existing_account.name != name or existing_account.skip_sync is not skip_sync:
+            msg = f"Duplicate address {normalized_address} has conflicting account metadata."
+            raise ValueError(msg)
+        known_chains = existing_account.chains
         for chain in normalized_chains:
             if chain not in known_chains:
                 known_chains.append(chain)
 
-    return [TrackedAccount(address=address, chains=chains_by_address[address]) for address in addresses_in_order]
+    return [account_by_address[address] for address in addresses_in_order]
 
 
 __all__ = ["DEFAULT_ACCOUNTS_PATH", "TrackedAccount", "load_accounts"]

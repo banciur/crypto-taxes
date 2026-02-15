@@ -47,6 +47,21 @@ def _write_accounts(path: Path, *, entries: list[dict[str, object]]) -> None:
     path.write_text(json.dumps(entries))
 
 
+def _account_entry(
+    *,
+    name: str,
+    address: str,
+    chains: list[str],
+    skip_sync: bool = False,
+) -> dict[str, object]:
+    return {
+        "name": name,
+        "address": address,
+        "chains": chains,
+        "skip_sync": skip_sync,
+    }
+
+
 def _calls_as_tuples(calls: list[tuple[ChainId, WalletAddress, date | None]]) -> list[tuple[str, str, date | None]]:
     return [(str(chain), str(address), from_date) for chain, address, from_date in calls]
 
@@ -59,8 +74,8 @@ def test_budget_fetches_new_wallet_chain_from_start_even_when_chain_has_recent_c
     _write_accounts(
         accounts_path,
         entries=[
-            {"address": existing_address, "chains": [shared_chain]},
-            {"address": new_address, "chains": [shared_chain]},
+            _account_entry(name="Existing", address=existing_address, chains=[shared_chain]),
+            _account_entry(name="New", address=new_address, chains=[shared_chain]),
         ],
     )
 
@@ -87,7 +102,7 @@ def test_budget_fetches_existing_wallet_chain_from_last_synced_cursor(tmp_path: 
     address = "0xAbCdEf"
     chain = "arbitrum"
     accounts_path = tmp_path / "accounts.json"
-    _write_accounts(accounts_path, entries=[{"address": address, "chains": [chain]}])
+    _write_accounts(accounts_path, entries=[_account_entry(name="Wallet", address=address, chains=[chain])])
 
     now = datetime.now(timezone.utc)
     stale_cursor = now - timedelta(days=3)
@@ -113,11 +128,34 @@ def test_budget_skips_recently_synced_wallet_chain(tmp_path: Path) -> None:
     address = "0x1234ABCD"
     chain = "optimism"
     accounts_path = tmp_path / "accounts.json"
-    _write_accounts(accounts_path, entries=[{"address": address, "chains": [chain]}])
+    _write_accounts(accounts_path, entries=[_account_entry(name="Wallet", address=address, chains=[chain])])
 
     now = datetime.now(timezone.utc)
     fresh_cursor = now - timedelta(hours=6)
     cache = _StubTransactionsCache(last_synced={(chain, address.lower()): fresh_cursor})
+    client = _StubMoralisClient()
+    service = MoralisService(
+        cast(MoralisClient, client),
+        cast(TransactionsCacheRepository, cache),
+        accounts_path=accounts_path,
+    )
+
+    service.get_transactions(SyncMode.BUDGET)
+
+    assert client.calls == []
+    assert cache.marked_synced == []
+
+
+def test_budget_skips_wallet_marked_as_skip_sync(tmp_path: Path) -> None:
+    address = "0x55AA66BB"
+    chain = "eth"
+    accounts_path = tmp_path / "accounts.json"
+    _write_accounts(
+        accounts_path,
+        entries=[_account_entry(name="Dormant", address=address, chains=[chain], skip_sync=True)],
+    )
+
+    cache = _StubTransactionsCache()
     client = _StubMoralisClient()
     service = MoralisService(
         cast(MoralisClient, client),
