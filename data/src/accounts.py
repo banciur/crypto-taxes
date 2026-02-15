@@ -33,12 +33,11 @@ def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[TrackedAccount]:
         msg = "Accounts file must contain a JSON list of objects."
         raise ValueError(msg)
 
-    addresses_in_order: list[WalletAddress] = []
-    account_by_address: dict[WalletAddress, TrackedAccount] = {}
+    addresses_seen: set[WalletAddress] = set()
+    accounts: list[TrackedAccount] = []
     for entry in payload:
         if not isinstance(entry, dict):
-            msg = "Each account entry must be an object."
-            raise ValueError(msg)
+            raise ValueError("Each account entry must be an object.")
         name = entry.get("name")
         address = entry.get("address")
         chains_raw = entry.get("chains")
@@ -49,28 +48,23 @@ def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[TrackedAccount]:
             or not isinstance(chains_raw, list)
             or not isinstance(skip_sync, bool)
         ):
-            msg = "Each account entry must include 'name' (string), 'address' (string), 'chains' (list), and 'skip_sync' (bool)."
-            raise ValueError(msg)
-        normalized_address = _normalize_address(address)
-        normalized_chains = _normalize_chains(chains_raw)
-        if normalized_address not in account_by_address:
-            addresses_in_order.append(normalized_address)
-            account_by_address[normalized_address] = TrackedAccount(
+            raise ValueError(
+                "Each account entry must include 'name' (string), 'address' (string), 'chains' (list), and 'skip_sync' (bool)."
+            )
+        address = _normalize_address(address)
+        if address in addresses_seen:
+            raise ValueError(f"Duplicate address {address} in accounts file.")
+        addresses_seen.add(address)
+        accounts.append(
+            TrackedAccount(
                 name=name,
-                address=normalized_address,
-                chains=[],
+                address=address,
+                chains=_normalize_chains(chains_raw),
                 skip_sync=skip_sync,
             )
-        existing_account = account_by_address[normalized_address]
-        if existing_account.name != name or existing_account.skip_sync is not skip_sync:
-            msg = f"Duplicate address {normalized_address} has conflicting account metadata."
-            raise ValueError(msg)
-        known_chains = existing_account.chains
-        for chain in normalized_chains:
-            if chain not in known_chains:
-                known_chains.append(chain)
+        )
 
-    return [account_by_address[address] for address in addresses_in_order]
+    return accounts
 
 
 __all__ = ["DEFAULT_ACCOUNTS_PATH", "TrackedAccount", "load_accounts"]
