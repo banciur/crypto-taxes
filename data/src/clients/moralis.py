@@ -2,26 +2,20 @@ from __future__ import annotations
 
 import json
 import logging
-from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from time import sleep
-from typing import Any, Iterable, TypedDict, cast
+from typing import Any, Iterable
 
 from moralis import evm_api  # type: ignore
 
-from accounts import DEFAULT_ACCOUNTS_PATH
+from accounts import DEFAULT_ACCOUNTS_PATH, load_accounts
 from config import config
 from db.transactions_cache import CACHE_DB_PATH, TransactionsCacheRepository, init_transactions_cache_db
 from domain.ledger import ChainId, WalletAddress
 
 logger = logging.getLogger(__name__)
-
-
-class Account(TypedDict):
-    address: WalletAddress
-    chains: list[ChainId]
 
 
 def _parse_block_timestamp(value: str) -> datetime:
@@ -114,30 +108,23 @@ class MoralisService:
         self.cache.upsert_transactions(rows)
 
     def _ensure_chains_synced(self, mode: SyncMode) -> None:
-        accounts = load_accounts(self.accounts_path)
-        by_chain: dict[ChainId, list[WalletAddress]] = defaultdict(list)
-        for account in accounts:
-            for chain in account["chains"]:
-                by_chain[chain].append(account["address"])
-
         yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
 
-        for chain, addresses in by_chain.items():
-            last_synced_at = self.cache.last_synced_at(chain)
-            should_fetch = mode == SyncMode.FRESH
-            if mode == SyncMode.BUDGET and (last_synced_at is None or last_synced_at.date() < yesterday):
-                should_fetch = True
+        for account in load_accounts(self.accounts_path):
+            address = account.address
+            for chain in account.chains:
+                last_synced_at = self.cache.last_synced_at(chain, address)
+                should_fetch = mode == SyncMode.FRESH
+                if mode == SyncMode.BUDGET and (last_synced_at is None or last_synced_at.date() < yesterday):
+                    should_fetch = True
 
-            if not should_fetch:
-                logger.info("Chain %s already synced; skipping fetch", chain)
-                continue
+                if not should_fetch:
+                    logger.info("Address %s on chain %s already synced; skipping fetch", address, chain)
+                    continue
 
-            latest_block = self.cache.latest_block_timestamp(chain)
-            api_from_date = (latest_block - timedelta(days=1)).date() if latest_block else None
-
-            for address in addresses:
+                api_from_date = (last_synced_at - timedelta(days=1)).date() if last_synced_at else None
                 self._sync_account_chain(chain, address, api_from_date)
-            self.cache.mark_synced(chain, datetime.now(timezone.utc))
+                self.cache.mark_synced(chain, address, datetime.now(timezone.utc))
 
     def _sync_account_chain(self, chain: ChainId, address: WalletAddress, from_date: date | None) -> None:
         fetched = self.client.fetch_transactions(chain, address, from_date)
@@ -147,19 +134,6 @@ class MoralisService:
         mode = sync_mode if sync_mode is not None else SyncMode.BUDGET
         self._ensure_chains_synced(mode)
         return self.cache.load_all_transactions()
-
-
-def load_accounts(path: Path) -> list[Account]:
-    raw = cast(list[dict[str, Any]], json.loads(path.read_text()))
-    accounts: list[Account] = []
-    for entry in raw:
-        accounts.append(
-            {
-                "address": WalletAddress(entry["address"]),
-                "chains": [ChainId(chain) for chain in entry["chains"]],
-            }
-        )
-    return accounts
 
 
 def build_default_service(cache_db: Path = CACHE_DB_PATH, accounts_path: Path | None = None) -> MoralisService:
