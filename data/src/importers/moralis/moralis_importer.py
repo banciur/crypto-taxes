@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Iterable, cast
 
-from clients.moralis import MoralisService, SyncMode, build_default_service, load_accounts
+from accounts import load_accounts
+from clients.moralis import MoralisService, SyncMode, build_default_service
 from domain.ledger import (
     AssetId,
     EventLocation,
@@ -88,7 +89,7 @@ class MoralisImporter:
 
     def load_events(self) -> list[LedgerEvent]:
         accounts = load_accounts(self.service.accounts_path)
-        wallet_addresses = set([cast(WalletAddress, account["address"].lower()) for account in accounts])
+        wallet_addresses = {account.address for account in accounts}
         transactions = self.service.get_transactions(self.mode)
         events: list[LedgerEvent] = []
 

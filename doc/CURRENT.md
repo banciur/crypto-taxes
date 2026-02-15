@@ -99,6 +99,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - Purpose: fetch on-chain wallet transaction history via Moralis with the caching feature.
 - Entry point: `MoralisService.get_transactions(mode)` in `data/src/clients/moralis.py`; loads accounts from `artifacts/accounts.json`, ensures chains are synced, then returns all cached transactions ordered at the DB level.
-- Sync policy: supports `FRESH` (always refresh recent history) and `BUDGET` (skip chains already synced through yesterday; overlap by 1 day from the latest cached transaction when fetching).
+- Accounts config entries include `name` and `skip_sync`; `skip_sync=true` excludes that wallet from future fetches while retaining the wallet in tracked account metadata.
+- Sync policy: supports `FRESH` (always refresh each configured account/chain pair) and `BUDGET` (skip account/chain pairs already synced through yesterday). New account/chain pairs fetch full history; previously synced pairs use a 1-day overlap from their own sync cursor.
 - Implementation and schema details live in `data/src/clients/AGENTS.md`.
 - Importer output currently covers ERC20 and native transfers plus fees. NFT transfers are ignored.
