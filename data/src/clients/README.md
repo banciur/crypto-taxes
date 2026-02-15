@@ -10,7 +10,7 @@
 - Persistence: SQLite `artifacts/transactions_cache.db` via `TransactionsCacheRepository`
 - Script: `scripts/fetch_wallet_history.py` accepts `--mode` and `--accounts`, syncs, prints last 5 transactions; storage is in DB (no file dump).
 - Types: `ChainId`/`WalletAddress` are `NewType(str, ...)`; accounts are `{"name": ..., "address": ..., "chains": [...], "skip_sync": ...}`.
-- Sync filter: accounts with `skip_sync=true` are excluded from Moralis fetches but remain valid tracked wallets for parsing cached transactions.
+- Sync filter: accounts with `skip_sync=true` are excluded from Moralis fetches.
 
 ## Moralis → LedgerEvent parsing (current)
 - Parsing rules live in `data/src/importers/moralis/README.md`.

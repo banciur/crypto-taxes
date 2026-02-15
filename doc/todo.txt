@@ -13,7 +13,6 @@ TODO: Improvements around wallets, tokens better structure etc. Broader topic to
 review the rest of todos
 
 TODO: tooltip on OrginIcon doesn't work for corrections - probably doesn't have to? Or maybe it should. Actually doest correcntion have a place where they are added?
-TODO: sync and track by address and chain not only chain so we can add new addresses on the fly
 TODO: code that creates legs for native and erc20 is similar to one for native transfers we could improve
 TODO: Why I have to restart UI or API to see new data.
 
