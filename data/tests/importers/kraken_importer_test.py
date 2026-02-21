@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from domain.ledger import EventLocation, EventType
+from domain.ledger import EventLocation
 from importers.kraken import KrakenImporter, KrakenLedgerEntry
 
 FIELDNAMES = [
@@ -146,7 +146,6 @@ def test_deposit_fiat_becomes_deposit_event(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.event_type == EventType.DEPOSIT
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
     assert len(event.legs) == 2
@@ -176,7 +175,6 @@ def test_deposit_fiat_without_fee(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.event_type == EventType.DEPOSIT
     assert len(event.legs) == 2
     outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
     kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
@@ -204,7 +202,6 @@ def test_deposit_crypto_becomes_transfer_event(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.event_type == EventType.TRANSFER
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
     assert len(event.legs) == 2
@@ -236,7 +233,6 @@ def test_deposit_crypto_with_fee(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.event_type == EventType.TRANSFER
     outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
     kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
 
@@ -266,7 +262,6 @@ def test_withdrawal_fiat_becomes_withdrawal_event(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.event_type == EventType.WITHDRAWAL
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
     assert len(event.legs) == 2
@@ -295,7 +290,6 @@ def test_withdrawal_fiat_without_fee(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.event_type == EventType.WITHDRAWAL
     kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
     outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
 
@@ -322,7 +316,6 @@ def test_withdrawal_crypto_becomes_transfer_event(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.event_type == EventType.TRANSFER
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
     assert len(event.legs) == 2
@@ -354,7 +347,6 @@ def test_withdrawal_crypto_with_fee(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.event_type == EventType.TRANSFER
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
     kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
@@ -400,7 +392,6 @@ def test_trade_event_with_fee(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.event_type == EventType.TRADE
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
     assert len(event.legs) == 2
@@ -443,7 +434,6 @@ def test_spend_receive_trade(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.event_type == EventType.TRADE
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
     sell_leg = next(leg for leg in event.legs if leg.asset_id == "EUR")
@@ -475,7 +465,6 @@ def test_staking_reward_with_fee(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.event_type == EventType.REWARD
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
     assert len(event.legs) == 1
@@ -502,7 +491,6 @@ def test_asset_aliases_are_applied(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.event_type == EventType.TRANSFER  # DOT is not fiat
     assert event.legs[0].asset_id == "DOT"
 
 
@@ -525,7 +513,6 @@ def test_earn_reward_event(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.event_type == EventType.REWARD
     assert event.legs[0].asset_id == "USDC"
     assert event.legs[0].quantity == Decimal("1.21127078")
 
@@ -603,7 +590,6 @@ def test_spot_from_futures_event(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.event_type == EventType.REWARD
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
     assert len(event.legs) == 1
     assert event.legs[0].asset_id == "STRK"

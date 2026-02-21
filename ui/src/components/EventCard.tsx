@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Badge,
   Card,
   CardBody,
   CardHeader,
@@ -17,7 +16,6 @@ import type { EventCardProps, EventLeg } from "@/types/events";
 
 export function EventCard({
   timestamp,
-  eventType,
   place,
   originId,
   legs,
@@ -43,7 +41,6 @@ export function EventCard({
   return (
     <Card className="shadow-sm">
       <CardHeader className="d-flex flex-wrap align-items-center gap-2">
-        <Badge className="text-uppercase">{eventType}</Badge>
         {originId && (
           <OriginId
             originId={originId}

@@ -8,7 +8,6 @@ export type EventLeg = {
 
 export type EventCardProps = {
   timestamp: string;
-  eventType: string;
   place: string;
   originId: string;
   legs: EventLeg[];

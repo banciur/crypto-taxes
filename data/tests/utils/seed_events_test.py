@@ -3,7 +3,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from domain.correction import SeedEvent
-from domain.ledger import EventLocation, EventType, LedgerLeg
+from domain.ledger import EventLocation, LedgerLeg
 from importers.seed_events import (
     DEFAULT_SEED_TIMESTAMP,
     SEED_CSV_INGESTION,
@@ -74,7 +74,6 @@ def test_ledger_events_from_seed_events() -> None:
     (event,) = ledger_events
     assert event.timestamp == timestamp
     assert event.ingestion == SEED_CSV_INGESTION
-    assert event.event_type == EventType.REWARD
     assert event.origin.location == EventLocation.INTERNAL
     assert event.origin.external_id == f"seed:{seed_event.id}"
     assert len(event.legs) == 1

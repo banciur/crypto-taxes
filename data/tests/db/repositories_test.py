@@ -20,7 +20,6 @@ from domain.ledger import (
     DisposalLink,
     EventLocation,
     EventOrigin,
-    EventType,
     LedgerEvent,
     LedgerEventId,
     LedgerLeg,
@@ -36,7 +35,6 @@ def _sample_event(external_id: str, timestamp: datetime) -> LedgerEvent:
         timestamp=timestamp,
         origin=EventOrigin(location=EventLocation.KRAKEN, external_id=external_id),
         ingestion="test_ingestion",
-        event_type=EventType.TRADE,
         legs=[
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), wallet_id=KRAKEN_WALLET, is_fee=False),
             LedgerLeg(asset_id=EUR, quantity=Decimal("-2000"), wallet_id=KRAKEN_WALLET, is_fee=False),
@@ -83,7 +81,6 @@ def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
     assert fetched is not None
     assert fetched.id == event.id
     assert fetched.timestamp == event.timestamp
-    assert fetched.event_type == event.event_type
     assert fetched.origin.location == event.origin.location
     assert len(fetched.legs) == len(event.legs)
     assert {leg.asset_id for leg in fetched.legs} == {leg.asset_id for leg in event.legs}

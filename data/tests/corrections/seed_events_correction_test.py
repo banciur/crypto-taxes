@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from corrections.seed_events import apply_seed_event_corrections
 from domain.correction import SeedEvent
-from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerEventId, LedgerLeg
+from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
 from tests.constants import BTC, KRAKEN_WALLET
 
 
@@ -24,7 +24,6 @@ def test_apply_seed_event_corrections_merges_and_sorts() -> None:
         timestamp=raw_timestamp,
         origin=EventOrigin(location=EventLocation.KRAKEN, external_id="raw-ext"),
         ingestion="raw_ingestion",
-        event_type=EventType.TRADE,
         legs=[LedgerLeg(asset_id=BTC, quantity=raw_quantity, wallet_id=KRAKEN_WALLET, is_fee=False)],
     )
 
