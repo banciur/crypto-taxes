@@ -10,14 +10,13 @@ from typing import Iterable
 
 from pydantic import BaseModel, Field, field_validator
 
-from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
+from domain.ledger import AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg, WalletId
 
 logger = logging.getLogger(__name__)
 KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"
 KRAKEN_WALLET_ID = WalletId("kraken")
 OUTSIDE_WALLET_ID = WalletId("outside")
 
-FIAT_ASSETS = {"EUR", "USD"}
 ASSET_ALIASES = {
     "DOT28.S": "DOT",
     "DOT.S": "DOT",
@@ -312,9 +311,6 @@ class KrakenImporter:
         if incoming_quantity <= 0:
             raise ValueError(f"Deposit entry net amount must be positive (refid={entry.refid})")
 
-        asset_code = _normalize_asset(entry.asset)
-        event_type = EventType.DEPOSIT if asset_code in FIAT_ASSETS else EventType.TRANSFER
-
         legs = [
             _ledger_leg(entry, -entry.amount, wallet_id=OUTSIDE_WALLET_ID),
             _ledger_leg(entry, incoming_quantity),
@@ -324,7 +320,6 @@ class KrakenImporter:
             timestamp=entry.time,
             origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
-            event_type=event_type,
             legs=legs,
         )
 
@@ -336,9 +331,6 @@ class KrakenImporter:
         if sent_quantity >= 0:
             raise ValueError(f"Withdrawal entry net amount must be negative (refid={entry.refid})")
 
-        asset_code = _normalize_asset(entry.asset)
-        event_type = EventType.WITHDRAWAL if asset_code in FIAT_ASSETS else EventType.TRANSFER
-
         legs = [
             _ledger_leg(entry, sent_quantity),
             _ledger_leg(entry, abs(entry.amount), wallet_id=OUTSIDE_WALLET_ID),
@@ -348,7 +340,6 @@ class KrakenImporter:
             timestamp=entry.time,
             origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
-            event_type=event_type,
             legs=legs,
         )
 
@@ -368,7 +359,6 @@ class KrakenImporter:
             timestamp=min(entry.time for entry in entries),
             origin=self._build_origin(entries[0].refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
-            event_type=EventType.TRADE,
             legs=legs,
         )
 
@@ -384,7 +374,6 @@ class KrakenImporter:
             timestamp=entry.time,
             origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
-            event_type=EventType.REWARD,
             legs=legs,
         )
 
@@ -399,7 +388,6 @@ class KrakenImporter:
             timestamp=entry.time,
             origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
-            event_type=EventType.REWARD,
             legs=legs,
         )
 
@@ -415,6 +403,5 @@ class KrakenImporter:
             timestamp=entry.time,
             origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
-            event_type=EventType.REWARD,
             legs=[_ledger_leg(entry, quantity)],
         )

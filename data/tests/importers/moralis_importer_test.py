@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from domain.ledger import AssetId, EventType, WalletAddress
+from domain.ledger import AssetId, WalletAddress
 from importers.moralis.moralis_importer import CHAIN_LOCATIONS, MoralisImporter
 
 CHAIN = "arbitrum"
@@ -48,7 +48,6 @@ def test_native_transfer_builds_incoming_leg() -> None:
     expected_timestamp = datetime.fromisoformat(BLOCK_TS.replace("Z", "+00:00")).astimezone(timezone.utc)
 
     assert event is not None
-    assert event.event_type == EventType.REWARD
     assert event.origin.location == CHAIN_LOCATIONS[CHAIN]
     assert event.origin.external_id == TX_HASH
     assert event.timestamp == expected_timestamp
@@ -102,7 +101,6 @@ def test_fee_leg_added_for_outgoing_tx() -> None:
     event = importer._build_event(tx, {WALLET})
 
     assert event is not None
-    assert event.event_type == EventType.OPERATION
     assert len(event.legs) == 1
     leg = event.legs[0]
     assert leg.asset_id == AssetId("ETH")

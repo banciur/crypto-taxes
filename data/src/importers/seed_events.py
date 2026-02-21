@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from domain.correction import SeedEvent
-from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
+from domain.ledger import AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg, WalletId
 
 DEFAULT_SEED_TIMESTAMP = datetime(2000, 1, 1, tzinfo=timezone.utc)
 SEED_CSV_INGESTION = "seed_csv"
@@ -95,7 +95,6 @@ def ledger_events_from_seed_events(seed_events: list[SeedEvent]) -> list[LedgerE
                     external_id=f"seed:{seed_event.id}",
                 ),
                 ingestion=SEED_CSV_INGESTION,
-                event_type=EventType.REWARD,
                 legs=[leg],
             )
         )

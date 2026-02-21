@@ -11,7 +11,6 @@ from domain.ledger import (
     AssetId,
     EventLocation,
     EventOrigin,
-    EventType,
     LedgerEvent,
     LedgerLeg,
     WalletAddress,
@@ -198,15 +197,7 @@ class MoralisImporter:
                 )
             )
 
-        if has_incoming and has_outgoing:
-            event_type = EventType.TRADE
-        elif has_incoming:
-            event_type = EventType.REWARD
-        elif has_outgoing:
-            event_type = EventType.WITHDRAWAL
-        elif is_my_tx:
-            event_type = EventType.OPERATION
-        else:
+        if not (has_incoming or has_outgoing or is_my_tx):
             # This could be NFT drop probably (probably spam)
             return None
 
@@ -214,6 +205,5 @@ class MoralisImporter:
             timestamp=_parse_timestamp(str(tx["block_timestamp"])),
             origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
-            event_type=event_type,
             legs=legs,
         )

@@ -13,7 +13,6 @@ from domain.ledger import (
     DisposalLink,
     EventLocation,
     EventOrigin,
-    EventType,
     LedgerEvent,
     LedgerEventId,
     LedgerLeg,
@@ -35,7 +34,6 @@ class LedgerEventRepository:
                 id=event.id,
                 timestamp=event.timestamp,
                 ingestion=event.ingestion,
-                event_type=event.event_type.value,
                 origin_location=event.origin.location.value,
                 origin_external_id=event.origin.external_id,
             )
@@ -89,7 +87,6 @@ class LedgerEventRepository:
             timestamp=timestamp,
             origin=origin,
             ingestion=orm_event.ingestion,
-            event_type=EventType(orm_event.event_type),
             legs=legs,
         )
 
@@ -105,7 +102,6 @@ class CorrectedLedgerEventRepository:
                 id=event.id,
                 timestamp=event.timestamp,
                 ingestion=event.ingestion,
-                event_type=event.event_type.value,
                 origin_location=event.origin.location.value,
                 origin_external_id=event.origin.external_id,
             )
@@ -157,7 +153,6 @@ class CorrectedLedgerEventRepository:
             timestamp=timestamp,
             origin=origin,
             ingestion=orm_event.ingestion,
-            event_type=EventType(orm_event.event_type),
             legs=legs,
         )
 

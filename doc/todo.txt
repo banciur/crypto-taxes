@@ -9,36 +9,41 @@ TODO: Improvements around wallets, tokens better structure etc. Broader topic to
   - do we need a token registry and mapping symbol to address and multichain address?
   - some tokens can have the same symbol on different chains, but in reality there are different tokens, and it's not a mistake. Example fGHO in fluid different price on different chains (to be confirmed)
   - review client and accounts structure, also think about wallet id (address_chain)
+  - Kraken importer why do I need outside wallet?
 
-review the rest of todos
+review next steps
+TODO: Manual adjustments to mark and filter out spam transactions.
+TODO: Mark spam transactions from Moralis importer.
 
-TODO: tooltip on OrginIcon doesn't work for corrections - probably doesn't have to? Or maybe it should. Actually doest correcntion have a place where they are added?
+TODO: Review fee legs
+TODO: Review Kraken importer after event type removal and wallets structure changes
+TODO: Review Moralis importer after wallets structure changes. This transaction should combine WETH together https://basescan.org/tx/0xa40bbba2eedb9c86ff4087c55740fce24df9d9c9b25a2a14768b490c3a6f674d
+TODO: Coinbase importer
+TODO: Corrections, combine and/or modify events (complicated transfers etc)
+TODO: I'm not sure about the corrections directory and which code should go where.
+
+TODO: Fix acquisition/disposal and tax computation after changes that were introduced
+
+TODO: I think some accounts I flagged as mine are actually not mine, but Coinbase
+TODO: tooltip on OrginIcon doesn't work for corrections - probably doesn't have to? Or maybe it should. Actually, does the correction have a place where they are added? Don't know what I meant here
 TODO: code that creates legs for native and erc20 is similar to one for native transfers we could improve
 TODO: Why I have to restart UI or API to see new data.
 
-TODO: Manual adjustments to mark and filter out spam transactions.
-
 TODO: Fix codex not being able to run pnpm commands
+TODO: Is there a possibility to have a whitelist of commands for codex?
 TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
 
 TODO: add loaders to the UI when data is being fetched, especially when changing visible columns
 
 TODO: we will end with multiple ledger legs tables in the database - maybe combine them into one with a discriminator column?
 
-TODO: additional correction elements
- - mark spam events (can be automatic?)
- - mark non-taxable events (income)
- - combine two (or more?) events into one
- - I'm not sure about the corrections directory and which code should go where.
-
-TODO: Import data from Coinbase hopefully through API
+TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
+TODO: mark non-taxable events (income), next layer of corrections
 
 TODO: still need it? Maybe good UI is enough? tool to print from db event, legs etc for debugging. After provided id print whole network of entities
 TODO: I'm suspicious of the tax calculations. Think how we can debug it better.
 
-TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
 TODO: Restore inventory taxable and free.
-TODO: Maybe time to change implementation and add connections to objects, not just id's. Or maybe create object repos so we could query them easily. Or just good old SQLAlchemy?
 TODO: Do we need extra snapshot mechanism to, for example, output value of wallets?
 TODO: Review inventory again. I don't like those intermediate objects also ones in taxes.
 
@@ -66,8 +71,6 @@ TODO: Export data in a format that can be used by Steuerberater
 TODO: Date chooser could be improved (in far futuren when I will need to make it nice)
  - it could follow (open/close) when the main section is being scrolled
  - active state of year and month should be properly stated
-
-TODO: Is there a possibility to have a whitelist of commands for codex?
 
 Second stage: tracking wealth
 TODO: better visualiation use some library to nicely print stuff or maybe switch to web app

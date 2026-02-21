@@ -19,7 +19,6 @@ export type ApiLedgerEvent = {
   timestamp: string;
   origin: ApiEventOrigin;
   ingestion: string;
-  event_type: string;
   legs: ApiLedgerLeg[];
 };
 

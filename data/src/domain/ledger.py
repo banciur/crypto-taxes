@@ -19,6 +19,7 @@ WalletAddress = NewType("WalletAddress", str)
 WalletId = NewType("WalletId", str)
 
 
+# Now it's deprecated and not used
 class EventType(StrEnum):
     TRADE = "TRADE"
     DEPOSIT = "DEPOSIT"
@@ -87,7 +88,7 @@ class LedgerEvent(AbstractEvent):
 
     origin: EventOrigin
     ingestion: str
-    event_type: EventType
+    event_type: EventType | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def _validate_fields(self) -> LedgerEvent:

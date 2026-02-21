@@ -39,40 +39,36 @@ The input CSV comes from Kraken’s web UI (“Ledger” report export). Each ro
 #### `deposit` → emit event
 
 - Applies when the refid group has a single ledger row of type `deposit` with a positive `amount`.
-- If the `asset` is a fiat ticker (`EUR` or `USD`), the event is emitted as `EventType.DEPOSIT`.
-- All other assets are treated as crypto deposits, which we model as `EventType.TRANSFER` (asset moving from an external wallet into Kraken without tax impact).
 - Two legs are emitted: `wallet_id="outside"` spends the reported `amount` (negative leg) and `wallet_id="kraken"` receives the net (`amount - fee`). Fees do not emit standalone legs; they are already accounted for in the net transfer into Kraken.
 
 #### `withdrawal` → emit event
 
 - Applies when the refid group has a single ledger row of type `withdrawal` with a negative `amount`.
-- Fiat withdrawals (`EUR`, `USD`) emit `EventType.WITHDRAWAL`.
-- Crypto withdrawals are modeled as `EventType.TRANSFER` (asset leaving Kraken to an external wallet).
 - Two legs are emitted: `wallet_id="kraken"` spends the `amount` plus any fee (`amount - fee`, still negative) and `wallet_id="outside"` receives `abs(amount)`. The recipient leg therefore matches what arrives externally while Kraken records the extra outflow that covered fees.
 
 #### `staking` → emit event
 
 - Applies when a refid group has one `type="staking"` row with a positive `amount`.
-- The event emits as `EventType.REWARD` with a positive leg for the staking asset (after alias normalization, if applicable).
+- The event emits with a single leg for the staking asset (after alias normalization, if applicable).
 - Any reported fee is netted into the reward quantity (the credited amount is `amount - fee`).
 - Historical anomalies: refids `STHFSYV-COKEV-2N3FK7` and `STFTGR6-35YZ3-ZWJDFO` contain negative staking amounts (Kraken logged the exit as `type="staking"` instead of `transfer`). These two refids are explicitly whitelisted so we still emit them as rewards despite the negative quantity.
 
 #### `earn` reward → emit event
 
 - Applies when the lone row has `type="earn"` and `subtype="reward"` with a positive amount.
-- Emitted as `EventType.REWARD`; any fee is netted into the credited quantity just like staking rewards.
+- Emits a single positive leg; any fee is netted into the credited quantity just like staking rewards.
 
 #### `transfer` (`spotfromfutures`) → emit event
 
 - Applies when a refid contains a single `type="transfer"` row whose `subtype="spotfromfutures"` and amount is positive.
-- Represents Kraken crediting spot after drops/forks; emitted as `EventType.REWARD` with a single positive leg.
+- Represents Kraken crediting spot after drops/forks; emitted with a single positive leg.
 
 ### Two-row groups
 
 #### `trade`/`spend-receive` → emit event
 
 - Applies when a refid group contains exactly two `type="trade"` rows **or** a `spend`/`receive` pair (Kraken sometimes encodes dust-sweeps or special conversions this way).
-- The row with a negative `amount` becomes the sell leg; the positive `amount` row becomes the buy leg. Both legs are captured in `EventType.TRADE`.
+- The row with a negative `amount` becomes the sell leg; the positive `amount` row becomes the buy leg.
 - Fee values reported on either row are netted into that leg’s quantity (e.g., a buy row with `fee` reduces the acquired quantity).
 - Timestamp for the event is the earliest timestamp across the two rows (Kraken typically uses the same instant for both).
 
