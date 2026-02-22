@@ -8,7 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 
@@ -49,7 +49,7 @@ class KrakenLedgerEntry(BaseModel):
     aclass: str
     asset: str
     wallet: str
-    amount: Decimal = Field(alias="amount")
+    amount: Decimal
     fee: Decimal
     balance: Decimal
 

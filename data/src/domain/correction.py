@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import NewType
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from domain.ledger import AbstractEvent, EventOrigin
 
@@ -13,6 +13,8 @@ CorrectionId = NewType("CorrectionId", UUID)
 
 
 class Correction(BaseModel, ABC):
+    model_config = ConfigDict(extra="forbid")
+
     id: CorrectionId = CorrectionId(Field(default_factory=uuid4))
 
 
