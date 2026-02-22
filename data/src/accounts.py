@@ -5,36 +5,65 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-from domain.ledger import ChainId, WalletAddress
+from domain.ledger import AccountId, ChainId, WalletAddress
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ACCOUNTS_PATH = REPO_ROOT / "artifacts" / "accounts.json"
+CHAIN_ALIASES: dict[str, str] = {
+    "ethereum": "eth",
+}
 
 
 @dataclass(frozen=True)
-class TrackedAccount:
+class Account:
     name: str
     address: WalletAddress
-    chains: list[ChainId]
+    chains: frozenset[ChainId]
     skip_sync: bool
+
+    def account_id_for(self, chain: ChainId) -> AccountId:
+        return account_id_for(chain=chain, address=self.address)
+
+
+@dataclass(frozen=True)
+class AccountRecord:
+    account_id: AccountId
+    name: str
+    chain: ChainId
+    address: WalletAddress
+    skip_sync: bool
+
+
+def normalize_chain(chain: str | ChainId) -> ChainId:
+    normalized = str(chain).strip().lower()
+    return ChainId(CHAIN_ALIASES.get(normalized, normalized))
 
 
 def _normalize_address(address: str) -> WalletAddress:
     return WalletAddress(address.lower())
 
 
-def _normalize_chains(chains: Iterable[object]) -> list[ChainId]:
-    return [ChainId(str(chain)) for chain in chains]
+def _normalize_chains(chains: Iterable[object]) -> frozenset[ChainId]:
+    return frozenset(normalize_chain(str(chain)) for chain in chains)
 
 
-def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[TrackedAccount]:
+def account_id_for(*, chain: ChainId, address: WalletAddress) -> AccountId:
+    return AccountId(f"{normalize_chain(chain)}:{address.lower()}")
+
+
+def chain_address_from_account_id(account_id: AccountId) -> tuple[ChainId, WalletAddress]:
+    chain, address = str(account_id).split(":", maxsplit=1)
+    return normalize_chain(chain), _normalize_address(address)
+
+
+def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[Account]:
     payload = json.loads(path.read_text())
     if not isinstance(payload, list):
         msg = "Accounts file must contain a JSON list of objects."
         raise ValueError(msg)
 
     addresses_seen: set[WalletAddress] = set()
-    accounts: list[TrackedAccount] = []
+    accounts: list[Account] = []
     for entry in payload:
         if not isinstance(entry, dict):
             raise ValueError("Each account entry must be an object.")
@@ -56,7 +85,7 @@ def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[TrackedAccount]:
             raise ValueError(f"Duplicate address {address} in accounts file.")
         addresses_seen.add(address)
         accounts.append(
-            TrackedAccount(
+            Account(
                 name=name,
                 address=address,
                 chains=_normalize_chains(chains_raw),
@@ -67,4 +96,66 @@ def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[TrackedAccount]:
     return accounts
 
 
-__all__ = ["DEFAULT_ACCOUNTS_PATH", "TrackedAccount", "load_accounts"]
+class AccountRegistry:
+    def __init__(self, accounts: Iterable[Account]):
+        ordered_accounts = tuple(accounts)
+        by_chain_address: dict[tuple[ChainId, WalletAddress], Account] = {}
+        by_account_id: dict[AccountId, AccountRecord] = {}
+        for account in ordered_accounts:
+            for chain in account.chains:
+                key = (chain, account.address)
+                by_chain_address[key] = account
+                account_id = account.account_id_for(chain)
+                by_account_id[account_id] = AccountRecord(
+                    account_id=account_id,
+                    name=account.name,
+                    chain=chain,
+                    address=account.address,
+                    skip_sync=account.skip_sync,
+                )
+        self._accounts = ordered_accounts
+        self._by_chain_address = by_chain_address
+        self._by_account_id = by_account_id
+
+    @classmethod
+    def from_path(cls, path: Path = DEFAULT_ACCOUNTS_PATH) -> AccountRegistry:
+        return cls(load_accounts(path))
+
+    def resolve_owned_id(self, *, chain: ChainId, address: WalletAddress) -> AccountId | None:
+        normalized_chain = normalize_chain(chain)
+        normalized_address = _normalize_address(address)
+        account = self._by_chain_address.get((normalized_chain, normalized_address))
+        if account is None:
+            return None
+        return account.account_id_for(normalized_chain)
+
+    def is_owned(self, account_id: AccountId) -> bool:
+        return account_id in self._by_account_id
+
+    def chain_address_for(self, account_id: AccountId) -> tuple[ChainId, WalletAddress] | None:
+        record = self._by_account_id.get(account_id)
+        if record is None:
+            return None
+        return record.chain, record.address
+
+    def name_for(self, account_id: AccountId) -> str | None:
+        record = self._by_account_id.get(account_id)
+        if record is None:
+            return None
+        return record.name
+
+    def records(self) -> list[AccountRecord]:
+        return list(self._by_account_id.values())
+
+
+__all__ = [
+    "Account",
+    "AccountRecord",
+    "AccountRegistry",
+    "CHAIN_ALIASES",
+    "DEFAULT_ACCOUNTS_PATH",
+    "account_id_for",
+    "chain_address_from_account_id",
+    "load_accounts",
+    "normalize_chain",
+]

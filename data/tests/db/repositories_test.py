@@ -36,8 +36,8 @@ def _sample_event(external_id: str, timestamp: datetime) -> LedgerEvent:
         origin=EventOrigin(location=EventLocation.KRAKEN, external_id=external_id),
         ingestion="test_ingestion",
         legs=[
-            LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), wallet_id=KRAKEN_WALLET, is_fee=False),
-            LedgerLeg(asset_id=EUR, quantity=Decimal("-2000"), wallet_id=KRAKEN_WALLET, is_fee=False),
+            LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_id=KRAKEN_WALLET, is_fee=False),
+            LedgerLeg(asset_id=EUR, quantity=Decimal("-2000"), account_id=KRAKEN_WALLET, is_fee=False),
         ],
     )
 
@@ -211,7 +211,7 @@ def test_persist_seed_events(seed_repo: SeedEventRepository) -> None:
     seed_event = SeedEvent(
         timestamp=timestamp,
         price_per_token=price_per_token,
-        legs=[LedgerLeg(asset_id=BTC, quantity=quantity, wallet_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=quantity, account_id=KRAKEN_WALLET, is_fee=False)],
     )
 
     seed_repo.create_many([seed_event])
@@ -226,7 +226,7 @@ def test_persist_seed_events(seed_repo: SeedEventRepository) -> None:
     (leg,) = reloaded.legs
     assert leg.asset_id == BTC
     assert leg.quantity == quantity
-    assert leg.wallet_id == KRAKEN_WALLET
+    assert leg.account_id == KRAKEN_WALLET
 
 
 def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRepository) -> None:

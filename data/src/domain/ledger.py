@@ -4,10 +4,10 @@ from abc import ABC
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import NewType
+from typing import Annotated, NewType
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 AssetId = NewType("AssetId", str)
 ChainId = NewType("ChainId", str)
@@ -16,17 +16,7 @@ LedgerEventId = NewType("LedgerEventId", UUID)
 LegId = NewType("LegId", UUID)
 LotId = NewType("LotId", UUID)
 WalletAddress = NewType("WalletAddress", str)
-WalletId = NewType("WalletId", str)
-
-
-# Now it's deprecated and not used
-class EventType(StrEnum):
-    TRADE = "TRADE"
-    DEPOSIT = "DEPOSIT"
-    WITHDRAWAL = "WITHDRAWAL"
-    TRANSFER = "TRANSFER"
-    REWARD = "REWARD"
-    OPERATION = "OPERATION"
+AccountId = NewType("AccountId", str)
 
 
 class EventLocation(StrEnum):
@@ -42,13 +32,7 @@ class EventLocation(StrEnum):
 
 class EventOrigin(BaseModel):
     location: EventLocation
-    external_id: str
-
-    @model_validator(mode="after")
-    def _validate_external_id(self) -> EventOrigin:
-        if not self.external_id:
-            raise ValueError("external_id must be non-empty")
-        return self
+    external_id: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 
 
 class LedgerLeg(BaseModel):
@@ -62,7 +46,7 @@ class LedgerLeg(BaseModel):
     id: LegId = LegId(Field(default_factory=uuid4))
     asset_id: AssetId
     quantity: Decimal
-    wallet_id: WalletId
+    account_id: AccountId
     is_fee: bool = False
 
     @model_validator(mode="after")
@@ -74,13 +58,7 @@ class LedgerLeg(BaseModel):
 
 class AbstractEvent(BaseModel, ABC):
     timestamp: datetime
-    legs: list[LedgerLeg]
-
-    @model_validator(mode="after")
-    def _validate_fields(self) -> AbstractEvent:
-        if not self.legs:
-            raise ValueError("Event must have at least one leg")
-        return self
+    legs: list[LedgerLeg] = Field(min_length=1)
 
 
 class LedgerEvent(AbstractEvent):
@@ -88,7 +66,6 @@ class LedgerEvent(AbstractEvent):
 
     origin: EventOrigin
     ingestion: str
-    event_type: EventType | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def _validate_fields(self) -> LedgerEvent:

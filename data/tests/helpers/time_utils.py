@@ -6,7 +6,7 @@ from itertools import count
 from random import Random
 from typing import Callable, Iterable
 
-from domain.ledger import EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg
+from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 
 
 @dataclass
@@ -37,7 +37,6 @@ _EVENT_COUNTER = count()
 
 def make_event(
     *,
-    event_type: EventType,
     legs: Iterable[LedgerLeg],
     timestamp: datetime | None = None,
     ts_gen: Callable[[], datetime] | None = None,
@@ -57,6 +56,5 @@ def make_event(
         timestamp=timestamp,
         origin=origin,
         ingestion=ingestion,
-        event_type=event_type,
         legs=list(legs),
     )

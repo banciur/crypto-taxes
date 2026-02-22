@@ -3,9 +3,11 @@ from time import perf_counter
 from typing import Annotated, AsyncGenerator, Awaitable, Callable
 
 from fastapi import Depends, FastAPI, Request, Response
+from pydantic import BaseModel
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from accounts import DEFAULT_ACCOUNTS_PATH, AccountRegistry
 from api.dependencies import get_corrected_events_repository, get_raw_events_repository, get_seed_events_repository
 from config import DB_FILE
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
@@ -22,6 +24,14 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+class ApiAccount(BaseModel):
+    id: str
+    name: str
+    chain: str
+    address: str
+    skip_sync: bool
 
 
 @app.middleware("http")
@@ -48,3 +58,19 @@ def get_corrected_events(
 @app.get("/seed-events")
 def get_seed_events(sr: Annotated[SeedEventRepository, Depends(get_seed_events_repository)]) -> list[SeedEvent]:
     return sr.list()
+
+
+@app.get("/accounts")
+def get_accounts() -> list[ApiAccount]:
+    registry = AccountRegistry.from_path(DEFAULT_ACCOUNTS_PATH)
+    records = sorted(registry.records(), key=lambda record: record.account_id)
+    return [
+        ApiAccount(
+            id=record.account_id,
+            name=record.name,
+            chain=record.chain,
+            address=record.address,
+            skip_sync=record.skip_sync,
+        )
+        for record in records
+    ]

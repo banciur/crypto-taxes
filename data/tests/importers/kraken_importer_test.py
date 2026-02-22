@@ -148,14 +148,10 @@ def test_deposit_fiat_becomes_deposit_event(tmp_path: Path) -> None:
     event = events[0]
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
-    assert len(event.legs) == 2
-    outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
-    kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
-
-    assert outside_leg.asset_id == "EUR"
-    assert outside_leg.quantity == -amount
-    assert kraken_leg.asset_id == "EUR"
-    assert kraken_leg.quantity == amount - fee
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.asset_id == "EUR"
+    assert leg.quantity == amount - fee
 
 
 def test_deposit_fiat_without_fee(tmp_path: Path) -> None:
@@ -175,11 +171,9 @@ def test_deposit_fiat_without_fee(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert len(event.legs) == 2
-    outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
-    kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
-    assert outside_leg.quantity == Decimal("-500.0000")
-    assert kraken_leg.quantity == Decimal("500.0000")
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.quantity == Decimal("500.0000")
 
 
 def test_deposit_crypto_becomes_transfer_event(tmp_path: Path) -> None:
@@ -204,13 +198,10 @@ def test_deposit_crypto_becomes_transfer_event(tmp_path: Path) -> None:
     event = events[0]
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
-    assert len(event.legs) == 2
-    outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
-    kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
-    assert outside_leg.asset_id == "ETH"
-    assert outside_leg.quantity == Decimal("-2.5")
-    assert kraken_leg.asset_id == "ETH"
-    assert kraken_leg.quantity == Decimal("2.5")
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.asset_id == "ETH"
+    assert leg.quantity == Decimal("2.5")
 
 
 def test_deposit_crypto_with_fee(tmp_path: Path) -> None:
@@ -233,11 +224,9 @@ def test_deposit_crypto_with_fee(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
-    kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
-
-    assert outside_leg.quantity == -amount
-    assert kraken_leg.quantity == amount - fee
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.quantity == amount - fee
 
 
 def test_withdrawal_fiat_becomes_withdrawal_event(tmp_path: Path) -> None:
@@ -264,13 +253,10 @@ def test_withdrawal_fiat_becomes_withdrawal_event(tmp_path: Path) -> None:
     event = events[0]
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
-    assert len(event.legs) == 2
-    kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
-    outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
-
-    assert kraken_leg.asset_id == "EUR"
-    assert kraken_leg.quantity == amount - fee
-    assert outside_leg.quantity == abs(amount)
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.asset_id == "EUR"
+    assert leg.quantity == amount - fee
 
 
 def test_withdrawal_fiat_without_fee(tmp_path: Path) -> None:
@@ -290,11 +276,9 @@ def test_withdrawal_fiat_without_fee(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
-    outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
-
-    assert kraken_leg.quantity == Decimal("-400.0000")
-    assert outside_leg.quantity == Decimal("400.0000")
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.quantity == Decimal("-400.0000")
 
 
 def test_withdrawal_crypto_becomes_transfer_event(tmp_path: Path) -> None:
@@ -318,13 +302,10 @@ def test_withdrawal_crypto_becomes_transfer_event(tmp_path: Path) -> None:
     event = events[0]
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
-    assert len(event.legs) == 2
-    kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
-    outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
-    assert kraken_leg.asset_id == "ETH"
-    assert kraken_leg.quantity == Decimal("-1.25")
-    assert outside_leg.asset_id == "ETH"
-    assert outside_leg.quantity == Decimal("1.25")
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.asset_id == "ETH"
+    assert leg.quantity == Decimal("-1.25")
 
 
 def test_withdrawal_crypto_with_fee(tmp_path: Path) -> None:
@@ -349,13 +330,10 @@ def test_withdrawal_crypto_with_fee(tmp_path: Path) -> None:
 
     assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
 
-    kraken_leg = next(leg for leg in event.legs if leg.wallet_id == "kraken")
-    outside_leg = next(leg for leg in event.legs if leg.wallet_id == "outside")
-
-    assert kraken_leg.asset_id == "BTC"
-    assert kraken_leg.quantity == amount - fee
-    assert outside_leg.asset_id == "BTC"
-    assert outside_leg.quantity == abs(amount)
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.asset_id == "BTC"
+    assert leg.quantity == amount - fee
 
 
 def test_trade_event_with_fee(tmp_path: Path) -> None:

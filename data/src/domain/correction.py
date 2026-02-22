@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from domain.ledger import AbstractEvent, EventOrigin, EventType
+from domain.ledger import AbstractEvent, EventOrigin
 
 CorrectionId = NewType("CorrectionId", UUID)
 
@@ -34,4 +34,3 @@ class SeedEvent(Correction, AbstractEvent):
 
 class LinkMarker(Correction, AbstractEvent):
     event_origins: list[EventOrigin]
-    event_type: EventType

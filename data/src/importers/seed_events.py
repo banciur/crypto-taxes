@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from domain.correction import SeedEvent
-from domain.ledger import AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg, WalletId
+from domain.ledger import AccountId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 
 DEFAULT_SEED_TIMESTAMP = datetime(2000, 1, 1, tzinfo=timezone.utc)
 SEED_CSV_INGESTION = "seed_csv"
@@ -15,7 +15,7 @@ SEED_CSV_INGESTION = "seed_csv"
 def load_seed_events(csv_path: Path) -> list[SeedEvent]:
     """Load seed lots (manual history) as correction events.
 
-    Each row should contain: asset_id,wallet_id,quantity[,timestamp,price_per_token]
+    Each row should contain: asset_id,account_id,quantity[,timestamp,price_per_token]
     Timestamp defaults to a distant past date (UTC).
     """
 
@@ -27,14 +27,21 @@ def load_seed_events(csv_path: Path) -> list[SeedEvent]:
         if reader.fieldnames is None:
             raise ValueError(f"Seed CSV {csv_path} is empty or missing headers")
 
-        required = {"asset_id", "wallet_id", "quantity"}
+        has_account_id = "account_id" in reader.fieldnames
+        has_legacy_wallet_id = "wallet_id" in reader.fieldnames
+        if not has_account_id and not has_legacy_wallet_id:
+            raise ValueError(f"Seed CSV {csv_path} missing required columns: account_id or wallet_id")
+        required = {"asset_id", "quantity"}
         missing = required - set(reader.fieldnames)
         if missing:
             raise ValueError(f"Seed CSV {csv_path} missing required columns: {', '.join(sorted(missing))}")
 
         events: list[SeedEvent] = []
         for row in reader:
-            wallet_id = WalletId(row["wallet_id"].strip())
+            raw_account_id = row.get("account_id") or row.get("wallet_id")
+            if raw_account_id is None:
+                raise ValueError("Seed CSV row is missing account_id")
+            account_id = AccountId(raw_account_id.strip())
             asset_id = AssetId(row["asset_id"].strip())
             quantity = Decimal(row["quantity"].strip())
             if quantity <= 0:
@@ -48,7 +55,7 @@ def load_seed_events(csv_path: Path) -> list[SeedEvent]:
                         LedgerLeg(
                             asset_id=asset_id,
                             quantity=quantity,
-                            wallet_id=wallet_id,
+                            account_id=account_id,
                         )
                     ],
                 )

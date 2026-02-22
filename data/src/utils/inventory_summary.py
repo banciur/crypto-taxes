@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from domain.inventory import InventoryEngine
-from domain.ledger import AssetId, WalletId
+from domain.ledger import AccountId, AssetId
 from domain.pricing import PriceProvider
 from domain.wallet_balance_tracker import WalletBalanceTracker
 
@@ -26,7 +26,7 @@ class InventorySummary:
 
 
 def compute_inventory_summary(
-    owned_wallet_ids: set[WalletId],
+    owned_account_ids: set[AccountId],
     *,
     wallet_balance_tracker: WalletBalanceTracker,
     price_provider: PriceProvider,
@@ -37,7 +37,7 @@ def compute_inventory_summary(
     summaries: list[AssetInventorySummary] = []
 
     for asset_id, quantity in sorted(
-        wallet_balance_tracker.asset_balances_for(owned_wallet_ids).items(),
+        wallet_balance_tracker.asset_balances_for(owned_account_ids).items(),
         key=lambda item: item[0],
     ):
         if quantity <= 0:

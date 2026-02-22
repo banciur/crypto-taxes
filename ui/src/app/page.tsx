@@ -51,9 +51,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const loadedColumns = await Promise.all(
     selectedColumns.map(async (key) => ({
       key,
-      events: (await COLUMN_DEFINITIONS[key].load()).map(
-        COLUMN_DEFINITIONS[key].transform,
-      ),
+      events: await COLUMN_DEFINITIONS[key].load(),
     })),
   );
 

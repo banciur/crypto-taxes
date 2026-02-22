@@ -1,4 +1,3 @@
-# Completely vibed didn't even read the code. Review during the next update
 from __future__ import annotations
 
 import json

@@ -18,7 +18,7 @@ from db.repositories import (
     TaxEventRepository,
 )
 from domain.inventory import InventoryEngine, InventoryResult
-from domain.ledger import WalletId
+from domain.ledger import AccountId
 from domain.wallet_balance_tracker import WalletBalanceTracker
 from importers.kraken import KrakenImporter
 from importers.moralis import MoralisImporter
@@ -72,8 +72,8 @@ def run(
     kraken_importer = KrakenImporter(str(csv_path))
     moralis_importer = MoralisImporter()
 
-    owned_wallets: set[WalletId] = set()
-    owned_wallets.add(KrakenImporter.WALLET_ID)
+    owned_accounts: set[AccountId] = set()
+    owned_accounts.add(KrakenImporter.ACCOUNT_ID)
 
     # Get corrections
     logger.info("Loading seed events from %s", seed_csv)
@@ -130,7 +130,7 @@ def run(
     print(f"Imported {len(events)} events from {csv_path}")
     print_base_inventory_summary(inventory)
     inventory_summary = compute_inventory_summary(
-        owned_wallets,
+        owned_accounts,
         wallet_balance_tracker=wallet_balance_tracker,
         price_provider=price_service,
     )

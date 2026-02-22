@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from domain.ledger import AssetId, WalletAddress
+from accounts import Account, AccountRegistry
+from domain.ledger import AccountId, AssetId, ChainId, WalletAddress
 from importers.moralis.moralis_importer import CHAIN_LOCATIONS, MoralisImporter
 
 CHAIN = "arbitrum"
@@ -11,6 +12,19 @@ TX_HASH = "0xabc123"
 BLOCK_TS = "2025-05-16T05:04:40.000Z"
 WALLET = WalletAddress("0x3c9219f44ead8154dee4e0854d67601fc2334c67")
 SENDER = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
+
+
+def _registry() -> AccountRegistry:
+    return AccountRegistry(
+        [
+            Account(
+                name="Wallet",
+                address=WALLET,
+                chains=frozenset([ChainId(CHAIN)]),
+                skip_sync=False,
+            )
+        ]
+    )
 
 
 def _build_tx(
@@ -44,7 +58,7 @@ def test_native_transfer_builds_incoming_leg() -> None:
     tx = _build_tx(native_transfers=[transfer])
 
     importer = MoralisImporter.__new__(MoralisImporter)
-    event = importer._build_event(tx, {WALLET})
+    event = importer._build_event(tx, _registry())
     expected_timestamp = datetime.fromisoformat(BLOCK_TS.replace("Z", "+00:00")).astimezone(timezone.utc)
 
     assert event is not None
@@ -56,7 +70,7 @@ def test_native_transfer_builds_incoming_leg() -> None:
     leg = event.legs[0]
     assert leg.asset_id == AssetId(symbol)
     assert leg.quantity == amount
-    assert leg.wallet_id == WALLET
+    assert leg.account_id == AccountId(f"{CHAIN}:{WALLET}")
 
 
 def test_native_transfer_dedupes_internal_and_external() -> None:
@@ -82,7 +96,7 @@ def test_native_transfer_dedupes_internal_and_external() -> None:
     tx = _build_tx(native_transfers=[external, internal])
 
     importer = MoralisImporter.__new__(MoralisImporter)
-    event = importer._build_event(tx, {WALLET})
+    event = importer._build_event(tx, _registry())
 
     assert event is not None
     assert len(event.legs) == 1
@@ -98,12 +112,12 @@ def test_fee_leg_added_for_outgoing_tx() -> None:
     )
 
     importer = MoralisImporter.__new__(MoralisImporter)
-    event = importer._build_event(tx, {WALLET})
+    event = importer._build_event(tx, _registry())
 
     assert event is not None
     assert len(event.legs) == 1
     leg = event.legs[0]
     assert leg.asset_id == AssetId("ETH")
     assert leg.quantity == -fee
-    assert leg.wallet_id == WALLET
+    assert leg.account_id == AccountId(f"{CHAIN}:{WALLET}")
     assert leg.is_fee is True

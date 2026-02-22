@@ -12,6 +12,7 @@ TODO: Improvements around wallets, tokens better structure etc. Broader topic to
   - Kraken importer why do I need outside wallet?
 
 review next steps
+TODO: Pydantic models could be simplified and some validation done by Field
 TODO: Manual adjustments to mark and filter out spam transactions.
 TODO: Mark spam transactions from Moralis importer.
 

@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Iterable, cast
 
 from domain.inventory import InventoryResult
-from domain.ledger import AcquisitionLot, DisposalId, DisposalLink, EventType, LedgerEvent, LedgerLeg, LegId, LotId
+from domain.ledger import AcquisitionLot, DisposalId, DisposalLink, LedgerEvent, LedgerLeg, LegId, LotId
 from domain.tax_event import TaxEvent, TaxEventKind
 
 from .formatting import format_currency
@@ -43,22 +43,6 @@ def generate_tax_events(
                 source_id=link.id,
                 kind=TaxEventKind.DISPOSAL,
                 taxable_gain=gain,
-            )
-        )
-
-    for lot in inventory_result.acquisition_lots:
-        acquisition_leg = legs_by_id[lot.acquired_leg_id]
-        acquisition_event = legs_to_event[lot.acquired_leg_id]
-
-        if acquisition_event.event_type != EventType.REWARD:
-            continue
-
-        proceeds = acquisition_leg.quantity * lot.cost_per_unit
-        tax_events.append(
-            TaxEvent(
-                source_id=lot.id,
-                kind=TaxEventKind.REWARD,
-                taxable_gain=proceeds,
             )
         )
 

@@ -10,12 +10,11 @@ from typing import Iterable
 
 from pydantic import BaseModel, Field, field_validator
 
-from domain.ledger import AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg, WalletId
+from domain.ledger import AccountId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 
 logger = logging.getLogger(__name__)
 KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"
-KRAKEN_WALLET_ID = WalletId("kraken")
-OUTSIDE_WALLET_ID = WalletId("outside")
+KRAKEN_ACCOUNT_ID = AccountId("kraken")
 
 ASSET_ALIASES = {
     "DOT28.S": "DOT",
@@ -94,19 +93,19 @@ def _ledger_leg(
     quantity: Decimal,
     *,
     is_fee: bool = False,
-    wallet_id: WalletId = KRAKEN_WALLET_ID,
+    account_id: AccountId = KRAKEN_ACCOUNT_ID,
 ) -> LedgerLeg:
     asset_id = _normalize_asset(entry.asset)
     return LedgerLeg(
         asset_id=asset_id,
         quantity=quantity,
-        wallet_id=wallet_id,
+        account_id=account_id,
         is_fee=is_fee,
     )
 
 
 class KrakenImporter:
-    WALLET_ID = KRAKEN_WALLET_ID
+    ACCOUNT_ID = KRAKEN_ACCOUNT_ID
 
     def __init__(self, source_path: str) -> None:
         self._source_path = Path(source_path)
@@ -311,16 +310,11 @@ class KrakenImporter:
         if incoming_quantity <= 0:
             raise ValueError(f"Deposit entry net amount must be positive (refid={entry.refid})")
 
-        legs = [
-            _ledger_leg(entry, -entry.amount, wallet_id=OUTSIDE_WALLET_ID),
-            _ledger_leg(entry, incoming_quantity),
-        ]
-
         return LedgerEvent(
             timestamp=entry.time,
             origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
-            legs=legs,
+            legs=[_ledger_leg(entry, incoming_quantity)],
         )
 
     def _withdrawal_event(self, entry: KrakenLedgerEntry) -> LedgerEvent:
@@ -331,16 +325,11 @@ class KrakenImporter:
         if sent_quantity >= 0:
             raise ValueError(f"Withdrawal entry net amount must be negative (refid={entry.refid})")
 
-        legs = [
-            _ledger_leg(entry, sent_quantity),
-            _ledger_leg(entry, abs(entry.amount), wallet_id=OUTSIDE_WALLET_ID),
-        ]
-
         return LedgerEvent(
             timestamp=entry.time,
             origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
-            legs=legs,
+            legs=[_ledger_leg(entry, sent_quantity)],
         )
 
     def _trade_event(self, entries: list[KrakenLedgerEntry]) -> LedgerEvent:
