@@ -105,8 +105,6 @@ def _ledger_leg(
 
 
 class KrakenImporter:
-    ACCOUNT_ID = KRAKEN_ACCOUNT_ID
-
     def __init__(self, source_path: str) -> None:
         self._source_path = Path(source_path)
 
