@@ -42,7 +42,7 @@ class LedgerEventRepository:
                     id=leg.id,
                     asset_id=leg.asset_id,
                     quantity=leg.quantity,
-                    account_id=leg.account_id,
+                    account_chain_id=leg.account_id,
                     is_fee=leg.is_fee,
                 )
                 for leg in event.legs
@@ -77,7 +77,7 @@ class LedgerEventRepository:
                 id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                account_id=AccountChainId(leg.account_id),
+                account_id=AccountChainId(leg.account_chain_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs
@@ -110,7 +110,7 @@ class CorrectedLedgerEventRepository:
                     id=leg.id,
                     asset_id=leg.asset_id,
                     quantity=leg.quantity,
-                    account_id=leg.account_id,
+                    account_chain_id=leg.account_id,
                     is_fee=leg.is_fee,
                 )
                 for leg in event.legs
@@ -143,7 +143,7 @@ class CorrectedLedgerEventRepository:
                 id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                account_id=AccountChainId(leg.account_id),
+                account_id=AccountChainId(leg.account_chain_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs
@@ -266,7 +266,7 @@ class SeedEventRepository:
                     id=leg.id,
                     asset_id=leg.asset_id,
                     quantity=leg.quantity,
-                    account_id=leg.account_id,
+                    account_chain_id=leg.account_id,
                     is_fee=leg.is_fee,
                 )
                 for leg in event.legs
@@ -292,7 +292,7 @@ class SeedEventRepository:
                 id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                account_id=AccountChainId(leg.account_id),
+                account_id=AccountChainId(leg.account_chain_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs

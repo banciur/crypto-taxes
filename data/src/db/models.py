@@ -49,7 +49,7 @@ class LedgerLegOrm(Base):
     event_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("ledger_events.id"), nullable=False)
     asset_id: Mapped[str] = mapped_column(String, nullable=False)
     quantity: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
-    account_id: Mapped[str] = mapped_column(String, nullable=False)
+    account_chain_id: Mapped[str] = mapped_column(String, nullable=False)
     is_fee: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     event: Mapped[LedgerEventOrm] = relationship(back_populates="legs")
@@ -82,7 +82,7 @@ class CorrectedLedgerLegOrm(Base):
     event_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("corrected_ledger_events.id"), nullable=False)
     asset_id: Mapped[str] = mapped_column(String, nullable=False)
     quantity: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
-    account_id: Mapped[str] = mapped_column(String, nullable=False)
+    account_chain_id: Mapped[str] = mapped_column(String, nullable=False)
     is_fee: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     event: Mapped["CorrectedLedgerEventOrm"] = relationship(back_populates="legs")
@@ -139,7 +139,7 @@ class SeedEventLegOrm(Base):
     event_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("seed_events.id"), nullable=False)
     asset_id: Mapped[str] = mapped_column(String, nullable=False)
     quantity: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
-    account_id: Mapped[str] = mapped_column(String, nullable=False)
+    account_chain_id: Mapped[str] = mapped_column(String, nullable=False)
     is_fee: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     event: Mapped[SeedEventOrm] = relationship(back_populates="legs")
