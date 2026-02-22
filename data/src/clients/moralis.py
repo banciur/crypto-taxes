@@ -115,7 +115,7 @@ class MoralisService:
                 logger.info("Address %s (%s) is marked skip_sync; skipping fetch", account.address, account.name)
                 continue
             address = account.address
-            for chain in sorted(account.chains):
+            for chain in account.chains:
                 last_synced_at = self.cache.last_synced_at(chain, address)
                 should_fetch = mode == SyncMode.FRESH
                 if mode == SyncMode.BUDGET and (last_synced_at is None or last_synced_at.date() < yesterday):
