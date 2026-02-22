@@ -1,6 +1,5 @@
 First stage: compute German taxes
 
-TODO: Review fee legs
 TODO: Manual adjustments to mark and filter out spam transactions.
 TODO: Mark spam transactions from Moralis importer.
 TODO: Review Moralis importer after wallets structure changes. This transaction should combine WETH together https://basescan.org/tx/0xa40bbba2eedb9c86ff4087c55740fce24df9d9c9b25a2a14768b490c3a6f674d
@@ -18,6 +17,7 @@ TODO: Improvements around tokens maybe better structure etc. Broader topic to th
   - do we need a token registry and mapping symbol to address and multichain address?
   - some tokens can have the same symbol on different chains, but in reality there are different tokens, and it's not a mistake. Example fGHO in fluid different price on different chains (to be confirmed)
 
+TODO: Another review of fee legs. Now without is_fee (or equivalent semantics), residual same-asset differences in transfer-like events (onchain with gas) require partial leg decomposition, and the current engine can only classify whole legs, causing misclassification of internal transfers as taxable disposals/acquisitions.
 TODO: I think some accounts I flagged as mine are actually not mine, but Coinbase
 TODO: tooltip on OrginIcon doesn't work for corrections - probably doesn't have to? Or maybe it should. Actually, does the correction have a place where they are added? Don't know what I meant here
 TODO: code that creates legs for native and erc20 is similar to one for native transfers we could improve
