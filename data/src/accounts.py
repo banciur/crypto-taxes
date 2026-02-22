@@ -40,27 +40,22 @@ def normalize_chain(chain: str | ChainId) -> ChainId:
 
 
 def _normalize_address(address: str) -> WalletAddress:
-    return WalletAddress(address.lower())
-
-
-def _normalize_chains(chains: Iterable[object]) -> frozenset[ChainId]:
-    return frozenset(normalize_chain(str(chain)) for chain in chains)
+    return WalletAddress(address.strip().lower())
 
 
 def account_id_for(*, chain: ChainId, address: WalletAddress) -> AccountId:
-    return AccountId(f"{normalize_chain(chain)}:{address.lower()}")
+    return AccountId(f"{chain}:{address}")
 
 
 def chain_address_from_account_id(account_id: AccountId) -> tuple[ChainId, WalletAddress]:
-    chain, address = str(account_id).split(":", maxsplit=1)
-    return normalize_chain(chain), _normalize_address(address)
+    chain, address = account_id.split(":", maxsplit=1)
+    return ChainId(chain), WalletAddress(address)
 
 
 def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[Account]:
     payload = json.loads(path.read_text())
     if not isinstance(payload, list):
-        msg = "Accounts file must contain a JSON list of objects."
-        raise ValueError(msg)
+        raise ValueError("Accounts file must contain a JSON list of objects.")
 
     addresses_seen: set[WalletAddress] = set()
     accounts: list[Account] = []
@@ -68,27 +63,28 @@ def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[Account]:
         if not isinstance(entry, dict):
             raise ValueError("Each account entry must be an object.")
         name = entry.get("name")
-        address = entry.get("address")
+        address_raw = entry.get("address")
         chains_raw = entry.get("chains")
         skip_sync = entry.get("skip_sync")
         if (
             not isinstance(name, str)
-            or not isinstance(address, str)
+            or not isinstance(address_raw, str)
             or not isinstance(chains_raw, list)
             or not isinstance(skip_sync, bool)
         ):
             raise ValueError(
                 "Each account entry must include 'name' (string), 'address' (string), 'chains' (list), and 'skip_sync' (bool)."
             )
-        address = _normalize_address(address)
+        address = _normalize_address(address_raw)
         if address in addresses_seen:
             raise ValueError(f"Duplicate address {address} in accounts file.")
         addresses_seen.add(address)
+
         accounts.append(
             Account(
                 name=name,
                 address=address,
-                chains=_normalize_chains(chains_raw),
+                chains=frozenset(normalize_chain(str(chain)) for chain in chains_raw),
                 skip_sync=skip_sync,
             )
         )
