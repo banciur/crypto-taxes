@@ -95,12 +95,9 @@ def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[AccountConfig]:
 class AccountRegistry:
     def __init__(self, accounts: Iterable[AccountConfig]):
         ordered_accounts = tuple(accounts)
-        by_chain_address: dict[tuple[ChainId, WalletAddress], AccountConfig] = {}
         by_account_id: dict[AccountChainId, AccountChainRecord] = {}
         for account in ordered_accounts:
             for chain in account.chains:
-                key = (chain, account.address)
-                by_chain_address[key] = account
                 account_id = account.account_chain_id_for(chain)
                 by_account_id[account_id] = AccountChainRecord(
                     account_id=account_id,
@@ -109,8 +106,6 @@ class AccountRegistry:
                     address=account.address,
                     skip_sync=account.skip_sync,
                 )
-        self._accounts = ordered_accounts
-        self._by_chain_address = by_chain_address
         self._by_account_id = by_account_id
 
     @classmethod
@@ -118,12 +113,10 @@ class AccountRegistry:
         return cls(load_accounts(path))
 
     def resolve_owned_id(self, *, chain: ChainId, address: WalletAddress) -> AccountChainId | None:
-        normalized_chain = normalize_chain(chain)
-        normalized_address = _normalize_address(address)
-        account = self._by_chain_address.get((normalized_chain, normalized_address))
-        if account is None:
+        account_id = account_chain_id_for(chain=chain, address=address)
+        if account_id not in self._by_account_id:
             return None
-        return account.account_chain_id_for(normalized_chain)
+        return account_id
 
     def is_owned(self, account_id: AccountChainId) -> bool:
         return account_id in self._by_account_id
