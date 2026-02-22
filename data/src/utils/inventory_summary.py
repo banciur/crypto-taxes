@@ -26,7 +26,7 @@ class InventorySummary:
 
 
 def compute_inventory_summary(
-    owned_account_ids: set[AccountChainId],
+    owned_account_chain_ids: set[AccountChainId],
     *,
     wallet_balance_tracker: WalletBalanceTracker,
     price_provider: PriceProvider,
@@ -37,7 +37,7 @@ def compute_inventory_summary(
     summaries: list[AssetInventorySummary] = []
 
     for asset_id, quantity in sorted(
-        wallet_balance_tracker.asset_balances_for(owned_account_ids).items(),
+        wallet_balance_tracker.asset_balances_for(owned_account_chain_ids).items(),
         key=lambda item: item[0],
     ):
         if quantity <= 0:

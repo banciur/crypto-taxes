@@ -28,7 +28,7 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `id: UUID`
   - `asset_id: str`
   - `quantity: Decimal`
-  - `account_id: str`
+  - `account_chain_id: str`
   - `is_fee: bool`
 
 - AcquisitionLot

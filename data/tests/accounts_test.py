@@ -56,7 +56,7 @@ def test_load_accounts_raises_for_duplicate_address(tmp_path: Path) -> None:
         load_accounts(accounts_path)
 
 
-def test_registry_resolves_owned_account_ids(tmp_path: Path) -> None:
+def test_registry_resolves_owned_account_chain_ids(tmp_path: Path) -> None:
     address = "0xAbCdEf"
     chain = "ethereum"
     accounts_path = tmp_path / "accounts.json"

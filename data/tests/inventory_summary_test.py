@@ -103,7 +103,7 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
     inventory_engine.process(events)
 
     summary = compute_inventory_summary(
-        owned_account_ids={KRAKEN_WALLET},
+        owned_account_chain_ids={KRAKEN_WALLET},
         wallet_balance_tracker=inventory_engine._wallet_balances,
         price_provider=price_service,
         as_of=as_of,

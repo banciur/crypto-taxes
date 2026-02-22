@@ -20,7 +20,7 @@ from db.repositories import (
 from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import AccountChainId
 from domain.wallet_balance_tracker import WalletBalanceTracker
-from importers.kraken import KrakenImporter
+from importers.kraken import KRAKEN_ACCOUNT_ID, KrakenImporter
 from importers.moralis import MoralisImporter
 from importers.seed_events import load_seed_events
 from services.coindesk_source import CoinDeskSource
@@ -73,7 +73,7 @@ def run(
     moralis_importer = MoralisImporter()
 
     owned_accounts: set[AccountChainId] = set()
-    owned_accounts.add(KrakenImporter.ACCOUNT_ID)
+    owned_accounts.add(KRAKEN_ACCOUNT_ID)
 
     # Get corrections
     logger.info("Loading seed events from %s", seed_csv)

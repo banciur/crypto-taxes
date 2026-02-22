@@ -9,25 +9,25 @@ from tests.constants import BTC, ETH, KRAKEN_WALLET, LEDGER_WALLET, OUTSIDE_WALL
 def test_wallet_balance_tracker_updates_balances() -> None:
     tracker = WalletBalanceTracker()
     asset_id = ETH
-    account_id = KRAKEN_WALLET
+    account_chain_id = KRAKEN_WALLET
 
     starting_quantity = Decimal("1.5")
-    tracker.apply_movement(asset_id=asset_id, account_chain_id=account_id, quantity=starting_quantity)
+    tracker.apply_movement(asset_id=asset_id, account_chain_id=account_chain_id, quantity=starting_quantity)
 
     reduction = Decimal("0.4")
-    tracker.apply_movement(asset_id=asset_id, account_chain_id=account_id, quantity=-reduction)
+    tracker.apply_movement(asset_id=asset_id, account_chain_id=account_chain_id, quantity=-reduction)
 
     expected_balance = starting_quantity - reduction
-    assert tracker.get_balance(asset_id=asset_id, account_chain_id=account_id) == expected_balance
-    assert tracker.has_available(asset_id=asset_id, account_chain_id=account_id, quantity=expected_balance)
+    assert tracker.get_balance(asset_id=asset_id, account_chain_id=account_chain_id) == expected_balance
+    assert tracker.has_available(asset_id=asset_id, account_chain_id=account_chain_id, quantity=expected_balance)
     assert not tracker.has_available(
-        asset_id=asset_id, account_chain_id=account_id, quantity=expected_balance + Decimal("0.1")
+        asset_id=asset_id, account_chain_id=account_chain_id, quantity=expected_balance + Decimal("0.1")
     )
 
     with pytest.raises(WalletBalanceError):
         tracker.apply_movement(
             asset_id=asset_id,
-            account_chain_id=account_id,
+            account_chain_id=account_chain_id,
             quantity=-(expected_balance + Decimal("0.01")),
         )
 

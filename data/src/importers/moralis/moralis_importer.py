@@ -118,29 +118,29 @@ class MoralisImporter:
             if quantity == 0:
                 continue
 
-            from_account_id = account_registry.resolve_owned_id(
+            from_account_chain_id = account_registry.resolve_owned_id(
                 chain=normalized_chain,
                 address=WalletAddress(from_addr),
             )
-            if from_account_id is not None:
+            if from_account_chain_id is not None:
                 legs.append(
                     LedgerLeg(
                         asset_id=NATIVE_ASSET_ID,
                         quantity=-quantity,
-                        account_chain_id=from_account_id,
+                        account_chain_id=from_account_chain_id,
                         is_fee=False,
                     )
                 )
-            to_account_id = account_registry.resolve_owned_id(
+            to_account_chain_id = account_registry.resolve_owned_id(
                 chain=normalized_chain,
                 address=WalletAddress(to_addr),
             )
-            if to_account_id is not None:
+            if to_account_chain_id is not None:
                 legs.append(
                     LedgerLeg(
                         asset_id=NATIVE_ASSET_ID,
                         quantity=quantity,
-                        account_chain_id=to_account_id,
+                        account_chain_id=to_account_chain_id,
                         is_fee=False,
                     )
                 )
@@ -155,46 +155,46 @@ class MoralisImporter:
 
             asset_id = AssetId(transfer["token_symbol"] if transfer["token_symbol"] else transfer["address"])
 
-            from_account_id = account_registry.resolve_owned_id(
+            from_account_chain_id = account_registry.resolve_owned_id(
                 chain=normalized_chain,
                 address=WalletAddress(from_addr),
             )
-            if from_account_id is not None:
+            if from_account_chain_id is not None:
                 legs.append(
                     LedgerLeg(
                         asset_id=asset_id,
                         quantity=-quantity,
-                        account_chain_id=from_account_id,
+                        account_chain_id=from_account_chain_id,
                         is_fee=False,
                     )
                 )
-            to_account_id = account_registry.resolve_owned_id(
+            to_account_chain_id = account_registry.resolve_owned_id(
                 chain=normalized_chain,
                 address=WalletAddress(to_addr),
             )
-            if to_account_id is not None:
+            if to_account_chain_id is not None:
                 legs.append(
                     LedgerLeg(
                         asset_id=asset_id,
                         quantity=quantity,
-                        account_chain_id=to_account_id,
+                        account_chain_id=to_account_chain_id,
                         is_fee=False,
                     )
                 )
 
         from_addr_tx = tx["from_address"].lower()
-        sender_account_id = account_registry.resolve_owned_id(
+        sender_account_chain_id = account_registry.resolve_owned_id(
             chain=normalized_chain,
             address=WalletAddress(from_addr_tx),
         )
-        if sender_account_id is not None:
+        if sender_account_chain_id is not None:
             fee = Decimal(str(tx["transaction_fee"]))
             assert fee.is_normal(), f"Unexpected transaction_fee: {tx['transaction_fee']}"
             legs.append(
                 LedgerLeg(
                     asset_id=NATIVE_ASSET_ID,
                     quantity=-fee,
-                    account_chain_id=sender_account_id,
+                    account_chain_id=sender_account_chain_id,
                     is_fee=True,
                 )
             )
