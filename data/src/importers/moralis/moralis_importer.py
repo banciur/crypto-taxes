@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Iterable, cast
 
-from accounts import load_accounts
+from accounts import AccountRegistry, normalize_chain
 from clients.moralis import MoralisService, SyncMode, build_default_service
 from domain.ledger import (
     AssetId,
@@ -14,7 +14,6 @@ from domain.ledger import (
     LedgerEvent,
     LedgerLeg,
     WalletAddress,
-    WalletId,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,30 +86,27 @@ class MoralisImporter:
         self.mode = mode or SyncMode.BUDGET
 
     def load_events(self) -> list[LedgerEvent]:
-        accounts = load_accounts(self.service.accounts_path)
-        wallet_addresses = {account.address for account in accounts}
+        account_registry = AccountRegistry.from_path(self.service.accounts_path)
         transactions = self.service.get_transactions(self.mode)
         events: list[LedgerEvent] = []
 
         for tx in transactions:
-            event = self._build_event(tx, wallet_addresses)
+            event = self._build_event(tx, account_registry)
             if event:
                 events.append(event)
 
         events.sort(key=lambda evt: evt.timestamp)
         return events
 
-    def _build_event(self, tx: dict[str, Any], my_wallet_addresses: set[WalletAddress]) -> LedgerEvent | None:
+    def _build_event(self, tx: dict[str, Any], account_registry: AccountRegistry) -> LedgerEvent | None:
         legs: list[LedgerLeg] = []
-
-        has_incoming = False
-        has_outgoing = False
 
         chain = str(tx["chain"]).lower()
         try:
             location = CHAIN_LOCATIONS[chain]
         except KeyError as e:
             raise Exception(f"Transaction {tx['hash']} with unsupported chain: {tx['chain']}") from e
+        normalized_chain = normalize_chain(chain)
 
         for transfer in _dedupe_native_transfers(cast(list, tx["native_transfers"])):
             token_symbol = transfer["token_symbol"]
@@ -118,43 +114,40 @@ class MoralisImporter:
 
             from_addr = transfer["from_address"].lower()
             to_addr = transfer["to_address"].lower()
-            ours_from = from_addr in my_wallet_addresses
-            ours_to = to_addr in my_wallet_addresses
-            if not (ours_from or ours_to):
-                continue
-
             quantity = _obtain_value(transfer)
             if quantity == 0:
                 continue
 
-            if ours_from:
+            from_account_chain_id = account_registry.resolve_owned_id(
+                chain=normalized_chain,
+                address=WalletAddress(from_addr),
+            )
+            if from_account_chain_id is not None:
                 legs.append(
                     LedgerLeg(
                         asset_id=NATIVE_ASSET_ID,
                         quantity=-quantity,
-                        wallet_id=WalletId(from_addr),
+                        account_chain_id=from_account_chain_id,
                         is_fee=False,
                     )
                 )
-                has_outgoing = True
-            if ours_to:
+            to_account_chain_id = account_registry.resolve_owned_id(
+                chain=normalized_chain,
+                address=WalletAddress(to_addr),
+            )
+            if to_account_chain_id is not None:
                 legs.append(
                     LedgerLeg(
                         asset_id=NATIVE_ASSET_ID,
                         quantity=quantity,
-                        wallet_id=WalletId(to_addr),
+                        account_chain_id=to_account_chain_id,
                         is_fee=False,
                     )
                 )
-                has_incoming = True
 
         for transfer in cast(list, tx["erc20_transfers"]):
             from_addr = transfer["from_address"].lower()
             to_addr = transfer["to_address"].lower()
-            ours_from = from_addr in my_wallet_addresses
-            ours_to = to_addr in my_wallet_addresses
-            if not (ours_from or ours_to):
-                continue
 
             quantity = _obtain_value(transfer)
             if quantity == 0:
@@ -162,42 +155,51 @@ class MoralisImporter:
 
             asset_id = AssetId(transfer["token_symbol"] if transfer["token_symbol"] else transfer["address"])
 
-            if ours_from:
+            from_account_chain_id = account_registry.resolve_owned_id(
+                chain=normalized_chain,
+                address=WalletAddress(from_addr),
+            )
+            if from_account_chain_id is not None:
                 legs.append(
                     LedgerLeg(
                         asset_id=asset_id,
                         quantity=-quantity,
-                        wallet_id=WalletId(from_addr),
+                        account_chain_id=from_account_chain_id,
                         is_fee=False,
                     )
                 )
-                has_outgoing = True
-            if ours_to:
+            to_account_chain_id = account_registry.resolve_owned_id(
+                chain=normalized_chain,
+                address=WalletAddress(to_addr),
+            )
+            if to_account_chain_id is not None:
                 legs.append(
                     LedgerLeg(
                         asset_id=asset_id,
                         quantity=quantity,
-                        wallet_id=WalletId(to_addr),
+                        account_chain_id=to_account_chain_id,
                         is_fee=False,
                     )
                 )
-                has_incoming = True
 
         from_addr_tx = tx["from_address"].lower()
-        is_my_tx = from_addr_tx in my_wallet_addresses
-        if is_my_tx:
+        sender_account_chain_id = account_registry.resolve_owned_id(
+            chain=normalized_chain,
+            address=WalletAddress(from_addr_tx),
+        )
+        if sender_account_chain_id is not None:
             fee = Decimal(str(tx["transaction_fee"]))
             assert fee.is_normal(), f"Unexpected transaction_fee: {tx['transaction_fee']}"
             legs.append(
                 LedgerLeg(
                     asset_id=NATIVE_ASSET_ID,
                     quantity=-fee,
-                    wallet_id=WalletId(from_addr_tx),
+                    account_chain_id=sender_account_chain_id,
                     is_fee=True,
                 )
             )
 
-        if not (has_incoming or has_outgoing or is_my_tx):
+        if not legs:
             # This could be NFT drop probably (probably spam)
             return None
 

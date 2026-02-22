@@ -13,7 +13,7 @@ def test_apply_seed_event_corrections_merges_and_sorts() -> None:
     seed_quantity = Decimal("0.5")
     seed_event = SeedEvent(
         timestamp=seed_timestamp,
-        legs=[LedgerLeg(asset_id=BTC, quantity=seed_quantity, wallet_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=seed_quantity, account_chain_id=KRAKEN_WALLET, is_fee=False)],
     )
 
     raw_timestamp = datetime(2024, 1, 2, 12, 0, tzinfo=timezone.utc)
@@ -24,7 +24,7 @@ def test_apply_seed_event_corrections_merges_and_sorts() -> None:
         timestamp=raw_timestamp,
         origin=EventOrigin(location=EventLocation.KRAKEN, external_id="raw-ext"),
         ingestion="raw_ingestion",
-        legs=[LedgerLeg(asset_id=BTC, quantity=raw_quantity, wallet_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=raw_quantity, account_chain_id=KRAKEN_WALLET, is_fee=False)],
     )
 
     corrected = apply_seed_event_corrections(raw_events=[raw_event], seed_events=[seed_event])

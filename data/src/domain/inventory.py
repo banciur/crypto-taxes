@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from .ledger import AcquisitionLot, AssetId, DisposalLink, EventType, LedgerEvent, LedgerLeg
+from .ledger import AcquisitionLot, AssetId, DisposalLink, LedgerEvent, LedgerLeg
 from .pricing import PriceProvider
 from .wallet_balance_tracker import WalletBalanceError, WalletBalanceTracker
 
@@ -74,11 +74,13 @@ class InventoryEngine:
 
         for event in events:
             self._apply_wallet_movements(event)
+            internal_transfer_leg_ids = self._internal_transfer_leg_ids(event)
 
-            if event.event_type == EventType.TRANSFER:
-                continue
-
-            acquisition_legs = [leg for leg in event.legs if leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID]
+            acquisition_legs = [
+                leg
+                for leg in event.legs
+                if leg.id not in internal_transfer_leg_ids and leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID
+            ]
             for leg in acquisition_legs:
                 lot = AcquisitionLot(
                     acquired_leg_id=leg.id,
@@ -94,7 +96,11 @@ class InventoryEngine:
                 )
                 self._append_open_lot_state(inventory, state)
 
-            disposal_legs = [leg for leg in event.legs if leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID]
+            disposal_legs = [
+                leg
+                for leg in event.legs
+                if leg.id not in internal_transfer_leg_ids and leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID
+            ]
             for leg in disposal_legs:
                 qty_to_match = abs(leg.quantity)
                 proceeds_per_unit = self._resolve_proceeds_per_unit(event, leg)
@@ -185,6 +191,27 @@ class InventoryEngine:
             return matches[0]
         return None
 
+    def _internal_transfer_leg_ids(self, event: LedgerEvent) -> set[UUID]:
+        by_asset: dict[AssetId, list[LedgerLeg]] = defaultdict(list)
+        for leg in event.legs:
+            if leg.asset_id == self.EUR_ASSET_ID or leg.is_fee:
+                continue
+            by_asset[leg.asset_id].append(leg)
+
+        transfer_leg_ids: set[UUID] = set()
+        for legs in by_asset.values():
+            incoming = [leg for leg in legs if leg.quantity > 0]
+            outgoing = [leg for leg in legs if leg.quantity < 0]
+            if not incoming or not outgoing:
+                continue
+            incoming_total = sum((leg.quantity for leg in incoming), start=Decimal("0"))
+            outgoing_total = sum((abs(leg.quantity) for leg in outgoing), start=Decimal("0"))
+            if incoming_total != outgoing_total:
+                continue
+            transfer_leg_ids.update(leg.id for leg in incoming)
+            transfer_leg_ids.update(leg.id for leg in outgoing)
+        return transfer_leg_ids
+
     def _match_inventory(
         self,
         *,
@@ -220,8 +247,8 @@ class InventoryEngine:
     ) -> InventoryError:
         legs_summary = "; ".join(f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}" for leg in event.legs)
         return InventoryError(
-            f"{reason} for asset={leg.asset_id} wallet={leg.wallet_id} leg={leg.id} event={event.id} "
-            f"{event.event_type} @{event.timestamp.isoformat()} "
+            f"{reason} for asset={leg.asset_id} account={leg.account_chain_id} leg={leg.id} event={event.id} "
+            f"@{event.timestamp.isoformat()} "
             f"legs={legs_summary}",
             leg=leg,
             event=event,
@@ -235,7 +262,7 @@ class InventoryEngine:
             try:
                 self._wallet_balances.apply_movement(
                     asset_id=leg.asset_id,
-                    wallet_id=leg.wallet_id,
+                    account_chain_id=leg.account_chain_id,
                     quantity=leg.quantity,
                 )
             except WalletBalanceError as err:
@@ -244,7 +271,7 @@ class InventoryEngine:
                     missing = abs(leg.quantity) - err.available_balance
                     quantity_needed = missing if missing > 0 else abs(leg.quantity)
                 raise self._inventory_error(
-                    "Insufficient wallet balance",
+                    "Insufficient account balance",
                     leg=leg,
                     event=event,
                     quantity_needed=quantity_needed,

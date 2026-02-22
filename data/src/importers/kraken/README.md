@@ -1,6 +1,6 @@
 # Kraken Ledger Importer
 
-`KrakenImporter` translates the raw CSV export from Kraken’s “Ledger” report into domain `LedgerEvent`s. The importer normalizes timestamps to UTC, converts numerics to `Decimal`, and collapses all Kraken sub-wallets into a single `wallet_id="kraken"` (spot, futures credit, staking, etc. are treated as one wallet in our tax model). Asset aliases such as `DOT28.S`, `USDC.M`, or `ETH2` are mapped to their canonical tickers up front so downstream systems see consistent asset IDs. While the importer will eventually sit alongside other data sources, you can already exercise it via `scripts/run_kraken_inventory.py` (`uv run scripts/run_kraken_inventory.py --csv path/to/ledger.csv`).
+`KrakenImporter` translates the raw CSV export from Kraken’s “Ledger” report into domain `LedgerEvent`s. The importer normalizes timestamps to UTC, converts numerics to `Decimal`, and collapses all Kraken sub-wallets into a single `account_chain_id="kraken"` (spot, futures credit, staking, etc. are treated as one wallet in our tax model). Asset aliases such as `DOT28.S`, `USDC.M`, or `ETH2` are mapped to their canonical tickers up front so downstream systems see consistent asset IDs. While the importer will eventually sit alongside other data sources, you can already exercise it via `scripts/run_kraken_inventory.py` (`uv run scripts/run_kraken_inventory.py --csv path/to/ledger.csv`).
 
 We expect most refids to be handled by the cases below; unknown patterns still raise so we can add explicit handling later.
 
@@ -14,15 +14,15 @@ The input CSV comes from Kraken’s web UI (“Ledger” report export). Each ro
 - `type` / `subtype`: primary classification (e.g., `trade`, `deposit`, `transfer`) plus optional subtype such as `spotfromfutures` or `tradespot`.
 - `asset`: reported asset ticker (aliases such as `DOT28.S`, `USDC.M`, `ETH2` are normalized to canonical codes).
 - `amount`: positive quantities mean inflows; negative values mean outflows.
-- `fee`: fee charged on the same row. Depending on the scenario, it is netted into the credited/debited leg or rebalanced between the `outside` and `kraken` wallets.
-- `wallet`: Kraken’s wallet label. We keep the value for traceability but all legs are emitted with `wallet_id="kraken"` to represent a consolidated exchange wallet.
+- `fee`: fee charged on the same row. It is netted into the emitted Kraken leg quantity.
+- `wallet`: Kraken’s wallet label. We keep the value for traceability but all legs are emitted with `account_chain_id="kraken"` to represent a consolidated exchange wallet.
 
 ## Import pipeline
 
 1. **CSV parsing:** `KrakenLedgerEntry` (Pydantic model) normalizes each row (timestamp→UTC, numerics→`Decimal`, empty strings→zero).
 2. **Preprocessing:** a pass over the flat ledger detects spot↔staking transfer pairs that net to zero and drops both rows so only economically meaningful events reach the builder.
-3. **Grouping:** `_group_by_refid` bundles rows that share a `refid`. Each group represents one Kraken action (trade, transfer, reward, etc.).
-4. **Event builder:** `_build_event` matches a refid pattern and emits the corresponding `LedgerEvent`. Fees are netted or applied via the `outside`/`kraken` legs per the scenarios below.
+3. **Grouping:** `_group_by_refid` bundles rows that share a `refid`. Each group represents one Kraken action.
+4. **Event builder:** `_build_event` matches a refid pattern and emits the corresponding `LedgerEvent`.
 
 ## Scenario catalog
 
@@ -39,12 +39,12 @@ The input CSV comes from Kraken’s web UI (“Ledger” report export). Each ro
 #### `deposit` → emit event
 
 - Applies when the refid group has a single ledger row of type `deposit` with a positive `amount`.
-- Two legs are emitted: `wallet_id="outside"` spends the reported `amount` (negative leg) and `wallet_id="kraken"` receives the net (`amount - fee`). Fees do not emit standalone legs; they are already accounted for in the net transfer into Kraken.
+- One leg is emitted for `account_chain_id="kraken"` with quantity `amount - fee`.
 
 #### `withdrawal` → emit event
 
 - Applies when the refid group has a single ledger row of type `withdrawal` with a negative `amount`.
-- Two legs are emitted: `wallet_id="kraken"` spends the `amount` plus any fee (`amount - fee`, still negative) and `wallet_id="outside"` receives `abs(amount)`. The recipient leg therefore matches what arrives externally while Kraken records the extra outflow that covered fees.
+- One leg is emitted for `account_chain_id="kraken"` with quantity `amount - fee` (still negative).
 
 #### `staking` → emit event
 

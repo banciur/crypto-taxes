@@ -4,10 +4,10 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import DefaultDict
 
-from domain.ledger import AssetId, WalletId
+from domain.ledger import AccountChainId, AssetId
 
-WalletBalances = DefaultDict[WalletId, Decimal]
-AssetBalances = DefaultDict[AssetId, WalletBalances]
+AccountBalances = DefaultDict[AccountChainId, Decimal]
+AssetBalances = DefaultDict[AssetId, AccountBalances]
 
 
 class WalletBalanceError(Exception):
@@ -15,16 +15,16 @@ class WalletBalanceError(Exception):
         self,
         *,
         asset_id: AssetId,
-        wallet_id: WalletId,
+        account_chain_id: AccountChainId,
         attempted_quantity: Decimal,
         available_balance: Decimal,
     ) -> None:
         self.asset_id = asset_id
-        self.wallet_id = wallet_id
+        self.account_chain_id = account_chain_id
         self.attempted_quantity = attempted_quantity
         self.available_balance = available_balance
         message = (
-            f"Insufficient balance for asset={asset_id} wallet={wallet_id} "
+            f"Insufficient balance for asset={asset_id} account_chain_id={account_chain_id} "
             f"attempted={attempted_quantity} available={available_balance}"
         )
         super().__init__(message)
@@ -34,33 +34,33 @@ class WalletBalanceTracker:
     def __init__(self) -> None:
         self._balances: AssetBalances = defaultdict(lambda: defaultdict(lambda: Decimal(0)))
 
-    def apply_movement(self, *, asset_id: AssetId, wallet_id: WalletId, quantity: Decimal) -> None:
-        current_balance = self._balances[asset_id][wallet_id]
+    def apply_movement(self, *, asset_id: AssetId, account_chain_id: AccountChainId, quantity: Decimal) -> None:
+        current_balance = self._balances[asset_id][account_chain_id]
         new_balance = current_balance + quantity
         if new_balance < 0:
             raise WalletBalanceError(
                 asset_id=asset_id,
-                wallet_id=wallet_id,
+                account_chain_id=account_chain_id,
                 attempted_quantity=quantity,
                 available_balance=current_balance,
             )
-        self._balances[asset_id][wallet_id] = new_balance
+        self._balances[asset_id][account_chain_id] = new_balance
 
-    def get_balance(self, *, asset_id: AssetId, wallet_id: WalletId) -> Decimal:
-        return self._balances[asset_id][wallet_id]
+    def get_balance(self, *, asset_id: AssetId, account_chain_id: AccountChainId) -> Decimal:
+        return self._balances[asset_id][account_chain_id]
 
-    def has_available(self, *, asset_id: AssetId, wallet_id: WalletId, quantity: Decimal) -> bool:
-        return self._balances[asset_id][wallet_id] >= quantity
+    def has_available(self, *, asset_id: AssetId, account_chain_id: AccountChainId, quantity: Decimal) -> bool:
+        return self._balances[asset_id][account_chain_id] >= quantity
 
-    def asset_balances_for(self, wallet_ids: set[WalletId] | None = None) -> dict[AssetId, Decimal]:
-        """Return per-asset totals limited to the provided wallets; None includes all wallets."""
+    def asset_balances_for(self, account_chain_ids: set[AccountChainId] | None = None) -> dict[AssetId, Decimal]:
+        """Return per-asset totals limited to the provided accounts; None includes all accounts."""
         totals: dict[AssetId, Decimal] = {}
-        for asset_id, wallet_balances in self._balances.items():
+        for asset_id, account_balances in self._balances.items():
             total = sum(
                 (
                     balance
-                    for wallet_id, balance in wallet_balances.items()
-                    if wallet_ids is None or wallet_id in wallet_ids
+                    for account_chain_id, balance in account_balances.items()
+                    if account_chain_ids is None or account_chain_id in account_chain_ids
                 ),
                 start=Decimal(0),
             )

@@ -4,7 +4,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from domain.inventory import InventoryEngine
-from domain.ledger import AssetId, EventLocation, EventOrigin, EventType, LedgerEvent, LedgerLeg, WalletId
+from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from tests.constants import BTC, EUR, SPOT_WALLET
 from utils.tax_summary import TaxEventKind, compute_weekly_tax_summary, generate_tax_events
 
@@ -17,50 +17,45 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
             timestamp=datetime(2023, 1, 1, 12, tzinfo=timezone.utc),
             origin=TEST_ORIGIN,
             ingestion="manual_test",
-            event_type=EventType.TRADE,
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("0.6"), wallet_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-6000"), wallet_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("0.6"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-6000"), account_chain_id=SPOT_WALLET),
             ],
         ),
         LedgerEvent(
             timestamp=datetime(2024, 12, 1, 12, tzinfo=timezone.utc),
             origin=TEST_ORIGIN,
             ingestion="manual_test",
-            event_type=EventType.TRADE,
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("0.4"), wallet_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-12000"), wallet_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("0.4"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-12000"), account_chain_id=SPOT_WALLET),
             ],
         ),
         LedgerEvent(
             timestamp=datetime(2024, 12, 15, 12, tzinfo=timezone.utc),
             origin=TEST_ORIGIN,
             ingestion="manual_test",
-            event_type=EventType.TRADE,
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.3"), wallet_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("9000"), wallet_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.3"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("9000"), account_chain_id=SPOT_WALLET),
             ],
         ),
         LedgerEvent(
             timestamp=datetime(2025, 1, 10, 12, tzinfo=timezone.utc),
             origin=TEST_ORIGIN,
             ingestion="manual_test",
-            event_type=EventType.TRADE,
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.4"), wallet_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("16000"), wallet_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.4"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("16000"), account_chain_id=SPOT_WALLET),
             ],
         ),
         LedgerEvent(
             timestamp=datetime(2025, 1, 17, 12, tzinfo=timezone.utc),
             origin=TEST_ORIGIN,
             ingestion="manual_test",
-            event_type=EventType.TRADE,
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.2"), wallet_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("10000"), wallet_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.2"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("10000"), account_chain_id=SPOT_WALLET),
             ],
         ),
     ]
@@ -92,40 +87,3 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
     assert week_two.taxable_gain == Decimal("4000")
 
     assert [summary.week_start for summary in summaries] == sorted(by_week)
-
-
-def test_reward_acquisitions_are_taxed_when_received(inventory_engine: InventoryEngine) -> None:
-    reward_time = datetime(2024, 5, 1, 12, tzinfo=timezone.utc)
-    reward_quantity = Decimal("2.5")
-    reward_leg = LedgerLeg(asset_id=AssetId("ATOM"), quantity=reward_quantity, wallet_id=WalletId("earn"))
-    events = [
-        LedgerEvent(
-            timestamp=reward_time,
-            origin=TEST_ORIGIN,
-            ingestion="manual_test",
-            event_type=EventType.REWARD,
-            legs=[reward_leg],
-        )
-    ]
-
-    result = inventory_engine.process(events)
-    tax_events = generate_tax_events(result, events)
-
-    assert len(tax_events) == 1
-    reward_tax = tax_events[0]
-    assert reward_tax.kind == TaxEventKind.REWARD
-
-    expected_rate = inventory_engine._price_provider.rate("ATOM", "EUR", reward_time)
-    expected_proceeds = reward_quantity * expected_rate
-
-    assert reward_tax.taxable_gain == expected_proceeds
-
-    weekly = compute_weekly_tax_summary(tax_events, result, events)
-    assert len(weekly) == 1
-    summary = weekly[0]
-    assert summary.week_start == date(2024, 4, 29)
-    assert summary.week_end == date(2024, 5, 5)
-    assert summary.taxable_events == 1
-    assert summary.proceeds == expected_proceeds
-    assert summary.cost_basis == Decimal("0")
-    assert summary.taxable_gain == expected_proceeds

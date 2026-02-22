@@ -1,7 +1,8 @@
 export type EventLeg = {
   id: string;
   assetId: string;
-  walletId: string;
+  accountId: string;
+  accountName: string;
   quantity: string;
   isFee: boolean;
 };

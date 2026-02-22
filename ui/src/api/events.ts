@@ -9,7 +9,7 @@ export type ApiEventOrigin = {
 export type ApiLedgerLeg = {
   id: string;
   asset_id: string;
-  wallet_id: string;
+  account_chain_id: string;
   quantity: string;
   is_fee: boolean;
 };
@@ -27,6 +27,14 @@ export type ApiSeedEvent = {
   timestamp: string;
   price_per_token: string;
   legs: ApiLedgerLeg[];
+};
+
+export type ApiAccount = {
+  account_chain_id: string;
+  name: string;
+  chain: string;
+  address: string;
+  skip_sync: boolean;
 };
 
 const buildUrl = (path: string) => {
@@ -72,3 +80,6 @@ export const getSeedEvents = async (): Promise<ApiSeedEvent[]> => {
   const events = await fetchApi<ApiSeedEvent[]>("/seed-events");
   return orderEvents(events);
 };
+
+export const getAccounts = async (): Promise<ApiAccount[]> =>
+  fetchApi<ApiAccount[]>("/accounts");

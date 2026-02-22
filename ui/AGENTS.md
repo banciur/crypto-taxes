@@ -17,6 +17,7 @@
   - `GET /raw-events`
   - `GET /seed-events`
   - `GET /corrected-events`
+  - `GET /accounts`
 
 ## Development commands
 

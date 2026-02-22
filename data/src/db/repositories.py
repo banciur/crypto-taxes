@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from db import models
 from domain.correction import CorrectionId, SeedEvent
 from domain.ledger import (
+    AccountChainId,
     AcquisitionLot,
     AssetId,
     DisposalId,
@@ -18,7 +19,6 @@ from domain.ledger import (
     LedgerLeg,
     LegId,
     LotId,
-    WalletId,
 )
 from domain.tax_event import TaxEvent, TaxEventKind
 
@@ -42,7 +42,7 @@ class LedgerEventRepository:
                     id=leg.id,
                     asset_id=leg.asset_id,
                     quantity=leg.quantity,
-                    wallet_id=leg.wallet_id,
+                    account_chain_id=leg.account_chain_id,
                     is_fee=leg.is_fee,
                 )
                 for leg in event.legs
@@ -77,7 +77,7 @@ class LedgerEventRepository:
                 id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                wallet_id=WalletId(leg.wallet_id),
+                account_chain_id=AccountChainId(leg.account_chain_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs
@@ -110,7 +110,7 @@ class CorrectedLedgerEventRepository:
                     id=leg.id,
                     asset_id=leg.asset_id,
                     quantity=leg.quantity,
-                    wallet_id=leg.wallet_id,
+                    account_chain_id=leg.account_chain_id,
                     is_fee=leg.is_fee,
                 )
                 for leg in event.legs
@@ -143,7 +143,7 @@ class CorrectedLedgerEventRepository:
                 id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                wallet_id=WalletId(leg.wallet_id),
+                account_chain_id=AccountChainId(leg.account_chain_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs
@@ -266,7 +266,7 @@ class SeedEventRepository:
                     id=leg.id,
                     asset_id=leg.asset_id,
                     quantity=leg.quantity,
-                    wallet_id=leg.wallet_id,
+                    account_chain_id=leg.account_chain_id,
                     is_fee=leg.is_fee,
                 )
                 for leg in event.legs
@@ -292,7 +292,7 @@ class SeedEventRepository:
                 id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                wallet_id=WalletId(leg.wallet_id),
+                account_chain_id=AccountChainId(leg.account_chain_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs

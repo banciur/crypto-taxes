@@ -28,7 +28,7 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `id: UUID`
   - `asset_id: str`
   - `quantity: Decimal`
-  - `wallet_id: str`
+  - `account_chain_id: str`
   - `is_fee: bool`
 
 - AcquisitionLot
@@ -65,10 +65,10 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Unbalanced events are allowed.
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
-- Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine. Open lots are tracked per asset (not per wallet) and matched FIFO.
-- Transfer-only handling in `InventoryEngine` still depends on legacy internal event typing and is pending refactor.
-- Per-wallet balances are tracked for all non-EUR legs; any debit that would push a wallet negative raises an error. Fix missing history by seeding lots or adding prior transfers into the source wallet before processing.
-- Synthetic seed lots can be injected ahead of importer output to satisfy transfers from `outside` when historical sources are missing. The CLI accepts `--seed-csv` (default `artifacts/seed_lots.csv`) with rows `asset_id,wallet_id,quantity[,timestamp,price_per_token]`; `timestamp` defaults to `2000-01-01T00:00:00Z` and `price_per_token` defaults to `0`.
+- Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine. Open lots are tracked per asset (not per account) and matched FIFO.
+- Internal account-to-account transfers are identified structurally (same-asset non-fee legs netting to zero inside one event) and only update balances. They do not create lots or disposal links.
+- Per-account balances are tracked for all non-EUR legs; any debit that would push an account negative raises an error. Fix missing history by seeding lots or adding prior movements into the source account before processing.
+- Synthetic seed lots can be injected ahead of importer output using `--seed-csv` (default `artifacts/seed_lots.csv`) with rows `asset_id,account_id,quantity[,timestamp,price_per_token]`; `timestamp` defaults to `2000-01-01T00:00:00Z` and `price_per_token` defaults to `0`.
 - Each event captures `origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 
 ---
@@ -77,18 +77,18 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - Swaps and trades (custodial or on-chain) net their exchange fees into whichever leg uses the same asset: if the fee reduces the asset being spent, we decrease that outgoing quantity; if it comes out of what you acquired, we shrink the inbound leg. Only when the fee is taken in an asset that is not otherwise part of the event do we emit a separate disposal leg, allowing FIFO to consume that third asset and value it like any other disposal. Stablecoins follow the same rule as any crypto.
 - Execution costs such as gas are independent on-chain spends and always produce their own disposal legs, even if they happen in the same transaction as the swap. Paying ETH for gas when swapping WETH/WBTC still records an ETH disposal.
-- Deposits and withdrawals route funds between the `outside` wallet and the exchange wallet without separate fee legs. Deposits decrease the `outside` wallet by the deposited amount while the `kraken` leg reflects the fee-reduced credit; withdrawals increase the `outside` wallet by what the recipient receives while the `kraken` leg spends the amount plus fees.
+- Deposits and withdrawals are modeled as single Kraken-side legs. Counterparty legs are not emitted.
 - Explicit fee legs set `is_fee=True` on the leg. Downstream views should use that to exclude fees from income while still valuing them for tax deductibility.
 
 ---
 
 ## Current Capabilities
 
-- Model simple trades and transfers with per-leg wallets and optional fee legs.
+- Model simple acquisitions/disposals with per-leg accounts and optional fee legs.
 - Automatically create lots for acquisitions and link disposals via `InventoryEngine.process` (FIFO only; other lot policies are future work).
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
-- CLI inventory summary aggregates quantities and EUR values per asset across owned wallets (no tax-free window split).
-- Tax events cover disposals inside the 1-year window and `REWARD` acquisitions taxed at receipt using their EUR value.
+- CLI inventory summary aggregates quantities and EUR values per asset across owned accounts.
+- Tax calculations currently focus on disposal links.
 - CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
 - There is UI in progress to visualize the data. It collects data via the FastAPI service in `data/src/api/`.
 
@@ -98,7 +98,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - Purpose: fetch on-chain wallet transaction history via Moralis with the caching feature.
 - Entry point: `MoralisService.get_transactions(mode)` in `data/src/clients/moralis.py`; loads accounts from `artifacts/accounts.json`, ensures chains are synced, then returns all cached transactions ordered at the DB level.
-- Accounts config entries include `name` and `skip_sync`; `skip_sync=true` excludes that wallet from future fetches while retaining the wallet in tracked account metadata.
+- Accounts config entries include `name`, `chains`, and `skip_sync`; `skip_sync=true` excludes that account from future fetches while retaining it in tracked account metadata.
 - Sync policy: supports `FRESH` (always refresh each configured account/chain pair) and `BUDGET` (skip account/chain pairs already synced through yesterday). New account/chain pairs fetch full history; previously synced pairs use a 1-day overlap from their own sync cursor.
 - Implementation and schema details live in `data/src/clients/AGENTS.md`.
-- Importer output currently covers ERC20 and native transfers plus fees. NFT transfers are ignored.
+- Importer output currently covers ERC20 and native transfers plus fees for owned accounts. NFT transfers are ignored.
