@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Iterable
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from .ledger import AcquisitionLot, AssetId, DisposalLink, LedgerEvent, LedgerLeg
 from .pricing import PriceProvider
@@ -38,6 +38,8 @@ class _OpenLotState:
 
 
 class OpenLotSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     lot_id: UUID
     asset_id: AssetId
     acquired_timestamp: datetime
@@ -46,6 +48,8 @@ class OpenLotSnapshot(BaseModel):
 
 
 class InventoryResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     acquisition_lots: list[AcquisitionLot]
     disposal_links: list[DisposalLink]
     open_inventory: list[OpenLotSnapshot]

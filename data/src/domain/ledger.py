@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import Annotated, NewType
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 AssetId = NewType("AssetId", str)
 ChainId = NewType("ChainId", str)
@@ -31,6 +31,8 @@ class EventLocation(StrEnum):
 
 
 class EventOrigin(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     location: EventLocation
     external_id: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 
@@ -43,20 +45,25 @@ class LedgerLeg(BaseModel):
     - Negative quantity indicates an asset/position decrease.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     id: LegId = LegId(Field(default_factory=uuid4))
     asset_id: AssetId
     quantity: Decimal
     account_chain_id: AccountChainId
     is_fee: bool = False
 
-    @model_validator(mode="after")
-    def _validate_quantity(self) -> LedgerLeg:
-        if self.quantity == 0:
+    @field_validator("quantity")
+    @classmethod
+    def _validate_quantity(cls, value: Decimal) -> Decimal:
+        if value == 0:
             raise ValueError("LedgerLeg.quantity must be non-zero")
-        return self
+        return value
 
 
 class AbstractEvent(BaseModel, ABC):
+    model_config = ConfigDict(extra="forbid")
+
     timestamp: datetime
     legs: list[LedgerLeg] = Field(min_length=1)
 
@@ -65,38 +72,22 @@ class LedgerEvent(AbstractEvent):
     id: LedgerEventId = LedgerEventId(Field(default_factory=uuid4))
 
     origin: EventOrigin
-    ingestion: str
-
-    @model_validator(mode="after")
-    def _validate_fields(self) -> LedgerEvent:
-        if not self.ingestion:
-            raise ValueError("LedgerEvent.ingestion must be non-empty")
-        return self
+    ingestion: Annotated[str, Field(min_length=1)]
 
 
 class AcquisitionLot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     id: LotId = LotId(Field(default_factory=uuid4))
     acquired_leg_id: LegId
-    cost_per_unit: Decimal
-
-    @model_validator(mode="after")
-    def _validate_fields(self) -> AcquisitionLot:
-        if self.cost_per_unit < 0:
-            raise ValueError("cost_per_unit must be >= 0")
-        return self
+    cost_per_unit: Annotated[Decimal, Field(ge=0)]
 
 
 class DisposalLink(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     id: DisposalId = DisposalId(Field(default_factory=uuid4))
     disposal_leg_id: LegId
     lot_id: LotId
-    quantity_used: Decimal
-    proceeds_total: Decimal
-
-    @model_validator(mode="after")
-    def _validate(self) -> DisposalLink:
-        if self.quantity_used <= 0:
-            raise ValueError("quantity_used must be > 0")
-        if self.proceeds_total < 0:
-            raise ValueError("proceeds_total must be >= 0")
-        return self
+    quantity_used: Annotated[Decimal, Field(gt=0)]
+    proceeds_total: Annotated[Decimal, Field(ge=0)]

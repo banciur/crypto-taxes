@@ -1,6 +1,5 @@
 First stage: compute German taxes
 
-TODO: Pydantic models could be simplified and some validation done by Field
 TODO: Review fee legs
 TODO: Manual adjustments to mark and filter out spam transactions.
 TODO: Mark spam transactions from Moralis importer.
