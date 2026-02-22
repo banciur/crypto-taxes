@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from domain.correction import SeedEvent
-from domain.ledger import AccountId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
+from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 
 DEFAULT_SEED_TIMESTAMP = datetime(2000, 1, 1, tzinfo=timezone.utc)
 SEED_CSV_INGESTION = "seed_csv"
@@ -41,7 +41,7 @@ def load_seed_events(csv_path: Path) -> list[SeedEvent]:
             raw_account_id = row.get("account_id") or row.get("wallet_id")
             if raw_account_id is None:
                 raise ValueError("Seed CSV row is missing account_id")
-            account_id = AccountId(raw_account_id.strip())
+            account_id = AccountChainId(raw_account_id.strip())
             asset_id = AssetId(row["asset_id"].strip())
             quantity = Decimal(row["quantity"].strip())
             if quantity <= 0:

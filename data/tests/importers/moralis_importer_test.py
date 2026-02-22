@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from accounts import Account, AccountRegistry
-from domain.ledger import AccountId, AssetId, ChainId, WalletAddress
+from accounts import AccountConfig, AccountRegistry
+from domain.ledger import AccountChainId, AssetId, ChainId, WalletAddress
 from importers.moralis.moralis_importer import CHAIN_LOCATIONS, MoralisImporter
 
 CHAIN = "arbitrum"
@@ -17,7 +17,7 @@ SENDER = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
 def _registry() -> AccountRegistry:
     return AccountRegistry(
         [
-            Account(
+            AccountConfig(
                 name="Wallet",
                 address=WALLET,
                 chains=frozenset([ChainId(CHAIN)]),
@@ -70,7 +70,7 @@ def test_native_transfer_builds_incoming_leg() -> None:
     leg = event.legs[0]
     assert leg.asset_id == AssetId(symbol)
     assert leg.quantity == amount
-    assert leg.account_id == AccountId(f"{CHAIN}:{WALLET}")
+    assert leg.account_id == AccountChainId(f"{CHAIN}:{WALLET}")
 
 
 def test_native_transfer_dedupes_internal_and_external() -> None:
@@ -119,5 +119,5 @@ def test_fee_leg_added_for_outgoing_tx() -> None:
     leg = event.legs[0]
     assert leg.asset_id == AssetId("ETH")
     assert leg.quantity == -fee
-    assert leg.account_id == AccountId(f"{CHAIN}:{WALLET}")
+    assert leg.account_id == AccountChainId(f"{CHAIN}:{WALLET}")
     assert leg.is_fee is True

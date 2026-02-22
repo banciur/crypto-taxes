@@ -1,10 +1,10 @@
-from domain.ledger import AccountId, AssetId
+from domain.ledger import AccountChainId, AssetId
 
 BTC = AssetId("BTC")
 ETH = AssetId("ETH")
 EUR = AssetId("EUR")
 
-KRAKEN_WALLET = AccountId("kraken")
-OUTSIDE_WALLET = AccountId("outside")
-SPOT_WALLET = AccountId("spot")
-LEDGER_WALLET = AccountId("ledger")
+KRAKEN_WALLET = AccountChainId("kraken")
+OUTSIDE_WALLET = AccountChainId("outside")
+SPOT_WALLET = AccountChainId("spot")
+LEDGER_WALLET = AccountChainId("ledger")

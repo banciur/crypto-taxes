@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from accounts import AccountRegistry, chain_address_from_account_id, load_accounts
+from accounts import AccountRegistry, chain_address_from_account_chain_id, load_accounts
 from domain.ledger import ChainId, WalletAddress
 
 
@@ -84,4 +84,7 @@ def test_registry_resolves_owned_account_ids(tmp_path: Path) -> None:
     assert str(resolved) == f"eth:{address.lower()}"
     assert registry.is_owned(resolved)
     assert registry.name_for(resolved) == "Primary"
-    assert chain_address_from_account_id(resolved) == (ChainId("eth"), WalletAddress(address.lower()))
+    assert chain_address_from_account_chain_id(resolved) == (
+        ChainId("eth"),
+        WalletAddress(address.lower()),
+    )

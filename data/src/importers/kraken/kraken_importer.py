@@ -10,11 +10,11 @@ from typing import Iterable
 
 from pydantic import BaseModel, Field, field_validator
 
-from domain.ledger import AccountId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
+from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 
 logger = logging.getLogger(__name__)
 KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"
-KRAKEN_ACCOUNT_ID = AccountId("kraken")
+KRAKEN_ACCOUNT_ID = AccountChainId("kraken")
 
 ASSET_ALIASES = {
     "DOT28.S": "DOT",
@@ -93,7 +93,7 @@ def _ledger_leg(
     quantity: Decimal,
     *,
     is_fee: bool = False,
-    account_id: AccountId = KRAKEN_ACCOUNT_ID,
+    account_id: AccountChainId = KRAKEN_ACCOUNT_ID,
 ) -> LedgerLeg:
     asset_id = _normalize_asset(entry.asset)
     return LedgerLeg(

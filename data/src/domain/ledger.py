@@ -16,7 +16,7 @@ LedgerEventId = NewType("LedgerEventId", UUID)
 LegId = NewType("LegId", UUID)
 LotId = NewType("LotId", UUID)
 WalletAddress = NewType("WalletAddress", str)
-AccountId = NewType("AccountId", str)
+AccountChainId = NewType("AccountChainId", str)
 
 
 class EventLocation(StrEnum):
@@ -46,7 +46,7 @@ class LedgerLeg(BaseModel):
     id: LegId = LegId(Field(default_factory=uuid4))
     asset_id: AssetId
     quantity: Decimal
-    account_id: AccountId
+    account_id: AccountChainId
     is_fee: bool = False
 
     @model_validator(mode="after")

@@ -4,9 +4,9 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import DefaultDict
 
-from domain.ledger import AccountId, AssetId
+from domain.ledger import AccountChainId, AssetId
 
-AccountBalances = DefaultDict[AccountId, Decimal]
+AccountBalances = DefaultDict[AccountChainId, Decimal]
 AssetBalances = DefaultDict[AssetId, AccountBalances]
 
 
@@ -15,7 +15,7 @@ class WalletBalanceError(Exception):
         self,
         *,
         asset_id: AssetId,
-        account_id: AccountId,
+        account_id: AccountChainId,
         attempted_quantity: Decimal,
         available_balance: Decimal,
     ) -> None:
@@ -34,7 +34,7 @@ class WalletBalanceTracker:
     def __init__(self) -> None:
         self._balances: AssetBalances = defaultdict(lambda: defaultdict(lambda: Decimal(0)))
 
-    def apply_movement(self, *, asset_id: AssetId, account_id: AccountId, quantity: Decimal) -> None:
+    def apply_movement(self, *, asset_id: AssetId, account_id: AccountChainId, quantity: Decimal) -> None:
         current_balance = self._balances[asset_id][account_id]
         new_balance = current_balance + quantity
         if new_balance < 0:
@@ -46,13 +46,13 @@ class WalletBalanceTracker:
             )
         self._balances[asset_id][account_id] = new_balance
 
-    def get_balance(self, *, asset_id: AssetId, account_id: AccountId) -> Decimal:
+    def get_balance(self, *, asset_id: AssetId, account_id: AccountChainId) -> Decimal:
         return self._balances[asset_id][account_id]
 
-    def has_available(self, *, asset_id: AssetId, account_id: AccountId, quantity: Decimal) -> bool:
+    def has_available(self, *, asset_id: AssetId, account_id: AccountChainId, quantity: Decimal) -> bool:
         return self._balances[asset_id][account_id] >= quantity
 
-    def asset_balances_for(self, account_ids: set[AccountId] | None = None) -> dict[AssetId, Decimal]:
+    def asset_balances_for(self, account_ids: set[AccountChainId] | None = None) -> dict[AssetId, Decimal]:
         """Return per-asset totals limited to the provided accounts; None includes all accounts."""
         totals: dict[AssetId, Decimal] = {}
         for asset_id, account_balances in self._balances.items():

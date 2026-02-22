@@ -5,11 +5,11 @@ from decimal import Decimal
 import pytest
 
 from domain.inventory import InventoryEngine, InventoryError
-from domain.ledger import AccountId, AssetId, LedgerLeg
+from domain.ledger import AccountChainId, AssetId, LedgerLeg
 from tests.constants import ETH, EUR, KRAKEN_WALLET, LEDGER_WALLET
 from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
 
-WALLET_ID = AccountId("wallet")
+WALLET_ID = AccountChainId("wallet")
 
 
 def test_fifo(inventory_engine: InventoryEngine) -> None:
@@ -148,8 +148,8 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
 
 
 def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) -> None:
-    kraken_wallet = AccountId("kraken")
-    hardware_wallet = AccountId("ledger")
+    kraken_wallet = AccountChainId("kraken")
+    hardware_wallet = AccountChainId("ledger")
 
     buy_amount = Decimal("1.5")
     transfer_amount = Decimal("0.5")

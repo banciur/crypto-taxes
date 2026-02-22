@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from db import models
 from domain.correction import CorrectionId, SeedEvent
 from domain.ledger import (
-    AccountId,
+    AccountChainId,
     AcquisitionLot,
     AssetId,
     DisposalId,
@@ -77,7 +77,7 @@ class LedgerEventRepository:
                 id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                account_id=AccountId(leg.account_id),
+                account_id=AccountChainId(leg.account_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs
@@ -143,7 +143,7 @@ class CorrectedLedgerEventRepository:
                 id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                account_id=AccountId(leg.account_id),
+                account_id=AccountChainId(leg.account_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs
@@ -292,7 +292,7 @@ class SeedEventRepository:
                 id=LegId(leg.id),
                 asset_id=AssetId(leg.asset_id),
                 quantity=leg.quantity,
-                account_id=AccountId(leg.account_id),
+                account_id=AccountChainId(leg.account_id),
                 is_fee=leg.is_fee,
             )
             for leg in orm_event.legs

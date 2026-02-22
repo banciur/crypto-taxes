@@ -18,7 +18,7 @@ from db.repositories import (
     TaxEventRepository,
 )
 from domain.inventory import InventoryEngine, InventoryResult
-from domain.ledger import AccountId
+from domain.ledger import AccountChainId
 from domain.wallet_balance_tracker import WalletBalanceTracker
 from importers.kraken import KrakenImporter
 from importers.moralis import MoralisImporter
@@ -72,7 +72,7 @@ def run(
     kraken_importer = KrakenImporter(str(csv_path))
     moralis_importer = MoralisImporter()
 
-    owned_accounts: set[AccountId] = set()
+    owned_accounts: set[AccountChainId] = set()
     owned_accounts.add(KrakenImporter.ACCOUNT_ID)
 
     # Get corrections
