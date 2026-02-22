@@ -127,7 +127,7 @@ class MoralisImporter:
                     LedgerLeg(
                         asset_id=NATIVE_ASSET_ID,
                         quantity=-quantity,
-                        account_id=from_account_id,
+                        account_chain_id=from_account_id,
                         is_fee=False,
                     )
                 )
@@ -140,7 +140,7 @@ class MoralisImporter:
                     LedgerLeg(
                         asset_id=NATIVE_ASSET_ID,
                         quantity=quantity,
-                        account_id=to_account_id,
+                        account_chain_id=to_account_id,
                         is_fee=False,
                     )
                 )
@@ -164,7 +164,7 @@ class MoralisImporter:
                     LedgerLeg(
                         asset_id=asset_id,
                         quantity=-quantity,
-                        account_id=from_account_id,
+                        account_chain_id=from_account_id,
                         is_fee=False,
                     )
                 )
@@ -177,7 +177,7 @@ class MoralisImporter:
                     LedgerLeg(
                         asset_id=asset_id,
                         quantity=quantity,
-                        account_id=to_account_id,
+                        account_chain_id=to_account_id,
                         is_fee=False,
                     )
                 )
@@ -194,7 +194,7 @@ class MoralisImporter:
                 LedgerLeg(
                     asset_id=NATIVE_ASSET_ID,
                     quantity=-fee,
-                    account_id=sender_account_id,
+                    account_chain_id=sender_account_id,
                     is_fee=True,
                 )
             )

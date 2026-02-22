@@ -55,7 +55,7 @@ def load_seed_events(csv_path: Path) -> list[SeedEvent]:
                         LedgerLeg(
                             asset_id=asset_id,
                             quantity=quantity,
-                            account_id=account_id,
+                            account_chain_id=account_id,
                         )
                     ],
                 )

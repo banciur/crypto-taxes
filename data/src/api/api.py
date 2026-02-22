@@ -27,7 +27,7 @@ app = FastAPI(lifespan=lifespan)
 
 
 class ApiAccount(BaseModel):
-    id: str
+    account_chain_id: str
     name: str
     chain: str
     address: str
@@ -63,10 +63,10 @@ def get_seed_events(sr: Annotated[SeedEventRepository, Depends(get_seed_events_r
 @app.get("/accounts")
 def get_accounts() -> list[ApiAccount]:
     registry = AccountRegistry.from_path(DEFAULT_ACCOUNTS_PATH)
-    records = sorted(registry.records(), key=lambda record: record.account_id)
+    records = sorted(registry.records(), key=lambda record: record.account_chain_id)
     return [
         ApiAccount(
-            id=record.account_id,
+            account_chain_id=record.account_chain_id,
             name=record.name,
             chain=record.chain,
             address=record.address,

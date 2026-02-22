@@ -70,7 +70,7 @@ def test_native_transfer_builds_incoming_leg() -> None:
     leg = event.legs[0]
     assert leg.asset_id == AssetId(symbol)
     assert leg.quantity == amount
-    assert leg.account_id == AccountChainId(f"{CHAIN}:{WALLET}")
+    assert leg.account_chain_id == AccountChainId(f"{CHAIN}:{WALLET}")
 
 
 def test_native_transfer_dedupes_internal_and_external() -> None:
@@ -119,5 +119,5 @@ def test_fee_leg_added_for_outgoing_tx() -> None:
     leg = event.legs[0]
     assert leg.asset_id == AssetId("ETH")
     assert leg.quantity == -fee
-    assert leg.account_id == AccountChainId(f"{CHAIN}:{WALLET}")
+    assert leg.account_chain_id == AccountChainId(f"{CHAIN}:{WALLET}")
     assert leg.is_fee is True

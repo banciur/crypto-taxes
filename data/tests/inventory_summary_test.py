@@ -31,8 +31,8 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
             origin=EventOrigin(location=EventLocation.INTERNAL, external_id=f"evt-{uuid4()}"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=btc_lot_one_qty, account_id=KRAKEN_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=btc_lot_one_qty, account_chain_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_WALLET),
             ],
         ),
         LedgerEvent(
@@ -40,8 +40,8 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
             origin=EventOrigin(location=EventLocation.INTERNAL, external_id=f"evt-{uuid4()}"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=btc_lot_two_qty, account_id=KRAKEN_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=btc_lot_two_qty, account_chain_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_WALLET),
             ],
         ),
         LedgerEvent(
@@ -49,8 +49,8 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
             origin=EventOrigin(location=EventLocation.INTERNAL, external_id=f"evt-{uuid4()}"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=ETH, quantity=eth_qty, account_id=KRAKEN_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=ETH, quantity=eth_qty, account_chain_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_WALLET),
             ],
         ),
     ]
@@ -85,8 +85,8 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
             origin=EventOrigin(location=EventLocation.INTERNAL, external_id="evt-1"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("1.0"), account_id=KRAKEN_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("1.0"), account_chain_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_WALLET),
             ],
         ),
         LedgerEvent(
@@ -94,8 +94,8 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
             origin=EventOrigin(location=EventLocation.INTERNAL, external_id="evt-2"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=ETH, quantity=Decimal("2.0"), account_id=OUTSIDE_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_id=OUTSIDE_WALLET),
+                LedgerLeg(asset_id=ETH, quantity=Decimal("2.0"), account_chain_id=OUTSIDE_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=OUTSIDE_WALLET),
             ],
         ),
     ]

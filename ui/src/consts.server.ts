@@ -26,7 +26,7 @@ const getAccountNamesById = async (): Promise<Map<string, string>> => {
   accountNamesByIdPromise = getAccounts().then((accounts: ApiAccount[]) => {
     const map = new Map<string, string>();
     for (const account of accounts) {
-      map.set(account.id, account.name);
+      map.set(account.account_chain_id, account.name);
     }
     return map;
   });
@@ -40,8 +40,8 @@ const mapLegs = (
   legs.map((leg) => ({
     id: leg.id,
     assetId: leg.asset_id,
-    accountId: leg.account_id,
-    accountName: accountNamesById.get(leg.account_id) ?? leg.account_id,
+    accountId: leg.account_chain_id,
+    accountName: accountNamesById.get(leg.account_chain_id) ?? leg.account_chain_id,
     quantity: leg.quantity,
     isFee: leg.is_fee,
   }));

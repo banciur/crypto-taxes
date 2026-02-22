@@ -29,7 +29,7 @@ def test_time_generator_increases_with_seed() -> None:
 
 def test_make_event_uses_generator_when_timestamp_missing() -> None:
     gen = TimeGenerator(_rng=Random(1))
-    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_id=AccountChainId("w"))]
+    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=AccountChainId("w"))]
 
     event1 = make_event(legs=legs, ts_gen=gen)
     event2 = make_event(legs=legs, ts_gen=gen)
@@ -40,7 +40,7 @@ def test_make_event_uses_generator_when_timestamp_missing() -> None:
 
 def test_make_event_respects_provided_timestamp() -> None:
     explicit_ts = datetime(2024, 2, 1, tzinfo=timezone.utc)
-    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_id=AccountChainId("w"))]
+    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=AccountChainId("w"))]
 
     event = make_event(legs=legs, timestamp=explicit_ts)
 
@@ -48,7 +48,7 @@ def test_make_event_respects_provided_timestamp() -> None:
 
 
 def test_make_event_uses_shared_generator_by_default() -> None:
-    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_id=AccountChainId("w"))]
+    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=AccountChainId("w"))]
 
     first = make_event(legs=legs)
     second = make_event(legs=legs)
@@ -58,7 +58,7 @@ def test_make_event_uses_shared_generator_by_default() -> None:
 
 def test_default_generator_is_reset_between_tests() -> None:
     # After the autouse reset, we should start from the same baseline.
-    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_id=AccountChainId("w"))]
+    legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=AccountChainId("w"))]
 
     first = make_event(legs=legs)
     second = make_event(legs=legs)

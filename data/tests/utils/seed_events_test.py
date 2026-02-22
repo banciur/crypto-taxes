@@ -28,7 +28,7 @@ def test_load_seed_events_defaults(tmp_path: Path) -> None:
     (leg,) = event.legs
     assert leg.asset_id == "ETH"
     assert leg.quantity == Decimal("0.5")
-    assert leg.account_id == "ledger"
+    assert leg.account_chain_id == "ledger"
     assert leg.is_fee is False
 
 
@@ -49,7 +49,7 @@ def test_load_seed_events_with_timestamp_and_price_per_token(tmp_path: Path) -> 
     (leg,) = event.legs
     assert leg.asset_id == "BTC"
     assert leg.quantity == Decimal("0.25")
-    assert leg.account_id == "kraken"
+    assert leg.account_chain_id == "kraken"
 
 
 def test_missing_seed_file_returns_empty(tmp_path: Path) -> None:
@@ -65,7 +65,7 @@ def test_ledger_events_from_seed_events() -> None:
     seed_event = SeedEvent(
         timestamp=timestamp,
         price_per_token=price_per_token,
-        legs=[LedgerLeg(asset_id=BTC, quantity=quantity, account_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=quantity, account_chain_id=KRAKEN_WALLET, is_fee=False)],
     )
 
     ledger_events = ledger_events_from_seed_events([seed_event])
@@ -80,5 +80,5 @@ def test_ledger_events_from_seed_events() -> None:
     (leg,) = event.legs
     assert leg.asset_id == BTC
     assert leg.quantity == quantity
-    assert leg.account_id == KRAKEN_WALLET
+    assert leg.account_chain_id == KRAKEN_WALLET
     assert leg.is_fee is False

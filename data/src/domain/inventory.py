@@ -247,7 +247,7 @@ class InventoryEngine:
     ) -> InventoryError:
         legs_summary = "; ".join(f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}" for leg in event.legs)
         return InventoryError(
-            f"{reason} for asset={leg.asset_id} account={leg.account_id} leg={leg.id} event={event.id} "
+            f"{reason} for asset={leg.asset_id} account={leg.account_chain_id} leg={leg.id} event={event.id} "
             f"@{event.timestamp.isoformat()} "
             f"legs={legs_summary}",
             leg=leg,
@@ -262,7 +262,7 @@ class InventoryEngine:
             try:
                 self._wallet_balances.apply_movement(
                     asset_id=leg.asset_id,
-                    account_id=leg.account_id,
+                    account_chain_id=leg.account_chain_id,
                     quantity=leg.quantity,
                 )
             except WalletBalanceError as err:

@@ -9,7 +9,7 @@ export type ApiEventOrigin = {
 export type ApiLedgerLeg = {
   id: string;
   asset_id: string;
-  account_id: string;
+  account_chain_id: string;
   quantity: string;
   is_fee: boolean;
 };
@@ -30,7 +30,7 @@ export type ApiSeedEvent = {
 };
 
 export type ApiAccount = {
-  id: string;
+  account_chain_id: string;
   name: string;
   chain: string;
   address: string;

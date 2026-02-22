@@ -46,7 +46,7 @@ class LedgerLeg(BaseModel):
     id: LegId = LegId(Field(default_factory=uuid4))
     asset_id: AssetId
     quantity: Decimal
-    account_id: AccountChainId
+    account_chain_id: AccountChainId
     is_fee: bool = False
 
     @model_validator(mode="after")

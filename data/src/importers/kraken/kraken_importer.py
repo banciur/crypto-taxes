@@ -93,13 +93,13 @@ def _ledger_leg(
     quantity: Decimal,
     *,
     is_fee: bool = False,
-    account_id: AccountChainId = KRAKEN_ACCOUNT_ID,
+    account_chain_id: AccountChainId = KRAKEN_ACCOUNT_ID,
 ) -> LedgerLeg:
     asset_id = _normalize_asset(entry.asset)
     return LedgerLeg(
         asset_id=asset_id,
         quantity=quantity,
-        account_id=account_id,
+        account_chain_id=account_chain_id,
         is_fee=is_fee,
     )
 

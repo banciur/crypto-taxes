@@ -27,7 +27,7 @@ class AccountConfig:
 
 @dataclass(frozen=True)
 class AccountChainRecord:
-    account_id: AccountChainId
+    account_chain_id: AccountChainId
     name: str
     chain: ChainId
     address: WalletAddress
@@ -47,8 +47,8 @@ def account_chain_id_for(*, chain: ChainId, address: WalletAddress) -> AccountCh
     return AccountChainId(f"{chain}:{address}")
 
 
-def chain_address_from_account_chain_id(account_id: AccountChainId) -> tuple[ChainId, WalletAddress]:
-    chain, address = account_id.split(":", maxsplit=1)
+def chain_address_from_account_chain_id(account_chain_id: AccountChainId) -> tuple[ChainId, WalletAddress]:
+    chain, address = account_chain_id.split(":", maxsplit=1)
     return ChainId(chain), WalletAddress(address)
 
 
@@ -95,46 +95,46 @@ def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[AccountConfig]:
 class AccountRegistry:
     def __init__(self, accounts: Iterable[AccountConfig]):
         ordered_accounts = tuple(accounts)
-        by_account_id: dict[AccountChainId, AccountChainRecord] = {}
+        by_account_chain_id: dict[AccountChainId, AccountChainRecord] = {}
         for account in ordered_accounts:
             for chain in account.chains:
-                account_id = account.account_chain_id_for(chain)
-                by_account_id[account_id] = AccountChainRecord(
-                    account_id=account_id,
+                account_chain_id = account.account_chain_id_for(chain)
+                by_account_chain_id[account_chain_id] = AccountChainRecord(
+                    account_chain_id=account_chain_id,
                     name=account.name,
                     chain=chain,
                     address=account.address,
                     skip_sync=account.skip_sync,
                 )
-        self._by_account_id = by_account_id
+        self._by_account_chain_id = by_account_chain_id
 
     @classmethod
     def from_path(cls, path: Path = DEFAULT_ACCOUNTS_PATH) -> AccountRegistry:
         return cls(load_accounts(path))
 
     def resolve_owned_id(self, *, chain: ChainId, address: WalletAddress) -> AccountChainId | None:
-        account_id = account_chain_id_for(chain=chain, address=address)
-        if account_id not in self._by_account_id:
+        account_chain_id = account_chain_id_for(chain=chain, address=address)
+        if account_chain_id not in self._by_account_chain_id:
             return None
-        return account_id
+        return account_chain_id
 
-    def is_owned(self, account_id: AccountChainId) -> bool:
-        return account_id in self._by_account_id
+    def is_owned(self, account_chain_id: AccountChainId) -> bool:
+        return account_chain_id in self._by_account_chain_id
 
-    def chain_address_for(self, account_id: AccountChainId) -> tuple[ChainId, WalletAddress] | None:
-        record = self._by_account_id.get(account_id)
+    def chain_address_for(self, account_chain_id: AccountChainId) -> tuple[ChainId, WalletAddress] | None:
+        record = self._by_account_chain_id.get(account_chain_id)
         if record is None:
             return None
         return record.chain, record.address
 
-    def name_for(self, account_id: AccountChainId) -> str | None:
-        record = self._by_account_id.get(account_id)
+    def name_for(self, account_chain_id: AccountChainId) -> str | None:
+        record = self._by_account_chain_id.get(account_chain_id)
         if record is None:
             return None
         return record.name
 
     def records(self) -> list[AccountChainRecord]:
-        return list(self._by_account_id.values())
+        return list(self._by_account_chain_id.values())
 
 
 __all__ = [
