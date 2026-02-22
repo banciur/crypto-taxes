@@ -1,29 +1,23 @@
 First stage: compute German taxes
 
-TODO: Improvements around wallets, tokens better structure etc. Broader topic to think through.
- - FE
-  - shortened address elispsis and popup with full address?
-  - recognize my own wallets on legs and don't use address but name
-  - tokens names?
- - BE
-  - do we need a token registry and mapping symbol to address and multichain address?
-  - some tokens can have the same symbol on different chains, but in reality there are different tokens, and it's not a mistake. Example fGHO in fluid different price on different chains (to be confirmed)
-  - review client and accounts structure, also think about wallet id (address_chain)
-  - Kraken importer why do I need outside wallet?
-
-review next steps
 TODO: Pydantic models could be simplified and some validation done by Field
+TODO: Review fee legs
 TODO: Manual adjustments to mark and filter out spam transactions.
 TODO: Mark spam transactions from Moralis importer.
-
-TODO: Review fee legs
-TODO: Review Kraken importer after event type removal and wallets structure changes
 TODO: Review Moralis importer after wallets structure changes. This transaction should combine WETH together https://basescan.org/tx/0xa40bbba2eedb9c86ff4087c55740fce24df9d9c9b25a2a14768b490c3a6f674d
+TODO: Review Kraken importer after event type removal and wallets structure changes
 TODO: Coinbase importer
 TODO: Corrections, combine and/or modify events (complicated transfers etc)
 TODO: I'm not sure about the corrections directory and which code should go where.
 
 TODO: Fix acquisition/disposal and tax computation after changes that were introduced
+TODO: Improvements around tokens maybe better structure etc. Broader topic to think through.
+ - FE
+  - shortened address elispsis and popup with full address?
+  - tokens names?
+ - BE
+  - do we need a token registry and mapping symbol to address and multichain address?
+  - some tokens can have the same symbol on different chains, but in reality there are different tokens, and it's not a mistake. Example fGHO in fluid different price on different chains (to be confirmed)
 
 TODO: I think some accounts I flagged as mine are actually not mine, but Coinbase
 TODO: tooltip on OrginIcon doesn't work for corrections - probably doesn't have to? Or maybe it should. Actually, does the correction have a place where they are added? Don't know what I meant here
