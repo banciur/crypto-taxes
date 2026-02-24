@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC
+from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum
 from typing import NewType
 from uuid import UUID, uuid4
 
@@ -22,8 +24,14 @@ class Marker(Correction, ABC):
     event_origin: EventOrigin
 
 
+class SpamCorrectionSource(StrEnum):
+    MANUAL = "MANUAL"
+    AUTO_MORALIS = "AUTO_MORALIS"
+
+
 class Spam(Marker):
-    pass
+    source: SpamCorrectionSource = SpamCorrectionSource.MANUAL
+    deleted_at: datetime | None = None
 
 
 class AlreadyTaxed(Marker):

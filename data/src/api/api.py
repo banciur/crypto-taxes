@@ -3,23 +3,34 @@ from time import perf_counter
 from typing import Annotated, AsyncGenerator, Awaitable, Callable
 
 from fastapi import Depends, FastAPI, Request, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from accounts import DEFAULT_ACCOUNTS_PATH, AccountRegistry
-from api.dependencies import get_corrected_events_repository, get_raw_events_repository, get_seed_events_repository
-from config import DB_FILE
+from api.dependencies import (
+    get_corrected_events_repository,
+    get_raw_events_repository,
+    get_seed_events_repository,
+    get_spam_correction_service,
+)
+from config import CORRECTIONS_DB_FILE, DB_FILE
+from db.corrections_store import CorrectionsBase
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
-from domain.correction import SeedEvent
-from domain.ledger import LedgerEvent
+from domain.correction import SeedEvent, Spam, SpamCorrectionSource
+from domain.ledger import EventLocation, EventOrigin, LedgerEvent
+from services.spam_correction_service import SpamCorrectionService
 
 
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
     engine = create_engine(f"sqlite:///{DB_FILE}", echo=True)
+    corrections_engine = create_engine(f"sqlite:///{CORRECTIONS_DB_FILE}", echo=True)
+    CorrectionsBase.metadata.create_all(corrections_engine)
     fastapi_app.state.sessionmaker = sessionmaker(engine)
+    fastapi_app.state.corrections_sessionmaker = sessionmaker(corrections_engine)
     yield
+    corrections_engine.dispose()
     engine.dispose()
 
 
@@ -32,6 +43,36 @@ class ApiAccount(BaseModel):
     chain: str
     address: str
     skip_sync: bool
+
+
+class ApiEventOrigin(BaseModel):
+    location: EventLocation
+    external_id: str = Field(min_length=1)
+
+
+class ApiSpamCorrection(BaseModel):
+    id: str
+    event_origin: ApiEventOrigin
+    source: SpamCorrectionSource
+
+
+class ApiCreateSpamCorrectionRequest(BaseModel):
+    event_origin: ApiEventOrigin
+
+
+class ApiDeleteSpamCorrectionRequest(BaseModel):
+    event_origin: ApiEventOrigin
+
+
+def _api_spam_correction(record: Spam) -> ApiSpamCorrection:
+    return ApiSpamCorrection(
+        id=str(record.id),
+        event_origin=ApiEventOrigin(
+            location=record.event_origin.location,
+            external_id=record.event_origin.external_id,
+        ),
+        source=record.source,
+    )
 
 
 @app.middleware("http")
@@ -74,3 +115,32 @@ def get_accounts() -> list[ApiAccount]:
         )
         for record in records
     ]
+
+
+@app.get("/spam-corrections")
+def get_spam_corrections(
+    service: Annotated[SpamCorrectionService, Depends(get_spam_correction_service)],
+) -> list[ApiSpamCorrection]:
+    return [_api_spam_correction(record) for record in service.list_active_manual()]
+
+
+@app.post("/spam-corrections")
+def create_spam_correction(
+    payload: ApiCreateSpamCorrectionRequest,
+    service: Annotated[SpamCorrectionService, Depends(get_spam_correction_service)],
+) -> ApiSpamCorrection:
+    record = service.create_manual(
+        EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id)
+    )
+    return _api_spam_correction(record)
+
+
+@app.delete("/spam-corrections", status_code=204)
+def delete_spam_correction(
+    payload: ApiDeleteSpamCorrectionRequest,
+    service: Annotated[SpamCorrectionService, Depends(get_spam_correction_service)],
+) -> Response:
+    service.delete_manual(
+        EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id)
+    )
+    return Response(status_code=204)
