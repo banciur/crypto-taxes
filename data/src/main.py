@@ -110,7 +110,7 @@ def run(
     logger.info("Loaded %d active spam corrections", len(spam_markers))
     logger.info("Applying corrections to %d raw events", len(events))
     corrections_started = perf_counter()
-    filtered_events = apply_spam_corrections(raw_events=events, spam_markers=spam_markers)
+    filtered_events = list(apply_spam_corrections(raw_events=events, spam_markers=spam_markers))
     logger.info("Removed %d spam raw events", len(events) - len(filtered_events))
     corrected_events = apply_seed_event_corrections(raw_events=filtered_events, seed_events=seed_events)
     logger.info(

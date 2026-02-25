@@ -30,8 +30,8 @@ def test_spam_filter_runs_before_seed_event_merge() -> None:
         legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("0.5"), account_chain_id=KRAKEN_WALLET, is_fee=False)],
     )
 
-    filtered = apply_spam_corrections(
-        raw_events=[spammed_raw, kept_raw], spam_markers=[Spam(event_origin=spammed_raw.origin)]
+    filtered = list(
+        apply_spam_corrections(raw_events=[spammed_raw, kept_raw], spam_markers=[Spam(event_origin=spammed_raw.origin)])
     )
     corrected = apply_seed_event_corrections(raw_events=filtered, seed_events=[seed_event])
 
