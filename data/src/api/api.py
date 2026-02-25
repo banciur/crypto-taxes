@@ -3,7 +3,7 @@ from time import perf_counter
 from typing import Annotated, AsyncGenerator, Awaitable, Callable
 
 from fastapi import Depends, FastAPI, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import Field
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -19,6 +19,7 @@ from db.corrections_store import CorrectionsBase
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
 from domain.correction import SeedEvent, Spam, SpamCorrectionSource
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent
+from pydantic_base import StrictBaseModel
 from services.spam_correction_service import SpamCorrectionService
 
 
@@ -37,7 +38,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(lifespan=lifespan)
 
 
-class ApiAccount(BaseModel):
+class ApiAccount(StrictBaseModel):
     account_chain_id: str
     name: str
     chain: str
@@ -45,22 +46,22 @@ class ApiAccount(BaseModel):
     skip_sync: bool
 
 
-class ApiEventOrigin(BaseModel):
+class ApiEventOrigin(StrictBaseModel):
     location: EventLocation
     external_id: str = Field(min_length=1)
 
 
-class ApiSpamCorrection(BaseModel):
+class ApiSpamCorrection(StrictBaseModel):
     id: str
     event_origin: ApiEventOrigin
     source: SpamCorrectionSource
 
 
-class ApiCreateSpamCorrectionRequest(BaseModel):
+class ApiCreateSpamCorrectionRequest(StrictBaseModel):
     event_origin: ApiEventOrigin
 
 
-class ApiDeleteSpamCorrectionRequest(BaseModel):
+class ApiDeleteSpamCorrectionRequest(StrictBaseModel):
     event_origin: ApiEventOrigin
 
 

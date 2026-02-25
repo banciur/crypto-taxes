@@ -8,9 +8,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
 
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
+from pydantic_base import StrictBaseModel
 
 logger = logging.getLogger(__name__)
 KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"
@@ -40,7 +41,7 @@ _SKIPPED_REFIDS = {
 }
 
 
-class KrakenLedgerEntry(BaseModel):
+class KrakenLedgerEntry(StrictBaseModel):
     txid: str
     refid: str
     time: datetime
