@@ -12,15 +12,14 @@ from api.dependencies import (
     get_corrected_events_repository,
     get_raw_events_repository,
     get_seed_events_repository,
-    get_spam_correction_service,
+    get_spam_correction_repository,
 )
 from config import CORRECTIONS_DB_FILE, DB_FILE
-from db.corrections_store import CorrectionsBase
+from db.corrections import CorrectionsBase, SpamCorrectionRepository
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
 from domain.correction import SeedEvent, Spam, SpamCorrectionSource
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent
 from pydantic_base import StrictBaseModel
-from services.spam_correction_service import SpamCorrectionService
 
 
 @asynccontextmanager
@@ -120,18 +119,19 @@ def get_accounts() -> list[ApiAccount]:
 
 @app.get("/spam-corrections")
 def get_spam_corrections(
-    service: Annotated[SpamCorrectionService, Depends(get_spam_correction_service)],
+    repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
 ) -> list[ApiSpamCorrection]:
-    return [_api_spam_correction(record) for record in service.list_active_manual()]
+    return [_api_spam_correction(record) for record in repo.list() if record.source == SpamCorrectionSource.MANUAL]
 
 
 @app.post("/spam-corrections")
 def create_spam_correction(
     payload: ApiCreateSpamCorrectionRequest,
-    service: Annotated[SpamCorrectionService, Depends(get_spam_correction_service)],
+    repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
 ) -> ApiSpamCorrection:
-    record = service.create_manual(
-        EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id)
+    record = repo.mark_as_spam(
+        EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id),
+        SpamCorrectionSource.MANUAL,
     )
     return _api_spam_correction(record)
 
@@ -139,9 +139,9 @@ def create_spam_correction(
 @app.delete("/spam-corrections", status_code=204)
 def delete_spam_correction(
     payload: ApiDeleteSpamCorrectionRequest,
-    service: Annotated[SpamCorrectionService, Depends(get_spam_correction_service)],
+    repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
 ) -> Response:
-    service.delete_manual(
+    repo.remove_spam_mark(
         EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id)
     )
     return Response(status_code=204)

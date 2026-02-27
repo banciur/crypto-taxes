@@ -24,9 +24,11 @@ def test_filters_matching_spam_origin() -> None:
     kept = _raw_event(location=EventLocation.KRAKEN, external_id="keep", hour=1)
     spammed = _raw_event(location=EventLocation.ARBITRUM, external_id="0xspam", hour=2)
 
-    filtered = apply_spam_corrections(
-        raw_events=[kept, spammed],
-        spam_markers=[Spam(event_origin=spammed.origin)],
+    filtered = list(
+        apply_spam_corrections(
+            raw_events=[kept, spammed],
+            spam_markers=[Spam(event_origin=spammed.origin)],
+        )
     )
 
     assert filtered == [kept]
@@ -37,9 +39,11 @@ def test_preserves_order_of_remaining_events() -> None:
     second = _raw_event(location=EventLocation.BASE, external_id="second", hour=2)
     third = _raw_event(location=EventLocation.OPTIMISM, external_id="third", hour=3)
 
-    filtered = apply_spam_corrections(
-        raw_events=[first, second, third],
-        spam_markers=[Spam(event_origin=second.origin)],
+    filtered = list(
+        apply_spam_corrections(
+            raw_events=[first, second, third],
+            spam_markers=[Spam(event_origin=second.origin)],
+        )
     )
 
     assert filtered == [first, third]
@@ -50,10 +54,12 @@ def test_handles_empty_and_duplicate_markers() -> None:
     second = _raw_event(location=EventLocation.ETHEREUM, external_id="0xb", hour=2)
     duplicate_marker = Spam(event_origin=second.origin)
 
-    no_spam_filtered = apply_spam_corrections(raw_events=[first, second], spam_markers=[])
-    duplicate_filtered = apply_spam_corrections(
-        raw_events=[first, second],
-        spam_markers=[duplicate_marker, Spam(event_origin=second.origin)],
+    no_spam_filtered = list(apply_spam_corrections(raw_events=[first, second], spam_markers=[]))
+    duplicate_filtered = list(
+        apply_spam_corrections(
+            raw_events=[first, second],
+            spam_markers=[duplicate_marker, Spam(event_origin=second.origin)],
+        )
     )
 
     assert no_spam_filtered == [first, second]

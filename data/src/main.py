@@ -9,7 +9,7 @@ from typing import Sequence
 from config import ARTIFACTS_DIR, DB_FILE, PROJECT_ROOT
 from corrections.seed_events import apply_seed_event_corrections
 from corrections.spam import apply_spam_corrections
-from db.corrections_store import SpamCorrectionRepository, init_corrections_db
+from db.corrections import SpamCorrectionRepository, init_corrections_db
 from db.db import init_db
 from db.repositories import (
     AcquisitionLotRepository,
@@ -30,7 +30,6 @@ from services.open_exchange_rates_source import OpenExchangeRatesSource
 from services.price_service import PriceService
 from services.price_sources import HybridPriceSource
 from services.price_store import JsonlPriceStore
-from services.spam_correction_service import SpamCorrectionService
 from utils.inventory_summary import compute_inventory_summary, render_inventory_summary
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
@@ -68,7 +67,7 @@ def run(
     lot_repository = AcquisitionLotRepository(session)
     disposal_repository = DisposalLinkRepository(session)
     tax_event_repository = TaxEventRepository(session)
-    spam_correction_service = SpamCorrectionService(SpamCorrectionRepository(corrections_session))
+    spam_correction_repository = SpamCorrectionRepository(corrections_session)
 
     wallet_balance_tracker = WalletBalanceTracker()
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
@@ -106,7 +105,7 @@ def run(
     logger.info("Persisted raw events in %.2fs", perf_counter() - persist_started)
 
     # Apply corrections
-    spam_markers = spam_correction_service.list_active_markers()
+    spam_markers = spam_correction_repository.list()
     logger.info("Loaded %d active spam corrections", len(spam_markers))
     logger.info("Applying corrections to %d raw events", len(events))
     corrections_started = perf_counter()

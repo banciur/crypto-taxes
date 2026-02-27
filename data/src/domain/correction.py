@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC
-from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import NewType
@@ -30,7 +29,7 @@ class SpamCorrectionSource(StrEnum):
 
 class Spam(Marker):
     source: SpamCorrectionSource = SpamCorrectionSource.MANUAL
-    deleted_at: datetime | None = None
+    is_deleted: bool = False
 
 
 class AlreadyTaxed(Marker):

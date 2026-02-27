@@ -17,7 +17,7 @@ Treat other files under `doc/` as background/templates unless explicitly referen
 ## Component interface (data ↔ ui)
 - Shared contract: FastAPI endpoints exposed by `data/src/api/`.
 - Base URL is configured via `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000` for local dev).
-- Endpoints: `GET /raw-events`, `GET /seed-events`, `GET /corrected-events`, `GET /accounts`.
+- Endpoints: `GET /raw-events`, `GET /seed-events`, `GET /corrected-events`, `GET /accounts`, `GET /spam-corrections`, `POST /spam-corrections`, `DELETE /spam-corrections`.
 
 ## Docs and drift control
 - When changing domain semantics, ingestion behavior, DB schema, or UI expectations, update `doc/CURRENT.md` and any relevant `AGENTS.md` files to keep the “how to work here” guidance accurate.

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Index, String, UniqueConstraint, Uuid, create_engine, select
+from sqlalchemy import Boolean, Index, String, UniqueConstraint, Uuid, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from config import CORRECTIONS_DB_FILE
@@ -25,7 +24,7 @@ class SpamCorrectionOrm(CorrectionsBase):
     origin_location: Mapped[str] = mapped_column(String, nullable=False)
     origin_external_id: Mapped[str] = mapped_column(String, nullable=False)
     source: Mapped[str] = mapped_column(String, nullable=False)
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     __table_args__ = (
         UniqueConstraint("origin_location", "origin_external_id", "source", name="uq_spam_corrections_origin_source"),
@@ -37,10 +36,10 @@ class SpamCorrectionRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def list_active(self) -> list[Spam]:
+    def list(self) -> list[Spam]:
         stmt = (
             select(SpamCorrectionOrm)
-            .where(SpamCorrectionOrm.deleted_at.is_(None))
+            .where(SpamCorrectionOrm.is_deleted.is_(False))
             .order_by(
                 SpamCorrectionOrm.origin_location.asc(),
                 SpamCorrectionOrm.origin_external_id.asc(),
@@ -50,26 +49,7 @@ class SpamCorrectionRepository:
         rows = self._session.execute(stmt).scalars().all()
         return [self._to_domain(row) for row in rows]
 
-    def get_by_origin_and_source(
-        self,
-        event_origin: EventOrigin,
-        source: SpamCorrectionSource,
-    ) -> Spam | None:
-        stmt = (
-            select(SpamCorrectionOrm)
-            .where(
-                SpamCorrectionOrm.origin_location == event_origin.location.value,
-                SpamCorrectionOrm.origin_external_id == event_origin.external_id,
-                SpamCorrectionOrm.source == source.value,
-            )
-            .limit(1)
-        )
-        row = self._session.execute(stmt).scalar_one_or_none()
-        if row is None:
-            return None
-        return self._to_domain(row)
-
-    def upsert_active(self, event_origin: EventOrigin, source: SpamCorrectionSource) -> Spam:
+    def mark_as_spam(self, event_origin: EventOrigin, source: SpamCorrectionSource) -> Spam:
         stmt = (
             select(SpamCorrectionOrm)
             .where(
@@ -85,39 +65,30 @@ class SpamCorrectionRepository:
                 origin_location=event_origin.location.value,
                 origin_external_id=event_origin.external_id,
                 source=source.value,
-                deleted_at=None,
+                is_deleted=False,
             )
             self._session.add(row)
-        elif row.deleted_at is not None:
-            row.deleted_at = None
+        elif row.is_deleted:
+            row.is_deleted = False
 
         self._session.commit()
         self._session.refresh(row)
         return self._to_domain(row)
 
-    def soft_delete(self, event_origin: EventOrigin, source: SpamCorrectionSource) -> bool:
-        stmt = (
-            select(SpamCorrectionOrm)
-            .where(
-                SpamCorrectionOrm.origin_location == event_origin.location.value,
-                SpamCorrectionOrm.origin_external_id == event_origin.external_id,
-                SpamCorrectionOrm.source == source.value,
-            )
-            .limit(1)
+    def remove_spam_mark(self, event_origin: EventOrigin) -> None:
+        stmt = select(SpamCorrectionOrm).where(
+            SpamCorrectionOrm.origin_location == event_origin.location.value,
+            SpamCorrectionOrm.origin_external_id == event_origin.external_id,
+            SpamCorrectionOrm.is_deleted.is_(False),
         )
-        row = self._session.execute(stmt).scalar_one_or_none()
-        if row is None or row.deleted_at is not None:
-            return False
-
-        row.deleted_at = datetime.now(timezone.utc)
-        self._session.commit()
-        return True
+        rows = self._session.execute(stmt).scalars().all()
+        for row in rows:
+            row.is_deleted = True
+        if rows:
+            self._session.commit()
 
     @staticmethod
     def _to_domain(row: SpamCorrectionOrm) -> Spam:
-        deleted_at = row.deleted_at
-        if deleted_at is not None and deleted_at.tzinfo is None:
-            deleted_at = deleted_at.replace(tzinfo=timezone.utc)
         return Spam(
             id=CorrectionId(row.id),
             event_origin=EventOrigin(
@@ -125,7 +96,7 @@ class SpamCorrectionRepository:
                 external_id=row.origin_external_id,
             ),
             source=SpamCorrectionSource(row.source),
-            deleted_at=deleted_at,
+            is_deleted=row.is_deleted,
         )
 
 
