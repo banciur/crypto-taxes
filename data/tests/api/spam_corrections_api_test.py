@@ -7,7 +7,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api.api as api_module
-from db.corrections import init_corrections_db
+from db.corrections import SpamCorrectionRepository, init_corrections_db
+from domain.correction import SpamCorrectionSource
+from domain.ledger import EventLocation, EventOrigin
 
 
 @pytest.fixture()
@@ -66,6 +68,24 @@ def test_duplicate_post_is_idempotent(client: TestClient) -> None:
     assert first_response.status_code == 204
     assert second_response.status_code == 204
     assert listed == first_listed
+
+
+def test_get_lists_spam_corrections_from_all_sources(client: TestClient) -> None:
+    session = init_corrections_db(db_file=api_module.CORRECTIONS_DB_PATH)
+    repo = SpamCorrectionRepository(session)
+    repo.mark_as_spam(
+        EventOrigin(location=EventLocation.ARBITRUM, external_id="0xauto"),
+        SpamCorrectionSource.AUTO_MORALIS,
+    )
+    session.close()
+
+    response = client.get("/spam-corrections")
+
+    assert response.status_code == 200
+    listed = response.json()
+    assert len(listed) == 1
+    assert listed[0]["event_origin"] == {"location": "ARBITRUM", "external_id": "0xauto"}
+    assert listed[0]["source"] == "AUTO_MORALIS"
 
 
 def test_delete_is_idempotent_for_missing_record(client: TestClient) -> None:

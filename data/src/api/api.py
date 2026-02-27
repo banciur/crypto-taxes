@@ -120,7 +120,7 @@ def get_accounts() -> list[ApiAccount]:
 def get_spam_corrections(
     repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
 ) -> list[ApiSpamCorrection]:
-    return [_api_spam_correction(record) for record in repo.list() if record.source == SpamCorrectionSource.MANUAL]
+    return [_api_spam_correction(record) for record in repo.list()]
 
 
 @app.post("/spam-corrections", status_code=204)
