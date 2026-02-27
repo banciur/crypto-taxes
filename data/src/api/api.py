@@ -15,7 +15,7 @@ from api.dependencies import (
     get_spam_correction_repository,
 )
 from config import CORRECTIONS_DB_FILE, DB_FILE
-from db.corrections import CorrectionsBase, SpamCorrectionRepository
+from db.corrections import SpamCorrectionRepository
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
 from domain.correction import SeedEvent, Spam, SpamCorrectionSource
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent
@@ -26,7 +26,6 @@ from pydantic_base import StrictBaseModel
 async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
     engine = create_engine(f"sqlite:///{DB_FILE}", echo=True)
     corrections_engine = create_engine(f"sqlite:///{CORRECTIONS_DB_FILE}", echo=True)
-    CorrectionsBase.metadata.create_all(corrections_engine)
     fastapi_app.state.sessionmaker = sessionmaker(engine)
     fastapi_app.state.corrections_sessionmaker = sessionmaker(corrections_engine)
     yield

@@ -7,12 +7,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api.api as api_module
+from db.corrections import init_corrections_db
 
 
 @pytest.fixture()
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
     main_db = tmp_path / "api-main.db"
     corrections_db = tmp_path / "api-corrections.db"
+    corrections_session = init_corrections_db(db_file=corrections_db, reset=True)
+    corrections_session.close()
     monkeypatch.setattr(api_module, "DB_FILE", main_db)
     monkeypatch.setattr(api_module, "CORRECTIONS_DB_FILE", corrections_db)
     with TestClient(api_module.app) as test_client:
