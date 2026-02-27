@@ -37,7 +37,7 @@
 - `make deps` syncs the project and `dev` dependency groups into the local `.venv` via uv.
 - `make code_check` runs `ruff check`, `ruff format --check`, and `mypy` to gate linting and types.
 - `make code_fix` executes `ruff check --fix`, `ruff format`, and `mypy` to auto-fix linting and re-run types.
-- `make test` runs the pytest suite. If you want to test a single file use `uv run --group dev pytest -s tests/test_foo.py`
+- `make test` runs the pytest suite. If you want to test a single file, use `uv run --group dev pytest tests/test_foo.py`
 
 ## Suggested workflow
 - ALWAYS after making python code changes `make code_fix` to auto-apply lint fixes.
