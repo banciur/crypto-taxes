@@ -142,7 +142,7 @@ class MoralisService:
 def build_default_service(
     cache_db: Path = TRANSACTIONS_CACHE_DB_PATH, accounts_path: Path | None = None
 ) -> MoralisService:
-    session = init_transactions_cache_db(db_file=cache_db)
+    session = init_transactions_cache_db(db_path=cache_db)
     client = MoralisClient(api_key=config().moralis_api_key)
     cache_repo = TransactionsCacheRepository(session)
     return MoralisService(client, cache_repo, accounts_path=accounts_path)

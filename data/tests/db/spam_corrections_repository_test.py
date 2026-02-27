@@ -24,7 +24,7 @@ def _row(session: Session, origin: EventOrigin) -> SpamCorrectionOrm:
 
 
 def test_mark_as_spam_and_list(tmp_path: Path) -> None:
-    session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
+    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.ARBITRUM, "0xabc")
 
@@ -39,7 +39,7 @@ def test_mark_as_spam_and_list(tmp_path: Path) -> None:
 
 
 def test_mark_as_spam_same_origin_and_source_is_idempotent(tmp_path: Path) -> None:
-    session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
+    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.BASE, "0xdup")
 
@@ -53,7 +53,7 @@ def test_mark_as_spam_same_origin_and_source_is_idempotent(tmp_path: Path) -> No
 
 
 def test_remove_spam_mark_hides_record_from_list(tmp_path: Path) -> None:
-    session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
+    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.ETHEREUM, "0xspam")
     repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
@@ -64,7 +64,7 @@ def test_remove_spam_mark_hides_record_from_list(tmp_path: Path) -> None:
 
 
 def test_mark_as_spam_after_remove_restores_same_row(tmp_path: Path) -> None:
-    session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
+    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.OPTIMISM, "0xrestore")
 
@@ -78,7 +78,7 @@ def test_mark_as_spam_after_remove_restores_same_row(tmp_path: Path) -> None:
 
 
 def test_different_origins_are_stored_independently(tmp_path: Path) -> None:
-    session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
+    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin_a = _origin(EventLocation.ARBITRUM, "0xb")
     origin_b = _origin(EventLocation.ARBITRUM, "0xa")
@@ -91,7 +91,7 @@ def test_different_origins_are_stored_independently(tmp_path: Path) -> None:
 
 
 def test_mark_as_spam_same_origin_updates_source_and_reuses_row(tmp_path: Path) -> None:
-    session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
+    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.BASE, "0xall")
 
@@ -106,7 +106,7 @@ def test_mark_as_spam_same_origin_updates_source_and_reuses_row(tmp_path: Path) 
 
 
 def test_mark_as_spam_with_skip_if_exists_inserts_when_absent(tmp_path: Path) -> None:
-    session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
+    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.KRAKEN, "0xnew")
 
@@ -119,7 +119,7 @@ def test_mark_as_spam_with_skip_if_exists_inserts_when_absent(tmp_path: Path) ->
 
 
 def test_mark_as_spam_with_skip_if_exists_leaves_existing_active_row_untouched(tmp_path: Path) -> None:
-    session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
+    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.BASE, "0xkeep")
 
@@ -134,7 +134,7 @@ def test_mark_as_spam_with_skip_if_exists_leaves_existing_active_row_untouched(t
 
 
 def test_mark_as_spam_with_skip_if_exists_does_not_revive_deleted_row(tmp_path: Path) -> None:
-    session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
+    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.ETHEREUM, "0xtombstone")
 

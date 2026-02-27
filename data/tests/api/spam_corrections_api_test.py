@@ -15,7 +15,7 @@ from domain.ledger import EventLocation, EventOrigin
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
     main_db = tmp_path / "api-main.db"
     corrections_db = tmp_path / "api-corrections.db"
-    corrections_session = init_corrections_db(db_file=corrections_db, reset=True)
+    corrections_session = init_corrections_db(db_path=corrections_db, reset=True)
     corrections_session.close()
     monkeypatch.setattr(api_module, "DB_PATH", main_db)
     monkeypatch.setattr(api_module, "CORRECTIONS_DB_PATH", corrections_db)
@@ -70,7 +70,7 @@ def test_duplicate_post_is_idempotent(client: TestClient) -> None:
 
 
 def test_get_lists_spam_corrections_from_all_sources(client: TestClient) -> None:
-    session = init_corrections_db(db_file=api_module.CORRECTIONS_DB_PATH)
+    session = init_corrections_db(db_path=api_module.CORRECTIONS_DB_PATH)
     repo = SpamCorrectionRepository(session)
     repo.mark_as_spam(
         EventOrigin(location=EventLocation.ARBITRUM, external_id="0xauto"),

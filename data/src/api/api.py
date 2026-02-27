@@ -36,6 +36,7 @@ async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(lifespan=lifespan)
 
 
+# Those classes might be redundant
 class ApiAccount(StrictBaseModel):
     account_chain_id: str
     name: str

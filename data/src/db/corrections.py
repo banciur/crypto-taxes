@@ -7,7 +7,6 @@ from uuid import UUID, uuid4
 from sqlalchemy import Boolean, Index, String, UniqueConstraint, Uuid, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-from config import CORRECTIONS_DB_PATH
 from domain.correction import CorrectionId, Spam
 from domain.ledger import EventLocation, EventOrigin
 
@@ -56,6 +55,7 @@ class SpamCorrectionRepository:
         self,
         event_origin: EventOrigin,
         source: SpamCorrectionSource = SpamCorrectionSource.MANUAL,
+        *,
         skip_if_exists: bool = False,
     ) -> None:
         stmt = select(SpamCorrectionOrm).where(
@@ -103,14 +103,10 @@ class SpamCorrectionRepository:
         )
 
 
-def init_corrections_db(
-    echo: bool = False, *, db_file: str | Path = CORRECTIONS_DB_PATH, reset: bool = False
-) -> Session:
-    path = Path(db_file)
-    if reset and path.exists():
-        path.unlink()
-    path.parent.mkdir(parents=True, exist_ok=True)
+def init_corrections_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
+    if reset and db_path.exists():
+        db_path.unlink()
 
-    engine = create_engine(f"sqlite:///{path}", echo=echo)
+    engine = create_engine(f"sqlite:///{db_path}", echo=echo)
     CorrectionsBase.metadata.create_all(engine)
     return sessionmaker(engine)()

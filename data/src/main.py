@@ -6,7 +6,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Sequence
 
-from config import ARTIFACTS_DIR, DB_PATH, PROJECT_ROOT
+from config import ARTIFACTS_DIR, CORRECTIONS_DB_PATH, DB_PATH, PROJECT_ROOT
 from corrections.seed_events import apply_seed_event_corrections
 from corrections.spam import apply_spam_corrections
 from db.corrections import SpamCorrectionRepository, init_corrections_db
@@ -60,7 +60,7 @@ def run(
     # Setup components
     logger.info("Initializing DB at %s", DB_PATH)
     session = init_db(reset=True, db_path=DB_PATH)
-    corrections_session = init_corrections_db(reset=False)
+    corrections_session = init_corrections_db(db_path=CORRECTIONS_DB_PATH, reset=False)
     event_repository = LedgerEventRepository(session)
     corrected_event_repository = CorrectedLedgerEventRepository(session)
     seed_event_repository = SeedEventRepository(session)

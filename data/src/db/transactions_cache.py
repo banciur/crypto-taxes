@@ -9,7 +9,6 @@ from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint,
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-from config import TRANSACTIONS_CACHE_DB_PATH
 from domain.ledger import ChainId, WalletAddress
 
 
@@ -84,14 +83,10 @@ class TransactionsCacheRepository:
         self.session.commit()
 
 
-def init_transactions_cache_db(
-    echo: bool = False, *, db_file: str | Path = TRANSACTIONS_CACHE_DB_PATH, reset: bool = False
-) -> Session:
-    path = Path(db_file)
-    if reset and path.exists():
-        path.unlink()
-    path.parent.mkdir(parents=True, exist_ok=True)
+def init_transactions_cache_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
+    if reset and db_path.exists():
+        db_path.unlink()
 
-    engine = create_engine(f"sqlite:///{path}", echo=echo)
+    engine = create_engine(f"sqlite:///{db_path}", echo=echo)
     TransactionsCacheBase.metadata.create_all(engine)
     return sessionmaker(engine)()
