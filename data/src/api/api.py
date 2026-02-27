@@ -123,16 +123,16 @@ def get_spam_corrections(
     return [_api_spam_correction(record) for record in repo.list() if record.source == SpamCorrectionSource.MANUAL]
 
 
-@app.post("/spam-corrections")
+@app.post("/spam-corrections", status_code=204)
 def create_spam_correction(
     payload: ApiCreateSpamCorrectionRequest,
     repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
-) -> ApiSpamCorrection:
-    record = repo.mark_as_spam(
+) -> Response:
+    repo.mark_as_spam(
         EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id),
         SpamCorrectionSource.MANUAL,
     )
-    return _api_spam_correction(record)
+    return Response(status_code=204)
 
 
 @app.delete("/spam-corrections", status_code=204)

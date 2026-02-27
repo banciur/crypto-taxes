@@ -25,7 +25,7 @@ class SpamCorrectionOrm(CorrectionsBase):
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     __table_args__ = (
-        UniqueConstraint("origin_location", "origin_external_id", "source", name="uq_spam_corrections_origin_source"),
+        UniqueConstraint("origin_location", "origin_external_id", name="uq_spam_corrections_origin"),
         Index("ix_spam_corrections_origin", "origin_location", "origin_external_id"),
     )
 
@@ -41,21 +41,15 @@ class SpamCorrectionRepository:
             .order_by(
                 SpamCorrectionOrm.origin_location.asc(),
                 SpamCorrectionOrm.origin_external_id.asc(),
-                SpamCorrectionOrm.source.asc(),
             )
         )
         rows = self._session.execute(stmt).scalars().all()
         return [self._to_domain(row) for row in rows]
 
-    def mark_as_spam(self, event_origin: EventOrigin, source: SpamCorrectionSource) -> Spam:
-        stmt = (
-            select(SpamCorrectionOrm)
-            .where(
-                SpamCorrectionOrm.origin_location == event_origin.location.value,
-                SpamCorrectionOrm.origin_external_id == event_origin.external_id,
-                SpamCorrectionOrm.source == source.value,
-            )
-            .limit(1)
+    def mark_as_spam(self, event_origin: EventOrigin, source: SpamCorrectionSource) -> None:
+        stmt = select(SpamCorrectionOrm).where(
+            SpamCorrectionOrm.origin_location == event_origin.location.value,
+            SpamCorrectionOrm.origin_external_id == event_origin.external_id,
         )
         row = self._session.execute(stmt).scalar_one_or_none()
         if row is None:
@@ -66,12 +60,11 @@ class SpamCorrectionRepository:
                 is_deleted=False,
             )
             self._session.add(row)
-        elif row.is_deleted:
+        else:
+            row.source = source.value
             row.is_deleted = False
 
         self._session.commit()
-        self._session.refresh(row)
-        return self._to_domain(row)
 
     def remove_spam_mark(self, event_origin: EventOrigin) -> None:
         stmt = select(SpamCorrectionOrm).where(
@@ -79,10 +72,9 @@ class SpamCorrectionRepository:
             SpamCorrectionOrm.origin_external_id == event_origin.external_id,
             SpamCorrectionOrm.is_deleted.is_(False),
         )
-        rows = self._session.execute(stmt).scalars().all()
-        for row in rows:
+        row = self._session.execute(stmt).scalar_one_or_none()
+        if row is not None:
             row.is_deleted = True
-        if rows:
             self._session.commit()
 
     @staticmethod

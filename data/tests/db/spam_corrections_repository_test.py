@@ -16,13 +16,12 @@ def test_mark_as_spam_and_list(tmp_path: Path) -> None:
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.ARBITRUM, "0xabc")
 
-    created = repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
 
     active = repo.list()
 
     assert len(active) == 1
     (reloaded,) = active
-    assert reloaded.id == created.id
     assert reloaded.event_origin == origin
     assert reloaded.source == SpamCorrectionSource.MANUAL
     assert reloaded.is_deleted is False
@@ -33,12 +32,12 @@ def test_mark_as_spam_same_origin_and_source_is_idempotent(tmp_path: Path) -> No
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.BASE, "0xdup")
 
-    first = repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
-    second = repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    first = repo.list()[0]
+    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
 
     active = repo.list()
     assert len(active) == 1
-    assert second.id == first.id
     assert active[0].id == first.id
 
 
@@ -58,10 +57,12 @@ def test_mark_as_spam_after_remove_restores_same_row(tmp_path: Path) -> None:
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.OPTIMISM, "0xrestore")
 
-    first = repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    first = repo.list()[0]
     repo.remove_spam_mark(origin)
 
-    restored = repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    restored = repo.list()[0]
     assert restored.id == first.id
     assert restored.is_deleted is False
 
@@ -80,16 +81,16 @@ def test_different_origins_are_stored_independently(tmp_path: Path) -> None:
     assert {record.source for record in active} == {SpamCorrectionSource.MANUAL}
 
 
-def test_remove_spam_mark_removes_all_sources_for_origin(tmp_path: Path) -> None:
+def test_mark_as_spam_same_origin_updates_source_and_reuses_row(tmp_path: Path) -> None:
     session = init_corrections_db(db_file=tmp_path / "corrections.db", reset=True)
     repo = SpamCorrectionRepository(session)
     origin = _origin(EventLocation.BASE, "0xall")
 
-    manual = repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
-    auto = repo.mark_as_spam(origin, SpamCorrectionSource.AUTO_MORALIS)
-    repo.remove_spam_mark(origin)
-    restored_manual = repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    manual = repo.list()[0]
+    repo.mark_as_spam(origin, SpamCorrectionSource.AUTO_MORALIS)
+    auto = repo.list()[0]
 
-    assert manual.id != auto.id
-    assert repo.list() == [restored_manual]
-    assert restored_manual.id == manual.id
+    assert auto.id == manual.id
+    assert auto.source == SpamCorrectionSource.AUTO_MORALIS
+    assert repo.list() == [auto]
