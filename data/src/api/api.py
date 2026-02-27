@@ -7,14 +7,14 @@ from pydantic import Field
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from accounts import DEFAULT_ACCOUNTS_PATH, AccountRegistry
+from accounts import AccountRegistry
 from api.dependencies import (
     get_corrected_events_repository,
     get_raw_events_repository,
     get_seed_events_repository,
     get_spam_correction_repository,
 )
-from config import CORRECTIONS_DB_FILE, DB_FILE
+from config import ACCOUNTS_PATH, CORRECTIONS_DB_PATH, DB_PATH
 from db.corrections import SpamCorrectionRepository
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
 from domain.correction import SeedEvent, Spam, SpamCorrectionSource
@@ -24,8 +24,8 @@ from pydantic_base import StrictBaseModel
 
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
-    engine = create_engine(f"sqlite:///{DB_FILE}", echo=True)
-    corrections_engine = create_engine(f"sqlite:///{CORRECTIONS_DB_FILE}", echo=True)
+    engine = create_engine(f"sqlite:///{DB_PATH}", echo=True)
+    corrections_engine = create_engine(f"sqlite:///{CORRECTIONS_DB_PATH}", echo=True)
     fastapi_app.state.sessionmaker = sessionmaker(engine)
     fastapi_app.state.corrections_sessionmaker = sessionmaker(corrections_engine)
     yield
@@ -102,7 +102,7 @@ def get_seed_events(sr: Annotated[SeedEventRepository, Depends(get_seed_events_r
 
 @app.get("/accounts")
 def get_accounts() -> list[ApiAccount]:
-    registry = AccountRegistry.from_path(DEFAULT_ACCOUNTS_PATH)
+    registry = AccountRegistry.from_path(ACCOUNTS_PATH)
     records = sorted(registry.records(), key=lambda record: record.account_chain_id)
     return [
         ApiAccount(

@@ -16,8 +16,8 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[TestCli
     corrections_db = tmp_path / "api-corrections.db"
     corrections_session = init_corrections_db(db_file=corrections_db, reset=True)
     corrections_session.close()
-    monkeypatch.setattr(api_module, "DB_FILE", main_db)
-    monkeypatch.setattr(api_module, "CORRECTIONS_DB_FILE", corrections_db)
+    monkeypatch.setattr(api_module, "DB_PATH", main_db)
+    monkeypatch.setattr(api_module, "CORRECTIONS_DB_PATH", corrections_db)
     with TestClient(api_module.app) as test_client:
         yield test_client
 

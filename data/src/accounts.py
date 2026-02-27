@@ -5,10 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from config import ACCOUNTS_PATH
 from domain.ledger import AccountChainId, ChainId, WalletAddress
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_ACCOUNTS_PATH = REPO_ROOT / "artifacts" / "accounts.json"
 CHAIN_ALIASES: dict[str, str] = {
     "ethereum": "eth",
 }
@@ -52,7 +51,7 @@ def chain_address_from_account_chain_id(account_chain_id: AccountChainId) -> tup
     return ChainId(chain), WalletAddress(address)
 
 
-def load_accounts(path: Path = DEFAULT_ACCOUNTS_PATH) -> list[AccountConfig]:
+def load_accounts(path: Path = ACCOUNTS_PATH) -> list[AccountConfig]:
     payload = json.loads(path.read_text())
     if not isinstance(payload, list):
         raise ValueError("Accounts file must contain a JSON list of objects.")
@@ -109,7 +108,7 @@ class AccountRegistry:
         self._by_account_chain_id = by_account_chain_id
 
     @classmethod
-    def from_path(cls, path: Path = DEFAULT_ACCOUNTS_PATH) -> AccountRegistry:
+    def from_path(cls, path: Path = ACCOUNTS_PATH) -> AccountRegistry:
         return cls(load_accounts(path))
 
     def resolve_owned_id(self, *, chain: ChainId, address: WalletAddress) -> AccountChainId | None:
@@ -143,7 +142,6 @@ __all__ = [
     "AccountConfig",
     "AccountRegistry",
     "CHAIN_ALIASES",
-    "DEFAULT_ACCOUNTS_PATH",
     "account_chain_id_for",
     "chain_address_from_account_chain_id",
     "load_accounts",

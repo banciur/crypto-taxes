@@ -6,11 +6,9 @@ from uuid import UUID, uuid4
 from sqlalchemy import Boolean, Index, String, UniqueConstraint, Uuid, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-from config import CORRECTIONS_DB_FILE
+from config import CORRECTIONS_DB_PATH
 from domain.correction import CorrectionId, Spam, SpamCorrectionSource
 from domain.ledger import EventLocation, EventOrigin
-
-CORRECTIONS_DB_PATH = CORRECTIONS_DB_FILE
 
 
 class CorrectionsBase(DeclarativeBase):
