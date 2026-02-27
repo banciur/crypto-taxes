@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import StrEnum
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -7,12 +8,17 @@ from sqlalchemy import Boolean, Index, String, UniqueConstraint, Uuid, create_en
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from config import CORRECTIONS_DB_PATH
-from domain.correction import CorrectionId, Spam, SpamCorrectionSource
+from domain.correction import CorrectionId, Spam
 from domain.ledger import EventLocation, EventOrigin
 
 
 class CorrectionsBase(DeclarativeBase):
     pass
+
+
+class SpamCorrectionSource(StrEnum):
+    MANUAL = "MANUAL"
+    AUTO_MORALIS = "AUTO_MORALIS"
 
 
 class SpamCorrectionOrm(CorrectionsBase):
@@ -46,7 +52,12 @@ class SpamCorrectionRepository:
         rows = self._session.execute(stmt).scalars().all()
         return [self._to_domain(row) for row in rows]
 
-    def mark_as_spam(self, event_origin: EventOrigin, source: SpamCorrectionSource) -> None:
+    def mark_as_spam(
+        self,
+        event_origin: EventOrigin,
+        source: SpamCorrectionSource = SpamCorrectionSource.MANUAL,
+        skip_if_exists: bool = False,
+    ) -> None:
         stmt = select(SpamCorrectionOrm).where(
             SpamCorrectionOrm.origin_location == event_origin.location.value,
             SpamCorrectionOrm.origin_external_id == event_origin.external_id,
@@ -60,10 +71,14 @@ class SpamCorrectionRepository:
                 is_deleted=False,
             )
             self._session.add(row)
-        else:
-            row.source = source.value
-            row.is_deleted = False
+            self._session.commit()
+            return
 
+        if skip_if_exists:
+            return
+
+        row.source = source.value
+        row.is_deleted = False
         self._session.commit()
 
     def remove_spam_mark(self, event_origin: EventOrigin) -> None:
@@ -85,8 +100,6 @@ class SpamCorrectionRepository:
                 location=EventLocation(row.origin_location),
                 external_id=row.origin_external_id,
             ),
-            source=SpamCorrectionSource(row.source),
-            is_deleted=row.is_deleted,
         )
 
 

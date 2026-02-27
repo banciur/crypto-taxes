@@ -17,7 +17,7 @@ from api.dependencies import (
 from config import ACCOUNTS_PATH, CORRECTIONS_DB_PATH, DB_PATH
 from db.corrections import SpamCorrectionRepository
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
-from domain.correction import SeedEvent, Spam, SpamCorrectionSource
+from domain.correction import SeedEvent, Spam
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent
 from pydantic_base import StrictBaseModel
 
@@ -52,7 +52,6 @@ class ApiEventOrigin(StrictBaseModel):
 class ApiSpamCorrection(StrictBaseModel):
     id: str
     event_origin: ApiEventOrigin
-    source: SpamCorrectionSource
 
 
 class ApiCreateSpamCorrectionRequest(StrictBaseModel):
@@ -70,7 +69,6 @@ def _api_spam_correction(record: Spam) -> ApiSpamCorrection:
             location=record.event_origin.location,
             external_id=record.event_origin.external_id,
         ),
-        source=record.source,
     )
 
 
@@ -128,10 +126,7 @@ def create_spam_correction(
     payload: ApiCreateSpamCorrectionRequest,
     repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
 ) -> Response:
-    repo.mark_as_spam(
-        EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id),
-        SpamCorrectionSource.MANUAL,
-    )
+    repo.mark_as_spam(EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id))
     return Response(status_code=204)
 
 

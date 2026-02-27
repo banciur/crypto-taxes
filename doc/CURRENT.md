@@ -70,9 +70,8 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Per-account balances are tracked for all non-EUR legs; any debit that would push an account negative raises an error. Fix missing history by seeding lots or adding prior movements into the source account before processing.
 - Synthetic seed lots can be injected ahead of importer output using `--seed-csv` (default `artifacts/seed_lots.csv`) with rows `asset_id,account_id,quantity[,timestamp,price_per_token]`; `timestamp` defaults to `2000-01-01T00:00:00Z` and `price_per_token` defaults to `0`.
 - Each event captures `origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
-- Corrected-event generation can exclude raw events using active spam corrections keyed by `EventOrigin` (`location` + `external_id`) before seed-event corrections are merged.
-- Manual spam corrections are persisted in a separate SQLite DB (`artifacts/corrections.db`) so they survive resets of the main analytics DB.
-- The spam-correction CRUD API updates correction state only; persisted `/corrected-events` snapshots refresh after rerunning the batch pipeline.
+- Corrected-event generation excludd raw events using active spam corrections keyed by `EventOrigin` (`location` + `external_id`).
+- Spam corrections are persisted in a separate DB so they survive resets of the main analytics DB. That persistence layer keeps soft-delete tombstones and provenance metadata internally so automatic imports can avoid recreating markers that were removed manually.
 
 ---
 

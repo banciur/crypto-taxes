@@ -7,8 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api.api as api_module
-from db.corrections import SpamCorrectionRepository, init_corrections_db
-from domain.correction import SpamCorrectionSource
+from db.corrections import SpamCorrectionRepository, SpamCorrectionSource, init_corrections_db
 from domain.ledger import EventLocation, EventOrigin
 
 
@@ -39,7 +38,7 @@ def test_post_creates_and_get_lists_active_spam_corrections(client: TestClient) 
     listed = list_response.json()
     assert len(listed) == 1
     assert listed[0]["event_origin"] == _payload()["event_origin"]
-    assert listed[0]["source"] == "MANUAL"
+    assert set(listed[0]) == {"id", "event_origin"}
 
 
 def test_delete_hides_record_and_post_restores_same_id(client: TestClient) -> None:
@@ -85,7 +84,7 @@ def test_get_lists_spam_corrections_from_all_sources(client: TestClient) -> None
     listed = response.json()
     assert len(listed) == 1
     assert listed[0]["event_origin"] == {"location": "ARBITRUM", "external_id": "0xauto"}
-    assert listed[0]["source"] == "AUTO_MORALIS"
+    assert set(listed[0]) == {"id", "event_origin"}
 
 
 def test_delete_is_idempotent_for_missing_record(client: TestClient) -> None:
