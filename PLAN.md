@@ -33,13 +33,15 @@ Finish the spam corrections implementation so the system can persist Moralis-det
   - The UI does not need to display the spam marker source.
   - For now, synchronization after manual spam edits is manual: rerun the full pipeline and rerun the UI.
 
-- [ ] Implement automatic Moralis spam detection persistence during import.
+- [x] Implement automatic Moralis spam detection persistence during import.
   Notes:
   - During `MoralisImporter.load_events`, inspect fetched Moralis transactions for the upstream `possible_spam` flag and persist matching entries into `spam_corrections`.
   - Persist a spam marker only when the transaction is marked as spam and successfully produces a `LedgerEvent`.
   - Use `mark_as_spam(..., skip_if_exists=True)` so manual removals are not overwritten by future imports.
   - Inject `SpamCorrectionRepository` into `MoralisImporter` so the importer remains easy to test.
+  - Keep the repository injection optional on the importer constructor so direct unit tests can still instantiate the importer in isolation; the runtime path passes the shared corrections repo from `data/src/main.py`.
   - Add importer-focused tests that cover spam marker creation, non-spam transactions, and preservation of manual overrides.
+  - Completed: `data/src/main.py` now passes the shared corrections repo into the Moralis importer, and importer tests cover auto-marker creation plus manual tombstone preservation.
 
 - [ ] Extend existing correction APIs for the corrections lane.
   Notes:

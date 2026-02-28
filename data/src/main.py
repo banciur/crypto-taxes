@@ -74,7 +74,7 @@ def run(
     engine = InventoryEngine(price_provider=price_service, wallet_balance_tracker=wallet_balance_tracker)
 
     kraken_importer = KrakenImporter(str(csv_path))
-    moralis_importer = MoralisImporter()
+    moralis_importer = MoralisImporter(spam_correction_repository=spam_correction_repository)
 
     owned_accounts: set[AccountChainId] = set()
     owned_accounts.add(KRAKEN_ACCOUNT_ID)
