@@ -5,16 +5,25 @@ import {
   getCorrectedEvents,
   getRawEvents,
   getSeedEvents,
+  getSpamCorrections,
   type ApiAccount,
   type ApiLedgerEvent,
   type ApiLedgerLeg,
   type ApiSeedEvent,
+  type ApiSpamCorrection,
 } from "@/api/events";
 import type { ColumnKey } from "@/consts";
-import type { EventCardData, EventLeg } from "@/types/events";
+import type {
+  CorrectedEventCardData,
+  EventLeg,
+  LaneItemData,
+  RawEventCardData,
+  SeedCorrectionItemData,
+  SpamCorrectionItemData,
+} from "@/types/events";
 
 type ColumnDefinition = {
-  load: () => Promise<EventCardData[]>;
+  load: () => Promise<LaneItemData[]>;
 };
 
 let accountNamesByIdPromise: Promise<Map<string, string>> | null = null;
@@ -46,16 +55,68 @@ const mapLegs = (
     isFee: leg.is_fee,
   }));
 
-const mapLedgerEvent = (
+const mapRawLedgerEvent = (
   event: ApiLedgerEvent,
   accountNamesById: Map<string, string>,
-): EventCardData => ({
+): RawEventCardData => ({
   id: event.id,
+  kind: "raw-event",
+  timestamp: event.timestamp,
+  place: event.origin.location.toLowerCase(),
+  originId: event.origin.external_id,
+  legs: mapLegs(event.legs, accountNamesById),
+  eventOrigin: {
+    location: event.origin.location,
+    externalId: event.origin.external_id,
+  },
+});
+
+const mapCorrectedLedgerEvent = (
+  event: ApiLedgerEvent,
+  accountNamesById: Map<string, string>,
+): CorrectedEventCardData => ({
+  id: event.id,
+  kind: "corrected-event",
   timestamp: event.timestamp,
   place: event.origin.location.toLowerCase(),
   originId: event.origin.external_id,
   legs: mapLegs(event.legs, accountNamesById),
 });
+
+const mapSeedCorrectionItem = (
+  event: ApiSeedEvent,
+  accountNamesById: Map<string, string>,
+): SeedCorrectionItemData => ({
+  id: event.id,
+  kind: "seed-correction",
+  timestamp: event.timestamp,
+  legs: mapLegs(event.legs, accountNamesById),
+});
+
+const mapSpamCorrectionItem = (
+  event: ApiSpamCorrection,
+): SpamCorrectionItemData => ({
+  id: event.id,
+  kind: "spam-correction",
+  timestamp: event.timestamp,
+  place: event.event_origin.location.toLowerCase(),
+  eventOrigin: {
+    location: event.event_origin.location,
+    externalId: event.event_origin.external_id,
+  },
+});
+
+const orderLaneItems = <T extends { id: string; timestamp: string }>(
+  items: T[],
+): T[] =>
+  [...items].sort((a, b) => {
+    const aTime = Date.parse(a.timestamp);
+    const bTime = Date.parse(b.timestamp);
+    if (aTime !== bTime) {
+      return bTime - aTime;
+    }
+    return a.id.localeCompare(b.id);
+  });
 
 export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   raw: {
@@ -65,23 +126,25 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
         getAccountNamesById(),
       ]);
       return events.map((event: ApiLedgerEvent) =>
-        mapLedgerEvent(event, accountNamesById),
+        mapRawLedgerEvent(event, accountNamesById),
       );
     },
   },
   corrections: {
     load: async () => {
-      const [events, accountNamesById] = await Promise.all([
+      const [seedEvents, spamCorrections, accountNamesById] = await Promise.all([
         getSeedEvents(),
+        getSpamCorrections(),
         getAccountNamesById(),
       ]);
-      return events.map((event: ApiSeedEvent) => ({
-        id: event.id,
-        timestamp: event.timestamp,
-        place: "",
-        originId: "",
-        legs: mapLegs(event.legs, accountNamesById),
-      }));
+      return orderLaneItems([
+        ...seedEvents.map((event: ApiSeedEvent) =>
+          mapSeedCorrectionItem(event, accountNamesById),
+        ),
+        ...spamCorrections.map((event: ApiSpamCorrection) =>
+          mapSpamCorrectionItem(event),
+        ),
+      ]);
     },
   },
   corrected: {
@@ -91,7 +154,7 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
         getAccountNamesById(),
       ]);
       return events.map((event: ApiLedgerEvent) =>
-        mapLedgerEvent(event, accountNamesById),
+        mapCorrectedLedgerEvent(event, accountNamesById),
       );
     },
   },

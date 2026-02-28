@@ -1,7 +1,6 @@
 First stage: compute German taxes
 
-TODO: Manual adjustments to mark and filter out spam transactions.
-TODO: Mark spam transactions from Moralis importer.
+TODO: Restore stric division for lanes content
 TODO: apy.py probably needf few changes, read comment and maybe split into main api and concerns
 TODO: Need automation to rerun everything from the UI
 TODO: Review Moralis importer after wallets structure changes. This transaction should combine WETH together https://basescan.org/tx/0xa40bbba2eedb9c86ff4087c55740fce24df9d9c9b25a2a14768b490c3a6f674d

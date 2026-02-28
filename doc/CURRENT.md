@@ -94,7 +94,8 @@ This document captures the currently implemented domain for modeling crypto ledg
 - CLI inventory summary aggregates quantities and EUR values per asset across owned accounts.
 - Tax calculations currently focus on disposal links.
 - CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
-- There is UI in progress to visualize the data. It collects data via the FastAPI service in `data/src/api/`.
+- The UI now renders raw, corrections, and corrected lanes. The raw lane supports per-event spam selection, the corrections lane mixes seed events with spam markers, and the corrected lane still shows only corrected ledger events.
+- Manual spam mark/unmark actions only persist correction state. The UI shows request status but does not locally reshuffle lane contents; rerun the full pipeline and reload the UI to resynchronize all lanes.
 - FastAPI currently exposes read endpoints plus spam-correction CRUD endpoints for correction state management. `GET /spam-corrections` returns correction entries with `id`, `event_origin`, and the matched raw-event `timestamp` so the UI can position them in the corrections lane without duplicating raw-event details.
 
 ---

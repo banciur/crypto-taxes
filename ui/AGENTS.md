@@ -8,7 +8,8 @@
 - Styling is Bootstrap 5, consumed through `react-bootstrap` (global import in `src/app/layout.tsx`); prefer `react-bootstrap` components and scoped styles (CSS modules or `globals.css`) for custom tweaks.
 - Prettier 3 for formatting;
 - ESLint is configured with Next core web vitals plus Prettier compatibility (`eslint.config.mjs`); keep new code aligned with those rules.
-- Data access goes through the FastAPI service in `data/src/api/`; fetch helpers under `src/api/`
+- Data access goes through the FastAPI service in `data/src/api/`; server-side fetch helpers live under `src/api/`.
+- Browser-side spam-correction writes go through `src/app/spam-corrections/route.ts`, which proxies the request to FastAPI so the UI can stay same-origin.
 
 ## API contract
 

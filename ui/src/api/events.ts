@@ -29,6 +29,12 @@ export type ApiSeedEvent = {
   legs: ApiLedgerLeg[];
 };
 
+export type ApiSpamCorrection = {
+  id: string;
+  event_origin: ApiEventOrigin;
+  timestamp: string;
+};
+
 export type ApiAccount = {
   account_chain_id: string;
   name: string;
@@ -37,7 +43,7 @@ export type ApiAccount = {
   skip_sync: boolean;
 };
 
-const buildUrl = (path: string) => {
+export const buildApiUrl = (path: string) => {
   const normalizedBase = API_BASE_URL.endsWith("/")
     ? API_BASE_URL
     : `${API_BASE_URL}/`;
@@ -46,7 +52,7 @@ const buildUrl = (path: string) => {
 };
 
 const fetchApi = async <T>(path: string): Promise<T> => {
-  const response = await fetch(buildUrl(path), { cache: "no-store" });
+  const response = await fetch(buildApiUrl(path), { cache: "no-store" });
   if (!response.ok) {
     const details = await response.text().catch(() => "missing details");
     throw new Error(`Failed to fetch ${path}: ${response.status} : ${details}`);
@@ -78,6 +84,11 @@ export const getCorrectedEvents = async (): Promise<ApiLedgerEvent[]> => {
 
 export const getSeedEvents = async (): Promise<ApiSeedEvent[]> => {
   const events = await fetchApi<ApiSeedEvent[]>("/seed-events");
+  return orderEvents(events);
+};
+
+export const getSpamCorrections = async (): Promise<ApiSpamCorrection[]> => {
+  const events = await fetchApi<ApiSpamCorrection[]>("/spam-corrections");
   return orderEvents(events);
 };
 

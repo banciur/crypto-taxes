@@ -1,5 +1,7 @@
 "use client";
 
+import type { ChangeEvent } from "react";
+
 import {
   Card,
   CardBody,
@@ -12,13 +14,22 @@ import { clsx } from "clsx";
 import styles from "./EventCard.module.css";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
-import type { EventCardProps, EventLeg } from "@/types/events";
+import type { EventCardDisplayData, EventLeg } from "@/types/events";
+
+type EventCardProps = EventCardDisplayData & {
+  isSelected?: boolean;
+  onSelectionChange?: (isSelected: boolean) => void;
+  selectionDisabled?: boolean;
+};
 
 export function EventCard({
   timestamp,
   place,
   originId,
   legs,
+  isSelected = false,
+  onSelectionChange,
+  selectionDisabled = false,
 }: EventCardProps) {
   const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
     timeZone: "UTC",
@@ -37,10 +48,25 @@ export function EventCard({
       return "text-success";
     }
   };
+  const hasSelectionControl = onSelectionChange !== undefined;
+
+  const handleSelectionChange = (event: ChangeEvent<HTMLInputElement>) => {
+    onSelectionChange?.(event.target.checked);
+  };
 
   return (
     <Card className="shadow-sm">
       <CardHeader className="d-flex flex-wrap align-items-center gap-2">
+        {hasSelectionControl && (
+          <input
+            type="checkbox"
+            className="form-check-input mt-0"
+            checked={isSelected}
+            disabled={selectionDisabled}
+            onChange={handleSelectionChange}
+            aria-label={`Select raw event ${originId}`}
+          />
+        )}
         {originId && (
           <OriginId
             originId={originId}

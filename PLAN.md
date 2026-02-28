@@ -62,7 +62,7 @@ Finish the spam corrections implementation so the system can persist Moralis-det
   - Update docs to reflect that raw events are now structurally unique by `EventOrigin`.
   - Completed: `ledger_events` now has a unique constraint on raw event origin, repository tests assert duplicate origins fail, and the multiple-match API test was removed because new schemas cannot persist that state.
 
-- [ ] Update the UI to render multiple correction item types.
+- [x] Update the UI to render multiple correction item types.
   Notes:
   - Refactor the current UI rendering pipeline so the lane renderer is no longer tied to a single `EventCard` shape.
   - Keep the day-and-column layout, but switch to rendering a typed list of lane items through a type-based renderer.
@@ -77,3 +77,4 @@ Finish the spam corrections implementation so the system can persist Moralis-det
   - Spam correction entries should expose a direct CTA to remove a single spam marker using a red X icon.
   - After mark/unmark actions, perform the API call, show a spinner while the request is in flight, and show success or failure feedback.
   - Do not reshuffle lane contents locally after actions; the manual rerun workflow remains the source of synchronization.
+  - Completed: the UI now renders typed lane items through a dedicated renderer, the corrections lane combines seed events with spam markers, raw events support bulk selection plus parallel spam-mark writes, spam markers can be removed inline, and `ui/src/app/spam-corrections/route.ts` proxies browser writes to the FastAPI endpoint so the action flow stays same-origin.
