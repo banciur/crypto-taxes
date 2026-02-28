@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.repositories import (
@@ -96,6 +97,29 @@ def test_list_ledger_events(repo: LedgerEventRepository) -> None:
 
     fetched_ids = {record.id for record in records}
     assert fetched_ids == {first.id, second.id}
+
+
+def test_list_event_timestamps_for_origins(repo: LedgerEventRepository) -> None:
+    first = _sample_event("first-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=timezone.utc))
+    ignored = _sample_event("ignored-ext", datetime(2024, 1, 2, 16, 30, 0, tzinfo=timezone.utc))
+    second = _sample_event("second-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc))
+
+    repo.create_many([second, ignored, first])
+
+    matches = list(repo.list_event_timestamps_for_origins([second.origin, first.origin]))
+
+    assert matches == [
+        (first.origin, first.timestamp),
+        (second.origin, second.timestamp),
+    ]
+
+
+def test_create_many_rejects_duplicate_event_origins(repo: LedgerEventRepository) -> None:
+    first = _sample_event("duplicate-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=timezone.utc))
+    second = _sample_event("duplicate-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc))
+
+    with pytest.raises(IntegrityError):
+        repo.create_many([first, second])
 
 
 def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: LedgerEventRepository) -> None:

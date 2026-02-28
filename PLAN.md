@@ -43,7 +43,7 @@ Finish the spam corrections implementation so the system can persist Moralis-det
   - Add importer-focused tests that cover spam marker creation, non-spam transactions, and preservation of manual overrides.
   - Completed: `data/src/main.py` now passes the shared corrections repo into the Moralis importer, and importer tests cover auto-marker creation plus manual tombstone preservation.
 
-- [ ] Extend existing correction APIs for the corrections lane.
+- [x] Extend existing correction APIs for the corrections lane.
   Notes:
   - Keep using the existing `/seed-events` endpoint for seed events.
   - Extend the existing `/spam-corrections` endpoint so it returns all data needed by the corrections lane.
@@ -53,6 +53,14 @@ Finish the spam corrections implementation so the system can persist Moralis-det
   - Raw event details should not be duplicated into the spam-corrections response.
   - Ordering of spam correction entries should follow the same chronological behavior as raw events so it is easy to compare what was marked.
   - If a spam marker cannot be matched to exactly one raw event while building the API response, code should fail loudly because the data is inconsistent.
+  - Completed: `GET /spam-corrections` now enriches corrections with raw-event timestamps in chronological order, `LedgerEventRepository` exposes a bulk origin-to-timestamp lookup, and API tests cover timestamp enrichment plus orphan-marker failure handling.
+
+- [x] Enforce raw-event origin uniqueness in the main events database.
+  Notes:
+  - Add a DB-level uniqueness constraint for `ledger_events` on (`origin_location`, `origin_external_id`) so the API invariant is guaranteed by storage, not just importer behavior.
+  - Add a repository-level test that duplicate raw-event origins fail to persist.
+  - Update docs to reflect that raw events are now structurally unique by `EventOrigin`.
+  - Completed: `ledger_events` now has a unique constraint on raw event origin, repository tests assert duplicate origins fail, and the multiple-match API test was removed because new schemas cannot persist that state.
 
 - [ ] Update the UI to render multiple correction item types.
   Notes:

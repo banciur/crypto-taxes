@@ -70,8 +70,10 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Per-account balances are tracked for all non-EUR legs; any debit that would push an account negative raises an error. Fix missing history by seeding lots or adding prior movements into the source account before processing.
 - Synthetic seed lots can be injected ahead of importer output using `--seed-csv` (default `artifacts/seed_lots.csv`) with rows `asset_id,account_id,quantity[,timestamp,price_per_token]`; `timestamp` defaults to `2000-01-01T00:00:00Z` and `price_per_token` defaults to `0`.
 - Each event captures `origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
+- Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
 - Corrected-event generation excludes raw events using active spam corrections keyed by `EventOrigin` (`location` + `external_id`).
 - Spam corrections are persisted in a separate DB so they survive resets of the main analytics DB. That persistence layer keeps soft-delete tombstones and provenance metadata internally so automatic imports can avoid recreating markers that were removed manually.
+- `GET /spam-corrections` enriches each active spam marker with the matching raw-event timestamp from the main ledger DB and raises an error if a marker no longer maps to exactly one raw event.
 
 ---
 
@@ -93,7 +95,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Tax calculations currently focus on disposal links.
 - CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
 - There is UI in progress to visualize the data. It collects data via the FastAPI service in `data/src/api/`.
-- FastAPI currently exposes read endpoints plus manual spam-correction CRUD endpoints for correction state management.
+- FastAPI currently exposes read endpoints plus spam-correction CRUD endpoints for correction state management. `GET /spam-corrections` returns correction entries with `id`, `event_origin`, and the matched raw-event `timestamp` so the UI can position them in the corrections lane without duplicating raw-event details.
 
 ---
 

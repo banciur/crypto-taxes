@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
 from time import perf_counter
-from typing import Annotated, AsyncGenerator, Awaitable, Callable
+from typing import Annotated, AsyncGenerator, Awaitable, Callable, Iterable
 
 from fastapi import Depends, FastAPI, Request, Response
 from pydantic import Field
@@ -39,6 +40,7 @@ class ApiEventOrigin(StrictBaseModel):
 class ApiSpamCorrection(StrictBaseModel):
     id: str
     event_origin: ApiEventOrigin
+    timestamp: datetime
 
 
 class ApiCreateSpamCorrectionRequest(StrictBaseModel):
@@ -49,14 +51,50 @@ class ApiDeleteSpamCorrectionRequest(StrictBaseModel):
     event_origin: ApiEventOrigin
 
 
-def _api_spam_correction(record: Spam) -> ApiSpamCorrection:
+def _event_origin_key(event_origin: EventOrigin) -> tuple[EventLocation, str]:
+    return event_origin.location, event_origin.external_id
+
+
+def _api_spam_correction(record: Spam, timestamp: datetime) -> ApiSpamCorrection:
     return ApiSpamCorrection(
         id=str(record.id),
         event_origin=ApiEventOrigin(
             location=record.event_origin.location,
             external_id=record.event_origin.external_id,
         ),
+        timestamp=timestamp,
     )
+
+
+def _api_spam_corrections(
+    records: list[Spam],
+    raw_event_timestamps: Iterable[tuple[EventOrigin, datetime]],
+) -> list[ApiSpamCorrection]:
+    records_by_origin = {_event_origin_key(record.event_origin): record for record in records}
+    matched_timestamps_by_origin: dict[tuple[EventLocation, str], list[datetime]] = {
+        key: [] for key in records_by_origin
+    }
+    ordered_origins: list[tuple[EventLocation, str]] = []
+
+    for event_origin, timestamp in raw_event_timestamps:
+        origin_key = _event_origin_key(event_origin)
+        matched_timestamps = matched_timestamps_by_origin[origin_key]
+        if len(matched_timestamps) == 0:
+            ordered_origins.append(origin_key)
+        matched_timestamps.append(timestamp)
+
+    for origin_key, record in records_by_origin.items():
+        matched_timestamps = matched_timestamps_by_origin[origin_key]
+        if len(matched_timestamps) != 1:
+            raise RuntimeError(
+                "Spam correction must match exactly one raw event: "
+                f"{record.event_origin.location.value}/{record.event_origin.external_id}"
+            )
+
+    return [
+        _api_spam_correction(records_by_origin[origin_key], matched_timestamps_by_origin[origin_key][0])
+        for origin_key in ordered_origins
+    ]
 
 
 def create_app(
@@ -130,8 +168,11 @@ def create_app(
     @app.get("/spam-corrections")
     def get_spam_corrections(
         repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
+        raw_repo: Annotated[LedgerEventRepository, Depends(get_raw_events_repository)],
     ) -> list[ApiSpamCorrection]:
-        return [_api_spam_correction(record) for record in repo.list()]
+        records = repo.list()
+        raw_event_timestamps = raw_repo.list_event_timestamps_for_origins(record.event_origin for record in records)
+        return _api_spam_corrections(records, raw_event_timestamps)
 
     @app.post("/spam-corrections", status_code=204)
     def create_spam_correction(

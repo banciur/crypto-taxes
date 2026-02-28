@@ -48,4 +48,5 @@
 - Use `Decimal` for numeric quantities/rates; avoid floats.
 - Time fields use `datetime` named `timestamp` and are stored in UTC.
   - Convert inbound times to UTC at ingestion boundaries so internal models are always UTC.
+- Raw `ledger_events` are unique by `EventOrigin` (`origin_location` + `origin_external_id`) at the DB level; do not design import flows that emit multiple persisted raw events for the same upstream origin.
 - IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`).

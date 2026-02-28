@@ -18,6 +18,9 @@
   - `GET /seed-events`
   - `GET /corrected-events`
   - `GET /accounts`
+  - `GET /spam-corrections` (`id`, `event_origin`, `timestamp`)
+  - `POST /spam-corrections`
+  - `DELETE /spam-corrections`
 
 ## Development commands
 
