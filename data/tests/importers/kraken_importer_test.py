@@ -118,8 +118,8 @@ def test_importer_sets_origin_and_ingestion(tmp_path: Path) -> None:
 
     event = KrakenImporter(str(file)).load_events()[0]
 
-    assert event.origin.location == EventLocation.KRAKEN
-    assert event.origin.external_id == refid
+    assert event.event_origin.location == EventLocation.KRAKEN
+    assert event.event_origin.external_id == refid
     assert event.ingestion == "kraken_ledger_csv"
 
 

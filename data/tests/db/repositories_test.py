@@ -34,7 +34,7 @@ def _sample_event(external_id: str, timestamp: datetime) -> LedgerEvent:
     return LedgerEvent(
         id=LedgerEventId(uuid4()),
         timestamp=timestamp,
-        origin=EventOrigin(location=EventLocation.KRAKEN, external_id=external_id),
+        event_origin=EventOrigin(location=EventLocation.KRAKEN, external_id=external_id),
         ingestion="test_ingestion",
         legs=[
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_WALLET, is_fee=False),
@@ -82,7 +82,7 @@ def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
     assert fetched is not None
     assert fetched.id == event.id
     assert fetched.timestamp == event.timestamp
-    assert fetched.origin.location == event.origin.location
+    assert fetched.event_origin.location == event.event_origin.location
     assert len(fetched.legs) == len(event.legs)
     assert {leg.asset_id for leg in fetched.legs} == {leg.asset_id for leg in event.legs}
 
@@ -106,11 +106,11 @@ def test_list_event_timestamps_for_origins(repo: LedgerEventRepository) -> None:
 
     repo.create_many([second, ignored, first])
 
-    matches = list(repo.list_event_timestamps_for_origins([second.origin, first.origin]))
+    matches = list(repo.list_event_timestamps_for_origins([second.event_origin, first.event_origin]))
 
     assert matches == [
-        (first.origin, first.timestamp),
-        (second.origin, second.timestamp),
+        (first.event_origin, first.timestamp),
+        (second.event_origin, second.timestamp),
     ]
 
 
@@ -265,5 +265,5 @@ def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRep
     (reloaded,) = stored
     assert reloaded.id == event.id
     assert reloaded.timestamp == timestamp
-    assert reloaded.origin.external_id == external_id
+    assert reloaded.event_origin.external_id == external_id
     assert {leg.id for leg in reloaded.legs} == {leg.id for leg in event.legs}

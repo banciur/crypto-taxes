@@ -14,7 +14,7 @@ def _raw_event(*, location: EventLocation, external_id: str, hour: int) -> Ledge
     return LedgerEvent(
         id=LedgerEventId(uuid4()),
         timestamp=datetime(2024, 1, 1, hour, 0, tzinfo=timezone.utc),
-        origin=EventOrigin(location=location, external_id=external_id),
+        event_origin=EventOrigin(location=location, external_id=external_id),
         ingestion="test",
         legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=KRAKEN_WALLET, is_fee=False)],
     )
@@ -27,7 +27,7 @@ def test_filters_matching_spam_origin() -> None:
     filtered = list(
         apply_spam_corrections(
             raw_events=[kept, spammed],
-            spam_markers=[Spam(event_origin=spammed.origin)],
+            spam_markers=[Spam(event_origin=spammed.event_origin)],
         )
     )
 
@@ -42,7 +42,7 @@ def test_preserves_order_of_remaining_events() -> None:
     filtered = list(
         apply_spam_corrections(
             raw_events=[first, second, third],
-            spam_markers=[Spam(event_origin=second.origin)],
+            spam_markers=[Spam(event_origin=second.event_origin)],
         )
     )
 
@@ -52,13 +52,13 @@ def test_preserves_order_of_remaining_events() -> None:
 def test_handles_empty_and_duplicate_markers() -> None:
     first = _raw_event(location=EventLocation.ARBITRUM, external_id="0xa", hour=1)
     second = _raw_event(location=EventLocation.ETHEREUM, external_id="0xb", hour=2)
-    duplicate_marker = Spam(event_origin=second.origin)
+    duplicate_marker = Spam(event_origin=second.event_origin)
 
     no_spam_filtered = list(apply_spam_corrections(raw_events=[first, second], spam_markers=[]))
     duplicate_filtered = list(
         apply_spam_corrections(
             raw_events=[first, second],
-            spam_markers=[duplicate_marker, Spam(event_origin=second.origin)],
+            spam_markers=[duplicate_marker, Spam(event_origin=second.event_origin)],
         )
     )
 

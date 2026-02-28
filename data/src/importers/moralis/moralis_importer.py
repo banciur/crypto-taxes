@@ -100,7 +100,7 @@ class MoralisImporter:
             events.append(event)
             if self.spam_correction_repository is not None and tx.get("possible_spam") is True:
                 self.spam_correction_repository.mark_as_spam(
-                    event.origin,
+                    event.event_origin,
                     SpamCorrectionSource.AUTO_MORALIS,
                     skip_if_exists=True,
                 )
@@ -215,7 +215,7 @@ class MoralisImporter:
 
         return LedgerEvent(
             timestamp=_parse_timestamp(str(tx["block_timestamp"])),
-            origin=EventOrigin(location=location, external_id=str(tx["hash"])),
+            event_origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
             legs=legs,
         )

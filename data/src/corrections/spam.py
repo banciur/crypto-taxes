@@ -8,4 +8,4 @@ from domain.ledger import LedgerEvent
 
 def apply_spam_corrections(*, raw_events: Iterable[LedgerEvent], spam_markers: Iterable[Spam]) -> Iterator[LedgerEvent]:
     spam_origins = {(marker.event_origin.location.value, marker.event_origin.external_id) for marker in spam_markers}
-    return filter(lambda e: (e.origin.location.value, e.origin.external_id) not in spam_origins, raw_events)
+    return filter(lambda e: (e.event_origin.location.value, e.event_origin.external_id) not in spam_origins, raw_events)

@@ -52,7 +52,7 @@ def _raw_event(*, location: EventLocation, external_id: str, timestamp: datetime
     return LedgerEvent(
         id=LedgerEventId(uuid4()),
         timestamp=timestamp,
-        origin=EventOrigin(location=location, external_id=external_id),
+        event_origin=EventOrigin(location=location, external_id=external_id),
         ingestion="api_test",
         legs=[
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_WALLET, is_fee=False),
@@ -95,6 +95,27 @@ def test_post_creates_and_get_lists_active_spam_corrections(client: TestClient) 
     assert set(listed[0]) == {"id", "event_origin", "timestamp"}
 
 
+def test_get_raw_events_exposes_event_origin_key(client: TestClient) -> None:
+    payload = _payload(external_id="0xshape")
+    _persist_raw_events(
+        client,
+        [
+            _raw_event(
+                location=EventLocation(payload["event_origin"]["location"]),
+                external_id=payload["event_origin"]["external_id"],
+                timestamp=datetime(2024, 1, 1, 13, 0, tzinfo=timezone.utc),
+            )
+        ],
+    )
+
+    response = client.get("/raw-events")
+
+    assert response.status_code == 200
+    event = response.json()[0]
+    assert event["event_origin"] == payload["event_origin"]
+    assert "origin" not in event
+
+
 def test_get_lists_spam_corrections_in_raw_event_order_with_raw_timestamp(client: TestClient) -> None:
     first_payload = _payload(external_id="0xearly")
     second_payload = _payload(external_id="0xlate")
@@ -121,7 +142,8 @@ def test_get_lists_spam_corrections_in_raw_event_order_with_raw_timestamp(client
 
     raw_events = client.get("/raw-events").json()
     raw_timestamps_by_origin = {
-        (event["origin"]["location"], event["origin"]["external_id"]): event["timestamp"] for event in raw_events
+        (event["event_origin"]["location"], event["event_origin"]["external_id"]): event["timestamp"]
+        for event in raw_events
     }
 
     response = client.get("/spam-corrections")

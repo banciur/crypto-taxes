@@ -311,7 +311,7 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
-            origin=self._build_origin(entry.refid),
+            event_origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
             legs=[_ledger_leg(entry, incoming_quantity)],
         )
@@ -326,7 +326,7 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
-            origin=self._build_origin(entry.refid),
+            event_origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
             legs=[_ledger_leg(entry, sent_quantity)],
         )
@@ -345,7 +345,7 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=min(entry.time for entry in entries),
-            origin=self._build_origin(entries[0].refid),
+            event_origin=self._build_origin(entries[0].refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
             legs=legs,
         )
@@ -360,7 +360,7 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
-            origin=self._build_origin(entry.refid),
+            event_origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
             legs=legs,
         )
@@ -374,7 +374,7 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
-            origin=self._build_origin(entry.refid),
+            event_origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
             legs=legs,
         )
@@ -389,7 +389,7 @@ class KrakenImporter:
 
         return LedgerEvent(
             timestamp=entry.time,
-            origin=self._build_origin(entry.refid),
+            event_origin=self._build_origin(entry.refid),
             ingestion=KRAKEN_INGESTION_SOURCE,
             legs=[_ledger_leg(entry, quantity)],
         )

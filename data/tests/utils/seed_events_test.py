@@ -74,8 +74,8 @@ def test_ledger_events_from_seed_events() -> None:
     (event,) = ledger_events
     assert event.timestamp == timestamp
     assert event.ingestion == SEED_CSV_INGESTION
-    assert event.origin.location == EventLocation.INTERNAL
-    assert event.origin.external_id == f"seed:{seed_event.id}"
+    assert event.event_origin.location == EventLocation.INTERNAL
+    assert event.event_origin.external_id == f"seed:{seed_event.id}"
     assert len(event.legs) == 1
     (leg,) = event.legs
     assert leg.asset_id == BTC

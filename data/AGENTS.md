@@ -20,7 +20,7 @@
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
 
 ## Data importers
-- Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `origin`/`ingestion` metadata.
+- Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `event_origin`/`ingestion` metadata.
 - Current importers:
   - Kraken CSV ledger: `src/importers/kraken/kraken_importer.py`
   - on-chain transactions through Moralis service: `src/importers/moralis/moralis_importer.py`

@@ -98,7 +98,7 @@ def _marker_row(repo: SpamCorrectionRepository) -> SpamCorrectionOrm:
 def _event_origin(tx: dict[str, object]) -> EventOrigin:
     event = MoralisImporter.__new__(MoralisImporter)._build_event(tx, _registry())
     assert event is not None
-    return event.origin
+    return event.event_origin
 
 
 def test_native_transfer_builds_incoming_leg() -> None:
@@ -119,8 +119,8 @@ def test_native_transfer_builds_incoming_leg() -> None:
     expected_timestamp = datetime.fromisoformat(BLOCK_TS.replace("Z", "+00:00")).astimezone(timezone.utc)
 
     assert event is not None
-    assert event.origin.location == CHAIN_LOCATIONS[CHAIN]
-    assert event.origin.external_id == TX_HASH
+    assert event.event_origin.location == CHAIN_LOCATIONS[CHAIN]
+    assert event.event_origin.external_id == TX_HASH
     assert event.timestamp == expected_timestamp
 
     assert len(event.legs) == 1
@@ -194,7 +194,7 @@ def test_load_events_marks_moralis_spam_transactions(tmp_path: Path) -> None:
     events = importer.load_events()
 
     assert len(events) == 1
-    assert repo.list()[0].event_origin == events[0].origin
+    assert repo.list()[0].event_origin == events[0].event_origin
     assert _marker_row(repo).source == SpamCorrectionSource.AUTO_MORALIS.value
 
 
@@ -232,7 +232,7 @@ def test_load_events_preserves_manual_spam_removals(tmp_path: Path) -> None:
     events = importer.load_events()
 
     assert len(events) == 1
-    assert events[0].origin == event_origin
+    assert events[0].event_origin == event_origin
     assert repo.list() == []
     row = _marker_row(repo)
     assert row.is_deleted is True

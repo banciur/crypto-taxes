@@ -22,7 +22,7 @@ def test_apply_seed_event_corrections_merges_and_sorts() -> None:
     raw_event = LedgerEvent(
         id=raw_event_id,
         timestamp=raw_timestamp,
-        origin=EventOrigin(location=EventLocation.KRAKEN, external_id="raw-ext"),
+        event_origin=EventOrigin(location=EventLocation.KRAKEN, external_id="raw-ext"),
         ingestion="raw_ingestion",
         legs=[LedgerLeg(asset_id=BTC, quantity=raw_quantity, account_chain_id=KRAKEN_WALLET, is_fee=False)],
     )
@@ -32,4 +32,4 @@ def test_apply_seed_event_corrections_merges_and_sorts() -> None:
     assert len(corrected) == 2
     assert corrected[0].timestamp == seed_timestamp
     assert corrected[1].id == raw_event_id
-    assert {event.origin.external_id for event in corrected} == {"raw-ext", f"seed:{seed_event.id}"}
+    assert {event.event_origin.external_id for event in corrected} == {"raw-ext", f"seed:{seed_event.id}"}

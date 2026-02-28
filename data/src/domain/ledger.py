@@ -67,7 +67,7 @@ class AbstractEvent(StrictBaseModel, ABC):
 class LedgerEvent(AbstractEvent):
     id: LedgerEventId = LedgerEventId(Field(default_factory=uuid4))
 
-    origin: EventOrigin
+    event_origin: EventOrigin
     ingestion: Annotated[str, Field(min_length=1)]
 
 

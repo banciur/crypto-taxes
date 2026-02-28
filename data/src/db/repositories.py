@@ -42,8 +42,8 @@ class LedgerEventRepository:
                 id=event.id,
                 timestamp=event.timestamp,
                 ingestion=event.ingestion,
-                origin_location=event.origin.location.value,
-                origin_external_id=event.origin.external_id,
+                origin_location=event.event_origin.location.value,
+                origin_external_id=event.event_origin.external_id,
             )
             orm_event.legs = [
                 models.LedgerLegOrm(
@@ -103,7 +103,7 @@ class LedgerEventRepository:
 
     @staticmethod
     def _to_domain(orm_event: models.LedgerEventOrm) -> LedgerEvent:
-        origin = EventOrigin(
+        event_origin = EventOrigin(
             location=EventLocation(orm_event.origin_location), external_id=orm_event.origin_external_id
         )
         legs = [
@@ -119,7 +119,7 @@ class LedgerEventRepository:
         return LedgerEvent(
             id=LedgerEventId(orm_event.id),
             timestamp=_timestamp_in_utc(orm_event.timestamp),
-            origin=origin,
+            event_origin=event_origin,
             ingestion=orm_event.ingestion,
             legs=legs,
         )
@@ -136,8 +136,8 @@ class CorrectedLedgerEventRepository:
                 id=event.id,
                 timestamp=event.timestamp,
                 ingestion=event.ingestion,
-                origin_location=event.origin.location.value,
-                origin_external_id=event.origin.external_id,
+                origin_location=event.event_origin.location.value,
+                origin_external_id=event.event_origin.external_id,
             )
             orm_event.legs = [
                 models.CorrectedLedgerLegOrm(
@@ -165,7 +165,7 @@ class CorrectedLedgerEventRepository:
 
     @staticmethod
     def _to_domain(orm_event: models.CorrectedLedgerEventOrm) -> LedgerEvent:
-        origin = EventOrigin(
+        event_origin = EventOrigin(
             location=EventLocation(orm_event.origin_location), external_id=orm_event.origin_external_id
         )
         legs = [
@@ -181,7 +181,7 @@ class CorrectedLedgerEventRepository:
         return LedgerEvent(
             id=LedgerEventId(orm_event.id),
             timestamp=_timestamp_in_utc(orm_event.timestamp),
-            origin=origin,
+            event_origin=event_origin,
             ingestion=orm_event.ingestion,
             legs=legs,
         )
