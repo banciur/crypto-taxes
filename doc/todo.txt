@@ -2,6 +2,8 @@ First stage: compute German taxes
 
 TODO: Manual adjustments to mark and filter out spam transactions.
 TODO: Mark spam transactions from Moralis importer.
+TODO: apy.py probably needf few changes, read comment and maybe split into main api and concerns
+TODO: Need automation to rerun everything from the UI
 TODO: Review Moralis importer after wallets structure changes. This transaction should combine WETH together https://basescan.org/tx/0xa40bbba2eedb9c86ff4087c55740fce24df9d9c9b25a2a14768b490c3a6f674d
 TODO: Review Kraken importer after event type removal and wallets structure changes
 TODO: Adjust readme / agents md instructions. All files except top level should be readme and add instruction to always read one in ui or data. And extra instruction to read readmes in the path "up" to get context. Go through existing README files. Do I need as code is self-documenting?

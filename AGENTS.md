@@ -20,7 +20,7 @@ Treat other files under `doc/` as background/templates unless explicitly referen
 - Endpoints: `GET /raw-events`, `GET /seed-events`, `GET /corrected-events`, `GET /accounts`, `GET /spam-corrections`, `POST /spam-corrections`, `DELETE /spam-corrections`.
 
 ## Docs and drift control
-- When changing domain semantics, ingestion behavior, DB schema, or UI expectations, update `doc/CURRENT.md` and any relevant `AGENTS.md` files to keep the “how to work here” guidance accurate.
+- When changing domain semantics, ingestion behavior, DB schema, API contracts, or UI expectations, update `doc/CURRENT.md` and any relevant `AGENTS.md` files immediately so the documented guidance stays in sync with the current implementation.
 
 ## Secrets and local artifacts
 - API keys/config live in `data/.env` (see `data/.env.example`); do not commit secrets.

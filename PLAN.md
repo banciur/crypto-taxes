@@ -3,13 +3,15 @@
 This file is a persistent planning document used across multiple sessions.
 It is both documentation for the current task and a tracking tool for progress.
 This section is generic guidance for AI and should remain stable across tasks unless the planning format itself is intentionally changed.
-During task discussion and implementation, update the task-specific sections below so they always reflect the current understanding of the work.
+During task discussion and implementation, update the task-specific sections below immediately after each decision so they always reflect the current understanding of the work.
 
 - Keep completed work marked with `[x]` so the historical record is preserved.
 - Keep remaining work marked with `[ ]` until it is actually finished.
 - Continue implementation from the first unchecked item unless the task scope is intentionally reordered.
-- Update the task-specific sections when decisions change, so this file stays current.
-- Add new steps below the existing ones instead of rewriting history.
+- Update the task-specific sections immediately when decisions change; do not wait to batch updates later.
+- Keep only information that is relevant to the current task.
+- The order of steps should reflect the implementation order.
+- After each implemented step, update any affected docs and relevant local guidance files so they stay aligned with the current implementation.
 
 ## Current Task
 
@@ -33,34 +35,35 @@ Finish the spam corrections implementation so the system can persist Moralis-det
 
 - [ ] Implement automatic Moralis spam detection persistence during import.
   Notes:
-  - During `MoralisImporter.load_events`, inspect fetched Moralis transactions for the upstream spam flag and persist matching entries into `spam_corrections`.
-  - Use persistent rows in the corrections DB and call `mark_as_spam(..., skip_if_exists=True)` so manual removals are not overwritten by future imports.
-  - Exact placement inside the importer flow is agreed broadly, but small code-structure details are still being decided.
+  - During `MoralisImporter.load_events`, inspect fetched Moralis transactions for the upstream `possible_spam` flag and persist matching entries into `spam_corrections`.
+  - Persist a spam marker only when the transaction is marked as spam and successfully produces a `LedgerEvent`.
+  - Use `mark_as_spam(..., skip_if_exists=True)` so manual removals are not overwritten by future imports.
+  - Inject `SpamCorrectionRepository` into `MoralisImporter` so the importer remains easy to test.
+  - Add importer-focused tests that cover spam marker creation, non-spam transactions, and preservation of manual overrides.
 
-- [ ] Add backend support for a mixed corrections feed.
+- [ ] Extend existing correction APIs for the corrections lane.
   Notes:
-  - The current corrections lane is seed-only; it must evolve to return both seed events and spam correction entries.
-  - Spam correction entries should include enough data for the UI to place them on the correct day and show the unique event identifier.
-  - Raw event details should not be duplicated into the corrections lane response.
-  - Exact API response shape is still being decided.
+  - Keep using the existing `/seed-events` endpoint for seed events.
+  - Extend the existing `/spam-corrections` endpoint so it returns all data needed by the corrections lane.
+  - Keep `SpamCorrectionRepository` focused on the corrections DB and enrich the `/spam-corrections` response in the API layer.
+  - Expand `LedgerEventRepository` with a bulk lookup method that accepts multiple event origins and returns `Iterable[tuple[EventOrigin, datetime]]` for the matching raw-event timestamps.
+  - Spam correction entries should include the correction record id, the marked event origin, and the exact raw-event timestamp in the same format as the original event.
+  - Raw event details should not be duplicated into the spam-corrections response.
+  - Ordering of spam correction entries should follow the same chronological behavior as raw events so it is easy to compare what was marked.
+  - If a spam marker cannot be matched to exactly one raw event while building the API response, code should fail loudly because the data is inconsistent.
 
 - [ ] Update the UI to render multiple correction item types.
   Notes:
-  - Keep the raw lane unchanged visually except for an action to mark an event as spam.
+  - Refactor the current UI rendering pipeline so the lane renderer is no longer tied to a single `EventCard` shape.
+  - Keep the day-and-column layout, but switch to rendering a typed list of lane items through a type-based renderer.
+  - Build a shared correction-item parent component that provides the common layout and styling for correction entries, with specific seed and spam components rendering their own inner content.
+  - The corrections lane should render from a combined list of UI objects and switch rendering based on the correction item type.
+  - Keep the raw lane visually unchanged except for per-event selection checkboxes.
+  - Support selecting one or more raw events, then use a sticky top action area with a `Mark as spam` button to submit the selected events in one action.
+  - Keep the existing mark API shape and send one `POST /spam-corrections` request per selected event, in parallel, when performing the bulk mark action.
+  - Do not attempt rollback for partial failures; send all requests, show success only if all succeed, and if any fail show failure and print the request errors to the console for manual follow-up.
   - Keep the corrected lane sourced only from `corrected_ledger_events`.
-  - Replace the current seed-only corrections lane rendering with components that can display both seed events and spam correction entries.
-  - Spam correction entries should support removing the spam marker.
-  - The component structure and final interaction details are still being decided.
-
-- [ ] Validate the end-to-end spam correction workflow.
-  Notes:
-  - Verify auto-detected Moralis spam markers are persisted.
-  - Verify manual mark/unmark flows persist correctly.
-  - Verify the corrections lane shows seed events and spam correction entries as intended.
-  - Verify the corrected lane reflects changes after the manual rerun workflow.
-
-- [ ] Decide how corrected-data synchronization should work long term.
-  Notes:
-  - This decision is intentionally deferred to the end of the task.
-  - Current accepted workflow: after marking or unmarking spam, rerun the full pipeline and rerun the UI.
-  - Future improvement to decide later: whether corrected data should be rebuilt automatically after spam edits.
+  - Replace the current seed-only corrections lane rendering with components that can display both seed events and spam correction entries using the same general visual pattern but different labels.
+  - Spam correction entries should expose a direct CTA to remove a single spam marker using a red X icon.
+  - After mark/unmark actions, perform the API call, show a spinner while the request is in flight, and show success or failure feedback.
+  - Do not reshuffle lane contents locally after actions; the manual rerun workflow remains the source of synchronization.

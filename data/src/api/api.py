@@ -22,7 +22,7 @@ from domain.ledger import EventLocation, EventOrigin, LedgerEvent
 from pydantic_base import StrictBaseModel
 
 
-# Those classes might be redundant
+# Those classes might be redundant or moved somewhere
 class ApiAccount(StrictBaseModel):
     account_chain_id: str
     name: str
