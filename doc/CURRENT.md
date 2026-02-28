@@ -20,7 +20,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - LedgerEvent
   - `id: UUID`
   - `timestamp: datetime`
-  - `origin: EventOrigin` (upstream location + external transaction id)
+  - `event_origin: EventOrigin` (upstream location + external transaction id)
   - `ingestion: str` (import pipeline label, e.g., `kraken_ledger_csv`, `seed_csv`)
   - `legs: list[LedgerLeg]`
 
@@ -69,7 +69,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Internal account-to-account transfers are identified structurally (same-asset non-fee legs netting to zero inside one event) and only update balances. They do not create lots or disposal links.
 - Per-account balances are tracked for all non-EUR legs; any debit that would push an account negative raises an error. Fix missing history by seeding lots or adding prior movements into the source account before processing.
 - Synthetic seed lots can be injected ahead of importer output using `--seed-csv` (default `artifacts/seed_lots.csv`) with rows `asset_id,account_id,quantity[,timestamp,price_per_token]`; `timestamp` defaults to `2000-01-01T00:00:00Z` and `price_per_token` defaults to `0`.
-- Each event captures `origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
+- Each event captures `event_origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 - Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
 - Corrected-event generation excludes raw events using active spam corrections keyed by `EventOrigin` (`location` + `external_id`).
 - Spam corrections are persisted in a separate DB so they survive resets of the main analytics DB. That persistence layer keeps soft-delete tombstones and provenance metadata internally so automatic imports can avoid recreating markers that were removed manually.
@@ -94,9 +94,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - CLI inventory summary aggregates quantities and EUR values per asset across owned accounts.
 - Tax calculations currently focus on disposal links.
 - CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
-- The UI now renders raw, corrections, and corrected lanes. The raw lane supports per-event spam selection, the corrections lane mixes seed events with spam markers, and the corrected lane still shows only corrected ledger events.
-- Manual spam mark/unmark actions only persist correction state. The UI shows request status but does not locally reshuffle lane contents; rerun the full pipeline and reload the UI to resynchronize all lanes.
-- FastAPI currently exposes read endpoints plus spam-correction CRUD endpoints for correction state management. `GET /spam-corrections` returns correction entries with `id`, `event_origin`, and the matched raw-event `timestamp` so the UI can position them in the corrections lane without duplicating raw-event details.
+- The UI now renders raw, corrections, and corrected lanes. The raw lane supports per-event spam selection, the corrections lane displays seed events with spam markers, and the corrected lane shows only corrected ledger events.
 
 ---
 

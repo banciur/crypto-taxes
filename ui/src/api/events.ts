@@ -1,7 +1,6 @@
-const DEFAULT_API_BASE_URL = "http://localhost:8000";
-const API_BASE_URL = process.env.CRYPTO_TAXES_API_URL ?? DEFAULT_API_BASE_URL;
+import { getFromApi, mutateApi } from "@/api/core";
 
-export type ApiEventOrigin = {
+type ApiEventOriginDto = {
   location: string;
   external_id: string;
 };
@@ -17,7 +16,15 @@ export type ApiLedgerLeg = {
 export type ApiLedgerEvent = {
   id: string;
   timestamp: string;
-  origin: ApiEventOrigin;
+  eventOrigin: EventOrigin;
+  ingestion: string;
+  legs: ApiLedgerLeg[];
+};
+
+type ApiLedgerEventDto = {
+  id: string;
+  timestamp: string;
+  event_origin: ApiEventOriginDto;
   ingestion: string;
   legs: ApiLedgerLeg[];
 };
@@ -29,9 +36,22 @@ export type ApiSeedEvent = {
   legs: ApiLedgerLeg[];
 };
 
+type ApiSeedEventDto = {
+  id: string;
+  timestamp: string;
+  price_per_token: string;
+  legs: ApiLedgerLeg[];
+};
+
 export type ApiSpamCorrection = {
   id: string;
-  event_origin: ApiEventOrigin;
+  eventOrigin: EventOrigin;
+  timestamp: string;
+};
+
+type ApiSpamCorrectionDto = {
+  id: string;
+  event_origin: ApiEventOriginDto;
   timestamp: string;
 };
 
@@ -43,22 +63,38 @@ export type ApiAccount = {
   skip_sync: boolean;
 };
 
-export const buildApiUrl = (path: string) => {
-  const normalizedBase = API_BASE_URL.endsWith("/")
-    ? API_BASE_URL
-    : `${API_BASE_URL}/`;
-  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
-  return new URL(normalizedPath, normalizedBase).toString();
+export type EventOrigin = {
+  location: string;
+  externalId: string;
 };
 
-const fetchApi = async <T>(path: string): Promise<T> => {
-  const response = await fetch(buildApiUrl(path), { cache: "no-store" });
-  if (!response.ok) {
-    const details = await response.text().catch(() => "missing details");
-    throw new Error(`Failed to fetch ${path}: ${response.status} : ${details}`);
-  }
-  return (await response.json()) as T;
-};
+const normalizeEventOrigin = (eventOrigin: ApiEventOriginDto): EventOrigin => ({
+  location: eventOrigin.location,
+  externalId: eventOrigin.external_id,
+});
+
+const normalizeLedgerEvent = (event: ApiLedgerEventDto): ApiLedgerEvent => ({
+  id: event.id,
+  timestamp: event.timestamp,
+  eventOrigin: normalizeEventOrigin(event.event_origin),
+  ingestion: event.ingestion,
+  legs: event.legs,
+});
+
+const normalizeSeedEvent = (event: ApiSeedEventDto): ApiSeedEvent => ({
+  id: event.id,
+  timestamp: event.timestamp,
+  price_per_token: event.price_per_token,
+  legs: event.legs,
+});
+
+const normalizeSpamCorrection = (
+  event: ApiSpamCorrectionDto,
+): ApiSpamCorrection => ({
+  id: event.id,
+  eventOrigin: normalizeEventOrigin(event.event_origin),
+  timestamp: event.timestamp,
+});
 
 const orderEvents = <T extends { id: string; timestamp: string }>(
   events: T[],
@@ -73,24 +109,49 @@ const orderEvents = <T extends { id: string; timestamp: string }>(
   });
 
 export const getRawEvents = async (): Promise<ApiLedgerEvent[]> => {
-  const events = await fetchApi<ApiLedgerEvent[]>("/raw-events");
-  return orderEvents(events);
+  const events = await getFromApi<ApiLedgerEventDto[]>("/raw-events");
+  return orderEvents(events.map(normalizeLedgerEvent));
 };
 
 export const getCorrectedEvents = async (): Promise<ApiLedgerEvent[]> => {
-  const events = await fetchApi<ApiLedgerEvent[]>("/corrected-events");
-  return orderEvents(events);
+  const events = await getFromApi<ApiLedgerEventDto[]>("/corrected-events");
+  return orderEvents(events.map(normalizeLedgerEvent));
 };
 
 export const getSeedEvents = async (): Promise<ApiSeedEvent[]> => {
-  const events = await fetchApi<ApiSeedEvent[]>("/seed-events");
-  return orderEvents(events);
+  const events = await getFromApi<ApiSeedEventDto[]>("/seed-events");
+  return orderEvents(events.map(normalizeSeedEvent));
 };
 
 export const getSpamCorrections = async (): Promise<ApiSpamCorrection[]> => {
-  const events = await fetchApi<ApiSpamCorrection[]>("/spam-corrections");
-  return orderEvents(events);
+  const events = await getFromApi<ApiSpamCorrectionDto[]>("/spam-corrections");
+  return orderEvents(events.map(normalizeSpamCorrection));
 };
 
 export const getAccounts = async (): Promise<ApiAccount[]> =>
-  fetchApi<ApiAccount[]>("/accounts");
+  getFromApi<ApiAccount[]>("/accounts");
+
+const buildSpamCorrectionPayload = (eventOrigin: EventOrigin) => ({
+  event_origin: {
+    location: eventOrigin.location,
+    external_id: eventOrigin.externalId,
+  },
+});
+
+export const createSpamCorrection = async (
+  eventOrigin: EventOrigin,
+): Promise<void> =>
+  mutateApi(
+    "/spam-corrections",
+    "POST",
+    buildSpamCorrectionPayload(eventOrigin),
+  );
+
+export const deleteSpamCorrection = async (
+  eventOrigin: EventOrigin,
+): Promise<void> =>
+  mutateApi(
+    "/spam-corrections",
+    "DELETE",
+    buildSpamCorrectionPayload(eventOrigin),
+  );

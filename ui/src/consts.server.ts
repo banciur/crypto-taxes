@@ -50,7 +50,8 @@ const mapLegs = (
     id: leg.id,
     assetId: leg.asset_id,
     accountId: leg.account_chain_id,
-    accountName: accountNamesById.get(leg.account_chain_id) ?? leg.account_chain_id,
+    accountName:
+      accountNamesById.get(leg.account_chain_id) ?? leg.account_chain_id,
     quantity: leg.quantity,
     isFee: leg.is_fee,
   }));
@@ -62,12 +63,12 @@ const mapRawLedgerEvent = (
   id: event.id,
   kind: "raw-event",
   timestamp: event.timestamp,
-  place: event.origin.location.toLowerCase(),
-  originId: event.origin.external_id,
+  place: event.eventOrigin.location.toLowerCase(),
+  originId: event.eventOrigin.externalId,
   legs: mapLegs(event.legs, accountNamesById),
   eventOrigin: {
-    location: event.origin.location,
-    externalId: event.origin.external_id,
+    location: event.eventOrigin.location,
+    externalId: event.eventOrigin.externalId,
   },
 });
 
@@ -78,8 +79,8 @@ const mapCorrectedLedgerEvent = (
   id: event.id,
   kind: "corrected-event",
   timestamp: event.timestamp,
-  place: event.origin.location.toLowerCase(),
-  originId: event.origin.external_id,
+  place: event.eventOrigin.location.toLowerCase(),
+  originId: event.eventOrigin.externalId,
   legs: mapLegs(event.legs, accountNamesById),
 });
 
@@ -99,10 +100,10 @@ const mapSpamCorrectionItem = (
   id: event.id,
   kind: "spam-correction",
   timestamp: event.timestamp,
-  place: event.event_origin.location.toLowerCase(),
+  place: event.eventOrigin.location.toLowerCase(),
   eventOrigin: {
-    location: event.event_origin.location,
-    externalId: event.event_origin.external_id,
+    location: event.eventOrigin.location,
+    externalId: event.eventOrigin.externalId,
   },
 });
 
@@ -132,11 +133,9 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   },
   corrections: {
     load: async () => {
-      const [seedEvents, spamCorrections, accountNamesById] = await Promise.all([
-        getSeedEvents(),
-        getSpamCorrections(),
-        getAccountNamesById(),
-      ]);
+      const [seedEvents, spamCorrections, accountNamesById] = await Promise.all(
+        [getSeedEvents(), getSpamCorrections(), getAccountNamesById()],
+      );
       return orderLaneItems([
         ...seedEvents.map((event: ApiSeedEvent) =>
           mapSeedCorrectionItem(event, accountNamesById),

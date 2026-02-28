@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { createSpamCorrection, deleteSpamCorrection } from "@/api/events";
 import type { ColumnKey } from "@/consts";
 import { orderColumnKeys } from "@/consts";
 
@@ -12,7 +13,6 @@ import { useVisibleDay } from "@/contexts/VisibleDayContext";
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
 import { dayIdFor } from "@/lib/dayHash";
 import type {
-  EventOriginData,
   LaneItemData,
   RawEventCardData,
   SpamCorrectionItemData,
@@ -31,52 +31,6 @@ type ActionFeedback = {
 
 const isRawEvent = (item: LaneItemData): item is RawEventCardData =>
   item.kind === "raw-event";
-
-const buildSpamCorrectionPayload = (eventOrigin: EventOriginData) => ({
-  event_origin: {
-    location: eventOrigin.location,
-    external_id: eventOrigin.externalId,
-  },
-});
-
-const readFailureDetails = async (response: Response) => {
-  const details = await response.text().catch(() => "missing details");
-  return details || "missing details";
-};
-
-const createSpamCorrection = async (eventOrigin: EventOriginData) => {
-  const response = await fetch("/spam-corrections", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(buildSpamCorrectionPayload(eventOrigin)),
-  });
-
-  if (!response.ok) {
-    const details = await readFailureDetails(response);
-    throw new Error(
-      `POST /spam-corrections failed for ${eventOrigin.location}/${eventOrigin.externalId}: ${response.status} : ${details}`,
-    );
-  }
-};
-
-const deleteSpamCorrection = async (eventOrigin: EventOriginData) => {
-  const response = await fetch("/spam-corrections", {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(buildSpamCorrectionPayload(eventOrigin)),
-  });
-
-  if (!response.ok) {
-    const details = await readFailureDetails(response);
-    throw new Error(
-      `DELETE /spam-corrections failed for ${eventOrigin.location}/${eventOrigin.externalId}: ${response.status} : ${details}`,
-    );
-  }
-};
 
 export function Events({ eventsByDate }: EventsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
