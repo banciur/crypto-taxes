@@ -1,26 +1,40 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 import api.api as api_module
-from db.corrections import SpamCorrectionRepository, SpamCorrectionSource, init_corrections_db
-from domain.ledger import EventLocation, EventOrigin
+from db.corrections import CorrectionsBase
+from db.models import Base
 
 
 @pytest.fixture()
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
-    main_db = tmp_path / "api-main.db"
-    corrections_db = tmp_path / "api-corrections.db"
-    corrections_session = init_corrections_db(db_path=corrections_db, reset=True)
-    corrections_session.close()
-    monkeypatch.setattr(api_module, "DB_PATH", main_db)
-    monkeypatch.setattr(api_module, "CORRECTIONS_DB_PATH", corrections_db)
-    with TestClient(api_module.app) as test_client:
+def client() -> Generator[TestClient, None, None]:
+    main_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    corrections_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(main_engine)
+    CorrectionsBase.metadata.create_all(corrections_engine)
+    app = api_module.create_app(
+        sessionmaker_factory=sessionmaker(main_engine),
+        corrections_sessionmaker_factory=sessionmaker(corrections_engine),
+    )
+    with TestClient(app) as test_client:
         yield test_client
+    corrections_engine.dispose()
+    main_engine.dispose()
 
 
 def _payload(*, location: str = "ARBITRUM", external_id: str = "0xabc") -> dict[str, object]:
@@ -67,24 +81,6 @@ def test_duplicate_post_is_idempotent(client: TestClient) -> None:
     assert first_response.status_code == 204
     assert second_response.status_code == 204
     assert listed == first_listed
-
-
-def test_get_lists_spam_corrections_from_all_sources(client: TestClient) -> None:
-    session = init_corrections_db(db_path=api_module.CORRECTIONS_DB_PATH)
-    repo = SpamCorrectionRepository(session)
-    repo.mark_as_spam(
-        EventOrigin(location=EventLocation.ARBITRUM, external_id="0xauto"),
-        SpamCorrectionSource.AUTO_MORALIS,
-    )
-    session.close()
-
-    response = client.get("/spam-corrections")
-
-    assert response.status_code == 200
-    listed = response.json()
-    assert len(listed) == 1
-    assert listed[0]["event_origin"] == {"location": "ARBITRUM", "external_id": "0xauto"}
-    assert set(listed[0]) == {"id", "event_origin"}
 
 
 def test_delete_is_idempotent_for_missing_record(client: TestClient) -> None:

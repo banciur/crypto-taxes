@@ -9,6 +9,10 @@ TODO: Coinbase importer
 TODO: Corrections, combine and/or modify events (complicated transfers etc)
 TODO: I'm not sure about the corrections directory and which code should go where.
 
+Review the order of todoes
+------------------
+TODO: Review setup of databases in tests. Especially now we have one setup for api tests and one for other. Looks bad.
+TODO: Generally tests sucks/
 TODO: Fix acquisition/disposal and tax computation after changes that were introduced
 TODO: Improvements around tokens maybe better structure etc. Broader topic to think through.
  - FE
