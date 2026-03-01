@@ -53,6 +53,7 @@ export function Events({ eventsByDate }: EventsProps) {
     () => orderColumnKeys(selected),
     [selected],
   );
+  const dateRowColumnSpan = 12 / orderedSelectedColumns.length;
   const hasRawColumn = orderedSelectedColumns.includes("raw");
   const rawEventsById = useMemo(() => {
     const items = new Map<string, RawEventCardData>();
@@ -314,6 +315,7 @@ export function Events({ eventsByDate }: EventsProps) {
                   <Row>
                     {orderedSelectedColumns.map((columnKey) => (
                       <Col
+                        xs={dateRowColumnSpan}
                         className="d-flex flex-column gap-2"
                         key={`row-${virtualRow.index}-${columnKey}`}
                       >
