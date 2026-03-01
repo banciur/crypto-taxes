@@ -32,13 +32,8 @@ const mapRawLedgerEvent = (event: LedgerEvent): RawEventCardData => ({
   id: event.id,
   kind: "raw-event",
   timestamp: event.timestamp,
-  place: event.eventOrigin.location.toLowerCase(),
-  originId: event.eventOrigin.externalId,
   legs: mapLegs(event.legs),
-  eventOrigin: {
-    location: event.eventOrigin.location,
-    externalId: event.eventOrigin.externalId,
-  },
+  eventOrigin: event.eventOrigin,
 });
 
 const mapCorrectedLedgerEvent = (
@@ -47,8 +42,7 @@ const mapCorrectedLedgerEvent = (
   id: event.id,
   kind: "corrected-event",
   timestamp: event.timestamp,
-  place: event.eventOrigin.location.toLowerCase(),
-  originId: event.eventOrigin.externalId,
+  eventOrigin: event.eventOrigin,
   legs: mapLegs(event.legs),
 });
 
@@ -65,11 +59,7 @@ const mapSpamCorrectionItem = (
   id: event.id,
   kind: "spam-correction",
   timestamp: event.timestamp,
-  place: event.eventOrigin.location.toLowerCase(),
-  eventOrigin: {
-    location: event.eventOrigin.location,
-    externalId: event.eventOrigin.externalId,
-  },
+  eventOrigin: event.eventOrigin,
 });
 
 export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {

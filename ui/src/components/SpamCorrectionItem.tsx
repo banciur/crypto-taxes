@@ -9,7 +9,6 @@ import type { EventOrigin } from "@/types/events";
 
 type SpamCorrectionItemProps = {
   timestamp: string;
-  place: string;
   eventOrigin: EventOrigin;
   isRemoving: boolean;
   actionDisabled: boolean;
@@ -18,12 +17,12 @@ type SpamCorrectionItemProps = {
 
 export function SpamCorrectionItem({
   timestamp,
-  place,
   eventOrigin,
   isRemoving,
   actionDisabled,
   onRemove,
 }: SpamCorrectionItemProps) {
+  const place = eventOrigin.location.toLowerCase();
   const action = (
     <Button
       type="button"

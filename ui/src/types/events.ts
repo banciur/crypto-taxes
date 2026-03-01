@@ -52,8 +52,7 @@ export type EventLeg = LedgerLeg & {
 
 export type EventCardDisplayData = {
   timestamp: string;
-  place: string;
-  originId: string;
+  eventOrigin: EventOrigin;
   legs: EventLeg[];
 };
 
@@ -65,7 +64,6 @@ type LaneItemBase = {
 export type RawEventCardData = LaneItemBase &
   EventCardDisplayData & {
     kind: "raw-event";
-    eventOrigin: EventOrigin;
   };
 
 export type CorrectedEventCardData = LaneItemBase &
@@ -80,7 +78,6 @@ export type SeedCorrectionItemData = LaneItemBase & {
 
 export type SpamCorrectionItemData = LaneItemBase & {
   kind: "spam-correction";
-  place: string;
   eventOrigin: EventOrigin;
 };
 

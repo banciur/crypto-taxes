@@ -24,13 +24,14 @@ type EventCardProps = EventCardDisplayData & {
 
 export function EventCard({
   timestamp,
-  place,
-  originId,
+  eventOrigin,
   legs,
   isSelected = false,
   onSelectionChange,
   selectionDisabled = false,
 }: EventCardProps) {
+  const place = eventOrigin.location.toLowerCase();
+  const originId = eventOrigin.externalId;
   const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
     timeZone: "UTC",
     hour: "2-digit",

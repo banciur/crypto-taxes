@@ -29,8 +29,7 @@ export function LaneItem({
       return (
         <EventCard
           timestamp={item.timestamp}
-          place={item.place}
-          originId={item.originId}
+          eventOrigin={item.eventOrigin}
           legs={item.legs}
           isSelected={isSelected}
           selectionDisabled={rawSelectionDisabled}
@@ -41,8 +40,7 @@ export function LaneItem({
       return (
         <EventCard
           timestamp={item.timestamp}
-          place={item.place}
-          originId={item.originId}
+          eventOrigin={item.eventOrigin}
           legs={item.legs}
         />
       );
@@ -52,7 +50,6 @@ export function LaneItem({
       return (
         <SpamCorrectionItem
           timestamp={item.timestamp}
-          place={item.place}
           eventOrigin={item.eventOrigin}
           isRemoving={isRemovingSpamCorrection}
           actionDisabled={spamActionDisabled}
