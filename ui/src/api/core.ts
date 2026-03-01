@@ -5,6 +5,9 @@ const DEFAULT_APP_ORIGIN = "http://localhost:3000";
 const APP_ORIGIN = process.env.NEXT_PUBLIC_APP_ORIGIN ?? DEFAULT_APP_ORIGIN;
 const API_PROXY_PREFIX = "/api/crypto-taxes";
 
+// This file is messy, but for now it does it's job. Interfaces of mutateApi and doApiRequest could be improved around
+// passing body, headers etc
+
 type ApiRequestInit = Omit<RequestInit, "body"> & {
   body?: unknown;
 };

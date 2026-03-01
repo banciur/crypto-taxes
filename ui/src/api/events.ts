@@ -1,22 +1,6 @@
 import { getFromApi } from "@/api/core";
-import type { LedgerLeg } from "@/api/types";
 import { orderByTimestamp } from "@/lib/sort";
-import type { EventOrigin } from "@/types/events";
-
-export type LedgerEvent = {
-  id: string;
-  timestamp: string;
-  eventOrigin: EventOrigin;
-  ingestion: string;
-  legs: LedgerLeg[];
-};
-
-export type SeedEvent = {
-  id: string;
-  timestamp: string;
-  pricePerToken: string;
-  legs: LedgerLeg[];
-};
+import type { LedgerEvent, SeedEvent } from "@/types/events";
 
 export const getRawEvents = async (): Promise<LedgerEvent[]> => {
   const events = await getFromApi<LedgerEvent[]>("/raw-events");

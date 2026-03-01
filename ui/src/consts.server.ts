@@ -1,23 +1,17 @@
 import "server-only";
 
-import {
-  getCorrectedEvents,
-  getRawEvents,
-  getSeedEvents,
-  type LedgerEvent,
-  type SeedEvent,
-} from "@/api/events";
-import {
-  getSpamCorrections,
-  type SpamCorrection,
-} from "@/api/spamCorrections";
-import type { LedgerLeg } from "@/api/types";
+import { getCorrectedEvents, getRawEvents, getSeedEvents } from "@/api/events";
+import { getSpamCorrections } from "@/api/spamCorrections";
 import type {
   CorrectedEventCardData,
   EventLeg,
+  LedgerEvent,
+  LedgerLeg,
   LaneItemData,
   RawEventCardData,
+  SeedEvent,
   SeedCorrectionItemData,
+  SpamCorrection,
   SpamCorrectionItemData,
 } from "@/types/events";
 import type { ColumnKey } from "@/consts";

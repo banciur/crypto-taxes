@@ -1,10 +1,58 @@
-export type EventLeg = {
+/*
+Current problems with types:
+  - ledger legs there are ones from the api and ones with translated wallet name
+  - Raw and Corrected events are different, but in reality they should have the same structure. Some problems in processing
+
+
+ */
+export type Account = {
+  accountChainId: string;
+  name: string;
+  chain: string;
+  address: string;
+  skipSync: boolean;
+};
+
+export type EventOrigin = {
+  location: string;
+  externalId: string;
+};
+
+export type SpamCorrection = {
+  id: string;
+  eventOrigin: EventOrigin;
+  timestamp: string;
+};
+
+export type SeedEvent = {
+  id: string;
+  timestamp: string;
+  pricePerToken: string;
+  legs: LedgerLeg[];
+};
+
+type LegBase = {
   id: string;
   assetId: string;
-  accountId: string;
-  accountName: string;
   quantity: string;
   isFee: boolean;
+};
+
+export type LedgerLeg = LegBase & {
+  accountChainId: string;
+};
+
+export type LedgerEvent = {
+  id: string;
+  timestamp: string;
+  eventOrigin: EventOrigin;
+  ingestion: string;
+  legs: LedgerLeg[];
+};
+
+export type EventLeg = LegBase & {
+  accountId: string;
+  accountName: string;
 };
 
 export type EventCardDisplayData = {
@@ -12,11 +60,6 @@ export type EventCardDisplayData = {
   place: string;
   originId: string;
   legs: EventLeg[];
-};
-
-export type EventOrigin = {
-  location: string;
-  externalId: string;
 };
 
 type LaneItemBase = {
