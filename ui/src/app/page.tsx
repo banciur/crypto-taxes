@@ -4,6 +4,7 @@ import { Col, Container, Row } from "react-bootstrap";
 
 import { ColumnKey, COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
+import { loadAccounts } from "@/lib/accounts";
 import { COLUMN_DEFINITIONS } from "@/consts.server";
 import type { LaneItemData } from "@/types/events";
 
@@ -46,7 +47,16 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     resolveSelectedColumns(query[COLUMNS_PARAM_NAME]),
   );
 
-  const loadStart = performance.now();
+  const accountsLoadStart = performance.now();
+
+  await loadAccounts();
+
+  const columnsLoadStart = performance.now();
+  console.log(
+    `Accounts fetch took: ${formatDuration(
+      columnsLoadStart - accountsLoadStart,
+    )}`,
+  );
 
   const loadedColumns = await Promise.all(
     selectedColumns.map(async (key) => ({
@@ -56,7 +66,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   console.log(
-    `Data fetch took: ${formatDuration(performance.now() - loadStart)}`,
+    `Column fetch took: ${formatDuration(
+      performance.now() - columnsLoadStart,
+    )}`,
   );
 
   // Transforming loadedColumns into a structure that matches how the UI renders.

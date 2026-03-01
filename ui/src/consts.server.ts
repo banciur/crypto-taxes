@@ -15,36 +15,30 @@ import type {
   SpamCorrectionItemData,
 } from "@/types/events";
 import type { ColumnKey } from "@/consts";
-import { getAccountNamesById } from "@/lib/accounts";
+import { getAccountName } from "@/lib/accounts";
 import { orderByTimestamp } from "@/lib/sort";
 
 type ColumnDefinition = {
   load: () => Promise<LaneItemData[]>;
 };
 
-const mapLegs = (
-  legs: LedgerLeg[],
-  accountNamesById: Map<string, string>,
-): EventLeg[] =>
+const mapLegs = (legs: LedgerLeg[]): EventLeg[] =>
   legs.map((leg) => ({
     id: leg.id,
     assetId: leg.assetId,
     accountId: leg.accountChainId,
-    accountName: accountNamesById.get(leg.accountChainId) ?? leg.accountChainId,
+    accountName: getAccountName(leg.accountChainId),
     quantity: leg.quantity,
     isFee: leg.isFee,
   }));
 
-const mapRawLedgerEvent = (
-  event: LedgerEvent,
-  accountNamesById: Map<string, string>,
-): RawEventCardData => ({
+const mapRawLedgerEvent = (event: LedgerEvent): RawEventCardData => ({
   id: event.id,
   kind: "raw-event",
   timestamp: event.timestamp,
   place: event.eventOrigin.location.toLowerCase(),
   originId: event.eventOrigin.externalId,
-  legs: mapLegs(event.legs, accountNamesById),
+  legs: mapLegs(event.legs),
   eventOrigin: {
     location: event.eventOrigin.location,
     externalId: event.eventOrigin.externalId,
@@ -53,24 +47,20 @@ const mapRawLedgerEvent = (
 
 const mapCorrectedLedgerEvent = (
   event: LedgerEvent,
-  accountNamesById: Map<string, string>,
 ): CorrectedEventCardData => ({
   id: event.id,
   kind: "corrected-event",
   timestamp: event.timestamp,
   place: event.eventOrigin.location.toLowerCase(),
   originId: event.eventOrigin.externalId,
-  legs: mapLegs(event.legs, accountNamesById),
+  legs: mapLegs(event.legs),
 });
 
-const mapSeedCorrectionItem = (
-  event: SeedEvent,
-  accountNamesById: Map<string, string>,
-): SeedCorrectionItemData => ({
+const mapSeedCorrectionItem = (event: SeedEvent): SeedCorrectionItemData => ({
   id: event.id,
   kind: "seed-correction",
   timestamp: event.timestamp,
-  legs: mapLegs(event.legs, accountNamesById),
+  legs: mapLegs(event.legs),
 });
 
 const mapSpamCorrectionItem = (
@@ -89,24 +79,18 @@ const mapSpamCorrectionItem = (
 export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   raw: {
     load: async () => {
-      const [events, accountNamesById] = await Promise.all([
-        getRawEvents(),
-        getAccountNamesById(),
-      ]);
-      return events.map((event: LedgerEvent) =>
-        mapRawLedgerEvent(event, accountNamesById),
-      );
+      const events = await getRawEvents();
+      return events.map((event: LedgerEvent) => mapRawLedgerEvent(event));
     },
   },
   corrections: {
     load: async () => {
-      const [seedEvents, spamCorrections, accountNamesById] = await Promise.all(
-        [getSeedEvents(), getSpamCorrections(), getAccountNamesById()],
-      );
+      const [seedEvents, spamCorrections] = await Promise.all([
+        getSeedEvents(),
+        getSpamCorrections(),
+      ]);
       return orderByTimestamp([
-        ...seedEvents.map((event: SeedEvent) =>
-          mapSeedCorrectionItem(event, accountNamesById),
-        ),
+        ...seedEvents.map((event: SeedEvent) => mapSeedCorrectionItem(event)),
         ...spamCorrections.map((event: SpamCorrection) =>
           mapSpamCorrectionItem(event),
         ),
@@ -115,13 +99,8 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   },
   corrected: {
     load: async () => {
-      const [events, accountNamesById] = await Promise.all([
-        getCorrectedEvents(),
-        getAccountNamesById(),
-      ]);
-      return events.map((event: LedgerEvent) =>
-        mapCorrectedLedgerEvent(event, accountNamesById),
-      );
+      const events = await getCorrectedEvents();
+      return events.map((event: LedgerEvent) => mapCorrectedLedgerEvent(event));
     },
   },
 } as const;
