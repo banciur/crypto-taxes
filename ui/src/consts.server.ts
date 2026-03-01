@@ -24,12 +24,8 @@ type ColumnDefinition = {
 
 const mapLegs = (legs: LedgerLeg[]): EventLeg[] =>
   legs.map((leg) => ({
-    id: leg.id,
-    assetId: leg.assetId,
-    accountId: leg.accountChainId,
+    ...leg,
     accountName: getAccountName(leg.accountChainId),
-    quantity: leg.quantity,
-    isFee: leg.isFee,
   }));
 
 const mapRawLedgerEvent = (event: LedgerEvent): RawEventCardData => ({

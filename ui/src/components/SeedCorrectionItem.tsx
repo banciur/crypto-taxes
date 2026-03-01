@@ -40,7 +40,7 @@ export function SeedCorrectionItem({
             className={clsx("d-flex align-items-center gap-1", styles.leg)}
           >
             <span>{leg.assetId}</span>
-            <span title={leg.accountId}>{leg.accountName}</span>
+            <span title={leg.accountChainId}>{leg.accountName}</span>
             <span className={clsx("flex-shrink-0", legQuantityClassName(leg))}>
               {leg.quantity}
             </span>

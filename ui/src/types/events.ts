@@ -1,10 +1,9 @@
 /*
 Current problems with types:
-  - ledger legs there are ones from the api and ones with translated wallet name
+  - I think having extra EventLeg is mistake, resolving name could be done when rendering
   - Raw and Corrected events are different, but in reality they should have the same structure. Some problems in processing
-
-
  */
+
 export type Account = {
   accountChainId: string;
   name: string;
@@ -31,15 +30,12 @@ export type SeedEvent = {
   legs: LedgerLeg[];
 };
 
-type LegBase = {
+export type LedgerLeg = {
   id: string;
   assetId: string;
+  accountChainId: string;
   quantity: string;
   isFee: boolean;
-};
-
-export type LedgerLeg = LegBase & {
-  accountChainId: string;
 };
 
 export type LedgerEvent = {
@@ -50,8 +46,7 @@ export type LedgerEvent = {
   legs: LedgerLeg[];
 };
 
-export type EventLeg = LegBase & {
-  accountId: string;
+export type EventLeg = LedgerLeg & {
   accountName: string;
 };
 
