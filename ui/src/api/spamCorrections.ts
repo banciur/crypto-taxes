@@ -2,46 +2,19 @@ import { getFromApi, mutateApi } from "@/api/core";
 import { orderByTimestamp } from "@/lib/sort";
 import type { EventOrigin } from "@/types/events";
 
-type ApiEventOriginDto = {
-  location: string;
-  external_id: string;
-};
-
-export type ApiSpamCorrection = {
+export type SpamCorrection = {
   id: string;
   eventOrigin: EventOrigin;
   timestamp: string;
 };
 
-type ApiSpamCorrectionDto = {
-  id: string;
-  event_origin: ApiEventOriginDto;
-  timestamp: string;
-};
-
-const normalizeEventOrigin = (eventOrigin: ApiEventOriginDto): EventOrigin => ({
-  location: eventOrigin.location,
-  externalId: eventOrigin.external_id,
-});
-
-const normalizeSpamCorrection = (
-  event: ApiSpamCorrectionDto,
-): ApiSpamCorrection => ({
-  id: event.id,
-  eventOrigin: normalizeEventOrigin(event.event_origin),
-  timestamp: event.timestamp,
-});
-
 const buildSpamCorrectionPayload = (eventOrigin: EventOrigin) => ({
-  event_origin: {
-    location: eventOrigin.location,
-    external_id: eventOrigin.externalId,
-  },
+  eventOrigin,
 });
 
-export const getSpamCorrections = async (): Promise<ApiSpamCorrection[]> => {
-  const events = await getFromApi<ApiSpamCorrectionDto[]>("/spam-corrections");
-  return orderByTimestamp(events.map(normalizeSpamCorrection));
+export const getSpamCorrections = async (): Promise<SpamCorrection[]> => {
+  const events = await getFromApi<SpamCorrection[]>("/spam-corrections");
+  return orderByTimestamp(events);
 };
 
 export const createSpamCorrection = async (

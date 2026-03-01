@@ -1,12 +1,12 @@
 import { getFromApi } from "@/api/core";
 
-export type ApiAccount = {
-  account_chain_id: string;
+export type Account = {
+  accountChainId: string;
   name: string;
   chain: string;
   address: string;
-  skip_sync: boolean;
+  skipSync: boolean;
 };
 
-export const getAccounts = async (): Promise<ApiAccount[]> =>
-  getFromApi<ApiAccount[]>("/accounts");
+export const getAccounts = async (): Promise<Account[]> =>
+  getFromApi<Account[]>("/accounts");

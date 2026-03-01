@@ -6,7 +6,7 @@ export const getAccountNamesById = cache(
   async (): Promise<Map<string, string>> => {
     const accounts = await getAccounts();
     return new Map(
-      accounts.map((account) => [account.account_chain_id, account.name]),
+      accounts.map((account) => [account.accountChainId, account.name]),
     );
   },
 );

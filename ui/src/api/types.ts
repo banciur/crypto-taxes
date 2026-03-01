@@ -1,7 +1,7 @@
-export type ApiLedgerLeg = {
+export type LedgerLeg = {
   id: string;
-  asset_id: string;
-  account_chain_id: string;
+  assetId: string;
+  accountChainId: string;
   quantity: string;
-  is_fee: boolean;
+  isFee: boolean;
 };

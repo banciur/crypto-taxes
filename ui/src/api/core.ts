@@ -1,6 +1,13 @@
+import camelcaseKeys from "camelcase-keys";
+import decamelizeKeys from "decamelize-keys";
+
 const DEFAULT_APP_ORIGIN = "http://localhost:3000";
 const APP_ORIGIN = process.env.NEXT_PUBLIC_APP_ORIGIN ?? DEFAULT_APP_ORIGIN;
 const API_PROXY_PREFIX = "/api/crypto-taxes";
+
+type ApiRequestInit = Omit<RequestInit, "body"> & {
+  body?: unknown;
+};
 
 const resolveApiUrl = (path: string) => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -11,13 +18,28 @@ const resolveApiUrl = (path: string) => {
   return new URL(proxyPath, APP_ORIGIN).toString();
 };
 
-export const doApiRequest = async (
+const isObjectOrArray = (
+  value: unknown,
+): value is Record<string, unknown> | readonly unknown[] =>
+  typeof value === "object" && value !== null;
+
+export const doApiRequest = async <T>(
   path: string,
-  init?: RequestInit,
-): Promise<Response> => {
+  init?: ApiRequestInit,
+): Promise<T | undefined> => {
+  const body =
+    init?.body === undefined
+      ? undefined
+      : JSON.stringify(
+          decamelizeKeys(
+            init.body as Record<string, unknown> | readonly unknown[],
+            { deep: true },
+          ),
+        );
   const response = await fetch(resolveApiUrl(path), {
     cache: "no-store",
     ...init,
+    body,
   });
 
   if (!response.ok) {
@@ -27,12 +49,25 @@ export const doApiRequest = async (
     );
   }
 
-  return response;
+  if (response.status === 204) {
+    return undefined;
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return undefined;
+  }
+
+  const data = (await response.json()) as unknown;
+  if (!isObjectOrArray(data)) {
+    return data as T;
+  }
+
+  return camelcaseKeys(data, { deep: true }) as T;
 };
 
 export const getFromApi = async <T>(path: string): Promise<T> => {
-  const response = await doApiRequest(path);
-  return (await response.json()) as T;
+  return (await doApiRequest<T>(path)) as T;
 };
 
 export const mutateApi = async (
@@ -45,6 +80,6 @@ export const mutateApi = async (
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: payload,
   });
 };

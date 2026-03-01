@@ -4,14 +4,14 @@ import {
   getCorrectedEvents,
   getRawEvents,
   getSeedEvents,
-  type ApiLedgerEvent,
-  type ApiSeedEvent,
+  type LedgerEvent,
+  type SeedEvent,
 } from "@/api/events";
 import {
   getSpamCorrections,
-  type ApiSpamCorrection,
+  type SpamCorrection,
 } from "@/api/spamCorrections";
-import type { ApiLedgerLeg } from "@/api/types";
+import type { LedgerLeg } from "@/api/types";
 import type {
   CorrectedEventCardData,
   EventLeg,
@@ -29,21 +29,20 @@ type ColumnDefinition = {
 };
 
 const mapLegs = (
-  legs: ApiLedgerLeg[],
+  legs: LedgerLeg[],
   accountNamesById: Map<string, string>,
 ): EventLeg[] =>
   legs.map((leg) => ({
     id: leg.id,
-    assetId: leg.asset_id,
-    accountId: leg.account_chain_id,
-    accountName:
-      accountNamesById.get(leg.account_chain_id) ?? leg.account_chain_id,
+    assetId: leg.assetId,
+    accountId: leg.accountChainId,
+    accountName: accountNamesById.get(leg.accountChainId) ?? leg.accountChainId,
     quantity: leg.quantity,
-    isFee: leg.is_fee,
+    isFee: leg.isFee,
   }));
 
 const mapRawLedgerEvent = (
-  event: ApiLedgerEvent,
+  event: LedgerEvent,
   accountNamesById: Map<string, string>,
 ): RawEventCardData => ({
   id: event.id,
@@ -59,7 +58,7 @@ const mapRawLedgerEvent = (
 });
 
 const mapCorrectedLedgerEvent = (
-  event: ApiLedgerEvent,
+  event: LedgerEvent,
   accountNamesById: Map<string, string>,
 ): CorrectedEventCardData => ({
   id: event.id,
@@ -71,7 +70,7 @@ const mapCorrectedLedgerEvent = (
 });
 
 const mapSeedCorrectionItem = (
-  event: ApiSeedEvent,
+  event: SeedEvent,
   accountNamesById: Map<string, string>,
 ): SeedCorrectionItemData => ({
   id: event.id,
@@ -81,7 +80,7 @@ const mapSeedCorrectionItem = (
 });
 
 const mapSpamCorrectionItem = (
-  event: ApiSpamCorrection,
+  event: SpamCorrection,
 ): SpamCorrectionItemData => ({
   id: event.id,
   kind: "spam-correction",
@@ -100,7 +99,7 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
         getRawEvents(),
         getAccountNamesById(),
       ]);
-      return events.map((event: ApiLedgerEvent) =>
+      return events.map((event: LedgerEvent) =>
         mapRawLedgerEvent(event, accountNamesById),
       );
     },
@@ -111,10 +110,10 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
         [getSeedEvents(), getSpamCorrections(), getAccountNamesById()],
       );
       return orderByTimestamp([
-        ...seedEvents.map((event: ApiSeedEvent) =>
+        ...seedEvents.map((event: SeedEvent) =>
           mapSeedCorrectionItem(event, accountNamesById),
         ),
-        ...spamCorrections.map((event: ApiSpamCorrection) =>
+        ...spamCorrections.map((event: SpamCorrection) =>
           mapSpamCorrectionItem(event),
         ),
       ]);
@@ -126,7 +125,7 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
         getCorrectedEvents(),
         getAccountNamesById(),
       ]);
-      return events.map((event: ApiLedgerEvent) =>
+      return events.map((event: LedgerEvent) =>
         mapCorrectedLedgerEvent(event, accountNamesById),
       );
     },

@@ -13,7 +13,7 @@
 
 - The UI talks to FastAPI through the same-origin `/api/crypto-taxes/*` rewrite in `next.config.ts`.
 - Put reusable API transport in `src/api/core.ts` and keep backend communication split into focused resource files under `src/api/` (ex. `events.ts`, `accounts.ts` etc.). Both server and client code should consume those shared API modules.
-- Keep snake_case request/response DTOs contained inside the endpoint module. Export only camelCase TypeScript shapes from the UI API layer and translate at that boundary.
+- `src/api/core.ts` owns the request/response case translation at the API boundary. Endpoint modules should expose camelCase TypeScript shapes and avoid duplicating snake_case DTO mirror types.
 
 ## API contract
 
