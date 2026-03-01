@@ -43,27 +43,8 @@ class ApiSpamCorrection(StrictBaseModel):
     timestamp: datetime
 
 
-class ApiCreateSpamCorrectionRequest(StrictBaseModel):
-    event_origin: ApiEventOrigin
-
-
-class ApiDeleteSpamCorrectionRequest(StrictBaseModel):
-    event_origin: ApiEventOrigin
-
-
 def _event_origin_key(event_origin: EventOrigin) -> tuple[EventLocation, str]:
     return event_origin.location, event_origin.external_id
-
-
-def _api_spam_correction(record: Spam, timestamp: datetime) -> ApiSpamCorrection:
-    return ApiSpamCorrection(
-        id=str(record.id),
-        event_origin=ApiEventOrigin(
-            location=record.event_origin.location,
-            external_id=record.event_origin.external_id,
-        ),
-        timestamp=timestamp,
-    )
 
 
 def _api_spam_corrections(
@@ -92,7 +73,14 @@ def _api_spam_corrections(
             )
 
     return [
-        _api_spam_correction(records_by_origin[origin_key], matched_timestamps_by_origin[origin_key][0])
+        ApiSpamCorrection(
+            id=str(records_by_origin[origin_key].id),
+            event_origin=ApiEventOrigin(
+                location=records_by_origin[origin_key].event_origin.location,
+                external_id=records_by_origin[origin_key].event_origin.external_id,
+            ),
+            timestamp=matched_timestamps_by_origin[origin_key][0],
+        )
         for origin_key in ordered_origins
     ]
 
@@ -176,22 +164,18 @@ def create_app(
 
     @app.post("/spam-corrections", status_code=204)
     def create_spam_correction(
-        payload: ApiCreateSpamCorrectionRequest,
+        payload: ApiEventOrigin,
         repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
     ) -> Response:
-        repo.mark_as_spam(
-            EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id)
-        )
+        repo.mark_as_spam(EventOrigin(location=payload.location, external_id=payload.external_id))
         return Response(status_code=204)
 
     @app.delete("/spam-corrections", status_code=204)
     def delete_spam_correction(
-        payload: ApiDeleteSpamCorrectionRequest,
+        payload: ApiEventOrigin,
         repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
     ) -> Response:
-        repo.remove_spam_mark(
-            EventOrigin(location=payload.event_origin.location, external_id=payload.event_origin.external_id)
-        )
+        repo.remove_spam_mark(EventOrigin(location=payload.location, external_id=payload.external_id))
         return Response(status_code=204)
 
     return app

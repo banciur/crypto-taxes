@@ -73,6 +73,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
 - Corrected-event generation excludes raw events using active spam corrections keyed by `EventOrigin` (`location` + `external_id`).
 - Spam corrections are persisted in a separate DB so they survive resets of the main analytics DB. That persistence layer keeps soft-delete tombstones and provenance metadata internally so automatic imports can avoid recreating markers that were removed manually.
+- `POST /spam-corrections` and `DELETE /spam-corrections` accept a flat `EventOrigin` request body (`location`, `external_id`).
 - `GET /spam-corrections` enriches each active spam marker with the matching raw-event timestamp from the main ledger DB and raises an error if a marker no longer maps to exactly one raw event.
 
 ---

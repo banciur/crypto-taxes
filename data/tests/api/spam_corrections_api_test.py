@@ -44,8 +44,8 @@ def client() -> Generator[TestClient, None, None]:
     main_engine.dispose()
 
 
-def _payload(*, location: str = "ARBITRUM", external_id: str = "0xabc") -> dict[str, dict[str, str]]:
-    return {"event_origin": {"location": location, "external_id": external_id}}
+def _payload(*, location: str = "ARBITRUM", external_id: str = "0xabc") -> dict[str, str]:
+    return {"location": location, "external_id": external_id}
 
 
 def _raw_event(*, location: EventLocation, external_id: str, timestamp: datetime) -> LedgerEvent:
@@ -74,8 +74,8 @@ def test_post_creates_and_get_lists_active_spam_corrections(client: TestClient) 
         client,
         [
             _raw_event(
-                location=EventLocation(payload["event_origin"]["location"]),
-                external_id=payload["event_origin"]["external_id"],
+                location=EventLocation(payload["location"]),
+                external_id=payload["external_id"],
                 timestamp=timestamp,
             )
         ],
@@ -90,7 +90,7 @@ def test_post_creates_and_get_lists_active_spam_corrections(client: TestClient) 
     assert list_response.status_code == 200
     listed = list_response.json()
     assert len(listed) == 1
-    assert listed[0]["event_origin"] == payload["event_origin"]
+    assert listed[0]["event_origin"] == payload
     assert listed[0]["timestamp"] == client.get("/raw-events").json()[0]["timestamp"]
     assert set(listed[0]) == {"id", "event_origin", "timestamp"}
 
@@ -101,8 +101,8 @@ def test_get_raw_events_exposes_event_origin_key(client: TestClient) -> None:
         client,
         [
             _raw_event(
-                location=EventLocation(payload["event_origin"]["location"]),
-                external_id=payload["event_origin"]["external_id"],
+                location=EventLocation(payload["location"]),
+                external_id=payload["external_id"],
                 timestamp=datetime(2024, 1, 1, 13, 0, tzinfo=timezone.utc),
             )
         ],
@@ -112,7 +112,7 @@ def test_get_raw_events_exposes_event_origin_key(client: TestClient) -> None:
 
     assert response.status_code == 200
     event = response.json()[0]
-    assert event["event_origin"] == payload["event_origin"]
+    assert event["event_origin"] == payload
     assert "origin" not in event
 
 
@@ -125,13 +125,13 @@ def test_get_lists_spam_corrections_in_raw_event_order_with_raw_timestamp(client
         client,
         [
             _raw_event(
-                location=EventLocation(second_payload["event_origin"]["location"]),
-                external_id=second_payload["event_origin"]["external_id"],
+                location=EventLocation(second_payload["location"]),
+                external_id=second_payload["external_id"],
                 timestamp=second_timestamp,
             ),
             _raw_event(
-                location=EventLocation(first_payload["event_origin"]["location"]),
-                external_id=first_payload["event_origin"]["external_id"],
+                location=EventLocation(first_payload["location"]),
+                external_id=first_payload["external_id"],
                 timestamp=first_timestamp,
             ),
         ],
@@ -150,17 +150,10 @@ def test_get_lists_spam_corrections_in_raw_event_order_with_raw_timestamp(client
 
     assert response.status_code == 200
     listed = response.json()
-    assert [item["event_origin"] for item in listed] == [
-        first_payload["event_origin"],
-        second_payload["event_origin"],
-    ]
+    assert [item["event_origin"] for item in listed] == [first_payload, second_payload]
     assert [item["timestamp"] for item in listed] == [
-        raw_timestamps_by_origin[
-            (first_payload["event_origin"]["location"], first_payload["event_origin"]["external_id"])
-        ],
-        raw_timestamps_by_origin[
-            (second_payload["event_origin"]["location"], second_payload["event_origin"]["external_id"])
-        ],
+        raw_timestamps_by_origin[(first_payload["location"], first_payload["external_id"])],
+        raw_timestamps_by_origin[(second_payload["location"], second_payload["external_id"])],
     ]
 
 
@@ -170,8 +163,8 @@ def test_delete_hides_record_and_post_restores_same_id(client: TestClient) -> No
         client,
         [
             _raw_event(
-                location=EventLocation(payload["event_origin"]["location"]),
-                external_id=payload["event_origin"]["external_id"],
+                location=EventLocation(payload["location"]),
+                external_id=payload["external_id"],
                 timestamp=datetime(2024, 1, 4, 12, 0, tzinfo=timezone.utc),
             )
         ],
@@ -199,8 +192,8 @@ def test_duplicate_post_is_idempotent(client: TestClient) -> None:
         client,
         [
             _raw_event(
-                location=EventLocation(payload["event_origin"]["location"]),
-                external_id=payload["event_origin"]["external_id"],
+                location=EventLocation(payload["location"]),
+                external_id=payload["external_id"],
                 timestamp=datetime(2024, 1, 5, 12, 0, tzinfo=timezone.utc),
             )
         ],

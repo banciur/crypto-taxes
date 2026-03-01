@@ -10,9 +10,9 @@ export const getSpamCorrections = async (): Promise<SpamCorrection[]> => {
 export const createSpamCorrection = async (
   eventOrigin: EventOrigin,
 ): Promise<void> =>
-  mutateApi("/spam-corrections", "POST", { eventOrigin });
+  mutateApi("/spam-corrections", "POST", eventOrigin);
 
 export const deleteSpamCorrection = async (
   eventOrigin: EventOrigin,
 ): Promise<void> =>
-  mutateApi("/spam-corrections", "DELETE", { eventOrigin });
+  mutateApi("/spam-corrections", "DELETE", eventOrigin);
