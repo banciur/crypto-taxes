@@ -1,7 +1,6 @@
 /*
 Current problems with types:
-  - I think having extra EventLeg is mistake, resolving name could be done when rendering
-  - Raw and Corrected events are different, but in reality they should have the same structure. Some problems in processing
+  - I think having extra EventLeg is a mistake; resolving name could be done when rendering
  */
 
 export type Account = {
@@ -50,33 +49,30 @@ export type EventLeg = LedgerLeg & {
   accountName: string;
 };
 
-export type EventCardDisplayData = {
-  timestamp: string;
-  eventOrigin: EventOrigin;
-  legs: EventLeg[];
-};
-
-type LaneItemBase = {
+type ItemBase = {
   id: string;
   timestamp: string;
 };
 
-export type RawEventCardData = LaneItemBase &
-  EventCardDisplayData & {
-    kind: "raw-event";
-  };
+export type EventCardDisplayData = ItemBase & {
+  eventOrigin: EventOrigin;
+  legs: EventLeg[];
+};
 
-export type CorrectedEventCardData = LaneItemBase &
-  EventCardDisplayData & {
-    kind: "corrected-event";
-  };
+export type RawEventCardData = EventCardDisplayData & {
+  kind: "raw-event";
+};
 
-export type SeedCorrectionItemData = LaneItemBase & {
+export type CorrectedEventCardData = EventCardDisplayData & {
+  kind: "corrected-event";
+};
+
+export type SeedCorrectionItemData = ItemBase & {
   kind: "seed-correction";
   legs: EventLeg[];
 };
 
-export type SpamCorrectionItemData = LaneItemBase & {
+export type SpamCorrectionItemData = ItemBase & {
   kind: "spam-correction";
   eventOrigin: EventOrigin;
 };
