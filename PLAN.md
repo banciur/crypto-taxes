@@ -77,3 +77,10 @@ Finish the spam corrections implementation so the system can persist Moralis-det
   - Spam correction entries should expose a direct CTA to remove a single spam marker using a red X icon.
   - After mark/unmark actions, perform the API call, show a spinner while the request is in flight, and show success or failure feedback.
   - Do not reshuffle lane contents locally after actions; the manual rerun workflow remains the source of synchronization.
+
+- [x] Split UI backend communication into resource-specific API modules.
+  Notes:
+  - Keep reusable transport in `ui/src/api/core.ts`.
+  - Move endpoint-specific backend communication into focused `ui/src/api/*` files instead of one mixed events module.
+  - Start by separating account and spam-correction communication so non-event resources no longer live in `ui/src/api/events.ts`.
+  - Completed: accounts and spam-correction communication now live in `ui/src/api/accounts.ts` and `ui/src/api/spamCorrections.ts`, shared API types/helpers were extracted, `ui/src/api/events.ts` now only handles event endpoints, and UI imports were updated without changing behavior.

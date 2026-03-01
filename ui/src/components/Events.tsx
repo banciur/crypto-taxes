@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { createSpamCorrection, deleteSpamCorrection } from "@/api/events";
+import {
+  createSpamCorrection,
+  deleteSpamCorrection,
+} from "@/api/spamCorrections";
 import type { ColumnKey } from "@/consts";
 import { orderColumnKeys } from "@/consts";
 
