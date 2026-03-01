@@ -92,25 +92,20 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     b.localeCompare(a),
   );
 
-  const eventsByDate = orderedDates.reduce(
-    (acc, dateKey) => {
-      acc[dateKey] = unorderedEventsByDate[dateKey];
-      return acc;
-    },
-    {} as Record<string, Partial<Record<ColumnKey, LaneItemData[]>>>,
-  );
+  const eventsByDate: Record<
+    string,
+    Partial<Record<ColumnKey, LaneItemData[]>>
+  > = {};
+  const eventCountsByDate: Record<string, number> = {};
 
-  const eventCountsByDate = orderedDates.reduce(
-    (acc, dateKey) => {
-      acc[dateKey] = selectedColumns.reduce(
-        (total, columnKey) =>
-          total + (eventsByDate[dateKey][columnKey]?.length ?? 0),
-        0,
-      );
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  for (const dateKey of orderedDates) {
+    const dateEvents = unorderedEventsByDate[dateKey];
+    eventsByDate[dateKey] = dateEvents;
+    eventCountsByDate[dateKey] = selectedColumns.reduce(
+      (total, columnKey) => total + (dateEvents[columnKey]?.length ?? 0),
+      0,
+    );
+  }
 
   return (
     <div className={styles.layoutContainer}>

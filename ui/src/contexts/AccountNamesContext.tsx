@@ -27,9 +27,7 @@ export function useAccountNames(): AccountNamesById {
   const context = useContext(AccountNamesContext);
 
   if (!context) {
-    throw new Error(
-      "useAccountNames must be used within AccountNamesProvider",
-    );
+    throw new Error("useAccountNames must be used within AccountNamesProvider");
   }
 
   return context;

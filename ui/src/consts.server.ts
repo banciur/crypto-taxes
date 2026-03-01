@@ -2,9 +2,7 @@ import "server-only";
 
 import { getCorrectedEvents, getRawEvents, getSeedEvents } from "@/api/events";
 import { getSpamCorrections } from "@/api/spamCorrections";
-import type {
-  LaneItemData,
-} from "@/types/events";
+import type { LaneItemData } from "@/types/events";
 import type { ColumnKey } from "@/consts";
 import { orderByTimestamp } from "@/lib/sort";
 
