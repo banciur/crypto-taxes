@@ -62,7 +62,7 @@ Finish the spam corrections implementation so the system can persist Moralis-det
   - Update docs to reflect that raw events are now structurally unique by `EventOrigin`.
   - Completed: `ledger_events` now has a unique constraint on raw event origin, repository tests assert duplicate origins fail, and the multiple-match API test was removed because new schemas cannot persist that state.
 
-- [] Update the UI to render multiple correction item types.
+- [x] Update the UI to render multiple correction item types.
   Notes:
   - Refactor the current UI rendering pipeline so the lane renderer is no longer tied to a single `EventCard` shape.
   - Keep the day-and-column layout, but switch to rendering a typed list of lane items through a type-based renderer.
@@ -77,6 +77,7 @@ Finish the spam corrections implementation so the system can persist Moralis-det
   - Spam correction entries should expose a direct CTA to remove a single spam marker using a red X icon.
   - After mark/unmark actions, perform the API call, show a spinner while the request is in flight, and show success or failure feedback.
   - Do not reshuffle lane contents locally after actions; the manual rerun workflow remains the source of synchronization.
+  - Completed: the UI now renders typed lane items through dedicated correction components, the raw lane supports multi-select spam marking, spam markers can be removed inline from the corrections lane, and the client shows in-flight plus success/failure feedback without locally reshuffling data.
 
 - [x] Split UI backend communication into resource-specific API modules.
   Notes:
@@ -84,3 +85,10 @@ Finish the spam corrections implementation so the system can persist Moralis-det
   - Move endpoint-specific backend communication into focused `ui/src/api/*` files instead of one mixed events module.
   - Start by separating account and spam-correction communication so non-event resources no longer live in `ui/src/api/events.ts`.
   - Completed: accounts and spam-correction communication now live in `ui/src/api/accounts.ts` and `ui/src/api/spamCorrections.ts`, shared API types/helpers were extracted, `ui/src/api/events.ts` now only handles event endpoints, and UI imports were updated without changing behavior.
+
+- [x] Move UI account-name caching into a shared server helper.
+  Notes:
+  - Keep backend communication in `ui/src/api/accounts.ts`.
+  - Add a shared helper in `ui/src/lib/accounts.ts` for cached account loading and account-name lookup reuse.
+  - Remove the module-local account cache from `ui/src/consts.server.ts` and make server loaders consume the shared helper instead.
+  - Completed: `ui/src/lib/accounts.ts` now owns the cached account lookup built on top of `getAccounts()` using a simple React `cache` wrapper, and `ui/src/consts.server.ts` reuses that shared helper instead of maintaining its own module-local promise.

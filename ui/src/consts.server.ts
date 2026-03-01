@@ -7,7 +7,6 @@ import {
   type ApiLedgerEvent,
   type ApiSeedEvent,
 } from "@/api/events";
-import { getAccounts, type ApiAccount } from "@/api/accounts";
 import {
   getSpamCorrections,
   type ApiSpamCorrection,
@@ -22,25 +21,10 @@ import type {
   SpamCorrectionItemData,
 } from "@/types/events";
 import type { ColumnKey } from "@/consts";
+import { getAccountNamesById } from "@/lib/accounts";
 
 type ColumnDefinition = {
   load: () => Promise<LaneItemData[]>;
-};
-
-let accountNamesByIdPromise: Promise<Map<string, string>> | null = null;
-
-const getAccountNamesById = async (): Promise<Map<string, string>> => {
-  if (accountNamesByIdPromise) {
-    return accountNamesByIdPromise;
-  }
-  accountNamesByIdPromise = getAccounts().then((accounts: ApiAccount[]) => {
-    const map = new Map<string, string>();
-    for (const account of accounts) {
-      map.set(account.account_chain_id, account.name);
-    }
-    return map;
-  });
-  return accountNamesByIdPromise;
 };
 
 const mapLegs = (
