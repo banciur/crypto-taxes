@@ -5,12 +5,12 @@ import { Button, Spinner } from "react-bootstrap";
 import { CorrectionItem } from "@/components/CorrectionItem";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
-import type { EventOriginData } from "@/types/events";
+import type { EventOrigin } from "@/types/events";
 
 type SpamCorrectionItemProps = {
   timestamp: string;
   place: string;
-  eventOrigin: EventOriginData;
+  eventOrigin: EventOrigin;
   isRemoving: boolean;
   actionDisabled: boolean;
   onRemove: () => void;

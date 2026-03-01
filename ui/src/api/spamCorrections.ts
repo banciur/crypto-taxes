@@ -1,6 +1,6 @@
 import { getFromApi, mutateApi } from "@/api/core";
-import type { EventOrigin } from "@/api/types";
 import { orderByTimestamp } from "@/lib/sort";
+import type { EventOrigin } from "@/types/events";
 
 type ApiEventOriginDto = {
   location: string;

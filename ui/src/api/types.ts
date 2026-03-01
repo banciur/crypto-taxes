@@ -1,8 +1,3 @@
-export type EventOrigin = {
-  location: string;
-  externalId: string;
-};
-
 export type ApiLedgerLeg = {
   id: string;
   asset_id: string;

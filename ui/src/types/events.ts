@@ -14,7 +14,7 @@ export type EventCardDisplayData = {
   legs: EventLeg[];
 };
 
-export type EventOriginData = {
+export type EventOrigin = {
   location: string;
   externalId: string;
 };
@@ -27,7 +27,7 @@ type LaneItemBase = {
 export type RawEventCardData = LaneItemBase &
   EventCardDisplayData & {
     kind: "raw-event";
-    eventOrigin: EventOriginData;
+    eventOrigin: EventOrigin;
   };
 
 export type CorrectedEventCardData = LaneItemBase &
@@ -43,7 +43,7 @@ export type SeedCorrectionItemData = LaneItemBase & {
 export type SpamCorrectionItemData = LaneItemBase & {
   kind: "spam-correction";
   place: string;
-  eventOrigin: EventOriginData;
+  eventOrigin: EventOrigin;
 };
 
 export type LaneItemData =
