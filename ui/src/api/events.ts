@@ -1,6 +1,6 @@
-import { orderByTimestampDesc } from "@/api/helpers";
 import { getFromApi } from "@/api/core";
 import type { ApiLedgerLeg, EventOrigin } from "@/api/types";
+import { orderByTimestamp } from "@/lib/sort";
 
 type ApiEventOriginDto = {
   location: string;
@@ -59,15 +59,15 @@ const normalizeSeedEvent = (event: ApiSeedEventDto): ApiSeedEvent => ({
 
 export const getRawEvents = async (): Promise<ApiLedgerEvent[]> => {
   const events = await getFromApi<ApiLedgerEventDto[]>("/raw-events");
-  return orderByTimestampDesc(events.map(normalizeLedgerEvent));
+  return orderByTimestamp(events.map(normalizeLedgerEvent));
 };
 
 export const getCorrectedEvents = async (): Promise<ApiLedgerEvent[]> => {
   const events = await getFromApi<ApiLedgerEventDto[]>("/corrected-events");
-  return orderByTimestampDesc(events.map(normalizeLedgerEvent));
+  return orderByTimestamp(events.map(normalizeLedgerEvent));
 };
 
 export const getSeedEvents = async (): Promise<ApiSeedEvent[]> => {
   const events = await getFromApi<ApiSeedEventDto[]>("/seed-events");
-  return orderByTimestampDesc(events.map(normalizeSeedEvent));
+  return orderByTimestamp(events.map(normalizeSeedEvent));
 };
