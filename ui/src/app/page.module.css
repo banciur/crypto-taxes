@@ -2,7 +2,6 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .layoutHeader {
@@ -12,7 +11,7 @@
 
 .layoutContent {
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
 }
 
 .layoutRow {

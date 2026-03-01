@@ -112,7 +112,6 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <header className={styles.layoutHeader}>
         <h1>Ledger events</h1>
       </header>
-
       <Container fluid className={styles.layoutContent}>
         <AccountNamesProvider accountNamesById={accountNamesById}>
           <UrlColumnSelectionProvider>
