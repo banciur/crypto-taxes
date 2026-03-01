@@ -3,70 +3,26 @@ import "server-only";
 import { getCorrectedEvents, getRawEvents, getSeedEvents } from "@/api/events";
 import { getSpamCorrections } from "@/api/spamCorrections";
 import type {
-  CorrectedEventCardData,
-  EventLeg,
-  LedgerEvent,
-  LedgerLeg,
   LaneItemData,
-  RawEventCardData,
-  SeedEvent,
-  SeedCorrectionItemData,
-  SpamCorrection,
-  SpamCorrectionItemData,
 } from "@/types/events";
 import type { ColumnKey } from "@/consts";
-import { getAccountName } from "@/lib/accounts";
 import { orderByTimestamp } from "@/lib/sort";
 
 type ColumnDefinition = {
   load: () => Promise<LaneItemData[]>;
 };
 
-const mapLegs = (legs: LedgerLeg[]): EventLeg[] =>
-  legs.map((leg) => ({
-    ...leg,
-    accountName: getAccountName(leg.accountChainId),
-  }));
-
-const mapRawLedgerEvent = (event: LedgerEvent): RawEventCardData => ({
-  id: event.id,
-  kind: "raw-event",
-  timestamp: event.timestamp,
-  legs: mapLegs(event.legs),
-  eventOrigin: event.eventOrigin,
-});
-
-const mapCorrectedLedgerEvent = (
-  event: LedgerEvent,
-): CorrectedEventCardData => ({
-  id: event.id,
-  kind: "corrected-event",
-  timestamp: event.timestamp,
-  eventOrigin: event.eventOrigin,
-  legs: mapLegs(event.legs),
-});
-
-const mapSeedCorrectionItem = (event: SeedEvent): SeedCorrectionItemData => ({
-  id: event.id,
-  kind: "seed-correction",
-  timestamp: event.timestamp,
-  legs: mapLegs(event.legs),
-});
-
-const mapSpamCorrectionItem = (
-  event: SpamCorrection,
-): SpamCorrectionItemData => ({
-  id: event.id,
-  kind: "spam-correction",
-  timestamp: event.timestamp,
-  eventOrigin: event.eventOrigin,
-});
-
 export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   raw: {
     load: async () => {
       const events = await getRawEvents();
-      return events.map((event: LedgerEvent) => mapRawLedgerEvent(event));
+      return events.map((event) => ({
+        id: event.id,
+        kind: "raw-event" as const,
+        timestamp: event.timestamp,
+        legs: event.legs,
+        eventOrigin: event.eventOrigin,
+      }));
     },
   },
   corrections: {
@@ -76,17 +32,29 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
         getSpamCorrections(),
       ]);
       return orderByTimestamp([
-        ...seedEvents.map((event: SeedEvent) => mapSeedCorrectionItem(event)),
-        ...spamCorrections.map((event: SpamCorrection) =>
-          mapSpamCorrectionItem(event),
-        ),
+        ...seedEvents.map((event) => ({
+          id: event.id,
+          kind: "seed-correction" as const,
+          timestamp: event.timestamp,
+          legs: event.legs,
+        })),
+        ...spamCorrections.map((event) => ({
+          ...event,
+          kind: "spam-correction" as const,
+        })),
       ]);
     },
   },
   corrected: {
     load: async () => {
       const events = await getCorrectedEvents();
-      return events.map((event: LedgerEvent) => mapCorrectedLedgerEvent(event));
+      return events.map((event) => ({
+        id: event.id,
+        kind: "corrected-event" as const,
+        timestamp: event.timestamp,
+        eventOrigin: event.eventOrigin,
+        legs: event.legs,
+      }));
     },
   },
 } as const;

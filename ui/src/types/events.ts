@@ -1,8 +1,3 @@
-/*
-Current problems with types:
-  - I think having extra EventLeg is a mistake; resolving name could be done when rendering
- */
-
 export type Account = {
   accountChainId: string;
   name: string;
@@ -45,10 +40,6 @@ export type LedgerEvent = {
   legs: LedgerLeg[];
 };
 
-export type EventLeg = LedgerLeg & {
-  accountName: string;
-};
-
 type ItemBase = {
   id: string;
   timestamp: string;
@@ -56,7 +47,7 @@ type ItemBase = {
 
 export type EventCardDisplayData = ItemBase & {
   eventOrigin: EventOrigin;
-  legs: EventLeg[];
+  legs: LedgerLeg[];
 };
 
 export type RawEventCardData = EventCardDisplayData & {
@@ -69,7 +60,7 @@ export type CorrectedEventCardData = EventCardDisplayData & {
 
 export type SeedCorrectionItemData = ItemBase & {
   kind: "seed-correction";
-  legs: EventLeg[];
+  legs: LedgerLeg[];
 };
 
 export type SpamCorrectionItemData = ItemBase & {

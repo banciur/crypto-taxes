@@ -14,7 +14,8 @@ import { clsx } from "clsx";
 import styles from "./EventCard.module.css";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
-import type { EventCardDisplayData, EventLeg } from "@/types/events";
+import { useAccountNameResolver } from "@/contexts/AccountNamesContext";
+import type { EventCardDisplayData, LedgerLeg } from "@/types/events";
 
 type EventCardProps = EventCardDisplayData & {
   isSelected?: boolean;
@@ -30,6 +31,7 @@ export function EventCard({
   onSelectionChange,
   selectionDisabled = false,
 }: EventCardProps) {
+  const resolveAccountName = useAccountNameResolver();
   const place = eventOrigin.location.toLowerCase();
   const originId = eventOrigin.externalId;
   const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
@@ -38,7 +40,7 @@ export function EventCard({
     minute: "2-digit",
     second: "2-digit",
   });
-  const legQuantityClassName = (leg: EventLeg) => {
+  const legQuantityClassName = (leg: LedgerLeg) => {
     if (leg.isFee) {
       return "text-info";
     }
@@ -86,7 +88,9 @@ export function EventCard({
               className={clsx("d-flex align-items-center gap-1", styles.leg)}
             >
               <span>{leg.assetId}</span>
-              <span title={leg.accountChainId}>{leg.accountName}</span>
+              <span title={leg.accountChainId}>
+                {resolveAccountName(leg.accountChainId)}
+              </span>
               <span
                 className={clsx("flex-shrink-0", legQuantityClassName(leg))}
               >
