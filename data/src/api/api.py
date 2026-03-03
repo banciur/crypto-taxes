@@ -31,9 +31,7 @@ class ApiAccount(StrictBaseModel):
     skip_sync: bool
 
 
-class ApiSpamCorrection(StrictBaseModel):
-    id: str
-    event_origin: EventOrigin
+class ApiSpamCorrection(Spam):
     timestamp: datetime
 
 
@@ -68,7 +66,7 @@ def _api_spam_corrections(
 
     return [
         ApiSpamCorrection(
-            id=str(records_by_origin[origin_key].id),
+            id=records_by_origin[origin_key].id,
             event_origin=records_by_origin[origin_key].event_origin,
             timestamp=matched_timestamps_by_origin[origin_key][0],
         )
