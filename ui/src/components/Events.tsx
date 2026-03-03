@@ -1,171 +1,98 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   createSpamCorrection,
   deleteSpamCorrection,
 } from "@/api/spamCorrections";
-import type { ColumnKey } from "@/consts";
-import { orderColumnKeys } from "@/consts";
-
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { Button, Col, Row, Spinner } from "react-bootstrap";
-import { LaneItem } from "@/components/LaneItem";
-import { useVisibleDay } from "@/contexts/VisibleDayContext";
-import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
-import { dayIdFor } from "@/lib/dayHash";
+import {
+  EventsActionBar,
+  type EventsActionFeedback,
+} from "@/components/EventsActionBar";
+import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
+import { eventOriginKey } from "@/lib/eventOrigin";
 import type {
+  EventOrigin,
+  EventsByTimestamp,
   LaneItemData,
   RawEventCardData,
-  SpamCorrectionItemData,
 } from "@/types/events";
 
-type EventsByDate = Record<string, Partial<Record<ColumnKey, LaneItemData[]>>>;
-
 type EventsProps = {
-  eventsByDate: EventsByDate;
-};
-
-type ActionFeedback = {
-  tone: "success" | "danger";
-  message: string;
+  eventsByTimestamp: EventsByTimestamp;
 };
 
 const isRawEvent = (item: LaneItemData): item is RawEventCardData =>
   item.kind === "raw-event";
 
-export function Events({ eventsByDate }: EventsProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const { selected } = useUrlColumnSelection();
-  const { activeDayKey, activeDaySource, setActiveDayKey } = useVisibleDay();
-  const [selectedRawEventIds, setSelectedRawEventIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+export function Events({ eventsByTimestamp }: EventsProps) {
+  const [selectedRawEventOriginKeys, setSelectedRawEventOriginKeys] = useState<
+    Set<string>
+  >(() => new Set());
   const [isMarkingSpam, setIsMarkingSpam] = useState(false);
-  const [removingSpamCorrectionId, setRemovingSpamCorrectionId] = useState<
-    string | null
-  >(null);
-  const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
+  const [isRemovingSpamCorrection, setIsRemovingSpamCorrection] =
+    useState(false);
+  const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
 
-  const dates = useMemo(() => Object.keys(eventsByDate), [eventsByDate]);
-  const orderedSelectedColumns = useMemo(
-    () => orderColumnKeys(selected),
-    [selected],
-  );
-  const dateRowColumnSpan = 12 / orderedSelectedColumns.length;
-  const hasRawColumn = orderedSelectedColumns.includes("raw");
-  const rawEventsById = useMemo(() => {
+  const rawEventsByOriginKey = useMemo(() => {
     const items = new Map<string, RawEventCardData>();
 
-    for (const columnsByDate of Object.values(eventsByDate)) {
-      for (const columnItems of Object.values(columnsByDate)) {
+    for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
+      for (const columnItems of Object.values(columnsByTimestamp)) {
         if (!columnItems) {
           continue;
         }
 
         for (const item of columnItems) {
           if (isRawEvent(item)) {
-            items.set(item.id, item);
+            items.set(eventOriginKey(item.eventOrigin), item);
           }
         }
       }
     }
 
     return items;
-  }, [eventsByDate]);
+  }, [eventsByTimestamp]);
+
   const selectedRawEvents = useMemo(
     () =>
-      Array.from(selectedRawEventIds)
-        .map((eventId) => rawEventsById.get(eventId))
+      Array.from(selectedRawEventOriginKeys)
+        .map((originKey) => rawEventsByOriginKey.get(originKey))
         .filter((item): item is RawEventCardData => item !== undefined),
-    [rawEventsById, selectedRawEventIds],
+    [rawEventsByOriginKey, selectedRawEventOriginKeys],
   );
-  const hasPendingAction = isMarkingSpam || removingSpamCorrectionId !== null;
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const virtualizer = useVirtualizer({
-    count: dates.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => 110,
-    gap: 16,
-    overscan: 5,
-    onChange: (instance, sync) => {
-      if (sync) return;
-      updateVisibleDay(instance.getVirtualItems());
-    },
-  });
-
-  const updateVisibleDay = useCallback(
-    (items: ReturnType<typeof virtualizer.getVirtualItems>) => {
-      const scrollElement = containerRef.current;
-      if (!scrollElement || items.length === 0) return;
-
-      const scrollTop = scrollElement.scrollTop;
-      let visibleItem = items.find(
-        (item) => item.start <= scrollTop && item.end > scrollTop,
-      );
-
-      if (!visibleItem) {
-        if (scrollTop <= 0) {
-          visibleItem = items[0];
-        } else {
-          visibleItem = items.find((item) => item.start > scrollTop);
-        }
-      }
-
-      if (!visibleItem) {
-        visibleItem = items[items.length - 1];
-      }
-
-      const dateKey = dates[visibleItem.index];
-      if (!dateKey) return;
-      setActiveDayKey(dateKey, "scroll");
-    },
-    [dates, setActiveDayKey, virtualizer],
-  );
+  const isSpamMarkerChangePending = isMarkingSpam || isRemovingSpamCorrection;
 
   useEffect(() => {
-    setSelectedRawEventIds((current) => {
+    setSelectedRawEventOriginKeys((current) => {
       if (current.size === 0) {
         return current;
       }
 
       const next = new Set(
-        Array.from(current).filter((eventId) => rawEventsById.has(eventId)),
+        Array.from(current).filter((originKey) =>
+          rawEventsByOriginKey.has(originKey),
+        ),
       );
       if (next.size === current.size) {
         return current;
       }
       return next;
     });
-  }, [rawEventsById]);
+  }, [rawEventsByOriginKey]);
 
-  useEffect(() => {
-    if (
-      !activeDayKey ||
-      activeDaySource === "scroll" ||
-      !containerRef.current
-    ) {
-      return;
-    }
-
-    const index = dates.findIndex((element) => element === activeDayKey);
-    if (index === -1) return;
-    virtualizer.scrollToIndex(index, { align: "start" });
-  }, [activeDayKey, activeDaySource, dates, virtualizer]);
-
-  const items = virtualizer.getVirtualItems();
-
-  const handleRawSelectionChange = useCallback(
-    (eventId: string, isSelected: boolean) => {
-      setFeedback(null);
-      setSelectedRawEventIds((current) => {
+  const handleToggleRawEventSelection = useCallback(
+    (eventOrigin: EventOrigin) => {
+      const originKey = eventOriginKey(eventOrigin);
+      setSelectedRawEventOriginKeys((current) => {
         const next = new Set(current);
-        if (isSelected) {
-          next.add(eventId);
+
+        if (next.has(originKey)) {
+          next.delete(originKey);
         } else {
-          next.delete(eventId);
+          next.add(originKey);
         }
         return next;
       });
@@ -200,7 +127,7 @@ export function Events({ eventsByDate }: EventsProps) {
       return;
     }
 
-    setSelectedRawEventIds(new Set());
+    setSelectedRawEventOriginKeys(new Set());
     setFeedback({
       tone: "success",
       message:
@@ -209,12 +136,12 @@ export function Events({ eventsByDate }: EventsProps) {
   }, [selectedRawEvents]);
 
   const handleRemoveSpamCorrection = useCallback(
-    async (item: SpamCorrectionItemData) => {
+    async (eventOrigin: EventOrigin) => {
       setFeedback(null);
-      setRemovingSpamCorrectionId(item.id);
+      setIsRemovingSpamCorrection(true);
 
       try {
-        await deleteSpamCorrection(item.eventOrigin);
+        await deleteSpamCorrection(eventOrigin);
         setFeedback({
           tone: "success",
           message:
@@ -228,7 +155,7 @@ export function Events({ eventsByDate }: EventsProps) {
             "Removing the spam marker failed. Check the console for details.",
         });
       } finally {
-        setRemovingSpamCorrectionId(null);
+        setIsRemovingSpamCorrection(false);
       }
     },
     [],
@@ -236,114 +163,21 @@ export function Events({ eventsByDate }: EventsProps) {
 
   return (
     <div className="d-flex h-100 w-100 flex-column">
-      {(hasRawColumn || feedback) && (
-        <div className="flex-shrink-0 border-bottom bg-body px-3 py-2">
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            {hasRawColumn ? (
-              <>
-                <span className="small text-muted">
-                  {selectedRawEvents.length === 0
-                    ? "Select raw events to create spam markers."
-                    : `${selectedRawEvents.length} raw event${selectedRawEvents.length === 1 ? "" : "s"} selected.`}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="warning"
-                  disabled={selectedRawEvents.length === 0 || hasPendingAction}
-                  onClick={handleMarkSelectedAsSpam}
-                >
-                  {isMarkingSpam ? (
-                    <>
-                      <Spinner size="sm" className="me-2" />
-                      Marking...
-                    </>
-                  ) : (
-                    "Mark as spam"
-                  )}
-                </Button>
-              </>
-            ) : null}
-            {feedback ? (
-              <span
-                className={
-                  feedback.tone === "success"
-                    ? "small text-success"
-                    : "small text-danger"
-                }
-                role="status"
-              >
-                {feedback.message}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      )}
-      <div
-        ref={containerRef}
+      <EventsActionBar
+        selectedRawEventCount={selectedRawEvents.length}
+        isRemovingSpamCorrection={isRemovingSpamCorrection}
+        isMarkingSpam={isMarkingSpam}
+        feedback={feedback}
+        onMarkSelectedAsSpam={handleMarkSelectedAsSpam}
+      />
+      <VirtualizedDateSections
+        eventsByTimestamp={eventsByTimestamp}
+        selectedRawEventOriginKeys={selectedRawEventOriginKeys}
+        isSpamMarkerChangePending={isSpamMarkerChangePending}
         className="flex-grow-1"
-        style={{
-          width: "100%",
-          overflowY: "auto",
-        }}
-      >
-        <div
-          style={{
-            height: `${virtualizer.getTotalSize()}px`,
-            width: "100%",
-            position: "relative",
-          }}
-        >
-          {items.map((virtualRow) => {
-            const dateKey = dates[virtualRow.index];
-            return (
-              <Row
-                key={dateKey}
-                id={dayIdFor(dateKey)}
-                data-index={virtualRow.index}
-                ref={virtualizer.measureElement}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-              >
-                <Col>
-                  <h5>{dateKey}</h5>
-                  <Row>
-                    {orderedSelectedColumns.map((columnKey) => (
-                      <Col
-                        xs={dateRowColumnSpan}
-                        className="d-flex flex-column gap-2"
-                        key={`row-${virtualRow.index}-${columnKey}`}
-                      >
-                        {eventsByDate[dateKey][columnKey]?.map((item) => (
-                          <LaneItem
-                            key={item.id}
-                            item={item}
-                            isSelected={selectedRawEventIds.has(item.id)}
-                            rawSelectionDisabled={hasPendingAction}
-                            onRawSelectionChange={(isSelected) =>
-                              handleRawSelectionChange(item.id, isSelected)
-                            }
-                            onRemoveSpamCorrection={handleRemoveSpamCorrection}
-                            spamActionDisabled={hasPendingAction}
-                            isRemovingSpamCorrection={
-                              removingSpamCorrectionId === item.id
-                            }
-                          />
-                        ))}
-                      </Col>
-                    ))}
-                  </Row>
-                </Col>
-              </Row>
-            );
-          })}
-        </div>
-      </div>
+        onToggleRawEventSelection={handleToggleRawEventSelection}
+        onRemoveSpamCorrection={handleRemoveSpamCorrection}
+      />
     </div>
   );
 }

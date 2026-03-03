@@ -3,42 +3,40 @@
 import { EventCard } from "@/components/EventCard";
 import { SeedCorrectionItem } from "@/components/SeedCorrectionItem";
 import { SpamCorrectionItem } from "@/components/SpamCorrectionItem";
-import type { LaneItemData, SpamCorrectionItemData } from "@/types/events";
+import type { EventOrigin, LaneItemData } from "@/types/events";
 
 type LaneItemProps = {
   item: LaneItemData;
   isSelected: boolean;
-  rawSelectionDisabled: boolean;
-  onRawSelectionChange: (isSelected: boolean) => void;
-  onRemoveSpamCorrection: (item: SpamCorrectionItemData) => void;
-  spamActionDisabled: boolean;
-  isRemovingSpamCorrection: boolean;
+  isSpamMarkerChangePending: boolean;
+  onToggleRawEventSelection: (eventOrigin: EventOrigin) => void;
+  onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
 };
 
 export function LaneItem({
   item,
   isSelected,
-  rawSelectionDisabled,
-  onRawSelectionChange,
+  isSpamMarkerChangePending,
+  onToggleRawEventSelection,
   onRemoveSpamCorrection,
-  spamActionDisabled,
-  isRemovingSpamCorrection,
 }: LaneItemProps) {
   switch (item.kind) {
     case "raw-event":
       return (
         <EventCard
+          id={item.id}
           timestamp={item.timestamp}
           eventOrigin={item.eventOrigin}
           legs={item.legs}
           isSelected={isSelected}
-          selectionDisabled={rawSelectionDisabled}
-          onSelectionChange={onRawSelectionChange}
+          selectionDisabled={isSpamMarkerChangePending}
+          onSelectionChange={() => onToggleRawEventSelection(item.eventOrigin)}
         />
       );
     case "corrected-event":
       return (
         <EventCard
+          id={item.id}
           timestamp={item.timestamp}
           eventOrigin={item.eventOrigin}
           legs={item.legs}
@@ -51,9 +49,8 @@ export function LaneItem({
         <SpamCorrectionItem
           timestamp={item.timestamp}
           eventOrigin={item.eventOrigin}
-          isRemoving={isRemovingSpamCorrection}
-          actionDisabled={spamActionDisabled}
-          onRemove={() => onRemoveSpamCorrection(item)}
+          actionDisabled={isSpamMarkerChangePending}
+          onRemove={() => onRemoveSpamCorrection(item.eventOrigin)}
         />
       );
   }
