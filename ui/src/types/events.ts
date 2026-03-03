@@ -1,3 +1,5 @@
+import type { ColumnKey } from "@/consts";
+
 export type Account = {
   accountChainId: string;
   name: string;
@@ -73,3 +75,8 @@ export type LaneItemData =
   | CorrectedEventCardData
   | SeedCorrectionItemData
   | SpamCorrectionItemData;
+
+export type EventsByDate = Record<
+  string,
+  Partial<Record<ColumnKey, LaneItemData[]>>
+>;
