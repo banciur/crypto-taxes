@@ -7,28 +7,18 @@ from fastapi import Depends, FastAPI, Request, Response
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from accounts import AccountRegistry
+from accounts import AccountChainRecord, AccountRegistry
 from api.dependencies import (
     get_corrected_events_repository,
     get_raw_events_repository,
     get_seed_events_repository,
     get_spam_correction_repository,
 )
-from config import ACCOUNTS_PATH, CORRECTIONS_DB_PATH, DB_PATH
+from config import CORRECTIONS_DB_PATH, DB_PATH
 from db.corrections import SpamCorrectionRepository
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
 from domain.correction import SeedEvent, Spam
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent
-from pydantic_base import StrictBaseModel
-
-
-# Those classes might be redundant or moved somewhere
-class ApiAccount(StrictBaseModel):
-    account_chain_id: str
-    name: str
-    chain: str
-    address: str
-    skip_sync: bool
 
 
 class ApiSpamCorrection(Spam):
@@ -128,19 +118,8 @@ def create_app(
         return sr.list()
 
     @app.get("/accounts")
-    def get_accounts() -> list[ApiAccount]:
-        registry = AccountRegistry.from_path(ACCOUNTS_PATH)
-        records = sorted(registry.records(), key=lambda record: record.account_chain_id)
-        return [
-            ApiAccount(
-                account_chain_id=record.account_chain_id,
-                name=record.name,
-                chain=record.chain,
-                address=record.address,
-                skip_sync=record.skip_sync,
-            )
-            for record in records
-        ]
+    def get_accounts() -> list[AccountChainRecord]:
+        return AccountRegistry.from_path().records()
 
     @app.get("/spam-corrections")
     def get_spam_corrections(

@@ -1,36 +1,52 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+from pydantic import ConfigDict, field_validator
+
 from config import ACCOUNTS_PATH
 from domain.ledger import AccountChainId, ChainId, WalletAddress
+from pydantic_base import StrictBaseModel
 
 CHAIN_ALIASES: dict[str, str] = {
     "ethereum": "eth",
 }
 
 
-@dataclass(frozen=True)
-class AccountConfig:
+class AccountBase(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
     name: str
     address: WalletAddress
-    chains: frozenset[ChainId]
     skip_sync: bool
+
+    @field_validator("address", mode="before")
+    @classmethod
+    def _normalize_address_value(cls, value: object) -> WalletAddress:
+        if not isinstance(value, str):
+            raise TypeError("address must be a string")
+        return _normalize_address(value)
+
+
+class AccountConfig(AccountBase):
+    chains: frozenset[ChainId]
+
+    @field_validator("chains", mode="before")
+    @classmethod
+    def _normalize_chains(cls, value: object) -> frozenset[ChainId]:
+        if not isinstance(value, list | set | frozenset | tuple):
+            raise TypeError("chains must be a list, tuple, or set of chains")
+        return frozenset(normalize_chain(str(chain)) for chain in value)
 
     def account_chain_id_for(self, chain: ChainId) -> AccountChainId:
         return account_chain_id_for(chain=chain, address=self.address)
 
 
-@dataclass(frozen=True)
-class AccountChainRecord:
+class AccountChainRecord(AccountBase):
     account_chain_id: AccountChainId
-    name: str
     chain: ChainId
-    address: WalletAddress
-    skip_sync: bool
 
 
 def normalize_chain(chain: str | ChainId) -> ChainId:
@@ -59,34 +75,11 @@ def load_accounts(path: Path = ACCOUNTS_PATH) -> list[AccountConfig]:
     addresses_seen: set[WalletAddress] = set()
     accounts: list[AccountConfig] = []
     for entry in payload:
-        if not isinstance(entry, dict):
-            raise ValueError("Each account entry must be an object.")
-        name = entry.get("name")
-        address_raw = entry.get("address")
-        chains_raw = entry.get("chains")
-        skip_sync = entry.get("skip_sync")
-        if (
-            not isinstance(name, str)
-            or not isinstance(address_raw, str)
-            or not isinstance(chains_raw, list)
-            or not isinstance(skip_sync, bool)
-        ):
-            raise ValueError(
-                "Each account entry must include 'name' (string), 'address' (string), 'chains' (list), and 'skip_sync' (bool)."
-            )
-        address = _normalize_address(address_raw)
-        if address in addresses_seen:
-            raise ValueError(f"Duplicate address {address} in accounts file.")
-        addresses_seen.add(address)
-
-        accounts.append(
-            AccountConfig(
-                name=name,
-                address=address,
-                chains=frozenset(normalize_chain(str(chain)) for chain in chains_raw),
-                skip_sync=skip_sync,
-            )
-        )
+        account = AccountConfig.model_validate(entry)
+        if account.address in addresses_seen:
+            raise ValueError(f"Duplicate address {account.address} in accounts file.")
+        addresses_seen.add(account.address)
+        accounts.append(account)
 
     return accounts
 
