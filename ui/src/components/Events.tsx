@@ -14,19 +14,19 @@ import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
 import { eventOriginKey } from "@/lib/eventOrigin";
 import type {
   EventOrigin,
-  EventsByDate,
+  EventsByTimestamp,
   LaneItemData,
   RawEventCardData,
 } from "@/types/events";
 
 type EventsProps = {
-  eventsByDate: EventsByDate;
+  eventsByTimestamp: EventsByTimestamp;
 };
 
 const isRawEvent = (item: LaneItemData): item is RawEventCardData =>
   item.kind === "raw-event";
 
-export function Events({ eventsByDate }: EventsProps) {
+export function Events({ eventsByTimestamp }: EventsProps) {
   const [selectedRawEventOriginKeys, setSelectedRawEventOriginKeys] = useState<
     Set<string>
   >(() => new Set());
@@ -34,11 +34,12 @@ export function Events({ eventsByDate }: EventsProps) {
   const [isRemovingSpamCorrection, setIsRemovingSpamCorrection] =
     useState(false);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
+
   const rawEventsByOriginKey = useMemo(() => {
     const items = new Map<string, RawEventCardData>();
 
-    for (const columnsByDate of Object.values(eventsByDate)) {
-      for (const columnItems of Object.values(columnsByDate)) {
+    for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
+      for (const columnItems of Object.values(columnsByTimestamp)) {
         if (!columnItems) {
           continue;
         }
@@ -52,7 +53,8 @@ export function Events({ eventsByDate }: EventsProps) {
     }
 
     return items;
-  }, [eventsByDate]);
+  }, [eventsByTimestamp]);
+
   const selectedRawEvents = useMemo(
     () =>
       Array.from(selectedRawEventOriginKeys)
@@ -60,6 +62,7 @@ export function Events({ eventsByDate }: EventsProps) {
         .filter((item): item is RawEventCardData => item !== undefined),
     [rawEventsByOriginKey, selectedRawEventOriginKeys],
   );
+
   const isSpamMarkerChangePending = isMarkingSpam || isRemovingSpamCorrection;
 
   useEffect(() => {
@@ -168,7 +171,7 @@ export function Events({ eventsByDate }: EventsProps) {
         onMarkSelectedAsSpam={handleMarkSelectedAsSpam}
       />
       <VirtualizedDateSections
-        eventsByDate={eventsByDate}
+        eventsByTimestamp={eventsByTimestamp}
         selectedRawEventOriginKeys={selectedRawEventOriginKeys}
         isSpamMarkerChangePending={isSpamMarkerChangePending}
         className="flex-grow-1"

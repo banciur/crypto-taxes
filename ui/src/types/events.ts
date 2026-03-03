@@ -76,7 +76,7 @@ export type LaneItemData =
   | SeedCorrectionItemData
   | SpamCorrectionItemData;
 
-export type EventsByDate = Record<
+export type EventsByTimestamp = Record<
   string,
   Partial<Record<ColumnKey, LaneItemData[]>>
 >;

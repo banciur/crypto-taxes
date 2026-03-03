@@ -4,15 +4,31 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { clsx } from "clsx";
-import { Col, Row } from "react-bootstrap";
 
 import { EventDateSection } from "@/components/EventDateSection";
 import { useVisibleDay } from "@/contexts/VisibleDayContext";
 import { dayIdFor } from "@/lib/dayHash";
-import type { EventOrigin, EventsByDate } from "@/types/events";
+import { dayKeyForTimestampBucket } from "@/lib/timestampBuckets";
+import type { EventOrigin, EventsByTimestamp } from "@/types/events";
+import { Col, Row } from "react-bootstrap";
+
+type DayHeaderRow = {
+  kind: "day-header";
+  key: string;
+  dayKey: string;
+};
+
+type EventBucketRow = {
+  kind: "event-bucket";
+  key: string;
+  dayKey: string;
+  itemsByColumn: EventsByTimestamp[string];
+};
+
+type TimelineRow = DayHeaderRow | EventBucketRow;
 
 type VirtualizedDateSectionsProps = {
-  eventsByDate: EventsByDate;
+  eventsByTimestamp: EventsByTimestamp;
   selectedRawEventOriginKeys: ReadonlySet<string>;
   isSpamMarkerChangePending: boolean;
   className?: string;
@@ -21,7 +37,7 @@ type VirtualizedDateSectionsProps = {
 };
 
 export function VirtualizedDateSections({
-  eventsByDate,
+  eventsByTimestamp,
   selectedRawEventOriginKeys,
   isSpamMarkerChangePending,
   className,
@@ -30,7 +46,38 @@ export function VirtualizedDateSections({
 }: VirtualizedDateSectionsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { activeDayKey, activeDaySource, setActiveDayKey } = useVisibleDay();
-  const dates = useMemo(() => Object.keys(eventsByDate), [eventsByDate]);
+  const { rows, firstRowIndexByDay } = useMemo(() => {
+    const nextRows: TimelineRow[] = [];
+    const nextFirstRowIndexByDay = new Map<string, number>();
+    let previousDayKey: string | null = null;
+    const orderedTimestampBuckets = Object.keys(eventsByTimestamp).sort(
+      (a, b) => Number(b) - Number(a),
+    );
+
+    for (const timestampBucket of orderedTimestampBuckets) {
+      const itemsByColumn = eventsByTimestamp[timestampBucket];
+      const dayKey = dayKeyForTimestampBucket(timestampBucket);
+
+      if (dayKey !== previousDayKey) {
+        nextFirstRowIndexByDay.set(dayKey, nextRows.length);
+        nextRows.push({
+          kind: "day-header",
+          key: `day-${dayKey}`,
+          dayKey,
+        });
+        previousDayKey = dayKey;
+      }
+
+      nextRows.push({
+        kind: "event-bucket",
+        key: `bucket-${timestampBucket}`,
+        dayKey,
+        itemsByColumn,
+      });
+    }
+
+    return { rows: nextRows, firstRowIndexByDay: nextFirstRowIndexByDay };
+  }, [eventsByTimestamp]);
 
   const updateVisibleDay = useCallback(
     (items: Array<{ start: number; end: number; index: number }>) => {
@@ -54,18 +101,18 @@ export function VirtualizedDateSections({
         visibleItem = items[items.length - 1];
       }
 
-      const dateKey = dates[visibleItem.index];
-      if (!dateKey) return;
-      setActiveDayKey(dateKey, "scroll");
+      const row = rows[visibleItem.index];
+      if (!row) return;
+      setActiveDayKey(row.dayKey, "scroll");
     },
-    [dates, setActiveDayKey],
+    [rows, setActiveDayKey],
   );
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
-    count: dates.length,
+    count: rows.length,
     getScrollElement: () => containerRef.current,
-    estimateSize: () => 110,
+    estimateSize: (index) => (rows[index]?.kind === "day-header" ? 28 : 110),
     gap: 16,
     overscan: 5,
     onChange: (instance, sync) => {
@@ -83,10 +130,10 @@ export function VirtualizedDateSections({
       return;
     }
 
-    const index = dates.findIndex((element) => element === activeDayKey);
-    if (index === -1) return;
+    const index = firstRowIndexByDay.get(activeDayKey);
+    if (index === undefined) return;
     virtualizer.scrollToIndex(index, { align: "start" });
-  }, [activeDayKey, activeDaySource, dates, virtualizer]);
+  }, [activeDayKey, activeDaySource, firstRowIndexByDay, virtualizer]);
 
   const items = virtualizer.getVirtualItems();
 
@@ -99,15 +146,14 @@ export function VirtualizedDateSections({
         }}
       >
         {items.map((virtualRow) => {
-          const dateKey = dates[virtualRow.index];
-          if (!dateKey) {
+          const row = rows[virtualRow.index];
+          if (!row) {
             return null;
           }
 
           return (
             <Row
-              key={dateKey}
-              id={dayIdFor(dateKey)}
+              key={row.key}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
               className="w-100 position-absolute top-0 start-0"
@@ -115,16 +161,19 @@ export function VirtualizedDateSections({
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <Col>
+              {row.kind === "day-header" ? (
+                <Col id={dayIdFor(row.dayKey)} className="fw-semibold">
+                  {row.dayKey}
+                </Col>
+              ) : (
                 <EventDateSection
-                  dateKey={dateKey}
-                  itemsByColumn={eventsByDate[dateKey]}
+                  itemsByColumn={row.itemsByColumn}
                   selectedRawEventOriginKeys={selectedRawEventOriginKeys}
                   isSpamMarkerChangePending={isSpamMarkerChangePending}
                   onToggleRawEventSelection={onToggleRawEventSelection}
                   onRemoveSpamCorrection={onRemoveSpamCorrection}
                 />
-              </Col>
+              )}
             </Row>
           );
         })}

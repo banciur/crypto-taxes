@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "prettier": "prettier . --write",
+    "prettier": "prettier . --list-different --write",
     "lint": "eslint",
     "types": "tsc --noEmit"
   },

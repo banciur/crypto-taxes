@@ -2,7 +2,6 @@ First stage: compute German taxes
 
 TODO: Clean UI code after spam implementation.
   - Can components accept interfaces? Different ones for the virtualized list different ones for the items.
-  - Higher resolution for dates in the list. Keep scrolling setting date to whole days.
   - Review hierarchy of items in the list.
   - Review naming of components.
 

@@ -2,11 +2,15 @@ import { performance } from "node:perf_hooks";
 
 import { Col, Container, Row } from "react-bootstrap";
 
-import { ColumnKey, COLUMNS_PARAM_NAME } from "@/consts";
+import { COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
 import { loadAccountNamesById } from "@/lib/accounts";
+import {
+  dayKeyForTimestampBucket,
+  timestampBucketKeyFor,
+} from "@/lib/timestampBuckets";
 import { COLUMN_DEFINITIONS } from "@/consts.server";
-import type { LaneItemData } from "@/types/events";
+import type { EventsByTimestamp } from "@/types/events";
 
 import styles from "./page.module.css";
 import { AccountNamesProvider } from "@/contexts/AccountNamesContext";
@@ -16,9 +20,6 @@ import { DateChooser } from "@/components/DateChooser";
 import { Events } from "@/components/Events";
 import { VisibleDayProvider } from "@/contexts/VisibleDayContext";
 
-const dateKeyFor = (timestamp: string) =>
-  new Date(timestamp).toISOString().slice(0, 10);
-
 const formatDuration = (durationMs: number) => {
   if (durationMs < 1000) {
     return `${Math.round(durationMs)} ms`;
@@ -26,20 +27,22 @@ const formatDuration = (durationMs: number) => {
   return `${(durationMs / 1000).toFixed(2)} s`;
 };
 
-const groupEventsByDate = <T extends { timestamp: string }>(events: T[]) => {
-  const eventsByDate: Record<string, T[]> = {};
+const groupEventsByTimestamp = <T extends { timestamp: string }>(
+  events: T[],
+) => {
+  const eventsByTimestamp: Record<string, T[]> = {};
 
   for (const event of events) {
-    const dateKey = dateKeyFor(event.timestamp);
-    const bucket = eventsByDate[dateKey];
+    const timestampBucket = timestampBucketKeyFor(event.timestamp);
+    const bucket = eventsByTimestamp[timestampBucket];
     if (bucket) {
       bucket.push(event);
     } else {
-      eventsByDate[dateKey] = [event];
+      eventsByTimestamp[timestampBucket] = [event];
     }
   }
 
-  return eventsByDate;
+  return eventsByTimestamp;
 };
 
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -72,39 +75,41 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   // Transforming loadedColumns into a structure that matches how the UI renders.
-  const unorderedEventsByDate = loadedColumns.reduce(
+  const unorderedEventsByTimestamp = loadedColumns.reduce(
     (acc, { key, events }) => {
-      const groupedByDate = groupEventsByDate(events);
-      for (const [dateKey, dateEvents] of Object.entries(groupedByDate)) {
-        const bucket = acc[dateKey];
+      const groupedByTimestamp = groupEventsByTimestamp(events);
+      for (const [timestampBucket, bucketEvents] of Object.entries(
+        groupedByTimestamp,
+      )) {
+        const bucket = acc[timestampBucket];
         if (bucket) {
-          bucket[key] = dateEvents;
+          bucket[key] = bucketEvents;
         } else {
-          acc[dateKey] = { [key]: dateEvents };
+          acc[timestampBucket] = { [key]: bucketEvents };
         }
       }
       return acc;
     },
-    {} as Record<string, Partial<Record<ColumnKey, LaneItemData[]>>>,
+    {} as EventsByTimestamp,
   );
 
-  const orderedDates = Object.keys(unorderedEventsByDate).sort((a, b) =>
-    b.localeCompare(a),
+  const orderedTimestampBuckets = Object.keys(unorderedEventsByTimestamp).sort(
+    (a, b) => Number(b) - Number(a),
   );
 
-  const eventsByDate: Record<
-    string,
-    Partial<Record<ColumnKey, LaneItemData[]>>
-  > = {};
+  const eventsByTimestamp: EventsByTimestamp = {};
   const eventCountsByDate: Record<string, number> = {};
 
-  for (const dateKey of orderedDates) {
-    const dateEvents = unorderedEventsByDate[dateKey];
-    eventsByDate[dateKey] = dateEvents;
-    eventCountsByDate[dateKey] = selectedColumns.reduce(
-      (total, columnKey) => total + (dateEvents[columnKey]?.length ?? 0),
+  for (const timestampBucket of orderedTimestampBuckets) {
+    const bucketEvents = unorderedEventsByTimestamp[timestampBucket];
+    const dayKey = dayKeyForTimestampBucket(timestampBucket);
+    const eventCount = selectedColumns.reduce(
+      (total, columnKey) => total + (bucketEvents[columnKey]?.length ?? 0),
       0,
     );
+
+    eventsByTimestamp[timestampBucket] = bucketEvents;
+    eventCountsByDate[dayKey] = (eventCountsByDate[dayKey] ?? 0) + eventCount;
   }
 
   return (
@@ -122,7 +127,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                   <DateChooser dates={eventCountsByDate} />
                 </Col>
                 <Col xs={10} className={styles.layoutColumn}>
-                  <Events eventsByDate={eventsByDate} />
+                  <Events eventsByTimestamp={eventsByTimestamp} />
                 </Col>
               </Row>
             </VisibleDayProvider>

@@ -2,17 +2,20 @@
 
 import { useMemo } from "react";
 
-import { Col, Row } from "react-bootstrap";
+import { Col } from "react-bootstrap";
 
 import { LaneItem } from "@/components/LaneItem";
 import { orderColumnKeys } from "@/consts";
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
 import { eventOriginKey } from "@/lib/eventOrigin";
-import type { EventOrigin, EventsByDate, LaneItemData } from "@/types/events";
+import type {
+  EventOrigin,
+  EventsByTimestamp,
+  LaneItemData,
+} from "@/types/events";
 
 type EventDateSectionProps = {
-  dateKey: string;
-  itemsByColumn: EventsByDate[string];
+  itemsByColumn: EventsByTimestamp[string];
   selectedRawEventOriginKeys: ReadonlySet<string>;
   isSpamMarkerChangePending: boolean;
   onToggleRawEventSelection: (eventOrigin: EventOrigin) => void;
@@ -27,7 +30,6 @@ const isSelectedRawEvent = (
   selectedRawEventOriginKeys.has(eventOriginKey(item.eventOrigin));
 
 export function EventDateSection({
-  dateKey,
   itemsByColumn,
   selectedRawEventOriginKeys,
   isSpamMarkerChangePending,
@@ -42,30 +44,24 @@ export function EventDateSection({
 
   return (
     <>
-      <h5>{dateKey}</h5>
-      <Row>
-        {orderedSelectedColumns.map((columnKey) => (
-          <Col
-            xs={12 / orderedSelectedColumns.length}
-            className="d-flex flex-column gap-2"
-            key={`section-${dateKey}-${columnKey}`}
-          >
-            {itemsByColumn[columnKey]?.map((item) => (
-              <LaneItem
-                key={item.id}
-                item={item}
-                isSelected={isSelectedRawEvent(
-                  item,
-                  selectedRawEventOriginKeys,
-                )}
-                isSpamMarkerChangePending={isSpamMarkerChangePending}
-                onToggleRawEventSelection={onToggleRawEventSelection}
-                onRemoveSpamCorrection={onRemoveSpamCorrection}
-              />
-            ))}
-          </Col>
-        ))}
-      </Row>
+      {orderedSelectedColumns.map((columnKey) => (
+        <Col
+          xs={12 / orderedSelectedColumns.length}
+          className="d-flex flex-column gap-2"
+          key={`section-${columnKey}`}
+        >
+          {itemsByColumn[columnKey]?.map((item) => (
+            <LaneItem
+              key={item.id}
+              item={item}
+              isSelected={isSelectedRawEvent(item, selectedRawEventOriginKeys)}
+              isSpamMarkerChangePending={isSpamMarkerChangePending}
+              onToggleRawEventSelection={onToggleRawEventSelection}
+              onRemoveSpamCorrection={onRemoveSpamCorrection}
+            />
+          ))}
+        </Col>
+      ))}
     </>
   );
 }
