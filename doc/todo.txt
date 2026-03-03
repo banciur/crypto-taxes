@@ -1,10 +1,5 @@
 First stage: compute German taxes
 
-TODO: Clean UI code after spam implementation.
-  - Can components accept interfaces? Different ones for the virtualized list different ones for the items.
-  - Review hierarchy of items in the list.
-  - Review naming of components.
-
 TODO: apy.py probably needf few changes, read comment and maybe split into main api and concerns
 TODO: Need automation to rerun everything from the UI
   - TODO: Why I have to restart UI or API to see new data. There is some caching on the backend. On the SQLAclchemy level sqlalchemy.engine.Engine [cached since 5818s ago] ()
@@ -15,7 +10,12 @@ TODO: Review Moralis importer after wallets structure changes. This transaction 
 TODO: Review Kraken importer after event type removal and wallets structure changes
 TODO: Adjust readme / agents md instructions. All files except top level should be readme and add instruction to always read one in ui or data. And extra instruction to read readmes in the path "up" to get context. Go through existing README files. Do I need as code is self-documenting?
 TODO: Coinbase importer
-TODO: Corrections, combine and/or modify events (complicated transfers etc)
+TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
+  - Events component is still messy, divide more?, put logic somewhere else. Internal structures are too complicated etc.
+  - Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs composition. Still, due to structure, inheritance seems ok.
+  - Review the hierarchy of types. Hierarchy from types/events ItemBase to LaneItemData vs EventDateSection.
+  - Review names of components don't like VirtualizedDateSections and others.
+
 TODO: I'm not sure about the corrections directory and which code should go where.
 
 Review the order of todoes
