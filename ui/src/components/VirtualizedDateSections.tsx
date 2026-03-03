@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { clsx } from "clsx";
 import { Col, Row } from "react-bootstrap";
 
 import { EventDateSection } from "@/components/EventDateSection";
@@ -14,6 +15,7 @@ type VirtualizedDateSectionsProps = {
   eventsByDate: EventsByDate;
   selectedRawEventOriginKeys: ReadonlySet<string>;
   isSpamMarkerChangePending: boolean;
+  className?: string;
   onToggleRawEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
 };
@@ -22,6 +24,7 @@ export function VirtualizedDateSections({
   eventsByDate,
   selectedRawEventOriginKeys,
   isSpamMarkerChangePending,
+  className,
   onToggleRawEventSelection,
   onRemoveSpamCorrection,
 }: VirtualizedDateSectionsProps) {
@@ -88,7 +91,7 @@ export function VirtualizedDateSections({
   const items = virtualizer.getVirtualItems();
 
   return (
-    <div ref={containerRef} className="flex-grow-1 w-100 overflow-y-auto">
+    <div ref={containerRef} className={clsx("overflow-y-auto", className)}>
       <div
         className="w-100 position-relative"
         style={{

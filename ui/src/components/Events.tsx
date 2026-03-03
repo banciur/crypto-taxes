@@ -171,6 +171,7 @@ export function Events({ eventsByDate }: EventsProps) {
         eventsByDate={eventsByDate}
         selectedRawEventOriginKeys={selectedRawEventOriginKeys}
         isSpamMarkerChangePending={isSpamMarkerChangePending}
+        className="flex-grow-1"
         onToggleRawEventSelection={handleToggleRawEventSelection}
         onRemoveSpamCorrection={handleRemoveSpamCorrection}
       />

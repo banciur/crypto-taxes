@@ -4,7 +4,6 @@ TODO: Clean UI code after spam implementation.
   - Can components accept interfaces? Different ones for the virtualized list different ones for the items.
   - Higher resolution for dates in the list. Keep scrolling setting date to whole days.
   - Review hierarchy of items in the list.
-  - Set classname on VirtualizedDateSections.
   - Review naming of components.
 
 TODO: apy.py probably needf few changes, read comment and maybe split into main api and concerns
