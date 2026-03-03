@@ -6,8 +6,11 @@ import {
   createSpamCorrection,
   deleteSpamCorrection,
 } from "@/api/spamCorrections";
+import {
+  EventsActionBar,
+  type EventsActionFeedback,
+} from "@/components/EventsActionBar";
 import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
-import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
 import { eventOriginKey } from "@/lib/eventOrigin";
 import type {
   EventOrigin,
@@ -16,31 +19,21 @@ import type {
   RawEventCardData,
 } from "@/types/events";
 
-import { Button, Spinner } from "react-bootstrap";
-
 type EventsProps = {
   eventsByDate: EventsByDate;
-};
-
-type ActionFeedback = {
-  tone: "success" | "danger";
-  message: string;
 };
 
 const isRawEvent = (item: LaneItemData): item is RawEventCardData =>
   item.kind === "raw-event";
 
 export function Events({ eventsByDate }: EventsProps) {
-  const { selected } = useUrlColumnSelection();
   const [selectedRawEventOriginKeys, setSelectedRawEventOriginKeys] = useState<
     Set<string>
   >(() => new Set());
   const [isMarkingSpam, setIsMarkingSpam] = useState(false);
   const [isRemovingSpamCorrection, setIsRemovingSpamCorrection] =
     useState(false);
-  const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
-
-  const hasRawColumn = selected.has("raw");
+  const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
   const rawEventsByOriginKey = useMemo(() => {
     const items = new Map<string, RawEventCardData>();
 
@@ -167,51 +160,13 @@ export function Events({ eventsByDate }: EventsProps) {
 
   return (
     <div className="d-flex h-100 w-100 flex-column">
-      {(hasRawColumn || feedback) && (
-        <div className="flex-shrink-0 border-bottom bg-body px-3 py-2">
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            {hasRawColumn && (
-              <>
-                <span className="small text-muted">
-                  {selectedRawEvents.length === 0
-                    ? "Select raw events to create spam markers."
-                    : `${selectedRawEvents.length} raw event${selectedRawEvents.length === 1 ? "" : "s"} selected.`}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="warning"
-                  disabled={
-                    selectedRawEvents.length === 0 || isSpamMarkerChangePending
-                  }
-                  onClick={handleMarkSelectedAsSpam}
-                >
-                  {isMarkingSpam ? (
-                    <>
-                      <Spinner size="sm" className="me-2" />
-                      Marking...
-                    </>
-                  ) : (
-                    "Mark as spam"
-                  )}
-                </Button>
-              </>
-            )}
-            {feedback && (
-              <span
-                className={
-                  feedback.tone === "success"
-                    ? "small text-success"
-                    : "small text-danger"
-                }
-                role="status"
-              >
-                {feedback.message}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+      <EventsActionBar
+        selectedRawEventCount={selectedRawEvents.length}
+        isRemovingSpamCorrection={isRemovingSpamCorrection}
+        isMarkingSpam={isMarkingSpam}
+        feedback={feedback}
+        onMarkSelectedAsSpam={handleMarkSelectedAsSpam}
+      />
       <VirtualizedDateSections
         eventsByDate={eventsByDate}
         selectedRawEventOriginKeys={selectedRawEventOriginKeys}
