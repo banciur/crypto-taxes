@@ -229,3 +229,25 @@ def test_invalid_event_origin_payload_returns_422(client: TestClient) -> None:
     response = client.post("/spam-corrections", json=_payload(location="NOT_A_CHAIN"))
 
     assert response.status_code == 422
+
+
+def test_post_strips_whitespace_from_event_origin_external_id(client: TestClient) -> None:
+    trimmed_external_id = "0xtrimmed"
+    _persist_raw_events(
+        client,
+        [
+            _raw_event(
+                location=EventLocation.ARBITRUM,
+                external_id=trimmed_external_id,
+                timestamp=datetime(2024, 1, 6, 12, 0, tzinfo=timezone.utc),
+            )
+        ],
+    )
+
+    response = client.post(
+        "/spam-corrections",
+        json=_payload(external_id=f"  {trimmed_external_id}  "),
+    )
+
+    assert response.status_code == 204
+    assert client.get("/spam-corrections").json()[0]["event_origin"] == _payload(external_id=trimmed_external_id)

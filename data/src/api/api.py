@@ -4,7 +4,6 @@ from time import perf_counter
 from typing import Annotated, AsyncGenerator, Awaitable, Callable, Iterable
 
 from fastapi import Depends, FastAPI, Request, Response
-from pydantic import Field
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -32,14 +31,9 @@ class ApiAccount(StrictBaseModel):
     skip_sync: bool
 
 
-class ApiEventOrigin(StrictBaseModel):
-    location: EventLocation
-    external_id: str = Field(min_length=1)
-
-
 class ApiSpamCorrection(StrictBaseModel):
     id: str
-    event_origin: ApiEventOrigin
+    event_origin: EventOrigin
     timestamp: datetime
 
 
@@ -75,10 +69,7 @@ def _api_spam_corrections(
     return [
         ApiSpamCorrection(
             id=str(records_by_origin[origin_key].id),
-            event_origin=ApiEventOrigin(
-                location=records_by_origin[origin_key].event_origin.location,
-                external_id=records_by_origin[origin_key].event_origin.external_id,
-            ),
+            event_origin=records_by_origin[origin_key].event_origin,
             timestamp=matched_timestamps_by_origin[origin_key][0],
         )
         for origin_key in ordered_origins
@@ -164,18 +155,18 @@ def create_app(
 
     @app.post("/spam-corrections", status_code=204)
     def create_spam_correction(
-        payload: ApiEventOrigin,
+        payload: EventOrigin,
         repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
     ) -> Response:
-        repo.mark_as_spam(EventOrigin(location=payload.location, external_id=payload.external_id))
+        repo.mark_as_spam(payload)
         return Response(status_code=204)
 
     @app.delete("/spam-corrections", status_code=204)
     def delete_spam_correction(
-        payload: ApiEventOrigin,
+        payload: EventOrigin,
         repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
     ) -> Response:
-        repo.remove_spam_mark(EventOrigin(location=payload.location, external_id=payload.external_id))
+        repo.remove_spam_mark(payload)
         return Response(status_code=204)
 
     return app
