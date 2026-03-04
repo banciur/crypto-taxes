@@ -84,9 +84,8 @@ class TransactionsCacheRepository:
 
 
 def init_transactions_cache_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
-    if reset and db_path.exists():
-        db_path.unlink()
-
     engine = create_engine(f"sqlite:///{db_path}", echo=echo)
+    if reset:
+        TransactionsCacheBase.metadata.drop_all(engine)
     TransactionsCacheBase.metadata.create_all(engine)
     return sessionmaker(engine)()

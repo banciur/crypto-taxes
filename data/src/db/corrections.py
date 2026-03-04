@@ -104,9 +104,8 @@ class SpamCorrectionRepository:
 
 
 def init_corrections_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
-    if reset and db_path.exists():
-        db_path.unlink()
-
     engine = create_engine(f"sqlite:///{db_path}", echo=echo)
+    if reset:
+        CorrectionsBase.metadata.drop_all(engine)
     CorrectionsBase.metadata.create_all(engine)
     return sessionmaker(engine)()
