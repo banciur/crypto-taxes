@@ -75,7 +75,6 @@ TODO: Date chooser could be improved (in far futuren when I will need to make it
  - it could follow (open/close) when the main section is being scrolled
  - active state of year and month should be properly stated
 
-Second stage: tracking wealth
 TODO: better visualiation use some library to nicely print stuff or maybe switch to web app
 TODO: Features from WEALTH_MODEL.md
  - income
