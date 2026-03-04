@@ -23,13 +23,13 @@ def create_app(
         corrections_engine: Engine | None = None
 
         if sessionmaker_factory is None:
-            engine = create_engine(f"sqlite:///{DB_PATH}", echo=True)
+            engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
             fastapi_app.state.sessionmaker = sessionmaker(engine)
         else:
             fastapi_app.state.sessionmaker = sessionmaker_factory
 
         if corrections_sessionmaker_factory is None:
-            corrections_engine = create_engine(f"sqlite:///{CORRECTIONS_DB_PATH}", echo=True)
+            corrections_engine = create_engine(f"sqlite:///{CORRECTIONS_DB_PATH}", echo=False)
             fastapi_app.state.corrections_sessionmaker = sessionmaker(corrections_engine)
         else:
             fastapi_app.state.corrections_sessionmaker = corrections_sessionmaker_factory
