@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.repositories import (
@@ -33,7 +34,7 @@ def _sample_event(external_id: str, timestamp: datetime) -> LedgerEvent:
     return LedgerEvent(
         id=LedgerEventId(uuid4()),
         timestamp=timestamp,
-        origin=EventOrigin(location=EventLocation.KRAKEN, external_id=external_id),
+        event_origin=EventOrigin(location=EventLocation.KRAKEN, external_id=external_id),
         ingestion="test_ingestion",
         legs=[
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_WALLET, is_fee=False),
@@ -81,7 +82,7 @@ def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
     assert fetched is not None
     assert fetched.id == event.id
     assert fetched.timestamp == event.timestamp
-    assert fetched.origin.location == event.origin.location
+    assert fetched.event_origin.location == event.event_origin.location
     assert len(fetched.legs) == len(event.legs)
     assert {leg.asset_id for leg in fetched.legs} == {leg.asset_id for leg in event.legs}
 
@@ -96,6 +97,29 @@ def test_list_ledger_events(repo: LedgerEventRepository) -> None:
 
     fetched_ids = {record.id for record in records}
     assert fetched_ids == {first.id, second.id}
+
+
+def test_list_event_timestamps_for_origins(repo: LedgerEventRepository) -> None:
+    first = _sample_event("first-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=timezone.utc))
+    ignored = _sample_event("ignored-ext", datetime(2024, 1, 2, 16, 30, 0, tzinfo=timezone.utc))
+    second = _sample_event("second-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc))
+
+    repo.create_many([second, ignored, first])
+
+    matches = list(repo.list_event_timestamps_for_origins([second.event_origin, first.event_origin]))
+
+    assert matches == [
+        (first.event_origin, first.timestamp),
+        (second.event_origin, second.timestamp),
+    ]
+
+
+def test_create_many_rejects_duplicate_event_origins(repo: LedgerEventRepository) -> None:
+    first = _sample_event("duplicate-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=timezone.utc))
+    second = _sample_event("duplicate-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc))
+
+    with pytest.raises(IntegrityError):
+        repo.create_many([first, second])
 
 
 def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: LedgerEventRepository) -> None:
@@ -241,5 +265,5 @@ def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRep
     (reloaded,) = stored
     assert reloaded.id == event.id
     assert reloaded.timestamp == timestamp
-    assert reloaded.origin.external_id == external_id
+    assert reloaded.event_origin.external_id == external_id
     assert {leg.id for leg in reloaded.legs} == {leg.id for leg in event.legs}

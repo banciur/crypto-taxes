@@ -7,6 +7,7 @@ from typing import Any, Iterable, cast
 
 from accounts import AccountRegistry, normalize_chain
 from clients.moralis import MoralisService, SyncMode, build_default_service
+from db.corrections import SpamCorrectionRepository, SpamCorrectionSource
 from domain.ledger import (
     AssetId,
     EventLocation,
@@ -81,9 +82,11 @@ class MoralisImporter:
         service: MoralisService | None = None,
         *,
         mode: SyncMode | None = None,
+        spam_correction_repository: SpamCorrectionRepository | None = None,
     ) -> None:
         self.service = service or build_default_service()
         self.mode = mode or SyncMode.BUDGET
+        self.spam_correction_repository = spam_correction_repository
 
     def load_events(self) -> list[LedgerEvent]:
         account_registry = AccountRegistry.from_path(self.service.accounts_path)
@@ -92,8 +95,15 @@ class MoralisImporter:
 
         for tx in transactions:
             event = self._build_event(tx, account_registry)
-            if event:
-                events.append(event)
+            if event is None:
+                continue
+            events.append(event)
+            if self.spam_correction_repository is not None and tx.get("possible_spam") is True:
+                self.spam_correction_repository.mark_as_spam(
+                    event.event_origin,
+                    SpamCorrectionSource.AUTO_MORALIS,
+                    skip_if_exists=True,
+                )
 
         events.sort(key=lambda evt: evt.timestamp)
         return events
@@ -205,7 +215,7 @@ class MoralisImporter:
 
         return LedgerEvent(
             timestamp=_parse_timestamp(str(tx["block_timestamp"])),
-            origin=EventOrigin(location=location, external_id=str(tx["hash"])),
+            event_origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
             legs=legs,
         )

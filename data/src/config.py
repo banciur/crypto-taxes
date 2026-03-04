@@ -7,7 +7,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
-DB_FILE = ARTIFACTS_DIR / "crypto_taxes.db"
+ACCOUNTS_PATH = ARTIFACTS_DIR / "accounts.json"
+TRANSACTIONS_CACHE_DB_PATH = ARTIFACTS_DIR / "transactions_cache.db"
+DB_PATH = ARTIFACTS_DIR / "crypto_taxes.db"
+CORRECTIONS_DB_PATH = ARTIFACTS_DIR / "corrections.db"
 
 
 class AppSettings(BaseSettings):

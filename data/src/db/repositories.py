@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from datetime import timezone
+from datetime import datetime, timezone
+from typing import Iterable
 
+from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from db import models
@@ -23,6 +25,12 @@ from domain.ledger import (
 from domain.tax_event import TaxEvent, TaxEventKind
 
 
+def _timestamp_in_utc(timestamp: datetime) -> datetime:
+    if timestamp.tzinfo is None:
+        return timestamp.replace(tzinfo=timezone.utc)
+    return timestamp
+
+
 class LedgerEventRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -34,8 +42,8 @@ class LedgerEventRepository:
                 id=event.id,
                 timestamp=event.timestamp,
                 ingestion=event.ingestion,
-                origin_location=event.origin.location.value,
-                origin_external_id=event.origin.external_id,
+                origin_location=event.event_origin.location.value,
+                origin_external_id=event.event_origin.external_id,
             )
             orm_event.legs = [
                 models.LedgerLegOrm(
@@ -63,13 +71,39 @@ class LedgerEventRepository:
         orm_events = self._session.query(models.LedgerEventOrm).order_by(models.LedgerEventOrm.timestamp.asc()).all()
         return [self._to_domain(event) for event in orm_events]
 
+    def list_event_timestamps_for_origins(
+        self, event_origins: Iterable[EventOrigin]
+    ) -> Iterable[tuple[EventOrigin, datetime]]:
+        origin_keys = list({(origin.location.value, origin.external_id) for origin in event_origins})
+        if len(origin_keys) == 0:
+            return []
+
+        stmt = (
+            select(
+                models.LedgerEventOrm.origin_location,
+                models.LedgerEventOrm.origin_external_id,
+                models.LedgerEventOrm.timestamp,
+            )
+            .where(
+                tuple_(
+                    models.LedgerEventOrm.origin_location,
+                    models.LedgerEventOrm.origin_external_id,
+                ).in_(origin_keys)
+            )
+            .order_by(models.LedgerEventOrm.timestamp.asc())
+        )
+        rows = self._session.execute(stmt).all()
+        return [
+            (
+                EventOrigin(location=EventLocation(origin_location), external_id=origin_external_id),
+                _timestamp_in_utc(timestamp),
+            )
+            for origin_location, origin_external_id, timestamp in rows
+        ]
+
     @staticmethod
     def _to_domain(orm_event: models.LedgerEventOrm) -> LedgerEvent:
-        timestamp = orm_event.timestamp
-        if timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=timezone.utc)
-
-        origin = EventOrigin(
+        event_origin = EventOrigin(
             location=EventLocation(orm_event.origin_location), external_id=orm_event.origin_external_id
         )
         legs = [
@@ -84,8 +118,8 @@ class LedgerEventRepository:
         ]
         return LedgerEvent(
             id=LedgerEventId(orm_event.id),
-            timestamp=timestamp,
-            origin=origin,
+            timestamp=_timestamp_in_utc(orm_event.timestamp),
+            event_origin=event_origin,
             ingestion=orm_event.ingestion,
             legs=legs,
         )
@@ -102,8 +136,8 @@ class CorrectedLedgerEventRepository:
                 id=event.id,
                 timestamp=event.timestamp,
                 ingestion=event.ingestion,
-                origin_location=event.origin.location.value,
-                origin_external_id=event.origin.external_id,
+                origin_location=event.event_origin.location.value,
+                origin_external_id=event.event_origin.external_id,
             )
             orm_event.legs = [
                 models.CorrectedLedgerLegOrm(
@@ -131,11 +165,7 @@ class CorrectedLedgerEventRepository:
 
     @staticmethod
     def _to_domain(orm_event: models.CorrectedLedgerEventOrm) -> LedgerEvent:
-        timestamp = orm_event.timestamp
-        if timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=timezone.utc)
-
-        origin = EventOrigin(
+        event_origin = EventOrigin(
             location=EventLocation(orm_event.origin_location), external_id=orm_event.origin_external_id
         )
         legs = [
@@ -150,8 +180,8 @@ class CorrectedLedgerEventRepository:
         ]
         return LedgerEvent(
             id=LedgerEventId(orm_event.id),
-            timestamp=timestamp,
-            origin=origin,
+            timestamp=_timestamp_in_utc(orm_event.timestamp),
+            event_origin=event_origin,
             ingestion=orm_event.ingestion,
             legs=legs,
         )
@@ -283,10 +313,6 @@ class SeedEventRepository:
 
     @staticmethod
     def _to_domain(orm_event: models.SeedEventOrm) -> SeedEvent:
-        timestamp = orm_event.timestamp
-        if timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=timezone.utc)
-
         legs = [
             LedgerLeg(
                 id=LegId(leg.id),
@@ -299,7 +325,7 @@ class SeedEventRepository:
         ]
         return SeedEvent(
             id=CorrectionId(orm_event.id),
-            timestamp=timestamp,
+            timestamp=_timestamp_in_utc(orm_event.timestamp),
             price_per_token=orm_event.price_per_token,
             legs=legs,
         )

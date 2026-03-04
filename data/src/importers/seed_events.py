@@ -97,7 +97,7 @@ def ledger_events_from_seed_events(seed_events: list[SeedEvent]) -> list[LedgerE
         events.append(
             LedgerEvent(
                 timestamp=seed_event.timestamp,
-                origin=EventOrigin(
+                event_origin=EventOrigin(
                     location=EventLocation.INTERNAL,
                     external_id=f"seed:{seed_event.id}",
                 ),

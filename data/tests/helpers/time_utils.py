@@ -40,7 +40,7 @@ def make_event(
     legs: Iterable[LedgerLeg],
     timestamp: datetime | None = None,
     ts_gen: Callable[[], datetime] | None = None,
-    origin: EventOrigin | None = None,
+    event_origin: EventOrigin | None = None,
     ingestion: str = "test",
 ) -> LedgerEvent:
     """Helper to create a LedgerEvent with an auto-generated timestamp."""
@@ -49,12 +49,15 @@ def make_event(
             ts_gen = DEFAULT_TIME_GEN
         timestamp = ts_gen()
 
-    if origin is None:
-        origin = EventOrigin(location=EventLocation.INTERNAL, external_id=f"test-event-{next(_EVENT_COUNTER)}")
+    if event_origin is None:
+        event_origin = EventOrigin(
+            location=EventLocation.INTERNAL,
+            external_id=f"test-event-{next(_EVENT_COUNTER)}",
+        )
 
     return LedgerEvent(
         timestamp=timestamp,
-        origin=origin,
+        event_origin=event_origin,
         ingestion=ingestion,
         legs=list(legs),
     )

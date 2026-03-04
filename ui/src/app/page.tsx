@@ -2,20 +2,23 @@ import { performance } from "node:perf_hooks";
 
 import { Col, Container, Row } from "react-bootstrap";
 
-import { ColumnKey, COLUMNS_PARAM_NAME } from "@/consts";
+import { COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
+import { loadAccountNamesById } from "@/lib/accounts";
+import {
+  dayKeyForTimestampBucket,
+  timestampBucketKeyFor,
+} from "@/lib/timestampBuckets";
 import { COLUMN_DEFINITIONS } from "@/consts.server";
-import type { EventCardData } from "@/types/events";
+import type { EventsByTimestamp } from "@/types/events";
 
 import styles from "./page.module.css";
+import { AccountNamesProvider } from "@/contexts/AccountNamesContext";
 import { ColumnChooser } from "@/components/ColumnChooser";
 import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext";
 import { DateChooser } from "@/components/DateChooser";
 import { Events } from "@/components/Events";
 import { VisibleDayProvider } from "@/contexts/VisibleDayContext";
-
-const dateKeyFor = (timestamp: string) =>
-  new Date(timestamp).toISOString().slice(0, 10);
 
 const formatDuration = (durationMs: number) => {
   if (durationMs < 1000) {
@@ -24,20 +27,22 @@ const formatDuration = (durationMs: number) => {
   return `${(durationMs / 1000).toFixed(2)} s`;
 };
 
-const groupEventsByDate = <T extends { timestamp: string }>(events: T[]) => {
-  const eventsByDate: Record<string, T[]> = {};
+const groupEventsByTimestamp = <T extends { timestamp: string }>(
+  events: T[],
+) => {
+  const eventsByTimestamp: Record<string, T[]> = {};
 
   for (const event of events) {
-    const dateKey = dateKeyFor(event.timestamp);
-    const bucket = eventsByDate[dateKey];
+    const timestampBucket = timestampBucketKeyFor(event.timestamp);
+    const bucket = eventsByTimestamp[timestampBucket];
     if (bucket) {
       bucket.push(event);
     } else {
-      eventsByDate[dateKey] = [event];
+      eventsByTimestamp[timestampBucket] = [event];
     }
   }
 
-  return eventsByDate;
+  return eventsByTimestamp;
 };
 
 export default async function Home({ searchParams }: PageProps<"/">) {
@@ -46,7 +51,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     resolveSelectedColumns(query[COLUMNS_PARAM_NAME]),
   );
 
-  const loadStart = performance.now();
+  const accountsLoadStart = performance.now();
+  const accountNamesById = await loadAccountNamesById();
+
+  const columnsLoadStart = performance.now();
+  console.log(
+    `Accounts fetch took: ${formatDuration(
+      columnsLoadStart - accountsLoadStart,
+    )}`,
+  );
 
   const loadedColumns = await Promise.all(
     selectedColumns.map(async (key) => ({
@@ -56,70 +69,70 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   console.log(
-    `Data fetch took: ${formatDuration(performance.now() - loadStart)}`,
+    `Column fetch took: ${formatDuration(
+      performance.now() - columnsLoadStart,
+    )}`,
   );
 
   // Transforming loadedColumns into a structure that matches how the UI renders.
-  const unorderedEventsByDate = loadedColumns.reduce(
+  const unorderedEventsByTimestamp = loadedColumns.reduce(
     (acc, { key, events }) => {
-      const groupedByDate = groupEventsByDate(events);
-      for (const [dateKey, dateEvents] of Object.entries(groupedByDate)) {
-        const bucket = acc[dateKey];
+      const groupedByTimestamp = groupEventsByTimestamp(events);
+      for (const [timestampBucket, bucketEvents] of Object.entries(
+        groupedByTimestamp,
+      )) {
+        const bucket = acc[timestampBucket];
         if (bucket) {
-          bucket[key] = dateEvents;
+          bucket[key] = bucketEvents;
         } else {
-          acc[dateKey] = { [key]: dateEvents };
+          acc[timestampBucket] = { [key]: bucketEvents };
         }
       }
       return acc;
     },
-    {} as Record<string, Partial<Record<ColumnKey, EventCardData[]>>>,
+    {} as EventsByTimestamp,
   );
 
-  const orderedDates = Object.keys(unorderedEventsByDate).sort((a, b) =>
-    b.localeCompare(a),
+  const orderedTimestampBuckets = Object.keys(unorderedEventsByTimestamp).sort(
+    (a, b) => Number(b) - Number(a),
   );
 
-  const eventsByDate = orderedDates.reduce(
-    (acc, dateKey) => {
-      acc[dateKey] = unorderedEventsByDate[dateKey];
-      return acc;
-    },
-    {} as Record<string, Partial<Record<ColumnKey, EventCardData[]>>>,
-  );
+  const eventsByTimestamp: EventsByTimestamp = {};
+  const eventCountsByDate: Record<string, number> = {};
 
-  const eventCountsByDate = orderedDates.reduce(
-    (acc, dateKey) => {
-      acc[dateKey] = selectedColumns.reduce(
-        (total, columnKey) =>
-          total + (eventsByDate[dateKey][columnKey]?.length ?? 0),
-        0,
-      );
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  for (const timestampBucket of orderedTimestampBuckets) {
+    const bucketEvents = unorderedEventsByTimestamp[timestampBucket];
+    const dayKey = dayKeyForTimestampBucket(timestampBucket);
+    const eventCount = selectedColumns.reduce(
+      (total, columnKey) => total + (bucketEvents[columnKey]?.length ?? 0),
+      0,
+    );
+
+    eventsByTimestamp[timestampBucket] = bucketEvents;
+    eventCountsByDate[dayKey] = (eventCountsByDate[dayKey] ?? 0) + eventCount;
+  }
 
   return (
     <div className={styles.layoutContainer}>
       <header className={styles.layoutHeader}>
         <h1>Ledger events</h1>
       </header>
-
       <Container fluid className={styles.layoutContent}>
-        <UrlColumnSelectionProvider>
-          <VisibleDayProvider>
-            <Row className={styles.layoutRow}>
-              <Col xs={2} className={styles.layoutColumn}>
-                <ColumnChooser />
-                <DateChooser dates={eventCountsByDate} />
-              </Col>
-              <Col xs={10} className={styles.layoutColumn}>
-                <Events eventsByDate={eventsByDate} />
-              </Col>
-            </Row>
-          </VisibleDayProvider>
-        </UrlColumnSelectionProvider>
+        <AccountNamesProvider accountNamesById={accountNamesById}>
+          <UrlColumnSelectionProvider>
+            <VisibleDayProvider>
+              <Row className={styles.layoutRow}>
+                <Col xs={2} className={styles.layoutColumn}>
+                  <ColumnChooser />
+                  <DateChooser dates={eventCountsByDate} />
+                </Col>
+                <Col xs={10} className={styles.layoutColumn}>
+                  <Events eventsByTimestamp={eventsByTimestamp} />
+                </Col>
+              </Row>
+            </VisibleDayProvider>
+          </UrlColumnSelectionProvider>
+        </AccountNamesProvider>
       </Container>
     </div>
   );

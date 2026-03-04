@@ -15,7 +15,7 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
     events = [
         LedgerEvent(
             timestamp=datetime(2023, 1, 1, 12, tzinfo=timezone.utc),
-            origin=TEST_ORIGIN,
+            event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
                 LedgerLeg(asset_id=BTC, quantity=Decimal("0.6"), account_chain_id=SPOT_WALLET),
@@ -24,7 +24,7 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
         ),
         LedgerEvent(
             timestamp=datetime(2024, 12, 1, 12, tzinfo=timezone.utc),
-            origin=TEST_ORIGIN,
+            event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
                 LedgerLeg(asset_id=BTC, quantity=Decimal("0.4"), account_chain_id=SPOT_WALLET),
@@ -33,7 +33,7 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
         ),
         LedgerEvent(
             timestamp=datetime(2024, 12, 15, 12, tzinfo=timezone.utc),
-            origin=TEST_ORIGIN,
+            event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
                 LedgerLeg(asset_id=BTC, quantity=Decimal("-0.3"), account_chain_id=SPOT_WALLET),
@@ -42,7 +42,7 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
         ),
         LedgerEvent(
             timestamp=datetime(2025, 1, 10, 12, tzinfo=timezone.utc),
-            origin=TEST_ORIGIN,
+            event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
                 LedgerLeg(asset_id=BTC, quantity=Decimal("-0.4"), account_chain_id=SPOT_WALLET),
@@ -51,7 +51,7 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
         ),
         LedgerEvent(
             timestamp=datetime(2025, 1, 17, 12, tzinfo=timezone.utc),
-            origin=TEST_ORIGIN,
+            event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
                 LedgerLeg(asset_id=BTC, quantity=Decimal("-0.2"), account_chain_id=SPOT_WALLET),

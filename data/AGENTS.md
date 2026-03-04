@@ -20,7 +20,7 @@
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
 
 ## Data importers
-- Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `origin`/`ingestion` metadata.
+- Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `event_origin`/`ingestion` metadata.
 - Current importers:
   - Kraken CSV ledger: `src/importers/kraken/kraken_importer.py`
   - on-chain transactions through Moralis service: `src/importers/moralis/moralis_importer.py`
@@ -37,7 +37,7 @@
 - `make deps` syncs the project and `dev` dependency groups into the local `.venv` via uv.
 - `make code_check` runs `ruff check`, `ruff format --check`, and `mypy` to gate linting and types.
 - `make code_fix` executes `ruff check --fix`, `ruff format`, and `mypy` to auto-fix linting and re-run types.
-- `make test` runs the pytest suite. If you want to test a single file use `uv run --group dev pytest -s tests/test_foo.py`
+- `make test` runs the pytest suite. If you want to test a single file, use `uv run --group dev pytest tests/test_foo.py`
 
 ## Suggested workflow
 - ALWAYS after making python code changes `make code_fix` to auto-apply lint fixes.
@@ -48,4 +48,5 @@
 - Use `Decimal` for numeric quantities/rates; avoid floats.
 - Time fields use `datetime` named `timestamp` and are stored in UTC.
   - Convert inbound times to UTC at ingestion boundaries so internal models are always UTC.
+- Raw `ledger_events` are unique by `EventOrigin` (`origin_location` + `origin_external_id`) at the DB level; do not design import flows that emit multiple persisted raw events for the same upstream origin.
 - IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`).

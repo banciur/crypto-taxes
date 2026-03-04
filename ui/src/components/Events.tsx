@@ -1,144 +1,183 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { ColumnKey } from "@/consts";
-import { orderColumnKeys } from "@/consts";
-
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { EventCard } from "@/components/EventCard";
-import { useVisibleDay } from "@/contexts/VisibleDayContext";
-import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
-import { dayIdFor } from "@/lib/dayHash";
-import type { EventCardData } from "@/types/events";
-import { Col, Row } from "react-bootstrap";
-
-type EventsByDate = Record<string, Partial<Record<ColumnKey, EventCardData[]>>>;
+import {
+  createSpamCorrection,
+  deleteSpamCorrection,
+} from "@/api/spamCorrections";
+import {
+  EventsActionBar,
+  type EventsActionFeedback,
+} from "@/components/EventsActionBar";
+import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
+import { eventOriginKey } from "@/lib/eventOrigin";
+import type {
+  EventOrigin,
+  EventsByTimestamp,
+  LaneItemData,
+  RawEventCardData,
+} from "@/types/events";
 
 type EventsProps = {
-  eventsByDate: EventsByDate;
+  eventsByTimestamp: EventsByTimestamp;
 };
 
-export function Events({ eventsByDate }: EventsProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const { selected } = useUrlColumnSelection();
-  const { activeDayKey, activeDaySource, setActiveDayKey } = useVisibleDay();
+const isRawEvent = (item: LaneItemData): item is RawEventCardData =>
+  item.kind === "raw-event";
 
-  const dates = useMemo(() => Object.keys(eventsByDate), [eventsByDate]);
-  const orderedSelectedColumns = useMemo(
-    () => orderColumnKeys(selected),
-    [selected],
-  );
+export function Events({ eventsByTimestamp }: EventsProps) {
+  const [selectedRawEventOriginKeys, setSelectedRawEventOriginKeys] = useState<
+    Set<string>
+  >(() => new Set());
+  const [isMarkingSpam, setIsMarkingSpam] = useState(false);
+  const [isRemovingSpamCorrection, setIsRemovingSpamCorrection] =
+    useState(false);
+  const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const virtualizer = useVirtualizer({
-    count: dates.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => 110,
-    gap: 16,
-    overscan: 5,
-    onChange: (instance, sync) => {
-      if (sync) return;
-      updateVisibleDay(instance.getVirtualItems());
-    },
-  });
+  const rawEventsByOriginKey = useMemo(() => {
+    const items = new Map<string, RawEventCardData>();
 
-  const updateVisibleDay = useCallback(
-    (items: ReturnType<typeof virtualizer.getVirtualItems>) => {
-      const scrollElement = containerRef.current;
-      if (!scrollElement || items.length === 0) return;
+    for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
+      for (const columnItems of Object.values(columnsByTimestamp)) {
+        if (!columnItems) {
+          continue;
+        }
 
-      const scrollTop = scrollElement.scrollTop;
-      let visibleItem = items.find(
-        (item) => item.start <= scrollTop && item.end > scrollTop,
-      );
-
-      if (!visibleItem) {
-        if (scrollTop <= 0) {
-          visibleItem = items[0];
-        } else {
-          visibleItem = items.find((item) => item.start > scrollTop);
+        for (const item of columnItems) {
+          if (isRawEvent(item)) {
+            items.set(eventOriginKey(item.eventOrigin), item);
+          }
         }
       }
+    }
 
-      if (!visibleItem) {
-        visibleItem = items[items.length - 1];
-      }
+    return items;
+  }, [eventsByTimestamp]);
 
-      const dateKey = dates[visibleItem.index];
-      if (!dateKey) return;
-      setActiveDayKey(dateKey, "scroll");
-    },
-    [dates, setActiveDayKey, virtualizer],
+  const selectedRawEvents = useMemo(
+    () =>
+      Array.from(selectedRawEventOriginKeys)
+        .map((originKey) => rawEventsByOriginKey.get(originKey))
+        .filter((item): item is RawEventCardData => item !== undefined),
+    [rawEventsByOriginKey, selectedRawEventOriginKeys],
   );
 
+  const isSpamMarkerChangePending = isMarkingSpam || isRemovingSpamCorrection;
+
   useEffect(() => {
-    if (
-      !activeDayKey ||
-      activeDaySource === "scroll" ||
-      !containerRef.current
-    ) {
+    setSelectedRawEventOriginKeys((current) => {
+      if (current.size === 0) {
+        return current;
+      }
+
+      const next = new Set(
+        Array.from(current).filter((originKey) =>
+          rawEventsByOriginKey.has(originKey),
+        ),
+      );
+      if (next.size === current.size) {
+        return current;
+      }
+      return next;
+    });
+  }, [rawEventsByOriginKey]);
+
+  const handleToggleRawEventSelection = useCallback(
+    (eventOrigin: EventOrigin) => {
+      const originKey = eventOriginKey(eventOrigin);
+      setSelectedRawEventOriginKeys((current) => {
+        const next = new Set(current);
+
+        if (next.has(originKey)) {
+          next.delete(originKey);
+        } else {
+          next.add(originKey);
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const handleMarkSelectedAsSpam = useCallback(async () => {
+    if (selectedRawEvents.length === 0) {
       return;
     }
 
-    const index = dates.findIndex((element) => element === activeDayKey);
-    if (index === -1) return;
-    virtualizer.scrollToIndex(index, { align: "start" });
-  }, [activeDayKey, activeDaySource, dates, virtualizer]);
+    setFeedback(null);
+    setIsMarkingSpam(true);
 
-  const items = virtualizer.getVirtualItems();
+    const results = await Promise.allSettled(
+      selectedRawEvents.map((event) => createSpamCorrection(event.eventOrigin)),
+    );
+
+    setIsMarkingSpam(false);
+
+    const failures = results.flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : [],
+    );
+    if (failures.length > 0) {
+      console.error("Failed to create spam corrections", failures);
+      setFeedback({
+        tone: "danger",
+        message:
+          "Some spam markers failed. Check the console, then rerun the pipeline manually if needed.",
+      });
+      return;
+    }
+
+    setSelectedRawEventOriginKeys(new Set());
+    setFeedback({
+      tone: "success",
+      message:
+        "Spam markers saved. Re-run the pipeline and reload the UI to refresh the lanes.",
+    });
+  }, [selectedRawEvents]);
+
+  const handleRemoveSpamCorrection = useCallback(
+    async (eventOrigin: EventOrigin) => {
+      setFeedback(null);
+      setIsRemovingSpamCorrection(true);
+
+      try {
+        await deleteSpamCorrection(eventOrigin);
+        setFeedback({
+          tone: "success",
+          message:
+            "Spam marker removed. Re-run the pipeline and reload the UI to refresh the lanes.",
+        });
+      } catch (error) {
+        console.error("Failed to remove spam correction", error);
+        setFeedback({
+          tone: "danger",
+          message:
+            "Removing the spam marker failed. Check the console for details.",
+        });
+      } finally {
+        setIsRemovingSpamCorrection(false);
+      }
+    },
+    [],
+  );
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        height: "100%",
-        width: "100%",
-        overflowY: "auto",
-      }}
-    >
-      <div
-        style={{
-          height: `${virtualizer.getTotalSize()}px`,
-          width: "100%",
-          position: "relative",
-        }}
-      >
-        {items.map((virtualRow) => {
-          const dateKey = dates[virtualRow.index];
-          return (
-            <Row
-              key={dateKey}
-              id={dayIdFor(dateKey)}
-              data-index={virtualRow.index}
-              ref={virtualizer.measureElement}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                transform: `translateY(${virtualRow.start}px)`,
-              }}
-            >
-              <Col>
-                <h5>{dateKey}</h5>
-                <Row>
-                  {orderedSelectedColumns.map((columnKey) => (
-                    <Col
-                      className="d-flex flex-column gap-2"
-                      key={`row-${virtualRow.index}-${columnKey}`}
-                    >
-                      {eventsByDate[dateKey][columnKey]?.map((event) => (
-                        <EventCard key={event.id} {...event} />
-                      ))}
-                    </Col>
-                  ))}
-                </Row>
-              </Col>
-            </Row>
-          );
-        })}
-      </div>
+    <div className="d-flex h-100 w-100 flex-column">
+      <EventsActionBar
+        selectedRawEventCount={selectedRawEvents.length}
+        isRemovingSpamCorrection={isRemovingSpamCorrection}
+        isMarkingSpam={isMarkingSpam}
+        feedback={feedback}
+        onMarkSelectedAsSpam={handleMarkSelectedAsSpam}
+      />
+      <VirtualizedDateSections
+        eventsByTimestamp={eventsByTimestamp}
+        selectedRawEventOriginKeys={selectedRawEventOriginKeys}
+        isSpamMarkerChangePending={isSpamMarkerChangePending}
+        className="flex-grow-1"
+        onToggleRawEventSelection={handleToggleRawEventSelection}
+        onRemoveSpamCorrection={handleRemoveSpamCorrection}
+      />
     </div>
   );
 }

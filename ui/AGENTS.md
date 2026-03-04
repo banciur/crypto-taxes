@@ -8,7 +8,12 @@
 - Styling is Bootstrap 5, consumed through `react-bootstrap` (global import in `src/app/layout.tsx`); prefer `react-bootstrap` components and scoped styles (CSS modules or `globals.css`) for custom tweaks.
 - Prettier 3 for formatting;
 - ESLint is configured with Next core web vitals plus Prettier compatibility (`eslint.config.mjs`); keep new code aligned with those rules.
-- Data access goes through the FastAPI service in `data/src/api/`; fetch helpers under `src/api/`
+
+## Architecture
+
+- The UI talks to FastAPI through the same-origin `/api/crypto-taxes/*` rewrite in `next.config.ts`.
+- Put reusable API transport in `src/api/core.ts` and keep backend communication split into focused resource files under `src/api/` (ex. `events.ts`, `accounts.ts` etc.). Both server and client code should consume those shared API modules.
+- `src/api/core.ts` owns the request/response case translation at the API boundary. Endpoint modules should expose camelCase TypeScript shapes and avoid duplicating snake_case DTO mirror types.
 
 ## API contract
 
@@ -18,6 +23,7 @@
   - `GET /seed-events`
   - `GET /corrected-events`
   - `GET /accounts`
+  - `GET | POST | DELETE /spam-corrections`
 
 ## Development commands
 

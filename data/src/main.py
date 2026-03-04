@@ -6,8 +6,10 @@ from pathlib import Path
 from time import perf_counter
 from typing import Sequence
 
-from config import ARTIFACTS_DIR, DB_FILE, PROJECT_ROOT
+from config import ARTIFACTS_DIR, CORRECTIONS_DB_PATH, DB_PATH, PROJECT_ROOT
 from corrections.seed_events import apply_seed_event_corrections
+from corrections.spam import apply_spam_corrections
+from db.corrections import SpamCorrectionRepository, init_corrections_db
 from db.db import init_db
 from db.repositories import (
     AcquisitionLotRepository,
@@ -56,21 +58,23 @@ def run(
     seed_csv: Path,
 ) -> None:
     # Setup components
-    logger.info("Initializing DB at %s", DB_FILE)
-    session = init_db(reset=True, db_path=DB_FILE)
+    logger.info("Initializing DB at %s", DB_PATH)
+    session = init_db(reset=True, db_path=DB_PATH)
+    corrections_session = init_corrections_db(db_path=CORRECTIONS_DB_PATH, reset=False)
     event_repository = LedgerEventRepository(session)
     corrected_event_repository = CorrectedLedgerEventRepository(session)
     seed_event_repository = SeedEventRepository(session)
     lot_repository = AcquisitionLotRepository(session)
     disposal_repository = DisposalLinkRepository(session)
     tax_event_repository = TaxEventRepository(session)
+    spam_correction_repository = SpamCorrectionRepository(corrections_session)
 
     wallet_balance_tracker = WalletBalanceTracker()
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     engine = InventoryEngine(price_provider=price_service, wallet_balance_tracker=wallet_balance_tracker)
 
     kraken_importer = KrakenImporter(str(csv_path))
-    moralis_importer = MoralisImporter()
+    moralis_importer = MoralisImporter(spam_correction_repository=spam_correction_repository)
 
     owned_accounts: set[AccountChainId] = set()
     owned_accounts.add(KRAKEN_ACCOUNT_ID)
@@ -101,11 +105,15 @@ def run(
     logger.info("Persisted raw events in %.2fs", perf_counter() - persist_started)
 
     # Apply corrections
-    logger.info("Applying seed event corrections to %d raw events", len(events))
+    spam_markers = spam_correction_repository.list()
+    logger.info("Loaded %d active spam corrections", len(spam_markers))
+    logger.info("Applying corrections to %d raw events", len(events))
     corrections_started = perf_counter()
-    corrected_events = apply_seed_event_corrections(raw_events=events, seed_events=seed_events)
+    filtered_events = list(apply_spam_corrections(raw_events=events, spam_markers=spam_markers))
+    logger.info("Removed %d spam raw events", len(events) - len(filtered_events))
+    corrected_events = apply_seed_event_corrections(raw_events=filtered_events, seed_events=seed_events)
     logger.info(
-        "Applied corrections: %d corrected events in %.2fs",
+        "Applied spam+seed corrections: %d corrected events in %.2fs",
         len(corrected_events),
         perf_counter() - corrections_started,
     )

@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
@@ -36,6 +36,8 @@ class LedgerEventOrm(Base):
     ingestion: Mapped[str] = mapped_column(String, nullable=False)
     origin_location: Mapped[str] = mapped_column(String, nullable=False)
     origin_external_id: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (UniqueConstraint("origin_location", "origin_external_id", name="uq_ledger_events_origin"),)
 
     legs: Mapped[list["LedgerLegOrm"]] = relationship(
         cascade="all, delete-orphan", back_populates="event", lazy="joined"

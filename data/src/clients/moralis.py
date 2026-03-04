@@ -10,9 +10,9 @@ from typing import Any, Iterable
 
 from moralis import evm_api  # type: ignore
 
-from accounts import DEFAULT_ACCOUNTS_PATH, load_accounts
-from config import config
-from db.transactions_cache import CACHE_DB_PATH, TransactionsCacheRepository, init_transactions_cache_db
+from accounts import load_accounts
+from config import ACCOUNTS_PATH, TRANSACTIONS_CACHE_DB_PATH, config
+from db.transactions_cache import TransactionsCacheRepository, init_transactions_cache_db
 from domain.ledger import ChainId, WalletAddress
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ class MoralisService:
     ):
         self.client = client
         self.cache = cache_repo
-        self.accounts_path = accounts_path or DEFAULT_ACCOUNTS_PATH
+        self.accounts_path = accounts_path or ACCOUNTS_PATH
 
     def _persist(self, chain: ChainId, records: Iterable[dict[str, Any]]) -> None:
         # TODO: there is property "chain": "optimism" in the record. Remove chain parameter
@@ -139,8 +139,10 @@ class MoralisService:
         return self.cache.load_all_transactions()
 
 
-def build_default_service(cache_db: Path = CACHE_DB_PATH, accounts_path: Path | None = None) -> MoralisService:
-    session = init_transactions_cache_db(db_file=cache_db)
+def build_default_service(
+    cache_db: Path = TRANSACTIONS_CACHE_DB_PATH, accounts_path: Path | None = None
+) -> MoralisService:
+    session = init_transactions_cache_db(db_path=cache_db)
     client = MoralisClient(api_key=config().moralis_api_key)
     cache_repo = TransactionsCacheRepository(session)
     return MoralisService(client, cache_repo, accounts_path=accounts_path)

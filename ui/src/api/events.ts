@@ -1,85 +1,18 @@
-const DEFAULT_API_BASE_URL = "http://localhost:8000";
-const API_BASE_URL = process.env.CRYPTO_TAXES_API_URL ?? DEFAULT_API_BASE_URL;
+import { getFromApi } from "@/api/core";
+import { orderByTimestamp } from "@/lib/sort";
+import type { LedgerEvent, SeedEvent } from "@/types/events";
 
-export type ApiEventOrigin = {
-  location: string;
-  external_id: string;
+export const getRawEvents = async (): Promise<LedgerEvent[]> => {
+  const events = await getFromApi<LedgerEvent[]>("/raw-events");
+  return orderByTimestamp(events);
 };
 
-export type ApiLedgerLeg = {
-  id: string;
-  asset_id: string;
-  account_chain_id: string;
-  quantity: string;
-  is_fee: boolean;
+export const getCorrectedEvents = async (): Promise<LedgerEvent[]> => {
+  const events = await getFromApi<LedgerEvent[]>("/corrected-events");
+  return orderByTimestamp(events);
 };
 
-export type ApiLedgerEvent = {
-  id: string;
-  timestamp: string;
-  origin: ApiEventOrigin;
-  ingestion: string;
-  legs: ApiLedgerLeg[];
+export const getSeedEvents = async (): Promise<SeedEvent[]> => {
+  const events = await getFromApi<SeedEvent[]>("/seed-events");
+  return orderByTimestamp(events);
 };
-
-export type ApiSeedEvent = {
-  id: string;
-  timestamp: string;
-  price_per_token: string;
-  legs: ApiLedgerLeg[];
-};
-
-export type ApiAccount = {
-  account_chain_id: string;
-  name: string;
-  chain: string;
-  address: string;
-  skip_sync: boolean;
-};
-
-const buildUrl = (path: string) => {
-  const normalizedBase = API_BASE_URL.endsWith("/")
-    ? API_BASE_URL
-    : `${API_BASE_URL}/`;
-  const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
-  return new URL(normalizedPath, normalizedBase).toString();
-};
-
-const fetchApi = async <T>(path: string): Promise<T> => {
-  const response = await fetch(buildUrl(path), { cache: "no-store" });
-  if (!response.ok) {
-    const details = await response.text().catch(() => "missing details");
-    throw new Error(`Failed to fetch ${path}: ${response.status} : ${details}`);
-  }
-  return (await response.json()) as T;
-};
-
-const orderEvents = <T extends { id: string; timestamp: string }>(
-  events: T[],
-) =>
-  [...events].sort((a, b) => {
-    const aTime = Date.parse(a.timestamp);
-    const bTime = Date.parse(b.timestamp);
-    if (aTime !== bTime) {
-      return bTime - aTime;
-    }
-    return a.id.localeCompare(b.id);
-  });
-
-export const getRawEvents = async (): Promise<ApiLedgerEvent[]> => {
-  const events = await fetchApi<ApiLedgerEvent[]>("/raw-events");
-  return orderEvents(events);
-};
-
-export const getCorrectedEvents = async (): Promise<ApiLedgerEvent[]> => {
-  const events = await fetchApi<ApiLedgerEvent[]>("/corrected-events");
-  return orderEvents(events);
-};
-
-export const getSeedEvents = async (): Promise<ApiSeedEvent[]> => {
-  const events = await fetchApi<ApiSeedEvent[]>("/seed-events");
-  return orderEvents(events);
-};
-
-export const getAccounts = async (): Promise<ApiAccount[]> =>
-  fetchApi<ApiAccount[]>("/accounts");

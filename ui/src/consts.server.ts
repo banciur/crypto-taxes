@@ -1,98 +1,58 @@
 import "server-only";
 
-import {
-  getAccounts,
-  getCorrectedEvents,
-  getRawEvents,
-  getSeedEvents,
-  type ApiAccount,
-  type ApiLedgerEvent,
-  type ApiLedgerLeg,
-  type ApiSeedEvent,
-} from "@/api/events";
+import { getCorrectedEvents, getRawEvents, getSeedEvents } from "@/api/events";
+import { getSpamCorrections } from "@/api/spamCorrections";
+import type { LaneItemData } from "@/types/events";
 import type { ColumnKey } from "@/consts";
-import type { EventCardData, EventLeg } from "@/types/events";
+import { orderByTimestamp } from "@/lib/sort";
 
 type ColumnDefinition = {
-  load: () => Promise<EventCardData[]>;
+  load: () => Promise<LaneItemData[]>;
 };
-
-let accountNamesByIdPromise: Promise<Map<string, string>> | null = null;
-
-const getAccountNamesById = async (): Promise<Map<string, string>> => {
-  if (accountNamesByIdPromise) {
-    return accountNamesByIdPromise;
-  }
-  accountNamesByIdPromise = getAccounts().then((accounts: ApiAccount[]) => {
-    const map = new Map<string, string>();
-    for (const account of accounts) {
-      map.set(account.account_chain_id, account.name);
-    }
-    return map;
-  });
-  return accountNamesByIdPromise;
-};
-
-const mapLegs = (
-  legs: ApiLedgerLeg[],
-  accountNamesById: Map<string, string>,
-): EventLeg[] =>
-  legs.map((leg) => ({
-    id: leg.id,
-    assetId: leg.asset_id,
-    accountId: leg.account_chain_id,
-    accountName: accountNamesById.get(leg.account_chain_id) ?? leg.account_chain_id,
-    quantity: leg.quantity,
-    isFee: leg.is_fee,
-  }));
-
-const mapLedgerEvent = (
-  event: ApiLedgerEvent,
-  accountNamesById: Map<string, string>,
-): EventCardData => ({
-  id: event.id,
-  timestamp: event.timestamp,
-  place: event.origin.location.toLowerCase(),
-  originId: event.origin.external_id,
-  legs: mapLegs(event.legs, accountNamesById),
-});
 
 export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   raw: {
     load: async () => {
-      const [events, accountNamesById] = await Promise.all([
-        getRawEvents(),
-        getAccountNamesById(),
-      ]);
-      return events.map((event: ApiLedgerEvent) =>
-        mapLedgerEvent(event, accountNamesById),
-      );
+      const events = await getRawEvents();
+      return events.map((event) => ({
+        id: event.id,
+        kind: "raw-event" as const,
+        timestamp: event.timestamp,
+        legs: event.legs,
+        eventOrigin: event.eventOrigin,
+      }));
     },
   },
   corrections: {
     load: async () => {
-      const [events, accountNamesById] = await Promise.all([
+      const [seedEvents, spamCorrections] = await Promise.all([
         getSeedEvents(),
-        getAccountNamesById(),
+        getSpamCorrections(),
       ]);
-      return events.map((event: ApiSeedEvent) => ({
-        id: event.id,
-        timestamp: event.timestamp,
-        place: "",
-        originId: "",
-        legs: mapLegs(event.legs, accountNamesById),
-      }));
+      return orderByTimestamp([
+        ...seedEvents.map((event) => ({
+          id: event.id,
+          kind: "seed-correction" as const,
+          timestamp: event.timestamp,
+          legs: event.legs,
+        })),
+        ...spamCorrections.map((event) => ({
+          ...event,
+          kind: "spam-correction" as const,
+        })),
+      ]);
     },
   },
   corrected: {
     load: async () => {
-      const [events, accountNamesById] = await Promise.all([
-        getCorrectedEvents(),
-        getAccountNamesById(),
-      ]);
-      return events.map((event: ApiLedgerEvent) =>
-        mapLedgerEvent(event, accountNamesById),
-      );
+      const events = await getCorrectedEvents();
+      return events.map((event) => ({
+        id: event.id,
+        kind: "corrected-event" as const,
+        timestamp: event.timestamp,
+        eventOrigin: event.eventOrigin,
+        legs: event.legs,
+      }));
     },
   },
 } as const;
