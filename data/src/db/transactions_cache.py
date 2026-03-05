@@ -72,7 +72,7 @@ class TransactionsCacheRepository:
             MoralisTransactionOrm.transaction_index,
         )
         rows = self.session.execute(stmt).scalars().all()
-        return [json.loads(row.payload) for row in rows]
+        return [{**json.loads(row.payload), "chain": row.chain} for row in rows]
 
     def last_synced_at(self, chain: ChainId, address: WalletAddress) -> datetime | None:
         stmt = (

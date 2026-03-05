@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import json
 from datetime import date, datetime, timedelta, timezone
-from pathlib import Path
 from typing import cast
 
+from accounts import AccountConfig
 from clients.moralis import MoralisClient
 from db.transactions_cache import TransactionsCacheRepository
 from domain.ledger import ChainId, WalletAddress
@@ -44,10 +43,6 @@ class _StubTransactionsCache:
         self.marked_synced.append((chain, address, when))
 
 
-def _write_accounts(path: Path, *, entries: list[dict[str, object]]) -> None:
-    path.write_text(json.dumps(entries))
-
-
 def _account_entry(
     *,
     name: str,
@@ -63,21 +58,23 @@ def _account_entry(
     }
 
 
+def _accounts(*, entries: list[dict[str, object]]) -> list[AccountConfig]:
+    return [AccountConfig.model_validate(entry) for entry in entries]
+
+
 def _calls_as_tuples(calls: list[tuple[ChainId, WalletAddress, date | None]]) -> list[tuple[str, str, date | None]]:
     return [(str(chain), str(address), from_date) for chain, address, from_date in calls]
 
 
-def test_budget_fetches_new_wallet_chain_from_start_even_when_chain_has_recent_cursor(tmp_path: Path) -> None:
+def test_budget_fetches_new_wallet_chain_from_start_even_when_chain_has_recent_cursor() -> None:
     existing_address = "0xAABBcc"
     new_address = "0xdDeeff"
     shared_chain = "eth"
-    accounts_path = tmp_path / "accounts.json"
-    _write_accounts(
-        accounts_path,
+    accounts = _accounts(
         entries=[
             _account_entry(name="Existing", address=existing_address, chains=[shared_chain]),
             _account_entry(name="New", address=new_address, chains=[shared_chain]),
-        ],
+        ]
     )
 
     now = datetime.now(timezone.utc)
@@ -91,7 +88,7 @@ def test_budget_fetches_new_wallet_chain_from_start_even_when_chain_has_recent_c
     service = MoralisService(
         cast(MoralisClient, client),
         cast(TransactionsCacheRepository, cache),
-        accounts_path=accounts_path,
+        accounts=accounts,
     )
 
     service.get_transactions(SyncMode.BUDGET)
@@ -99,11 +96,10 @@ def test_budget_fetches_new_wallet_chain_from_start_even_when_chain_has_recent_c
     assert _calls_as_tuples(client.calls) == [(shared_chain, new_address.lower(), None)]
 
 
-def test_budget_fetches_existing_wallet_chain_from_last_synced_cursor(tmp_path: Path) -> None:
+def test_budget_fetches_existing_wallet_chain_from_last_synced_cursor() -> None:
     address = "0xAbCdEf"
     chain = "arbitrum"
-    accounts_path = tmp_path / "accounts.json"
-    _write_accounts(accounts_path, entries=[_account_entry(name="Wallet", address=address, chains=[chain])])
+    accounts = _accounts(entries=[_account_entry(name="Wallet", address=address, chains=[chain])])
 
     now = datetime.now(timezone.utc)
     stale_cursor = now - timedelta(days=3)
@@ -113,7 +109,7 @@ def test_budget_fetches_existing_wallet_chain_from_last_synced_cursor(tmp_path: 
     service = MoralisService(
         cast(MoralisClient, client),
         cast(TransactionsCacheRepository, cache),
-        accounts_path=accounts_path,
+        accounts=accounts,
     )
 
     service.get_transactions(SyncMode.BUDGET)
@@ -125,11 +121,10 @@ def test_budget_fetches_existing_wallet_chain_from_last_synced_cursor(tmp_path: 
     assert str(marked_address) == address.lower()
 
 
-def test_budget_skips_recently_synced_wallet_chain(tmp_path: Path) -> None:
+def test_budget_skips_recently_synced_wallet_chain() -> None:
     address = "0x1234ABCD"
     chain = "optimism"
-    accounts_path = tmp_path / "accounts.json"
-    _write_accounts(accounts_path, entries=[_account_entry(name="Wallet", address=address, chains=[chain])])
+    accounts = _accounts(entries=[_account_entry(name="Wallet", address=address, chains=[chain])])
 
     now = datetime.now(timezone.utc)
     fresh_cursor = now - timedelta(hours=6)
@@ -138,7 +133,7 @@ def test_budget_skips_recently_synced_wallet_chain(tmp_path: Path) -> None:
     service = MoralisService(
         cast(MoralisClient, client),
         cast(TransactionsCacheRepository, cache),
-        accounts_path=accounts_path,
+        accounts=accounts,
     )
 
     service.get_transactions(SyncMode.BUDGET)
@@ -147,12 +142,10 @@ def test_budget_skips_recently_synced_wallet_chain(tmp_path: Path) -> None:
     assert cache.marked_synced == []
 
 
-def test_budget_skips_wallet_marked_as_skip_sync(tmp_path: Path) -> None:
+def test_budget_skips_wallet_marked_as_skip_sync() -> None:
     address = "0x55AA66BB"
     chain = "eth"
-    accounts_path = tmp_path / "accounts.json"
-    _write_accounts(
-        accounts_path,
+    accounts = _accounts(
         entries=[_account_entry(name="Dormant", address=address, chains=[chain], skip_sync=True)],
     )
 
@@ -161,7 +154,7 @@ def test_budget_skips_wallet_marked_as_skip_sync(tmp_path: Path) -> None:
     service = MoralisService(
         cast(MoralisClient, client),
         cast(TransactionsCacheRepository, cache),
-        accounts_path=accounts_path,
+        accounts=accounts,
     )
 
     service.get_transactions(SyncMode.BUDGET)

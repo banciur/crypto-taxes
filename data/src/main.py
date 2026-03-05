@@ -6,7 +6,9 @@ from pathlib import Path
 from time import perf_counter
 from typing import Sequence
 
-from config import ARTIFACTS_DIR, CORRECTIONS_DB_PATH, DB_PATH, PROJECT_ROOT
+from accounts import AccountRegistry, load_accounts
+from clients.moralis import MoralisClient
+from config import ARTIFACTS_DIR, CORRECTIONS_DB_PATH, DB_PATH, PROJECT_ROOT, TRANSACTIONS_CACHE_DB_PATH, config
 from corrections.seed_events import apply_seed_event_corrections
 from corrections.spam import apply_spam_corrections
 from db.corrections import SpamCorrectionRepository, init_corrections_db
@@ -19,6 +21,7 @@ from db.repositories import (
     SeedEventRepository,
     TaxEventRepository,
 )
+from db.transactions_cache import TransactionsCacheRepository, init_transactions_cache_db
 from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import AccountChainId
 from domain.wallet_balance_tracker import WalletBalanceTracker
@@ -26,6 +29,7 @@ from importers.kraken import KRAKEN_ACCOUNT_ID, KrakenImporter
 from importers.moralis import MoralisImporter
 from importers.seed_events import load_seed_events
 from services.coindesk_source import CoinDeskSource
+from services.moralis import MoralisService
 from services.open_exchange_rates_source import OpenExchangeRatesSource
 from services.price_service import PriceService
 from services.price_sources import HybridPriceSource
@@ -74,7 +78,22 @@ def run(
     engine = InventoryEngine(price_provider=price_service, wallet_balance_tracker=wallet_balance_tracker)
 
     kraken_importer = KrakenImporter(str(csv_path))
-    moralis_importer = MoralisImporter(spam_correction_repository=spam_correction_repository)
+
+    accounts = load_accounts()
+    moralis_cache_session = init_transactions_cache_db(db_path=TRANSACTIONS_CACHE_DB_PATH)
+
+    moralis_service = MoralisService(
+        MoralisClient(api_key=config().moralis_api_key),
+        TransactionsCacheRepository(moralis_cache_session),
+        accounts=accounts,
+    )
+
+    account_registry = AccountRegistry(accounts)
+    moralis_importer = MoralisImporter(
+        service=moralis_service,
+        account_registry=account_registry,
+        spam_correction_repository=spam_correction_repository,
+    )
 
     owned_accounts: set[AccountChainId] = set()
     owned_accounts.add(KRAKEN_ACCOUNT_ID)

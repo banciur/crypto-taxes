@@ -4,15 +4,13 @@ import json
 import logging
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from pathlib import Path
+from typing import Sequence
 
-from accounts import load_accounts
+from accounts import AccountConfig
 from clients.moralis import MoralisClient
-from config import ACCOUNTS_PATH, TRANSACTIONS_CACHE_DB_PATH, config
 from db.transactions_cache import (
     TransactionRow,
     TransactionsCacheRepository,
-    init_transactions_cache_db,
 )
 from domain.ledger import ChainId
 from type_defs import RawTxs
@@ -31,11 +29,14 @@ class SyncMode(str, Enum):
 
 class MoralisService:
     def __init__(
-        self, client: MoralisClient, cache_repo: TransactionsCacheRepository, *, accounts_path: Path | None = None
+        self,
+        client: MoralisClient,
+        cache_repo: TransactionsCacheRepository,
+        accounts: Sequence[AccountConfig],
     ):
         self.client = client
         self.cache = cache_repo
-        self.accounts_path = accounts_path or ACCOUNTS_PATH
+        self.accounts = accounts
 
     def _persist(self, chain: ChainId, records: RawTxs) -> None:
         rows: list[TransactionRow] = [
@@ -55,7 +56,7 @@ class MoralisService:
     def _ensure_chains_synced(self, mode: SyncMode) -> None:
         yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
 
-        for account in load_accounts(self.accounts_path):
+        for account in self.accounts:
             if account.skip_sync:
                 logger.info("Address %s (%s) is marked skip_sync; skipping fetch", account.address, account.name)
                 continue
@@ -75,16 +76,6 @@ class MoralisService:
                 self._persist(chain, txs)
                 self.cache.mark_synced(chain, address, datetime.now(timezone.utc))
 
-    def get_transactions(self, sync_mode: SyncMode | None = None) -> RawTxs:
-        mode = sync_mode if sync_mode is not None else SyncMode.BUDGET
-        self._ensure_chains_synced(mode)
+    def get_transactions(self, sync_mode: SyncMode = SyncMode.BUDGET) -> RawTxs:
+        self._ensure_chains_synced(sync_mode)
         return self.cache.load_all_transactions()
-
-
-def build_default_service(
-    cache_db: Path = TRANSACTIONS_CACHE_DB_PATH, accounts_path: Path | None = None
-) -> MoralisService:
-    session = init_transactions_cache_db(db_path=cache_db)
-    client = MoralisClient(api_key=config().moralis_api_key)
-    cache_repo = TransactionsCacheRepository(session)
-    return MoralisService(client, cache_repo, accounts_path=accounts_path)
