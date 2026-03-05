@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 from accounts import load_accounts
 from clients.moralis import MoralisClient
 from config import ACCOUNTS_PATH, TRANSACTIONS_CACHE_DB_PATH, config
-from db.transactions_cache import TransactionsCacheRepository, init_transactions_cache_db
-from domain.ledger import ChainId, WalletAddress
+from db.transactions_cache import (
+    TransactionRow,
+    TransactionsCacheRepository,
+    init_transactions_cache_db,
+)
+from domain.ledger import ChainId
 from type_defs import RawTxs
 
 logger = logging.getLogger(__name__)
@@ -35,18 +38,17 @@ class MoralisService:
         self.accounts_path = accounts_path or ACCOUNTS_PATH
 
     def _persist(self, chain: ChainId, records: RawTxs) -> None:
-        rows: list[dict[str, object]] = []
-        for record in records:
-            rows.append(
-                {
-                    "chain": chain,
-                    "hash": str(record["hash"]),
-                    "block_number": int(record["block_number"]),
-                    "transaction_index": int(record["transaction_index"]),
-                    "block_timestamp": _parse_block_timestamp(str(record["block_timestamp"])),
-                    "payload": json.dumps(record),
-                }
-            )
+        rows: list[TransactionRow] = [
+            {
+                "chain": chain,
+                "hash": str(record["hash"]),
+                "block_number": int(record["block_number"]),
+                "transaction_index": int(record["transaction_index"]),
+                "block_timestamp": _parse_block_timestamp(str(record["block_timestamp"])),
+                "payload": json.dumps(record),
+            }
+            for record in records
+        ]
 
         self.cache.upsert_transactions(rows)
 
@@ -68,13 +70,10 @@ class MoralisService:
                     logger.info("Address %s on chain %s already synced; skipping fetch", address, chain)
                     continue
 
-                api_from_date = (last_synced_at - timedelta(days=1)).date() if last_synced_at else None
-                self._sync_account_chain(chain, address, api_from_date)
+                from_date = (last_synced_at - timedelta(days=1)).date() if last_synced_at else None
+                txs = self.client.fetch_transactions(chain, address, from_date)
+                self._persist(chain, txs)
                 self.cache.mark_synced(chain, address, datetime.now(timezone.utc))
-
-    def _sync_account_chain(self, chain: ChainId, address: WalletAddress, from_date: date | None) -> None:
-        fetched = self.client.fetch_transactions(chain, address, from_date)
-        self._persist(chain, fetched)
 
     def get_transactions(self, sync_mode: SyncMode | None = None) -> RawTxs:
         mode = sync_mode if sync_mode is not None else SyncMode.BUDGET

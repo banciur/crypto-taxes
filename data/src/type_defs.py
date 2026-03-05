@@ -1,3 +1,3 @@
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
-type RawTxs = list[Mapping[str, Any]]
+type RawTxs = Sequence[Mapping[str, Any]]

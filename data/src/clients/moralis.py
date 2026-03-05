@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 from time import sleep
+from typing import Any, Mapping
 
 from moralis import evm_api
 from moralis.evm_api.wallets.get_wallet_history import Params
@@ -27,7 +28,7 @@ class MoralisClient:
         from_date: date | None = None,
     ) -> RawTxs:
         cursor: str | None = ""
-        aggregated: RawTxs = []
+        aggregated: list[Mapping[str, Any]] = []
         total = 0
 
         logger.info(
@@ -50,7 +51,7 @@ class MoralisClient:
                 params=params,
             )
             cursor = response.get("cursor")
-            batch = response.get("result", []) or []
+            batch = response.get("result") or []
 
             aggregated.extend(batch)
             total += len(batch)

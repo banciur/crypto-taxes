@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Iterable, cast
+from typing import Any, Iterable, Mapping, cast
 
 from accounts import AccountRegistry, normalize_chain
 from db.corrections import SpamCorrectionRepository, SpamCorrectionSource
@@ -108,7 +108,7 @@ class MoralisImporter:
         events.sort(key=lambda evt: evt.timestamp)
         return events
 
-    def _build_event(self, tx: dict[str, Any], account_registry: AccountRegistry) -> LedgerEvent | None:
+    def _build_event(self, tx: Mapping[str, Any], account_registry: AccountRegistry) -> LedgerEvent | None:
         legs: list[LedgerLeg] = []
 
         chain = str(tx["chain"]).lower()

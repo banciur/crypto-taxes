@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Sequence, TypedDict
 
 from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint, create_engine, select
 from sqlalchemy.dialects.sqlite import insert
@@ -42,11 +43,20 @@ class MoralisSyncStateOrm(TransactionsCacheBase):
     last_synced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class TransactionRow(TypedDict):
+    chain: str
+    hash: str
+    block_number: int
+    transaction_index: int
+    block_timestamp: datetime
+    payload: str
+
+
 class TransactionsCacheRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def upsert_transactions(self, records: list[dict[str, object]]) -> None:
+    def upsert_transactions(self, records: Sequence[TransactionRow]) -> None:
         if not records:
             return
 
