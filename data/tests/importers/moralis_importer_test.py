@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from accounts import AccountConfig, AccountRegistry
 from db.corrections import SpamCorrectionOrm, SpamCorrectionRepository, SpamCorrectionSource, init_corrections_db
-from domain.ledger import AccountChainId, AssetId, ChainId, EventOrigin, WalletAddress
+from domain.ledger import AccountChainId, AssetId, ChainId, WalletAddress
 from importers.moralis.moralis_importer import CHAIN_LOCATIONS, MoralisImporter
 from services.moralis import MoralisService
 
@@ -28,7 +28,7 @@ class _StubMoralisService:
         return self._transactions
 
 
-def _registry() -> AccountRegistry:
+def _account_registry() -> AccountRegistry:
     return AccountRegistry(
         [
             AccountConfig(
@@ -90,17 +90,18 @@ def _marker_row(repo: SpamCorrectionRepository) -> SpamCorrectionOrm:
     return row
 
 
-def _importer_for_build() -> MoralisImporter:
+def _build_importer(
+    transactions: list[dict[str, Any]],
+    spam_correction_repository: SpamCorrectionRepository | None = None,
+) -> MoralisImporter:
     return MoralisImporter(
-        service=cast(MoralisService, _StubMoralisService(transactions=[])),
-        account_registry=_registry(),
+        service=cast(
+            MoralisService,
+            _StubMoralisService(transactions=transactions),
+        ),
+        account_registry=_account_registry(),
+        spam_correction_repository=spam_correction_repository,
     )
-
-
-def _event_origin(tx: dict[str, object]) -> EventOrigin:
-    event = _importer_for_build()._build_event(tx)
-    assert event is not None
-    return event.event_origin
 
 
 def test_native_transfer_builds_incoming_leg() -> None:
@@ -116,7 +117,7 @@ def test_native_transfer_builds_incoming_leg() -> None:
     }
     tx = _build_tx(native_transfers=[transfer])
 
-    importer = _importer_for_build()
+    importer = _build_importer([])
     event = importer._build_event(tx)
     expected_timestamp = datetime.fromisoformat(BLOCK_TS.replace("Z", "+00:00")).astimezone(timezone.utc)
 
@@ -154,7 +155,7 @@ def test_native_transfer_dedupes_internal_and_external() -> None:
     }
     tx = _build_tx(native_transfers=[external, internal])
 
-    importer = _importer_for_build()
+    importer = _build_importer([])
     event = importer._build_event(tx)
 
     assert event is not None
@@ -170,7 +171,7 @@ def test_fee_leg_added_for_outgoing_tx() -> None:
         transaction_fee=str(fee),
     )
 
-    importer = _importer_for_build()
+    importer = _build_importer([])
     event = importer._build_event(tx)
 
     assert event is not None
@@ -195,7 +196,7 @@ def test_erc20_legs_net_per_asset_and_account() -> None:
         ],
     )
 
-    importer = _importer_for_build()
+    importer = _build_importer([])
     event = importer._build_event(tx)
 
     assert event is not None
@@ -224,7 +225,7 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate() -> None:
         transaction_fee=str(fee),
     )
 
-    importer = _importer_for_build()
+    importer = _build_importer([])
     event = importer._build_event(tx)
 
     assert event is not None
@@ -242,12 +243,7 @@ def test_load_events_marks_moralis_spam_transactions(tmp_path: Path) -> None:
     tx = _build_tx(native_transfers=[_native_transfer(amount)])
     tx["possible_spam"] = True
     repo = SpamCorrectionRepository(init_corrections_db(db_path=tmp_path / "corrections.db", reset=True))
-    service = _StubMoralisService(transactions=[tx])
-    importer = MoralisImporter(
-        service=cast(MoralisService, service),
-        account_registry=_registry(),
-        spam_correction_repository=repo,
-    )
+    importer = _build_importer([tx], repo)
 
     events = importer.load_events()
 
@@ -261,12 +257,7 @@ def test_load_events_does_not_mark_non_spam_transactions(tmp_path: Path) -> None
     tx = _build_tx(native_transfers=[_native_transfer(amount)])
     tx["possible_spam"] = False
     repo = SpamCorrectionRepository(init_corrections_db(db_path=tmp_path / "corrections.db", reset=True))
-    service = _StubMoralisService(transactions=[tx])
-    importer = MoralisImporter(
-        service=cast(MoralisService, service),
-        account_registry=_registry(),
-        spam_correction_repository=repo,
-    )
+    importer = _build_importer([tx], repo)
 
     events = importer.load_events()
 
@@ -279,15 +270,12 @@ def test_load_events_preserves_manual_spam_removals(tmp_path: Path) -> None:
     tx = _build_tx(native_transfers=[_native_transfer(amount)])
     tx["possible_spam"] = True
     repo = SpamCorrectionRepository(init_corrections_db(db_path=tmp_path / "corrections.db", reset=True))
-    event_origin = _event_origin(tx)
+    event = _build_importer([])._build_event(tx)
+    assert event is not None
+    event_origin = event.event_origin
     repo.mark_as_spam(event_origin=event_origin, source=SpamCorrectionSource.MANUAL)
     repo.remove_spam_mark(event_origin)
-    service = _StubMoralisService(transactions=[tx])
-    importer = MoralisImporter(
-        service=cast(MoralisService, service),
-        account_registry=_registry(),
-        spam_correction_repository=repo,
-    )
+    importer = _build_importer([tx], repo)
 
     events = importer.load_events()
 

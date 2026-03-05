@@ -1,7 +1,7 @@
 # Services
 
 ## Moralis service
-- Fetches data for all tracked accounts and store them in the cache.
+- Fetches data for all tracked accounts storing them in the cache along the way.
 - Accounts with `skip_sync=true` are excluded from fetches.
 - Cache uses SQLite persistence.
 - Helper scripts live under `scripts/moralis/`.

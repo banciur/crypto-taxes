@@ -58,37 +58,39 @@ def _account_entry(
     }
 
 
-def _accounts(*, entries: list[dict[str, object]]) -> list[AccountConfig]:
-    return [AccountConfig.model_validate(entry) for entry in entries]
-
-
 def _calls_as_tuples(calls: list[tuple[ChainId, WalletAddress, date | None]]) -> list[tuple[str, str, date | None]]:
     return [(str(chain), str(address), from_date) for chain, address, from_date in calls]
+
+
+def _build_service(
+    account_entries: list[dict[str, object]],
+    last_synced: dict[tuple[str, str], datetime | None] | None = None,
+) -> tuple[MoralisService, _StubMoralisClient, _StubTransactionsCache]:
+    accounts = [AccountConfig.model_validate(entry) for entry in account_entries]
+    cache = _StubTransactionsCache(last_synced=last_synced)
+    client = _StubMoralisClient()
+    service = MoralisService(
+        cast(MoralisClient, client),
+        cast(TransactionsCacheRepository, cache),
+        accounts=accounts,
+    )
+    return service, client, cache
 
 
 def test_budget_fetches_new_wallet_chain_from_start_even_when_chain_has_recent_cursor() -> None:
     existing_address = "0xAABBcc"
     new_address = "0xdDeeff"
     shared_chain = "eth"
-    accounts = _accounts(
-        entries=[
-            _account_entry(name="Existing", address=existing_address, chains=[shared_chain]),
-            _account_entry(name="New", address=new_address, chains=[shared_chain]),
-        ]
-    )
-
     now = datetime.now(timezone.utc)
     existing_cursor = now - timedelta(hours=2)
-    cache = _StubTransactionsCache(
-        last_synced={
+    service, client, _ = _build_service(
+        [
+            _account_entry(name="Existing", address=existing_address, chains=[shared_chain]),
+            _account_entry(name="New", address=new_address, chains=[shared_chain]),
+        ],
+        {
             (shared_chain, existing_address.lower()): existing_cursor,
-        }
-    )
-    client = _StubMoralisClient()
-    service = MoralisService(
-        cast(MoralisClient, client),
-        cast(TransactionsCacheRepository, cache),
-        accounts=accounts,
+        },
     )
 
     service.get_transactions(SyncMode.BUDGET)
@@ -99,17 +101,13 @@ def test_budget_fetches_new_wallet_chain_from_start_even_when_chain_has_recent_c
 def test_budget_fetches_existing_wallet_chain_from_last_synced_cursor() -> None:
     address = "0xAbCdEf"
     chain = "arbitrum"
-    accounts = _accounts(entries=[_account_entry(name="Wallet", address=address, chains=[chain])])
 
     now = datetime.now(timezone.utc)
     stale_cursor = now - timedelta(days=3)
     expected_from_date = (stale_cursor - timedelta(days=1)).date()
-    cache = _StubTransactionsCache(last_synced={(chain, address.lower()): stale_cursor})
-    client = _StubMoralisClient()
-    service = MoralisService(
-        cast(MoralisClient, client),
-        cast(TransactionsCacheRepository, cache),
-        accounts=accounts,
+    service, client, cache = _build_service(
+        [_account_entry(name="Wallet", address=address, chains=[chain])],
+        {(chain, address.lower()): stale_cursor},
     )
 
     service.get_transactions(SyncMode.BUDGET)
@@ -124,16 +122,12 @@ def test_budget_fetches_existing_wallet_chain_from_last_synced_cursor() -> None:
 def test_budget_skips_recently_synced_wallet_chain() -> None:
     address = "0x1234ABCD"
     chain = "optimism"
-    accounts = _accounts(entries=[_account_entry(name="Wallet", address=address, chains=[chain])])
 
     now = datetime.now(timezone.utc)
     fresh_cursor = now - timedelta(hours=6)
-    cache = _StubTransactionsCache(last_synced={(chain, address.lower()): fresh_cursor})
-    client = _StubMoralisClient()
-    service = MoralisService(
-        cast(MoralisClient, client),
-        cast(TransactionsCacheRepository, cache),
-        accounts=accounts,
+    service, client, cache = _build_service(
+        [_account_entry(name="Wallet", address=address, chains=[chain])],
+        {(chain, address.lower()): fresh_cursor},
     )
 
     service.get_transactions(SyncMode.BUDGET)
@@ -145,16 +139,8 @@ def test_budget_skips_recently_synced_wallet_chain() -> None:
 def test_budget_skips_wallet_marked_as_skip_sync() -> None:
     address = "0x55AA66BB"
     chain = "eth"
-    accounts = _accounts(
-        entries=[_account_entry(name="Dormant", address=address, chains=[chain], skip_sync=True)],
-    )
-
-    cache = _StubTransactionsCache()
-    client = _StubMoralisClient()
-    service = MoralisService(
-        cast(MoralisClient, client),
-        cast(TransactionsCacheRepository, cache),
-        accounts=accounts,
+    service, client, cache = _build_service(
+        [_account_entry(name="Dormant", address=address, chains=[chain], skip_sync=True)],
     )
 
     service.get_transactions(SyncMode.BUDGET)
