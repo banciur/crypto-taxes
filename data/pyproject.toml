@@ -5,12 +5,12 @@ requires-python = ">= 3.13"
 
 dependencies = [
     "alembic==1.18.4",
-    "fastapi[standard]>=0.129.0",
-    "moralis>=0.1.49",
+    "fastapi[standard]>=0.135.1",
+    "moralis==0.1.49",
     "pydantic==2.12.5",
-    "pydantic-settings>=2.12.0",
+    "pydantic-settings==2.13.1",
     "requests==2.32.5",
-    "SQLAlchemy==2.0.46",
+    "SQLAlchemy==2.0.48",
 ]
 
 [dependency-groups]
@@ -18,7 +18,7 @@ dev = [
     "types-requests>=2.32.4,<2.32.6",
     "mypy==1.19.1",
     "pytest==9.0.2",
-    "ruff==0.15.1",
+    "ruff==0.15.4",
 ]
 
 [tool.pytest.ini_options]
@@ -48,3 +48,7 @@ warn_redundant_casts = true
 warn_unreachable = true
 warn_unused_configs = true
 pretty = true
+
+[[tool.mypy.overrides]]
+module = ["moralis", "moralis.*", "openapi_evm_api.*"]
+ignore_missing_imports = true

@@ -6,7 +6,6 @@ from decimal import Decimal
 from typing import Any, Iterable, cast
 
 from accounts import AccountRegistry, normalize_chain
-from clients.moralis import MoralisService, SyncMode, build_default_service
 from db.corrections import SpamCorrectionRepository, SpamCorrectionSource
 from domain.ledger import (
     AssetId,
@@ -16,6 +15,7 @@ from domain.ledger import (
     LedgerLeg,
     WalletAddress,
 )
+from services.moralis import MoralisService, SyncMode, build_default_service
 
 logger = logging.getLogger(__name__)
 

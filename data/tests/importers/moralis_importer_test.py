@@ -9,10 +9,10 @@ from typing import Any, cast
 from sqlalchemy import select
 
 from accounts import AccountConfig, AccountRegistry
-from clients.moralis import MoralisService
 from db.corrections import SpamCorrectionOrm, SpamCorrectionRepository, SpamCorrectionSource, init_corrections_db
 from domain.ledger import AccountChainId, AssetId, ChainId, EventOrigin, WalletAddress
 from importers.moralis.moralis_importer import CHAIN_LOCATIONS, MoralisImporter
+from services.moralis import MoralisService
 
 CHAIN = "arbitrum"
 TX_HASH = "0xabc123"

@@ -12,8 +12,9 @@ TODO: Corrections, combine and/or modify events (complicated transfers etc). Whe
 
 TODO: I'm not sure about the corrections directory and which code should go where.
 
-Review the order of todoes
+Review the order of todos
 ------------------
+TODO: When turning corrections lane on and off virtualized list gets a bit broken. Something about height computation.
 TODO: Need automation to rerun computation (src/main.py)
 TODO: db init code for multiple dbs is in many places of the code. Also there is different one for main and for api.
 TODO: Review setup of databases in tests. Especially now we have one setup for api tests and one for other. Looks bad.
@@ -114,7 +115,6 @@ Some loose ideas
     - borrowing USDC in xlend.extrafi.io
     - putting it into farm 40acres USDC Vault through vaults.fyi
     - occasionally get some money from the farm and repay part of the debt to decrease debt
-
 
 - Polish bonds income
 

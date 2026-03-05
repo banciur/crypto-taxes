@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint, create_engine, select
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from domain.ledger import ChainId, WalletAddress
+from type_defs import RawTxs
 
 
 class TransactionsCacheBase(DeclarativeBase):
@@ -55,7 +55,7 @@ class TransactionsCacheRepository:
         self.session.execute(stmt)
         self.session.commit()
 
-    def load_all_transactions(self) -> list[dict[str, Any]]:
+    def load_all_transactions(self) -> RawTxs:
         stmt = select(MoralisTransactionOrm).order_by(
             MoralisTransactionOrm.block_timestamp,
             MoralisTransactionOrm.block_number,

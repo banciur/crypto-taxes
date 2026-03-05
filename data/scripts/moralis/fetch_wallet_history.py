@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PROJECT_ROOT.parent
 ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 SRC_DIR = PROJECT_ROOT / "src"
@@ -16,8 +16,8 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 
-from clients.moralis import SyncMode, build_default_service
 from importers.moralis import MoralisImporter
+from services.moralis import SyncMode, build_default_service
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:

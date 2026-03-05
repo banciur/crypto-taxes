@@ -5,9 +5,10 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import cast
 
-from clients.moralis import MoralisClient, MoralisService, SyncMode
+from clients.moralis import MoralisClient
 from db.transactions_cache import TransactionsCacheRepository
 from domain.ledger import ChainId, WalletAddress
+from services.moralis import MoralisService, SyncMode
 
 
 class _StubMoralisClient:
