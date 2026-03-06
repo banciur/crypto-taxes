@@ -6,9 +6,8 @@ from decimal import Decimal
 from typing import Any, NamedTuple, cast
 
 import pytest
-from sqlalchemy import Engine, create_engine, select
+from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from accounts import AccountConfig, AccountRegistry
 from db.corrections import CorrectionsBase, SpamCorrectionOrm, SpamCorrectionRepository
@@ -86,23 +85,12 @@ class _ImporterTestContext(NamedTuple):
     service: _StubMoralisService
 
 
-@pytest.fixture(scope="module")
-def corrections_engine() -> Generator[Engine, None, None]:
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    yield engine
-    engine.dispose()
-
-
 @pytest.fixture()
-def corrections_session(corrections_engine: Engine) -> Generator[Session, None, None]:
-    CorrectionsBase.metadata.create_all(corrections_engine)
-    with sessionmaker(corrections_engine)() as session:
+def corrections_session(db_engine: Engine) -> Generator[Session, None, None]:
+    CorrectionsBase.metadata.create_all(db_engine)
+    with sessionmaker(db_engine)() as session:
         yield session
-    CorrectionsBase.metadata.drop_all(corrections_engine)
+    CorrectionsBase.metadata.drop_all(db_engine)
 
 
 @pytest.fixture()

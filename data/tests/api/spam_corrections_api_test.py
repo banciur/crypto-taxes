@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Generator
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Generator, cast
+from typing import cast
 from uuid import uuid4
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -21,17 +22,28 @@ from tests.constants import BTC, EUR, KRAKEN_WALLET
 
 
 @pytest.fixture()
-def client() -> Generator[TestClient, None, None]:
-    main_engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    corrections_engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+def db_engine_factory() -> Generator[Callable[[], Engine], None, None]:
+    engines: list[Engine] = []
+
+    def make_engine() -> Engine:
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        engines.append(engine)
+        return engine
+
+    yield make_engine
+
+    for engine in engines:
+        engine.dispose()
+
+
+@pytest.fixture()
+def client(db_engine_factory: Callable[[], Engine]) -> Generator[TestClient, None, None]:
+    main_engine = db_engine_factory()
+    corrections_engine = db_engine_factory()
     Base.metadata.create_all(main_engine)
     CorrectionsBase.metadata.create_all(corrections_engine)
     app = api_module.create_app(
@@ -40,8 +52,6 @@ def client() -> Generator[TestClient, None, None]:
     )
     with TestClient(app) as test_client:
         yield test_client
-    corrections_engine.dispose()
-    main_engine.dispose()
 
 
 def _payload(*, location: str = "ARBITRUM", external_id: str = "0xabc") -> dict[str, str]:
