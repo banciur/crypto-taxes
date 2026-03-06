@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
+import pytest
+from sqlalchemy import Engine, create_engine, select
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from accounts import AccountConfig, AccountRegistry
 from db.corrections import CorrectionsBase, SpamCorrectionOrm, SpamCorrectionRepository
@@ -21,7 +24,10 @@ SENDER = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
 
 
 class _StubMoralisService:
-    def __init__(self, *, transactions: list[dict[str, Any]]) -> None:
+    def __init__(self) -> None:
+        self._transactions: list[dict[str, Any]] = []
+
+    def set_transactions(self, transactions: list[dict[str, Any]]) -> None:
         self._transactions = transactions
 
     def get_transactions(self, _mode: object) -> list[dict[str, Any]]:
@@ -74,18 +80,37 @@ def _erc20_transfer(
     }
 
 
-def _build_importer(
-    transactions: list[dict[str, Any]] | None = None,
-) -> tuple[MoralisImporter, SpamCorrectionRepository]:
-    engine = create_engine("sqlite:///:memory:")
-    CorrectionsBase.metadata.create_all(engine)
-    session = sessionmaker(engine)()
-    repo = SpamCorrectionRepository(session)
+class _ImporterTestContext(NamedTuple):
+    importer: MoralisImporter
+    spam_repo: SpamCorrectionRepository
+    service: _StubMoralisService
+
+
+@pytest.fixture(scope="module")
+def corrections_engine() -> Generator[Engine, None, None]:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture()
+def corrections_session(corrections_engine: Engine) -> Generator[Session, None, None]:
+    CorrectionsBase.metadata.create_all(corrections_engine)
+    with sessionmaker(corrections_engine)() as session:
+        yield session
+    CorrectionsBase.metadata.drop_all(corrections_engine)
+
+
+@pytest.fixture()
+def test_ctx(corrections_session: Session) -> _ImporterTestContext:
+    repo = SpamCorrectionRepository(corrections_session)
+    service = _StubMoralisService()
     importer = MoralisImporter(
-        service=cast(
-            MoralisService,
-            _StubMoralisService(transactions=transactions if transactions is not None else []),
-        ),
+        service=cast(MoralisService, service),
         account_registry=AccountRegistry(
             [
                 AccountConfig(
@@ -98,10 +123,10 @@ def _build_importer(
         ),
         spam_correction_repository=repo,
     )
-    return importer, repo
+    return _ImporterTestContext(importer=importer, spam_repo=repo, service=service)
 
 
-def test_native_transfer_builds_incoming_leg() -> None:
+def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> None:
     amount = Decimal("0.5")
     symbol = "ETH"
     transfer = {
@@ -114,8 +139,7 @@ def test_native_transfer_builds_incoming_leg() -> None:
     }
     tx = _build_tx(native_transfers=[transfer])
 
-    importer, _ = _build_importer()
-    event = importer._build_event(tx)
+    event = test_ctx.importer._build_event(tx)
     expected_timestamp = datetime.fromisoformat(BLOCK_TS.replace("Z", "+00:00")).astimezone(timezone.utc)
 
     assert event is not None
@@ -130,7 +154,7 @@ def test_native_transfer_builds_incoming_leg() -> None:
     assert leg.account_chain_id == AccountChainId(f"{CHAIN}:{WALLET}")
 
 
-def test_native_transfer_dedupes_internal_and_external() -> None:
+def test_native_transfer_dedupes_internal_and_external(test_ctx: _ImporterTestContext) -> None:
     amount = Decimal("0.75")
     symbol = "ETH"
     value = "750000000000000000"
@@ -152,15 +176,14 @@ def test_native_transfer_dedupes_internal_and_external() -> None:
     }
     tx = _build_tx(native_transfers=[external, internal])
 
-    importer, _ = _build_importer()
-    event = importer._build_event(tx)
+    event = test_ctx.importer._build_event(tx)
 
     assert event is not None
     assert len(event.legs) == 1
     assert event.legs[0].quantity == amount
 
 
-def test_fee_leg_added_for_outgoing_tx() -> None:
+def test_fee_leg_added_for_outgoing_tx(test_ctx: _ImporterTestContext) -> None:
     fee = Decimal("0.0025")
     tx = _build_tx(
         native_transfers=[],
@@ -168,8 +191,7 @@ def test_fee_leg_added_for_outgoing_tx() -> None:
         transaction_fee=str(fee),
     )
 
-    importer, _ = _build_importer()
-    event = importer._build_event(tx)
+    event = test_ctx.importer._build_event(tx)
 
     assert event is not None
     assert len(event.legs) == 1
@@ -180,7 +202,7 @@ def test_fee_leg_added_for_outgoing_tx() -> None:
     assert leg.is_fee is True
 
 
-def test_erc20_legs_net_per_asset_and_account() -> None:
+def test_erc20_legs_net_per_asset_and_account(test_ctx: _ImporterTestContext) -> None:
     amount_out = Decimal("1.900000317186616554")
     amount_in = Decimal("0.000000764022969882")
     symbol = "WETH"
@@ -193,8 +215,7 @@ def test_erc20_legs_net_per_asset_and_account() -> None:
         ],
     )
 
-    importer, _ = _build_importer()
-    event = importer._build_event(tx)
+    event = test_ctx.importer._build_event(tx)
 
     assert event is not None
     assert len(event.legs) == 1
@@ -204,7 +225,7 @@ def test_erc20_legs_net_per_asset_and_account() -> None:
     assert event.legs[0].is_fee is False
 
 
-def test_collapse_keeps_fee_and_non_fee_legs_separate() -> None:
+def test_collapse_keeps_fee_and_non_fee_legs_separate(test_ctx: _ImporterTestContext) -> None:
     amount = Decimal("0.5")
     fee = Decimal("0.0025")
     tx = _build_tx(
@@ -222,8 +243,7 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate() -> None:
         transaction_fee=str(fee),
     )
 
-    importer, _ = _build_importer()
-    event = importer._build_event(tx)
+    event = test_ctx.importer._build_event(tx)
 
     assert event is not None
     assert len(event.legs) == 2
@@ -235,41 +255,41 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate() -> None:
     assert fee_leg.asset_id == AssetId("ETH")
 
 
-def test_load_events_marks_moralis_spam_transactions() -> None:
+def test_load_events_marks_moralis_spam_transactions(test_ctx: _ImporterTestContext) -> None:
     tx = _build_tx(native_transfers=[_native_transfer(Decimal("0.5"))], possible_spam=True)
-    importer, repo = _build_importer([tx])
+    test_ctx.service.set_transactions([tx])
 
-    events = importer.load_events()
+    events = test_ctx.importer.load_events()
 
     assert len(events) == 1
-    spam_events = repo.list()
+    spam_events = test_ctx.spam_repo.list()
     assert len(spam_events) == 1
     assert spam_events[0].event_origin == events[0].event_origin
 
 
-def test_load_events_does_not_mark_non_spam_transactions() -> None:
+def test_load_events_does_not_mark_non_spam_transactions(test_ctx: _ImporterTestContext) -> None:
     tx = _build_tx(native_transfers=[_native_transfer(Decimal("0.5"))], possible_spam=False)
-    importer, repo = _build_importer([tx])
+    test_ctx.service.set_transactions([tx])
 
-    events = importer.load_events()
+    events = test_ctx.importer.load_events()
 
     assert len(events) == 1
-    assert repo.list() == []
+    assert test_ctx.spam_repo.list() == []
 
 
-def test_load_events_preserves_manual_spam_removals() -> None:
+def test_load_events_preserves_manual_spam_removals(test_ctx: _ImporterTestContext) -> None:
     tx = _build_tx(native_transfers=[_native_transfer(Decimal("0.5"))], possible_spam=True)
-    importer, repo = _build_importer([tx])
-    event = importer._build_event(tx)
+    test_ctx.service.set_transactions([tx])
+    event = test_ctx.importer._build_event(tx)
     assert event is not None
     event_origin = event.event_origin
-    repo.mark_as_spam(event_origin=event_origin)
-    repo.remove_spam_mark(event_origin)
+    test_ctx.spam_repo.mark_as_spam(event_origin=event_origin)
+    test_ctx.spam_repo.remove_spam_mark(event_origin)
 
-    events = importer.load_events()
+    events = test_ctx.importer.load_events()
 
     assert len(events) == 1
     assert events[0].event_origin == event_origin
-    assert repo.list() == []
-    row = repo._session.execute(select(SpamCorrectionOrm)).scalar_one()
+    assert test_ctx.spam_repo.list() == []
+    row = test_ctx.spam_repo._session.execute(select(SpamCorrectionOrm)).scalar_one()
     assert row.is_deleted is True
