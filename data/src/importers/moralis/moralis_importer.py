@@ -101,10 +101,11 @@ def _collapse_legs(legs: Iterable[LedgerLeg]) -> list[LedgerLeg]:
 class MoralisImporter:
     def __init__(
         self,
+        *,
         service: MoralisService,
         account_registry: AccountRegistry,
+        spam_correction_repository: SpamCorrectionRepository,
         sync_mode: SyncMode = SyncMode.BUDGET,
-        spam_correction_repository: SpamCorrectionRepository | None = None,
     ) -> None:
         self.service = service
         self.account_registry = account_registry
@@ -120,7 +121,7 @@ class MoralisImporter:
             if event is None:
                 continue
             events.append(event)
-            if self.spam_correction_repository is not None and tx.get("possible_spam") is True:
+            if tx.get("possible_spam"):
                 self.spam_correction_repository.mark_as_spam(
                     event.event_origin,
                     SpamCorrectionSource.AUTO_MORALIS,
