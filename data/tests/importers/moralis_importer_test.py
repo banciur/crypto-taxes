@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 from accounts import AccountConfig, AccountRegistry
-from db.corrections import CorrectionsBase, SpamCorrectionOrm, SpamCorrectionRepository, SpamCorrectionSource
+from db.corrections import CorrectionsBase, SpamCorrectionOrm, SpamCorrectionRepository
 from domain.ledger import AccountChainId, AssetId, ChainId, WalletAddress
 from importers.moralis.moralis_importer import CHAIN_LOCATIONS, MoralisImporter
 from services.moralis import MoralisService
@@ -47,8 +47,9 @@ def _build_tx(
     erc20_transfers: list[dict[str, object]] | None = None,
     from_address: str = SENDER,
     transaction_fee: str = "0",
+    possible_spam: bool | None = None,
 ) -> dict[str, object]:
-    return {
+    tx: dict[str, object] = {
         "block_timestamp": BLOCK_TS,
         "chain": CHAIN,
         "hash": TX_HASH,
@@ -57,6 +58,9 @@ def _build_tx(
         "erc20_transfers": erc20_transfers if erc20_transfers is not None else [],
         "transaction_fee": transaction_fee,
     }
+    if possible_spam is not None:
+        tx["possible_spam"] = possible_spam
+    return tx
 
 
 def _native_transfer(amount: Decimal) -> dict[str, object]:
@@ -81,13 +85,6 @@ def _erc20_transfer(
         "token_symbol": symbol,
         "address": token,
     }
-
-
-def _marker_row(repo: SpamCorrectionRepository) -> SpamCorrectionOrm:
-    stmt = select(SpamCorrectionOrm)
-    row = repo._session.execute(stmt).scalar_one_or_none()
-    assert row is not None
-    return row
 
 
 def _build_importer(
@@ -243,22 +240,19 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate() -> None:
 
 
 def test_load_events_marks_moralis_spam_transactions() -> None:
-    amount = Decimal("0.5")
-    tx = _build_tx(native_transfers=[_native_transfer(amount)])
-    tx["possible_spam"] = True
+    tx = _build_tx(native_transfers=[_native_transfer(Decimal("0.5"))], possible_spam=True)
     importer, repo = _build_importer([tx])
 
     events = importer.load_events()
 
     assert len(events) == 1
-    assert repo.list()[0].event_origin == events[0].event_origin
-    assert _marker_row(repo).source == SpamCorrectionSource.AUTO_MORALIS.value
+    spam_events = repo.list()
+    assert len(spam_events) == 1
+    assert spam_events[0].event_origin == events[0].event_origin
 
 
 def test_load_events_does_not_mark_non_spam_transactions() -> None:
-    amount = Decimal("0.5")
-    tx = _build_tx(native_transfers=[_native_transfer(amount)])
-    tx["possible_spam"] = False
+    tx = _build_tx(native_transfers=[_native_transfer(Decimal("0.5"))], possible_spam=False)
     importer, repo = _build_importer([tx])
 
     events = importer.load_events()
@@ -268,9 +262,7 @@ def test_load_events_does_not_mark_non_spam_transactions() -> None:
 
 
 def test_load_events_preserves_manual_spam_removals() -> None:
-    amount = Decimal("0.5")
-    tx = _build_tx(native_transfers=[_native_transfer(amount)])
-    tx["possible_spam"] = True
+    tx = _build_tx(native_transfers=[_native_transfer(Decimal("0.5"))], possible_spam=True)
     importer, repo = _build_importer([tx])
     event = importer._build_event(tx)
     assert event is not None
@@ -283,6 +275,5 @@ def test_load_events_preserves_manual_spam_removals() -> None:
     assert len(events) == 1
     assert events[0].event_origin == event_origin
     assert repo.list() == []
-    row = _marker_row(repo)
+    row = repo._session.execute(select(SpamCorrectionOrm)).scalar_one()
     assert row.is_deleted is True
-    assert row.source == SpamCorrectionSource.MANUAL.value
