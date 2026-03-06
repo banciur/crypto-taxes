@@ -11,15 +11,14 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from accounts import AccountConfig, AccountRegistry
 from db.corrections import CorrectionsBase, SpamCorrectionOrm, SpamCorrectionRepository
-from domain.ledger import AccountChainId, AssetId, ChainId, WalletAddress
+from domain.ledger import AccountChainId, AssetId, ChainId
 from importers.moralis.moralis_importer import CHAIN_LOCATIONS, MoralisImporter
 from services.moralis import MoralisService
+from tests.constants import CHAIN, ETH_ADDRESS
 
-CHAIN = "arbitrum"
-TX_HASH = "0xabc123"
 BLOCK_TS = "2025-05-16T05:04:40.000Z"
-WALLET = WalletAddress("0x64c74B53C247D176c5fefd1E239F92B23dF434BF".lower())
 SENDER = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
+TX_HASH = "0xabc123"
 
 
 class _StubMoralisService:
@@ -58,7 +57,7 @@ def _build_tx(
 def _native_transfer(amount: Decimal) -> dict[str, object]:
     return {
         "from_address": SENDER,
-        "to_address": WALLET,
+        "to_address": ETH_ADDRESS,
         "value": "500000000000000000",
         "value_formatted": str(amount),
         "token_symbol": "ETH",
@@ -103,7 +102,7 @@ def test_ctx(corrections_session: Session) -> _ImporterTestContext:
             [
                 AccountConfig(
                     name="Wallet",
-                    address=WALLET,
+                    address=ETH_ADDRESS,
                     chains=frozenset([ChainId(CHAIN)]),
                     skip_sync=False,
                 )
@@ -119,7 +118,7 @@ def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> 
     symbol = "ETH"
     transfer = {
         "from_address": SENDER,
-        "to_address": WALLET,
+        "to_address": ETH_ADDRESS,
         "value": "500000000000000000",
         "value_formatted": str(amount),
         "token_symbol": symbol,
@@ -139,7 +138,7 @@ def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> 
     leg = event.legs[0]
     assert leg.asset_id == AssetId(symbol)
     assert leg.quantity == amount
-    assert leg.account_chain_id == AccountChainId(f"{CHAIN}:{WALLET}")
+    assert leg.account_chain_id == AccountChainId(f"{CHAIN}:{ETH_ADDRESS}")
 
 
 def test_native_transfer_dedupes_internal_and_external(test_ctx: _ImporterTestContext) -> None:
@@ -148,7 +147,7 @@ def test_native_transfer_dedupes_internal_and_external(test_ctx: _ImporterTestCo
     value = "750000000000000000"
     external = {
         "from_address": SENDER,
-        "to_address": WALLET,
+        "to_address": ETH_ADDRESS,
         "value": value,
         "value_formatted": str(amount),
         "token_symbol": symbol,
@@ -156,7 +155,7 @@ def test_native_transfer_dedupes_internal_and_external(test_ctx: _ImporterTestCo
     }
     internal = {
         "from_address": SENDER,
-        "to_address": WALLET,
+        "to_address": ETH_ADDRESS,
         "value": value,
         "value_formatted": str(amount),
         "token_symbol": symbol,
@@ -175,7 +174,7 @@ def test_fee_leg_added_for_outgoing_tx(test_ctx: _ImporterTestContext) -> None:
     fee = Decimal("0.0025")
     tx = _build_tx(
         native_transfers=[],
-        from_address=WALLET,
+        from_address=ETH_ADDRESS,
         transaction_fee=str(fee),
     )
 
@@ -186,7 +185,7 @@ def test_fee_leg_added_for_outgoing_tx(test_ctx: _ImporterTestContext) -> None:
     leg = event.legs[0]
     assert leg.asset_id == AssetId("ETH")
     assert leg.quantity == -fee
-    assert leg.account_chain_id == AccountChainId(f"{CHAIN}:{WALLET}")
+    assert leg.account_chain_id == AccountChainId(f"{CHAIN}:{ETH_ADDRESS}")
     assert leg.is_fee is True
 
 
@@ -198,8 +197,8 @@ def test_erc20_legs_net_per_asset_and_account(test_ctx: _ImporterTestContext) ->
     tx = _build_tx(
         native_transfers=[],
         erc20_transfers=[
-            _erc20_transfer(from_address=WALLET, to_address=SENDER, amount=amount_out, symbol=symbol, token=token),
-            _erc20_transfer(from_address=SENDER, to_address=WALLET, amount=amount_in, symbol=symbol, token=token),
+            _erc20_transfer(from_address=ETH_ADDRESS, to_address=SENDER, amount=amount_out, symbol=symbol, token=token),
+            _erc20_transfer(from_address=SENDER, to_address=ETH_ADDRESS, amount=amount_in, symbol=symbol, token=token),
         ],
     )
 
@@ -209,7 +208,7 @@ def test_erc20_legs_net_per_asset_and_account(test_ctx: _ImporterTestContext) ->
     assert len(event.legs) == 1
     assert event.legs[0].asset_id == AssetId(symbol)
     assert event.legs[0].quantity == amount_in - amount_out
-    assert event.legs[0].account_chain_id == AccountChainId(f"{CHAIN}:{WALLET}")
+    assert event.legs[0].account_chain_id == AccountChainId(f"{CHAIN}:{ETH_ADDRESS}")
     assert event.legs[0].is_fee is False
 
 
@@ -219,7 +218,7 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate(test_ctx: _ImporterTestCon
     tx = _build_tx(
         native_transfers=[
             {
-                "from_address": WALLET,
+                "from_address": ETH_ADDRESS,
                 "to_address": SENDER,
                 "value": "500000000000000000",
                 "value_formatted": str(amount),
@@ -227,7 +226,7 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate(test_ctx: _ImporterTestCon
                 "internal_transaction": False,
             }
         ],
-        from_address=WALLET,
+        from_address=ETH_ADDRESS,
         transaction_fee=str(fee),
     )
 
