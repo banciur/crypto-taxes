@@ -28,19 +28,6 @@ class _StubMoralisService:
         return self._transactions
 
 
-def _account_registry() -> AccountRegistry:
-    return AccountRegistry(
-        [
-            AccountConfig(
-                name="Wallet",
-                address=WALLET,
-                chains=frozenset([ChainId(CHAIN)]),
-                skip_sync=False,
-            )
-        ]
-    )
-
-
 def _build_tx(
     *,
     native_transfers: list[dict[str, object]],
@@ -99,7 +86,16 @@ def _build_importer(
             MoralisService,
             _StubMoralisService(transactions=transactions if transactions is not None else []),
         ),
-        account_registry=_account_registry(),
+        account_registry=AccountRegistry(
+            [
+                AccountConfig(
+                    name="Wallet",
+                    address=WALLET,
+                    chains=frozenset([ChainId(CHAIN)]),
+                    skip_sync=False,
+                )
+            ]
+        ),
         spam_correction_repository=repo,
     )
     return importer, repo
