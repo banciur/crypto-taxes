@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Sequence, TypedDict
 
@@ -80,7 +80,10 @@ class TransactionsCacheRepository:
             .where(MoralisSyncStateOrm.chain == str(chain), MoralisSyncStateOrm.address == str(address))
             .limit(1)
         )
-        return self.session.scalar(stmt)
+        last_synced_at = self.session.scalar(stmt)
+        if last_synced_at is None or last_synced_at.tzinfo is not None:
+            return last_synced_at
+        return last_synced_at.replace(tzinfo=timezone.utc)  # SQLite does not preserve timezone info for datetimes.
 
     def mark_synced(self, chain: ChainId, address: WalletAddress, when: datetime) -> None:
         stmt = insert(MoralisSyncStateOrm).values(

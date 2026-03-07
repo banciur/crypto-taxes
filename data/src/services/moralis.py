@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Sequence
@@ -14,6 +15,7 @@ from db.transactions_cache import (
 )
 from domain.ledger import ChainId
 from type_defs import RawTxs
+from utils.misc import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +35,12 @@ class MoralisService:
         client: MoralisClient,
         cache_repo: TransactionsCacheRepository,
         accounts: Sequence[AccountConfig],
+        now_fn: Callable[[], datetime] = utc_now,
     ):
         self.client = client
         self.cache = cache_repo
         self.accounts = accounts
+        self._now = now_fn
 
     def _persist(self, chain: ChainId, records: RawTxs) -> None:
         rows: list[TransactionRow] = [
@@ -54,8 +58,6 @@ class MoralisService:
         self.cache.upsert_transactions(rows)
 
     def _ensure_chains_synced(self, mode: SyncMode) -> None:
-        yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
-
         for account in self.accounts:
             if account.skip_sync:
                 logger.info("Address %s (%s) is marked skip_sync; skipping fetch", account.address, account.name)
@@ -64,7 +66,7 @@ class MoralisService:
             for chain in account.chains:
                 last_synced_at = self.cache.last_synced_at(chain, address)
                 should_fetch = mode == SyncMode.FRESH
-                if mode == SyncMode.BUDGET and (last_synced_at is None or last_synced_at.date() < yesterday):
+                if mode == SyncMode.BUDGET and (last_synced_at is None or last_synced_at.date() < self._now().date()):
                     should_fetch = True
 
                 if not should_fetch:
@@ -74,7 +76,7 @@ class MoralisService:
                 from_date = (last_synced_at - timedelta(days=1)).date() if last_synced_at else None
                 txs = self.client.fetch_transactions(chain, address, from_date)
                 self._persist(chain, txs)
-                self.cache.mark_synced(chain, address, datetime.now(timezone.utc))
+                self.cache.mark_synced(chain, address, self._now())
 
     def get_transactions(self, sync_mode: SyncMode = SyncMode.BUDGET) -> RawTxs:
         self._ensure_chains_synced(sync_mode)

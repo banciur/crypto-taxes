@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 from random import choice
 from string import ascii_lowercase
@@ -13,3 +14,7 @@ def decimal_to_int(d: Decimal, precision: int = 18) -> int:
 
 def int_to_decimal(value: int, precision: int = 18) -> Decimal:
     return Decimal(value) / (Decimal(10) ** precision)
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
