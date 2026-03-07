@@ -20,7 +20,7 @@ class AccountBase(StrictBaseModel):
 
     name: str
     address: WalletAddress
-    skip_sync: bool
+    skip_sync: bool = False
 
     @field_validator("address", mode="before")
     @classmethod

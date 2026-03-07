@@ -3,13 +3,14 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Sequence, TypedDict
 
 from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint, create_engine, select
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from domain.ledger import ChainId, WalletAddress
+from type_defs import RawTxs
 
 
 class TransactionsCacheBase(DeclarativeBase):
@@ -42,11 +43,20 @@ class MoralisSyncStateOrm(TransactionsCacheBase):
     last_synced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class TransactionRow(TypedDict):
+    chain: str
+    hash: str
+    block_number: int
+    transaction_index: int
+    block_timestamp: datetime
+    payload: str
+
+
 class TransactionsCacheRepository:
     def __init__(self, session: Session):
         self.session = session
 
-    def upsert_transactions(self, records: list[dict[str, object]]) -> None:
+    def upsert_transactions(self, records: Sequence[TransactionRow]) -> None:
         if not records:
             return
 
@@ -55,14 +65,14 @@ class TransactionsCacheRepository:
         self.session.execute(stmt)
         self.session.commit()
 
-    def load_all_transactions(self) -> list[dict[str, Any]]:
+    def load_all_transactions(self) -> RawTxs:
         stmt = select(MoralisTransactionOrm).order_by(
             MoralisTransactionOrm.block_timestamp,
             MoralisTransactionOrm.block_number,
             MoralisTransactionOrm.transaction_index,
         )
         rows = self.session.execute(stmt).scalars().all()
-        return [json.loads(row.payload) for row in rows]
+        return [{**json.loads(row.payload), "chain": row.chain} for row in rows]
 
     def last_synced_at(self, chain: ChainId, address: WalletAddress) -> datetime | None:
         stmt = (
