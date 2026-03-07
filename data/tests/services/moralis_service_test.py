@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Sequence
+from collections.abc import Generator
 from datetime import date, datetime, timedelta, timezone
 from typing import NamedTuple, cast
 
 import pytest
 from sqlalchemy import Engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from accounts import AccountConfig
 from clients.moralis import MoralisClient
@@ -47,42 +47,18 @@ class _ServiceTestContext(NamedTuple):
 
 
 @pytest.fixture()
-def cache_session(db_engine: Engine) -> Generator[Session, None, None]:
+def test_ctx(db_engine: Engine) -> Generator[_ServiceTestContext, None, None]:
     TransactionsCacheBase.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
-        yield session
+        cache_repo = TransactionsCacheRepository(session)
+        client = _StubMoralisClient()
+        service = MoralisService(
+            cast(MoralisClient, client),
+            cache_repo,
+            accounts=[],
+        )
+        yield _ServiceTestContext(service=service, client=client, cache_repo=cache_repo)
     TransactionsCacheBase.metadata.drop_all(db_engine)
-
-
-@pytest.fixture()
-def test_ctx(cache_session: Session) -> _ServiceTestContext:
-    cache_repo = TransactionsCacheRepository(cache_session)
-    client = _StubMoralisClient()
-    service = MoralisService(
-        cast(MoralisClient, client),
-        cache_repo,
-        accounts=[],
-    )
-    return _ServiceTestContext(service=service, client=client, cache_repo=cache_repo)
-
-
-def _account_entry(
-    *,
-    name: str,
-    address: str,
-    chains: list[str],
-    skip_sync: bool = False,
-) -> dict[str, object]:
-    return {
-        "name": name,
-        "address": address,
-        "chains": chains,
-        "skip_sync": skip_sync,
-    }
-
-
-def _accounts(account_entries: Sequence[dict[str, object]]) -> list[AccountConfig]:
-    return [AccountConfig.model_validate(entry) for entry in account_entries]
 
 
 def _calls_as_tuples(calls: list[tuple[ChainId, WalletAddress, date | None]]) -> list[tuple[str, str, date | None]]:
@@ -92,41 +68,39 @@ def _calls_as_tuples(calls: list[tuple[ChainId, WalletAddress, date | None]]) ->
 def test_budget_fetches_new_wallet_chain_from_start_even_when_chain_has_recent_cursor(
     test_ctx: _ServiceTestContext,
 ) -> None:
-    new_address = "0xddeeff"
+    new_address = WalletAddress("0xddeeff")
     existing_cursor = datetime.now(timezone.utc) - timedelta(hours=2)
 
-    test_ctx.service.accounts = _accounts(
-        [
-            _account_entry(name="Existing", address=ETH_ADDRESS, chains=[CHAIN]),
-            _account_entry(name="New", address=new_address, chains=[CHAIN]),
-        ]
-    )
-    test_ctx.cache_repo.mark_synced(ChainId(CHAIN), WalletAddress(ETH_ADDRESS), existing_cursor)
+    test_ctx.service.accounts = [
+        AccountConfig(name="Existing", address=ETH_ADDRESS, chains=frozenset([CHAIN])),
+        AccountConfig(name="New", address=new_address, chains=frozenset([CHAIN])),
+    ]
+    test_ctx.cache_repo.mark_synced(CHAIN, ETH_ADDRESS, existing_cursor)
 
     test_ctx.service.get_transactions(SyncMode.BUDGET)
 
-    assert _calls_as_tuples(test_ctx.client.calls) == [(CHAIN, new_address.lower(), None)]
-    assert test_ctx.cache_repo.last_synced_at(ChainId(CHAIN), WalletAddress(new_address)) is not None
+    assert _calls_as_tuples(test_ctx.client.calls) == [(CHAIN, new_address, None)]
+    assert test_ctx.cache_repo.last_synced_at(CHAIN, new_address) is not None
 
 
 def test_budget_fetches_existing_wallet_chain_from_last_synced_cursor(test_ctx: _ServiceTestContext) -> None:
     stale_cursor = datetime.now(timezone.utc) - timedelta(days=3)
     expected_from_date = (stale_cursor - timedelta(days=1)).date()
-    test_ctx.service.accounts = _accounts([_account_entry(name="Wallet", address=ETH_ADDRESS, chains=[CHAIN])])
-    test_ctx.cache_repo.mark_synced(ChainId(CHAIN), ETH_ADDRESS, stale_cursor)
+    test_ctx.service.accounts = [AccountConfig(name="Wallet", address=ETH_ADDRESS, chains=frozenset([CHAIN]))]
+    test_ctx.cache_repo.mark_synced(CHAIN, ETH_ADDRESS, stale_cursor)
 
     test_ctx.service.get_transactions(SyncMode.BUDGET)
 
     assert _calls_as_tuples(test_ctx.client.calls) == [(CHAIN, ETH_ADDRESS, expected_from_date)]
-    refreshed_cursor = test_ctx.cache_repo.last_synced_at(ChainId(CHAIN), ETH_ADDRESS)
+    refreshed_cursor = test_ctx.cache_repo.last_synced_at(CHAIN, ETH_ADDRESS)
     assert refreshed_cursor is not None
     assert refreshed_cursor.date() >= stale_cursor.date()
 
 
 def test_budget_skips_recently_synced_wallet_chain(test_ctx: _ServiceTestContext) -> None:
     fresh_cursor = datetime.now(timezone.utc) - timedelta(hours=6)
-    test_ctx.service.accounts = _accounts([_account_entry(name="Wallet", address=ETH_ADDRESS, chains=[CHAIN])])
-    test_ctx.cache_repo.mark_synced(ChainId(CHAIN), ETH_ADDRESS, fresh_cursor)
+    test_ctx.service.accounts = [AccountConfig(name="Wallet", address=ETH_ADDRESS, chains=frozenset([CHAIN]))]
+    test_ctx.cache_repo.mark_synced(CHAIN, ETH_ADDRESS, fresh_cursor)
 
     test_ctx.service.get_transactions(SyncMode.BUDGET)
 
@@ -135,8 +109,8 @@ def test_budget_skips_recently_synced_wallet_chain(test_ctx: _ServiceTestContext
 
 def test_budget_skips_wallet_chain_synced_yesterday(test_ctx: _ServiceTestContext) -> None:
     yesterday_cursor = datetime.now(timezone.utc) - timedelta(days=1, hours=1)
-    test_ctx.service.accounts = _accounts([_account_entry(name="Wallet", address=ETH_ADDRESS, chains=[CHAIN])])
-    test_ctx.cache_repo.mark_synced(ChainId(CHAIN), ETH_ADDRESS, yesterday_cursor)
+    test_ctx.service.accounts = [AccountConfig(name="Wallet", address=ETH_ADDRESS, chains=frozenset([CHAIN]))]
+    test_ctx.cache_repo.mark_synced(CHAIN, ETH_ADDRESS, yesterday_cursor)
 
     test_ctx.service.get_transactions(SyncMode.BUDGET)
 
@@ -144,9 +118,9 @@ def test_budget_skips_wallet_chain_synced_yesterday(test_ctx: _ServiceTestContex
 
 
 def test_budget_skips_wallet_marked_as_skip_sync(test_ctx: _ServiceTestContext) -> None:
-    test_ctx.service.accounts = _accounts(
-        [_account_entry(name="Dormant", address=ETH_ADDRESS, chains=[CHAIN], skip_sync=True)]
-    )
+    test_ctx.service.accounts = [
+        AccountConfig(name="Dormant", address=ETH_ADDRESS, chains=frozenset([CHAIN]), skip_sync=True)
+    ]
 
     test_ctx.service.get_transactions(SyncMode.BUDGET)
 
@@ -156,8 +130,8 @@ def test_budget_skips_wallet_marked_as_skip_sync(test_ctx: _ServiceTestContext) 
 def test_fresh_fetches_even_when_wallet_chain_was_recently_synced(test_ctx: _ServiceTestContext) -> None:
     recent_cursor = datetime.now(timezone.utc) - timedelta(hours=3)
     expected_from_date = (recent_cursor - timedelta(days=1)).date()
-    test_ctx.service.accounts = _accounts([_account_entry(name="Wallet", address=ETH_ADDRESS, chains=[CHAIN])])
-    test_ctx.cache_repo.mark_synced(ChainId(CHAIN), ETH_ADDRESS, recent_cursor)
+    test_ctx.service.accounts = [AccountConfig(name="Wallet", address=ETH_ADDRESS, chains=frozenset([CHAIN]))]
+    test_ctx.cache_repo.mark_synced(CHAIN, ETH_ADDRESS, recent_cursor)
 
     test_ctx.service.get_transactions(SyncMode.FRESH)
 
@@ -176,7 +150,7 @@ def test_get_transactions_persists_fetched_transactions(test_ctx: _ServiceTestCo
         "transaction_fee": "0",
     }
 
-    test_ctx.service.accounts = _accounts([_account_entry(name="Wallet", address=ETH_ADDRESS, chains=[CHAIN])])
+    test_ctx.service.accounts = [AccountConfig(name="Wallet", address=ETH_ADDRESS, chains=frozenset([CHAIN]))]
     test_ctx.client.set_transactions(chain=CHAIN, address=ETH_ADDRESS, transactions=[tx])
 
     transactions = test_ctx.service.get_transactions(SyncMode.FRESH)

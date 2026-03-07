@@ -56,6 +56,28 @@ def test_load_accounts_raises_for_duplicate_address(tmp_path: Path) -> None:
         load_accounts(accounts_path)
 
 
+def test_load_accounts_defaults_skip_sync_to_false_when_omitted(tmp_path: Path) -> None:
+    address = "0xAbCdEf"
+    chain = "eth"
+    accounts_path = tmp_path / "accounts.json"
+    accounts_path.write_text(
+        json.dumps(
+            [
+                {
+                    "name": "Primary",
+                    "address": address,
+                    "chains": [chain],
+                }
+            ]
+        )
+    )
+
+    loaded_accounts = load_accounts(accounts_path)
+
+    assert len(loaded_accounts) == 1
+    assert loaded_accounts[0].skip_sync is False
+
+
 def test_registry_resolves_owned_account_chain_ids(tmp_path: Path) -> None:
     address = "0xAbCdEf"
     chain = "ethereum"

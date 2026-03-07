@@ -7,7 +7,7 @@ from typing import Any, NamedTuple, cast
 
 import pytest
 from sqlalchemy import Engine, select
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from accounts import AccountConfig, AccountRegistry
 from db.corrections import CorrectionsBase, SpamCorrectionOrm, SpamCorrectionRepository
@@ -85,32 +85,27 @@ class _ImporterTestContext(NamedTuple):
 
 
 @pytest.fixture()
-def corrections_session(db_engine: Engine) -> Generator[Session, None, None]:
+def test_ctx(db_engine: Engine) -> Generator[_ImporterTestContext, None, None]:
     CorrectionsBase.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
-        yield session
+        repo = SpamCorrectionRepository(session)
+        service = _StubMoralisService()
+        importer = MoralisImporter(
+            service=cast(MoralisService, service),
+            account_registry=AccountRegistry(
+                [
+                    AccountConfig(
+                        name="Wallet",
+                        address=ETH_ADDRESS,
+                        chains=frozenset([ChainId(CHAIN)]),
+                        skip_sync=False,
+                    )
+                ]
+            ),
+            spam_correction_repository=repo,
+        )
+        yield _ImporterTestContext(importer=importer, spam_repo=repo, service=service)
     CorrectionsBase.metadata.drop_all(db_engine)
-
-
-@pytest.fixture()
-def test_ctx(corrections_session: Session) -> _ImporterTestContext:
-    repo = SpamCorrectionRepository(corrections_session)
-    service = _StubMoralisService()
-    importer = MoralisImporter(
-        service=cast(MoralisService, service),
-        account_registry=AccountRegistry(
-            [
-                AccountConfig(
-                    name="Wallet",
-                    address=ETH_ADDRESS,
-                    chains=frozenset([ChainId(CHAIN)]),
-                    skip_sync=False,
-                )
-            ]
-        ),
-        spam_correction_repository=repo,
-    )
-    return _ImporterTestContext(importer=importer, spam_repo=repo, service=service)
 
 
 def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> None:
