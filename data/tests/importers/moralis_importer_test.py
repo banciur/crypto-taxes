@@ -11,10 +11,10 @@ from sqlalchemy.orm import sessionmaker
 
 from accounts import AccountConfig, AccountRegistry
 from db.corrections import CorrectionsBase, SpamCorrectionOrm, SpamCorrectionRepository
-from domain.ledger import AccountChainId, AssetId, ChainId
-from importers.moralis.moralis_importer import CHAIN_LOCATIONS, MoralisImporter
+from domain.ledger import AccountChainId, AssetId
+from importers.moralis.moralis_importer import MoralisImporter
 from services.moralis import MoralisService
-from tests.constants import CHAIN, ETH_ADDRESS
+from tests.constants import ETH_ADDRESS, LOCATION
 
 BLOCK_TS = "2025-05-16T05:04:40.000Z"
 SENDER = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
@@ -42,7 +42,7 @@ def _build_tx(
 ) -> dict[str, object]:
     tx: dict[str, object] = {
         "block_timestamp": BLOCK_TS,
-        "chain": CHAIN,
+        "location": LOCATION,
         "hash": TX_HASH,
         "from_address": from_address,
         "native_transfers": native_transfers,
@@ -97,7 +97,7 @@ def test_ctx(db_engine: Engine) -> Generator[_ImporterTestContext, None, None]:
                     AccountConfig(
                         name="Wallet",
                         address=ETH_ADDRESS,
-                        chains=frozenset([ChainId(CHAIN)]),
+                        locations=frozenset([LOCATION]),
                         skip_sync=False,
                     )
                 ]
@@ -125,7 +125,7 @@ def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> 
     expected_timestamp = datetime.fromisoformat(BLOCK_TS.replace("Z", "+00:00")).astimezone(timezone.utc)
 
     assert event is not None
-    assert event.event_origin.location == CHAIN_LOCATIONS[CHAIN]
+    assert event.event_origin.location == LOCATION
     assert event.event_origin.external_id == TX_HASH
     assert event.timestamp == expected_timestamp
 
@@ -133,7 +133,7 @@ def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> 
     leg = event.legs[0]
     assert leg.asset_id == AssetId(symbol)
     assert leg.quantity == amount
-    assert leg.account_chain_id == AccountChainId(f"{CHAIN}:{ETH_ADDRESS}")
+    assert leg.account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
 
 
 def test_native_transfer_dedupes_internal_and_external(test_ctx: _ImporterTestContext) -> None:
@@ -180,7 +180,7 @@ def test_fee_leg_added_for_outgoing_tx(test_ctx: _ImporterTestContext) -> None:
     leg = event.legs[0]
     assert leg.asset_id == AssetId("ETH")
     assert leg.quantity == -fee
-    assert leg.account_chain_id == AccountChainId(f"{CHAIN}:{ETH_ADDRESS}")
+    assert leg.account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
     assert leg.is_fee is True
 
 
@@ -203,7 +203,7 @@ def test_erc20_legs_net_per_asset_and_account(test_ctx: _ImporterTestContext) ->
     assert len(event.legs) == 1
     assert event.legs[0].asset_id == AssetId(symbol)
     assert event.legs[0].quantity == amount_in - amount_out
-    assert event.legs[0].account_chain_id == AccountChainId(f"{CHAIN}:{ETH_ADDRESS}")
+    assert event.legs[0].account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
     assert event.legs[0].is_fee is False
 
 

@@ -12,7 +12,6 @@ from pydantic import Field, StringConstraints, field_validator
 from pydantic_base import StrictBaseModel
 
 AssetId = NewType("AssetId", str)
-ChainId = NewType("ChainId", str)
 DisposalId = NewType("DisposalId", UUID)
 LedgerEventId = NewType("LedgerEventId", UUID)
 LegId = NewType("LegId", UUID)

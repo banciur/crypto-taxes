@@ -16,7 +16,7 @@ if str(SRC_DIR) not in sys.path:
 
 from clients.moralis import MoralisClient
 from config import config
-from domain.ledger import ChainId, WalletAddress
+from domain.ledger import EventLocation, WalletAddress
 
 
 def _parse_date(value: str) -> date:
@@ -34,7 +34,11 @@ def _parse_print_count(value: str) -> int | None:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fetch wallet history directly from Moralis API.")
-    parser.add_argument("--chain", required=True, help="Chain id, e.g. eth, arbitrum, optimism, base.")
+    parser.add_argument(
+        "--location",
+        required=True,
+        help="Location name, e.g. ethereum, arbitrum, optimism, base.",
+    )
     parser.add_argument("--address", required=True, help="Wallet address to query.")
     parser.add_argument(
         "--from-date",
@@ -61,7 +65,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
     client = MoralisClient(api_key=config().moralis_api_key, delay_seconds=args.delay_seconds)
     transactions = client.fetch_transactions(
-        chain=ChainId(args.chain),
+        location=EventLocation(args.location.strip().upper()),
         address=WalletAddress(args.address.lower()),
         from_date=args.from_date,
     )

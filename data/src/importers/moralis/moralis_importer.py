@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Iterable, Mapping, cast
 
-from accounts import AccountRegistry, normalize_chain
+from accounts import AccountRegistry
 from db.corrections import SpamCorrectionRepository, SpamCorrectionSource
 from domain.ledger import (
     AccountChainId,
@@ -21,14 +21,6 @@ from services.moralis import MoralisService, SyncMode
 logger = logging.getLogger(__name__)
 
 INGESTION_SOURCE = "moralis"
-
-CHAIN_LOCATIONS: dict[str, EventLocation] = {
-    "eth": EventLocation.ETHEREUM,
-    "ethereum": EventLocation.ETHEREUM,
-    "arbitrum": EventLocation.ARBITRUM,
-    "base": EventLocation.BASE,
-    "optimism": EventLocation.OPTIMISM,
-}
 NATIVE_ASSET_ID = AssetId("ETH")
 
 
@@ -133,13 +125,7 @@ class MoralisImporter:
 
     def _build_event(self, tx: Mapping[str, Any]) -> LedgerEvent | None:
         legs: list[LedgerLeg] = []
-
-        chain = str(tx["chain"]).lower()
-        try:
-            location = CHAIN_LOCATIONS[chain]
-        except KeyError as e:
-            raise Exception(f"Transaction {tx['hash']} with unsupported chain: {tx['chain']}") from e
-        normalized_chain = normalize_chain(chain)
+        location = EventLocation(tx["location"])
 
         for transfer in _dedupe_native_transfers(cast(list, tx["native_transfers"])):
             token_symbol = transfer["token_symbol"]
@@ -152,7 +138,7 @@ class MoralisImporter:
                 continue
 
             from_account_chain_id = self.account_registry.resolve_owned_id(
-                chain=normalized_chain,
+                location=location,
                 address=WalletAddress(from_addr),
             )
             if from_account_chain_id is not None:
@@ -165,7 +151,7 @@ class MoralisImporter:
                     )
                 )
             to_account_chain_id = self.account_registry.resolve_owned_id(
-                chain=normalized_chain,
+                location=location,
                 address=WalletAddress(to_addr),
             )
             if to_account_chain_id is not None:
@@ -189,7 +175,7 @@ class MoralisImporter:
             asset_id = AssetId(transfer["token_symbol"] if transfer["token_symbol"] else transfer["address"])
 
             from_account_chain_id = self.account_registry.resolve_owned_id(
-                chain=normalized_chain,
+                location=location,
                 address=WalletAddress(from_addr),
             )
             if from_account_chain_id is not None:
@@ -202,7 +188,7 @@ class MoralisImporter:
                     )
                 )
             to_account_chain_id = self.account_registry.resolve_owned_id(
-                chain=normalized_chain,
+                location=location,
                 address=WalletAddress(to_addr),
             )
             if to_account_chain_id is not None:
@@ -217,7 +203,7 @@ class MoralisImporter:
 
         from_addr_tx = tx["from_address"].lower()
         sender_account_chain_id = self.account_registry.resolve_owned_id(
-            chain=normalized_chain,
+            location=location,
             address=WalletAddress(from_addr_tx),
         )
         if sender_account_chain_id is not None:

@@ -9,7 +9,7 @@ from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint,
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
-from domain.ledger import ChainId, WalletAddress
+from domain.ledger import EventLocation, WalletAddress
 from type_defs import RawTxs
 
 
@@ -21,7 +21,7 @@ class MoralisTransactionOrm(TransactionsCacheBase):
     __tablename__ = "moralis_transactions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    chain: Mapped[str] = mapped_column(String, nullable=False)
+    location: Mapped[str] = mapped_column(String, nullable=False)
     hash: Mapped[str] = mapped_column(String, nullable=False)
     block_number: Mapped[int] = mapped_column(Integer, nullable=False)
     transaction_index: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -29,7 +29,7 @@ class MoralisTransactionOrm(TransactionsCacheBase):
     payload: Mapped[str] = mapped_column(Text, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("chain", "hash", name="uq_moralis_chain_hash"),
+        UniqueConstraint("location", "hash", name="uq_moralis_location_hash"),
         Index("ix_moralis_hash", "hash"),
         Index("ix_moralis_order", "block_timestamp", "block_number", "transaction_index"),
     )
@@ -38,13 +38,13 @@ class MoralisTransactionOrm(TransactionsCacheBase):
 class MoralisSyncStateOrm(TransactionsCacheBase):
     __tablename__ = "moralis_sync_state"
 
-    chain: Mapped[str] = mapped_column(String, primary_key=True)
+    location: Mapped[str] = mapped_column(String, primary_key=True)
     address: Mapped[str] = mapped_column(String, primary_key=True)
     last_synced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class TransactionRow(TypedDict):
-    chain: str
+    location: str
     hash: str
     block_number: int
     transaction_index: int
@@ -61,7 +61,7 @@ class TransactionsCacheRepository:
             return
 
         stmt = insert(MoralisTransactionOrm).values(records)
-        stmt = stmt.on_conflict_do_nothing(index_elements=["chain", "hash"])
+        stmt = stmt.on_conflict_do_nothing(index_elements=["location", "hash"])
         self.session.execute(stmt)
         self.session.commit()
 
@@ -72,12 +72,12 @@ class TransactionsCacheRepository:
             MoralisTransactionOrm.transaction_index,
         )
         rows = self.session.execute(stmt).scalars().all()
-        return [{**json.loads(row.payload), "chain": row.chain} for row in rows]
+        return [{**json.loads(row.payload), "location": EventLocation(row.location)} for row in rows]
 
-    def last_synced_at(self, chain: ChainId, address: WalletAddress) -> datetime | None:
+    def last_synced_at(self, location: EventLocation, address: WalletAddress) -> datetime | None:
         stmt = (
             select(MoralisSyncStateOrm.last_synced_at)
-            .where(MoralisSyncStateOrm.chain == str(chain), MoralisSyncStateOrm.address == str(address))
+            .where(MoralisSyncStateOrm.location == location.value, MoralisSyncStateOrm.address == str(address))
             .limit(1)
         )
         last_synced_at = self.session.scalar(stmt)
@@ -85,12 +85,12 @@ class TransactionsCacheRepository:
             return last_synced_at
         return last_synced_at.replace(tzinfo=timezone.utc)  # SQLite does not preserve timezone info for datetimes.
 
-    def mark_synced(self, chain: ChainId, address: WalletAddress, when: datetime) -> None:
+    def mark_synced(self, location: EventLocation, address: WalletAddress, when: datetime) -> None:
         stmt = insert(MoralisSyncStateOrm).values(
-            {"chain": str(chain), "address": str(address), "last_synced_at": when}
+            {"location": location.value, "address": str(address), "last_synced_at": when}
         )
         stmt = stmt.on_conflict_do_update(
-            index_elements=["chain", "address"], set_={"last_synced_at": stmt.excluded.last_synced_at}
+            index_elements=["location", "address"], set_={"last_synced_at": stmt.excluded.last_synced_at}
         )
         self.session.execute(stmt)
         self.session.commit()

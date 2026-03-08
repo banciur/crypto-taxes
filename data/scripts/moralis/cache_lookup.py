@@ -35,7 +35,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def _format_record(row: MoralisTransactionOrm) -> dict[str, object]:
     return {
         "id": row.id,
-        "chain": row.chain,
+        "location": row.location,
         "hash": row.hash,
         "block_number": row.block_number,
         "transaction_index": row.transaction_index,

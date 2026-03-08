@@ -9,10 +9,21 @@ from moralis import evm_api
 from moralis.evm_api.wallets.get_wallet_history import Params
 from openapi_evm_api.model.chain_list import ChainList
 
-from domain.ledger import ChainId, WalletAddress
+from domain.ledger import EventLocation, WalletAddress
 from type_defs import RawTxs
 
 logger = logging.getLogger(__name__)
+
+_MORALIS_CHAIN_VALUES: dict[EventLocation, str] = {
+    EventLocation.ETHEREUM: "eth",
+    EventLocation.ARBITRUM: "arbitrum",
+    EventLocation.BASE: "base",
+    EventLocation.OPTIMISM: "optimism",
+}
+
+
+def _moralis_chain(location: EventLocation) -> ChainList:
+    return ChainList(_MORALIS_CHAIN_VALUES[location])
 
 
 class MoralisClient:
@@ -23,7 +34,7 @@ class MoralisClient:
 
     def fetch_transactions(
         self,
-        chain: ChainId,
+        location: EventLocation,
         address: WalletAddress,
         from_date: date | None = None,
     ) -> RawTxs:
@@ -32,14 +43,14 @@ class MoralisClient:
         total = 0
 
         logger.info(
-            "Fetching transactions chain=%s address=%s%s",
-            chain,
+            "Fetching transactions location=%s address=%s%s",
+            location,
             address,
             f" from_date={from_date:%Y-%m-%d}" if from_date else "",
         )
 
         while cursor is not None:
-            params: Params = {"chain": ChainList(chain), "address": address}
+            params: Params = {"chain": _moralis_chain(location), "address": address}
             if from_date:
                 params["from_date"] = from_date.strftime("%Y-%m-%d")
             if cursor:
@@ -57,10 +68,10 @@ class MoralisClient:
             total += len(batch)
 
             logger.info(
-                "Fetched batch size=%d total=%d chain=%s address=%s",
+                "Fetched batch size=%d total=%d location=%s address=%s",
                 len(batch),
                 total,
-                chain,
+                location,
                 address,
             )
 
