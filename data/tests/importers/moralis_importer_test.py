@@ -19,6 +19,8 @@ from tests.constants import ETH_ADDRESS, ETH_TX_HASH, LOCATION
 BLOCK_TS = "2025-05-16T05:04:40.000Z"
 ETH_ADDRESS_2 = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
 
+# This file is missing test cases and supporting functions are poorly written. Next time you touch it, fix it.
+
 
 def _build_tx(
     *,

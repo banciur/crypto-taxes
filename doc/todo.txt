@@ -1,9 +1,8 @@
 First stage: compute German taxes
 
-TODO: Review Moralis importer after wallets structure changes.
-TODO: Review Kraken importer after event type removal and wallets structure changes
 TODO: Adjust readme / agents md instructions. All files except top level should be readme and add instruction to always read one in ui or data. And extra instruction to read readmes in the path "up" to get context. Go through existing README files. Do I need as code is self-documenting?
 TODO: Coinbase importer
+  - I imagine coinbase will also need a cache. This mighet be a good place for some unified approach.
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
   - Events component is still messy, divide more?, put logic somewhere else. Internal structures are too complicated etc.
   - Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok.
