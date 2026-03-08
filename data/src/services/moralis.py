@@ -1,0 +1,81 @@
+from __future__ import annotations
+
+import json
+import logging
+from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
+from enum import Enum
+from typing import Sequence
+
+from accounts import AccountConfig
+from clients.moralis import MoralisClient
+from db.transactions_cache import (
+    TransactionRow,
+    TransactionsCacheRepository,
+)
+from domain.ledger import EventLocation
+from type_defs import RawTxs
+from utils.misc import utc_now
+
+logger = logging.getLogger(__name__)
+
+
+class SyncMode(str, Enum):
+    FRESH = "fresh"
+    BUDGET = "budget"
+
+
+class MoralisService:
+    def __init__(
+        self,
+        client: MoralisClient,
+        cache_repo: TransactionsCacheRepository,
+        accounts: Sequence[AccountConfig],
+        now_fn: Callable[[], datetime] = utc_now,
+    ):
+        self.client = client
+        self.cache = cache_repo
+        self.accounts = accounts
+        self._now = now_fn
+
+    def _persist(self, location: EventLocation, records: RawTxs) -> None:
+        rows: list[TransactionRow] = [
+            {
+                "location": location.value,
+                "hash": str(record["hash"]),
+                "block_number": int(record["block_number"]),
+                "transaction_index": int(record["transaction_index"]),
+                "block_timestamp": datetime.fromisoformat(record["block_timestamp"].replace("Z", "+00:00")).astimezone(
+                    timezone.utc
+                ),
+                "payload": json.dumps(record),
+            }
+            for record in records
+        ]
+
+        self.cache.upsert_transactions(rows)
+
+    def _ensure_locations_synced(self, mode: SyncMode) -> None:
+        for account in self.accounts:
+            if account.skip_sync:
+                logger.info("Address %s (%s) is marked skip_sync; skipping fetch", account.address, account.name)
+                continue
+            address = account.address
+            for location in account.locations:
+                last_synced_at = self.cache.last_synced_at(location, address)
+                should_fetch = mode == SyncMode.FRESH
+                if mode == SyncMode.BUDGET and (last_synced_at is None or last_synced_at.date() < self._now().date()):
+                    should_fetch = True
+
+                if not should_fetch:
+                    logger.info("Address %s at location %s already synced; skipping fetch", address, location)
+                    continue
+
+                from_date = (last_synced_at - timedelta(days=1)).date() if last_synced_at else None
+                txs = self.client.fetch_transactions(location, address, from_date)
+                self._persist(location, txs)
+                self.cache.mark_synced(location, address, self._now())
+
+    def get_transactions(self, sync_mode: SyncMode = SyncMode.BUDGET) -> RawTxs:
+        self._ensure_locations_synced(sync_mode)
+        return self.cache.load_all_transactions()

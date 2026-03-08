@@ -7,14 +7,15 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from sqlalchemy import select
 
-from db.transactions_cache import CACHE_DB_PATH, MoralisTransactionOrm, init_transactions_cache_db
+from config import TRANSACTIONS_CACHE_DB_PATH
+from db.transactions_cache import MoralisTransactionOrm, init_transactions_cache_db
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -25,7 +26,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--db",
         type=Path,
-        default=CACHE_DB_PATH,
+        default=TRANSACTIONS_CACHE_DB_PATH,
         help="Path to cache DB (default: artifacts/transactions_cache.db).",
     )
     return parser.parse_args(argv)
@@ -34,7 +35,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def _format_record(row: MoralisTransactionOrm) -> dict[str, object]:
     return {
         "id": row.id,
-        "chain": row.chain,
+        "location": row.location,
         "hash": row.hash,
         "block_number": row.block_number,
         "transaction_index": row.transaction_index,
@@ -68,7 +69,7 @@ def _lookup_by_hash(session, tx_hash: str) -> None:
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
-    session = init_transactions_cache_db(db_file=args.db)
+    session = init_transactions_cache_db(db_path=args.db)
     if args.id is not None:
         _lookup_by_id(session, args.id)
     else:
