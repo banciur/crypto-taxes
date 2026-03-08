@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Iterable, Mapping, cast
@@ -10,6 +11,7 @@ from db.corrections import SpamCorrectionRepository, SpamCorrectionSource
 from domain.ledger import (
     AccountChainId,
     AssetId,
+    EventLocation,
     EventOrigin,
     LedgerEvent,
     LedgerLeg,
@@ -21,20 +23,6 @@ logger = logging.getLogger(__name__)
 
 INGESTION_SOURCE = "moralis"
 NATIVE_ASSET_ID = AssetId("ETH")
-
-
-def _obtain_value(transfer: dict[str, Any]) -> Decimal:
-    value = Decimal(transfer["value_formatted"])
-    if value.is_finite():
-        return value
-    if transfer["token_decimals"] is None:
-        return Decimal(transfer["value"])
-    else:
-        raise Exception("I was to lazy to implement proper handling of token decimals and value")
-
-
-def _parse_timestamp(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
 
 
 def _native_transfer_key(transfer: dict[str, str]) -> tuple[str, str, str, str]:
@@ -89,6 +77,29 @@ def _collapse_legs(legs: Iterable[LedgerLeg]) -> list[LedgerLeg]:
     return collapsed
 
 
+def native_asset_id(transfer: Mapping[str, Any]) -> AssetId:
+    asset_id = AssetId(str(transfer["token_symbol"]))
+    assert asset_id.upper() == NATIVE_ASSET_ID, f"Unexpected native token symbol: {asset_id}"
+    return NATIVE_ASSET_ID
+
+
+def erc20_asset_id(transfer: Mapping[str, Any]) -> AssetId:
+    token_symbol = str(transfer["token_symbol"])
+    if token_symbol:
+        return AssetId(token_symbol)
+    return AssetId(str(transfer["address"]))
+
+
+def _obtain_value(transfer: dict[str, Any]) -> Decimal:
+    value = Decimal(transfer["value_formatted"])
+    if value.is_finite():
+        return value
+    if transfer["token_decimals"] is None:
+        return Decimal(transfer["value"])
+    else:
+        raise Exception("I was to lazy to implement proper handling of token decimals and value")
+
+
 class MoralisImporter:
     def __init__(
         self,
@@ -122,80 +133,67 @@ class MoralisImporter:
         events.sort(key=lambda evt: evt.timestamp)
         return events
 
-    def _build_event(self, tx: Mapping[str, Any]) -> LedgerEvent | None:
+    def _build_transfer_legs(
+        self,
+        *,
+        location: EventLocation,
+        transfers: Iterable[Mapping[str, Any]],
+        asset_id_for_transfer: Callable[[Mapping[str, Any]], AssetId],
+    ) -> list[LedgerLeg]:
         legs: list[LedgerLeg] = []
+        for transfer in transfers:
+            asset_id = asset_id_for_transfer(transfer)
+            quantity = _obtain_value(cast(dict[str, Any], transfer))
+            if quantity == 0:
+                continue
+
+            from_account_chain_id = self.account_registry.resolve_owned_id(
+                location=location,
+                address=WalletAddress(str(transfer["from_address"]).lower()),
+            )
+            if from_account_chain_id is not None:
+                legs.append(
+                    LedgerLeg(
+                        asset_id=asset_id,
+                        quantity=-quantity,
+                        account_chain_id=from_account_chain_id,
+                        is_fee=False,
+                    )
+                )
+
+            to_account_chain_id = self.account_registry.resolve_owned_id(
+                location=location,
+                address=WalletAddress(str(transfer["to_address"]).lower()),
+            )
+            if to_account_chain_id is not None:
+                legs.append(
+                    LedgerLeg(
+                        asset_id=asset_id,
+                        quantity=quantity,
+                        account_chain_id=to_account_chain_id,
+                        is_fee=False,
+                    )
+                )
+        return legs
+
+    def _build_event(self, tx: Mapping[str, Any]) -> LedgerEvent | None:
         location = tx["location"]
 
-        for transfer in _dedupe_native_transfers(cast(list, tx["native_transfers"])):
-            asset_id = transfer["token_symbol"]
-            assert asset_id.upper() == NATIVE_ASSET_ID, f"Unexpected native token symbol: {asset_id}"
+        legs = self._build_transfer_legs(
+            location=location,
+            transfers=_dedupe_native_transfers(cast(list, tx["native_transfers"])),
+            asset_id_for_transfer=native_asset_id,
+        )
 
-            quantity = _obtain_value(transfer)
-            if quantity == 0:
-                continue
-
-            from_account_chain_id = self.account_registry.resolve_owned_id(
+        legs.extend(
+            self._build_transfer_legs(
                 location=location,
-                address=WalletAddress(transfer["from_address"].lower()),
+                transfers=cast(list, tx["erc20_transfers"]),
+                asset_id_for_transfer=erc20_asset_id,
             )
-            if from_account_chain_id is not None:
-                legs.append(
-                    LedgerLeg(
-                        asset_id=NATIVE_ASSET_ID,
-                        quantity=-quantity,
-                        account_chain_id=from_account_chain_id,
-                        is_fee=False,
-                    )
-                )
+        )
 
-            to_account_chain_id = self.account_registry.resolve_owned_id(
-                location=location,
-                address=WalletAddress(transfer["to_address"].lower()),
-            )
-            if to_account_chain_id is not None:
-                legs.append(
-                    LedgerLeg(
-                        asset_id=NATIVE_ASSET_ID,
-                        quantity=quantity,
-                        account_chain_id=to_account_chain_id,
-                        is_fee=False,
-                    )
-                )
-
-        for transfer in cast(list, tx["erc20_transfers"]):
-            quantity = _obtain_value(transfer)
-            if quantity == 0:
-                continue
-
-            asset_id = AssetId(transfer["token_symbol"] if transfer["token_symbol"] else transfer["address"])
-
-            from_account_chain_id = self.account_registry.resolve_owned_id(
-                location=location,
-                address=WalletAddress(transfer["from_address"].lower()),
-            )
-            if from_account_chain_id is not None:
-                legs.append(
-                    LedgerLeg(
-                        asset_id=asset_id,
-                        quantity=-quantity,
-                        account_chain_id=from_account_chain_id,
-                        is_fee=False,
-                    )
-                )
-            to_account_chain_id = self.account_registry.resolve_owned_id(
-                location=location,
-                address=WalletAddress(transfer["to_address"].lower()),
-            )
-            if to_account_chain_id is not None:
-                legs.append(
-                    LedgerLeg(
-                        asset_id=asset_id,
-                        quantity=quantity,
-                        account_chain_id=to_account_chain_id,
-                        is_fee=False,
-                    )
-                )
-
+        # If its comming from my account add fee leg
         from_addr_tx = tx["from_address"].lower()
         sender_account_chain_id = self.account_registry.resolve_owned_id(
             location=location,
@@ -219,7 +217,7 @@ class MoralisImporter:
             return None
 
         return LedgerEvent(
-            timestamp=_parse_timestamp(str(tx["block_timestamp"])),
+            timestamp=datetime.fromisoformat(tx["block_timestamp"].replace("Z", "+00:00")).astimezone(timezone.utc),
             event_origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
             legs=legs,

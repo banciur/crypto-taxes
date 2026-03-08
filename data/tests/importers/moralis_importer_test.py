@@ -12,38 +12,26 @@ from sqlalchemy.orm import sessionmaker
 from accounts import AccountConfig, AccountRegistry
 from db.corrections import CorrectionsBase, SpamCorrectionOrm, SpamCorrectionRepository
 from domain.ledger import AccountChainId, AssetId
-from importers.moralis.moralis_importer import MoralisImporter
+from importers.moralis.moralis_importer import NATIVE_ASSET_ID, MoralisImporter
 from services.moralis import MoralisService
-from tests.constants import ETH_ADDRESS, LOCATION
+from tests.constants import ETH_ADDRESS, ETH_TX_HASH, LOCATION
 
 BLOCK_TS = "2025-05-16T05:04:40.000Z"
-SENDER = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
-TX_HASH = "0xabc123"
-
-
-class _StubMoralisService:
-    def __init__(self) -> None:
-        self._transactions: list[dict[str, Any]] = []
-
-    def set_transactions(self, transactions: list[dict[str, Any]]) -> None:
-        self._transactions = transactions
-
-    def get_transactions(self, _mode: object) -> list[dict[str, Any]]:
-        return self._transactions
+ETH_ADDRESS_2 = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
 
 
 def _build_tx(
     *,
     native_transfers: list[dict[str, object]],
     erc20_transfers: list[dict[str, object]] | None = None,
-    from_address: str = SENDER,
+    from_address: str = ETH_ADDRESS_2,
     transaction_fee: str = "0",
     possible_spam: bool | None = None,
 ) -> dict[str, object]:
     tx: dict[str, object] = {
         "block_timestamp": BLOCK_TS,
         "location": LOCATION,
-        "hash": TX_HASH,
+        "hash": ETH_TX_HASH,
         "from_address": from_address,
         "native_transfers": native_transfers,
         "erc20_transfers": erc20_transfers if erc20_transfers is not None else [],
@@ -56,7 +44,7 @@ def _build_tx(
 
 def _native_transfer(amount: Decimal) -> dict[str, object]:
     return {
-        "from_address": SENDER,
+        "from_address": ETH_ADDRESS_2,
         "to_address": ETH_ADDRESS,
         "value": "500000000000000000",
         "value_formatted": str(amount),
@@ -76,6 +64,17 @@ def _erc20_transfer(
         "token_symbol": symbol,
         "address": token,
     }
+
+
+class _StubMoralisService:
+    def __init__(self) -> None:
+        self._transactions: list[dict[str, Any]] = []
+
+    def set_transactions(self, transactions: list[dict[str, Any]]) -> None:
+        self._transactions = transactions
+
+    def get_transactions(self, _mode: object) -> list[dict[str, Any]]:
+        return self._transactions
 
 
 class _ImporterTestContext(NamedTuple):
@@ -110,13 +109,12 @@ def test_ctx(db_engine: Engine) -> Generator[_ImporterTestContext, None, None]:
 
 def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> None:
     amount = Decimal("0.5")
-    symbol = "ETH"
     transfer = {
-        "from_address": SENDER,
+        "from_address": ETH_ADDRESS_2,
         "to_address": ETH_ADDRESS,
         "value": "500000000000000000",
         "value_formatted": str(amount),
-        "token_symbol": symbol,
+        "token_symbol": NATIVE_ASSET_ID,
         "internal_transaction": False,
     }
     tx = _build_tx(native_transfers=[transfer])
@@ -126,34 +124,33 @@ def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> 
 
     assert event is not None
     assert event.event_origin.location == LOCATION
-    assert event.event_origin.external_id == TX_HASH
+    assert event.event_origin.external_id == ETH_TX_HASH
     assert event.timestamp == expected_timestamp
 
     assert len(event.legs) == 1
     leg = event.legs[0]
-    assert leg.asset_id == AssetId(symbol)
+    assert leg.asset_id == NATIVE_ASSET_ID
     assert leg.quantity == amount
     assert leg.account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
 
 
 def test_native_transfer_dedupes_internal_and_external(test_ctx: _ImporterTestContext) -> None:
     amount = Decimal("0.75")
-    symbol = "ETH"
     value = "750000000000000000"
     external = {
-        "from_address": SENDER,
+        "from_address": ETH_ADDRESS_2,
         "to_address": ETH_ADDRESS,
         "value": value,
         "value_formatted": str(amount),
-        "token_symbol": symbol,
+        "token_symbol": NATIVE_ASSET_ID,
         "internal_transaction": False,
     }
     internal = {
-        "from_address": SENDER,
+        "from_address": ETH_ADDRESS_2,
         "to_address": ETH_ADDRESS,
         "value": value,
         "value_formatted": str(amount),
-        "token_symbol": symbol,
+        "token_symbol": NATIVE_ASSET_ID,
         "internal_transaction": True,
     }
     tx = _build_tx(native_transfers=[external, internal])
@@ -192,8 +189,12 @@ def test_erc20_legs_net_per_asset_and_account(test_ctx: _ImporterTestContext) ->
     tx = _build_tx(
         native_transfers=[],
         erc20_transfers=[
-            _erc20_transfer(from_address=ETH_ADDRESS, to_address=SENDER, amount=amount_out, symbol=symbol, token=token),
-            _erc20_transfer(from_address=SENDER, to_address=ETH_ADDRESS, amount=amount_in, symbol=symbol, token=token),
+            _erc20_transfer(
+                from_address=ETH_ADDRESS, to_address=ETH_ADDRESS_2, amount=amount_out, symbol=symbol, token=token
+            ),
+            _erc20_transfer(
+                from_address=ETH_ADDRESS_2, to_address=ETH_ADDRESS, amount=amount_in, symbol=symbol, token=token
+            ),
         ],
     )
 
@@ -214,10 +215,10 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate(test_ctx: _ImporterTestCon
         native_transfers=[
             {
                 "from_address": ETH_ADDRESS,
-                "to_address": SENDER,
+                "to_address": ETH_ADDRESS_2,
                 "value": "500000000000000000",
                 "value_formatted": str(amount),
-                "token_symbol": "ETH",
+                "token_symbol": NATIVE_ASSET_ID,
                 "internal_transaction": False,
             }
         ],
