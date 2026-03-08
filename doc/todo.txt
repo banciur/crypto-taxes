@@ -1,6 +1,5 @@
 First stage: compute German taxes
 
-TODO: Adjust readme / agents md instructions. All files except top level should be readme and add instruction to always read one in ui or data. And extra instruction to read readmes in the path "up" to get context. Go through existing README files. Do I need as code is self-documenting?
 TODO: Coinbase importer
   - I imagine coinbase will also need a cache. This mighet be a good place for some unified approach.
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
