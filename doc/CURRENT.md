@@ -99,7 +99,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 ## External data: on-chain transactions (via Moralis, cached)
 
 - Purpose: fetch on-chain wallet transaction history via Moralis with the caching feature.
-- Entry point: `MoralisService.get_transactions(sync_mode)` in `data/src/services/moralis.py`; load accounts once from `artifacts/accounts.json`, ensures configured locations are synced.
+- Entry point: `MoralisService.get_transactions(sync_mode)` in `data/src/services/moralis.py`; load accounts from `artifacts/accounts.json`, ensures configured locations are synced.
 - Accounts config entries include `name`, `locations`, and `skip_sync`; `locations` are names of `EventLocation` and `skip_sync=true` excludes that account from future fetches while retaining it in tracked account metadata.
 - Sync policy: supports `FRESH` (always refresh) and `BUDGET` (fetch at most once per UTC day). New account/location pairs fetch full history;
 - Importer output currently covers ERC20 and native transfers plus fees for owned accounts. NFT transfers are ignored.
