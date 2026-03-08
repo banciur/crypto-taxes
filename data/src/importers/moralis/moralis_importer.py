@@ -10,7 +10,6 @@ from db.corrections import SpamCorrectionRepository, SpamCorrectionSource
 from domain.ledger import (
     AccountChainId,
     AssetId,
-    EventLocation,
     EventOrigin,
     LedgerEvent,
     LedgerLeg,
@@ -125,21 +124,19 @@ class MoralisImporter:
 
     def _build_event(self, tx: Mapping[str, Any]) -> LedgerEvent | None:
         legs: list[LedgerLeg] = []
-        location = EventLocation(tx["location"])
+        location = tx["location"]
 
         for transfer in _dedupe_native_transfers(cast(list, tx["native_transfers"])):
-            token_symbol = transfer["token_symbol"]
-            assert token_symbol.upper() == NATIVE_ASSET_ID, f"Unexpected native token symbol: {token_symbol}"
+            asset_id = transfer["token_symbol"]
+            assert asset_id.upper() == NATIVE_ASSET_ID, f"Unexpected native token symbol: {asset_id}"
 
-            from_addr = transfer["from_address"].lower()
-            to_addr = transfer["to_address"].lower()
             quantity = _obtain_value(transfer)
             if quantity == 0:
                 continue
 
             from_account_chain_id = self.account_registry.resolve_owned_id(
                 location=location,
-                address=WalletAddress(from_addr),
+                address=WalletAddress(transfer["from_address"].lower()),
             )
             if from_account_chain_id is not None:
                 legs.append(
@@ -150,9 +147,10 @@ class MoralisImporter:
                         is_fee=False,
                     )
                 )
+
             to_account_chain_id = self.account_registry.resolve_owned_id(
                 location=location,
-                address=WalletAddress(to_addr),
+                address=WalletAddress(transfer["to_address"].lower()),
             )
             if to_account_chain_id is not None:
                 legs.append(
@@ -165,9 +163,6 @@ class MoralisImporter:
                 )
 
         for transfer in cast(list, tx["erc20_transfers"]):
-            from_addr = transfer["from_address"].lower()
-            to_addr = transfer["to_address"].lower()
-
             quantity = _obtain_value(transfer)
             if quantity == 0:
                 continue
@@ -176,7 +171,7 @@ class MoralisImporter:
 
             from_account_chain_id = self.account_registry.resolve_owned_id(
                 location=location,
-                address=WalletAddress(from_addr),
+                address=WalletAddress(transfer["from_address"].lower()),
             )
             if from_account_chain_id is not None:
                 legs.append(
@@ -189,7 +184,7 @@ class MoralisImporter:
                 )
             to_account_chain_id = self.account_registry.resolve_owned_id(
                 location=location,
-                address=WalletAddress(to_addr),
+                address=WalletAddress(transfer["to_address"].lower()),
             )
             if to_account_chain_id is not None:
                 legs.append(
