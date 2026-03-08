@@ -8,13 +8,21 @@
 
 ## Directory structure
 - `src/`: Python application code and domain modules.
+- `src/api/`: FastAPI service layer that exposes the backend contract consumed by the UI.
 - `tests/`: pytest suite.
 - `scripts/`: helper scripts.
+
+## API
+- The API is implemented with FastAPI under `src/api/`.
+- Its purpose is to expose ledger/corrections/accounts data to the UI through a stable HTTP interface.
 
 ## Domain modules
 - Ledger and lots: `src/domain/ledger.py`
 - Inventory engine and lot matching: `src/domain/inventory.py`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
+- Corrections model (spam markers, seed events, links): `src/domain/correction.py`
+- Tax event projection types: `src/domain/tax_event.py`
+- Wallet balance tracking and insufficient-balance errors: `src/domain/wallet_balance_tracker.py`
 
 ## Price services
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
