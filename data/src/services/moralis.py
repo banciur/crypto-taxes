@@ -20,10 +20,6 @@ from utils.misc import utc_now
 logger = logging.getLogger(__name__)
 
 
-def _parse_block_timestamp(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
-
-
 class SyncMode(str, Enum):
     FRESH = "fresh"
     BUDGET = "budget"
@@ -49,7 +45,9 @@ class MoralisService:
                 "hash": str(record["hash"]),
                 "block_number": int(record["block_number"]),
                 "transaction_index": int(record["transaction_index"]),
-                "block_timestamp": _parse_block_timestamp(str(record["block_timestamp"])),
+                "block_timestamp": datetime.fromisoformat(record["block_timestamp"].replace("Z", "+00:00")).astimezone(
+                    timezone.utc
+                ),
                 "payload": json.dumps(record),
             }
             for record in records
