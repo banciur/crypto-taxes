@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
 from typing import Sequence
+
+from utils import _parse_print_count
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -17,30 +20,33 @@ from config import config
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Fetch account balances from Coinbase Advanced Trade.")
+    parser = argparse.ArgumentParser(description="Fetch Coinbase account transaction history from Track API.")
     parser.add_argument(
-        "--include-zero-balances",
-        action="store_true",
-        help="Include zero balances in output.",
+        "--print-count",
+        type=_parse_print_count,
+        default=3,
+        help="Number of transactions to print (default: 3). Use 'all' to print every returned transaction.",
     )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
-    balances = CoinbaseClient(
+    client = CoinbaseClient(
         api_key=config().coinbase_key_name,
         api_secret=config().coinbase_key_prv,
-    ).fetch_balances(include_zero_balances=args.include_zero_balances)
+    )
 
-    if not balances:
-        print("No balances returned.")
-        return
+    transactions = client.fetch_transactions()
+    total_count = len(transactions)
+    if args.print_count is None:
+        printed_transactions = transactions
+    else:
+        printed_transactions = transactions[: args.print_count]
+    printed_count = len(printed_transactions)
 
-    print("currency,balance,account_name,account_uuid")
-    for balance in balances:
-        print(f"{balance.currency},{balance.value},{balance.account_name},{balance.account_uuid}")
-    print(f"Returned {len(balances)} balances.")
+    print(json.dumps(printed_transactions, indent=2, default=str))
+    print(f"Printed {printed_count} transactions out of {total_count} returned.")
 
 
 if __name__ == "__main__":
