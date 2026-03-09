@@ -5,6 +5,7 @@ requires-python = ">= 3.13"
 
 dependencies = [
     "alembic==1.18.4",
+    "coinbase-advanced-py==1.8.2",
     "fastapi[standard]>=0.135.1",
     "moralis==0.1.49",
     "pydantic==2.12.5",
@@ -18,7 +19,7 @@ dev = [
     "types-requests>=2.32.4,<2.32.6",
     "mypy==1.19.1",
     "pytest==9.0.2",
-    "ruff==0.15.4",
+    "ruff==0.15.5",
 ]
 
 [tool.pytest.ini_options]
@@ -50,5 +51,5 @@ warn_unused_configs = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["moralis", "moralis.*", "openapi_evm_api.*"]
+module = ["coinbase", "coinbase.*", "moralis", "moralis.*", "openapi_evm_api.*"]
 ignore_missing_imports = true

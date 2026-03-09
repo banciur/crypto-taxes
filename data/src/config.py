@@ -17,6 +17,8 @@ class AppSettings(BaseSettings):
     coindesk_api_key: str
     open_exchange_rates_app_id: str
     moralis_api_key: str
+    coinbase_key_name: str
+    coinbase_key_prv: str
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
