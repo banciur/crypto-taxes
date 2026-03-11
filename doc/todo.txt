@@ -1,13 +1,16 @@
 First stage: compute German taxes
 
 TODO: Coinbase importer
-  - I imagine coinbase will also need a cache. This mighet be a good place for some unified approach.
+  - https://docs.cdp.coinbase.com/coinbase-app/track-apis/transactions#python-2
+  - https://github.com/coinbase/coinbase-advanced-py/
+  - I imagine coinbase will also need a cache. This might be a good place for some unified approach.
+TODO: Moralis in private.txt there is example of transaction that is not correctly parsed
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
+  - Checkboxes to combine, mark as spam transactions should be also on the corrections lane.
   - Events component is still messy, divide more?, put logic somewhere else. Internal structures are too complicated etc.
   - Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok.
   - Review the hierarchy of types. Hierarchy from types/events ItemBase to LaneItemData vs EventDateSection.
   - Review names of components don't like VirtualizedDateSections and others.
-  - Checkboxes to combine transactions should be also on corrections' lane.
   - Combination of events should be on raw events or corrected. Is it possible that I have to combine raw event with correction?
 
 TODO: I'm not sure about the corrections directory and which code should go where.
