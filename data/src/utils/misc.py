@@ -22,14 +22,16 @@ def utc_now() -> datetime:
 
 
 @overload
-def add_utc_to_datetime(value: None) -> None: ...
+def ensure_utc_datetime(value: None) -> None: ...
 
 
 @overload
-def add_utc_to_datetime(value: datetime) -> datetime: ...
+def ensure_utc_datetime(value: datetime) -> datetime: ...
 
 
-def add_utc_to_datetime(value: datetime | None) -> datetime | None:
-    if value is None or value.tzinfo is not None:
+def ensure_utc_datetime(value: datetime | None) -> datetime | None:
+    if value is None:
         return value
-    return value.replace(tzinfo=timezone.utc)
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)

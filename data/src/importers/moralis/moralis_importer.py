@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, Iterable, Mapping, cast
 
@@ -18,6 +18,7 @@ from domain.ledger import (
     WalletAddress,
 )
 from services.moralis import MoralisService, SyncMode
+from utils.misc import ensure_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +218,7 @@ class MoralisImporter:
             return None
 
         return LedgerEvent(
-            timestamp=datetime.fromisoformat(tx["block_timestamp"].replace("Z", "+00:00")).astimezone(timezone.utc),
+            timestamp=ensure_utc_datetime(datetime.fromisoformat(tx["block_timestamp"].replace("Z", "+00:00"))),
             event_origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
             legs=legs,

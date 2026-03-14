@@ -10,7 +10,7 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from db.tx_cache_common import TransactionsCacheBase
-from utils.misc import add_utc_to_datetime
+from utils.misc import ensure_utc_datetime
 
 
 class CoinbaseAccountOrm(TransactionsCacheBase):
@@ -78,7 +78,7 @@ class CoinbaseCacheRepository:
         state = self.session.get(CoinbaseCacheStateOrm, self._STATE_ROW_ID)
         if state is None:
             return None
-        return add_utc_to_datetime(state.fetched_at)
+        return ensure_utc_datetime(state.fetched_at)
 
     def replace_history(
         self,
@@ -138,7 +138,7 @@ class CoinbaseCacheRepository:
         state = self.session.get(CoinbaseCacheStateOrm, self._STATE_ROW_ID)
         if state is None:
             raise ValueError("Coinbase cache does not contain account history")
-        fetched_at = add_utc_to_datetime(state.fetched_at)
+        fetched_at = ensure_utc_datetime(state.fetched_at)
         assert fetched_at is not None
 
         order_by_created_at = (

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 from db.tx_cache_common import TransactionsCacheBase
 from domain.ledger import EventLocation, WalletAddress
 from type_defs import RawTxs
-from utils.misc import add_utc_to_datetime
+from utils.misc import ensure_utc_datetime
 
 
 class MoralisTransactionOrm(TransactionsCacheBase):
@@ -77,7 +77,7 @@ class MoralisCacheRepository:
             .where(MoralisSyncStateOrm.location == location.value, MoralisSyncStateOrm.address == str(address))
             .limit(1)
         )
-        return add_utc_to_datetime(self.session.scalar(stmt))
+        return ensure_utc_datetime(self.session.scalar(stmt))
 
     def mark_synced(self, location: EventLocation, address: WalletAddress, when: datetime) -> None:
         stmt = insert(MoralisSyncStateOrm).values(

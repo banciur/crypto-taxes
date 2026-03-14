@@ -4,13 +4,14 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from collections.abc import Callable, Iterable
-from datetime import timedelta, timezone
+from datetime import timedelta
 from decimal import Decimal
 from typing import Protocol, TypeVar
 
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from services.coinbase import CoinbaseAccountHistory, CoinbaseMoney, CoinbaseTransaction
 from services.moralis import SyncMode
+from utils.misc import ensure_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -311,7 +312,7 @@ class CoinbaseImporter:
         if not collapsed_legs:
             return None
 
-        timestamp = min(transaction.created_at for transaction in transactions).astimezone(timezone.utc)
+        timestamp = ensure_utc_datetime(min(transaction.created_at for transaction in transactions))
         return LedgerEvent(
             timestamp=timestamp,
             event_origin=EventOrigin(location=EventLocation.COINBASE, external_id=external_id),

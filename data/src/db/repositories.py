@@ -23,7 +23,7 @@ from domain.ledger import (
     LotId,
 )
 from domain.tax_event import TaxEvent, TaxEventKind
-from utils.misc import add_utc_to_datetime
+from utils.misc import ensure_utc_datetime
 
 
 class LedgerEventRepository:
@@ -91,7 +91,7 @@ class LedgerEventRepository:
         return [
             (
                 EventOrigin(location=EventLocation(origin_location), external_id=origin_external_id),
-                add_utc_to_datetime(timestamp),
+                ensure_utc_datetime(timestamp),
             )
             for origin_location, origin_external_id, timestamp in rows
         ]
@@ -113,7 +113,7 @@ class LedgerEventRepository:
         ]
         return LedgerEvent(
             id=LedgerEventId(orm_event.id),
-            timestamp=add_utc_to_datetime(orm_event.timestamp),
+            timestamp=ensure_utc_datetime(orm_event.timestamp),
             event_origin=event_origin,
             ingestion=orm_event.ingestion,
             legs=legs,
@@ -175,7 +175,7 @@ class CorrectedLedgerEventRepository:
         ]
         return LedgerEvent(
             id=LedgerEventId(orm_event.id),
-            timestamp=add_utc_to_datetime(orm_event.timestamp),
+            timestamp=ensure_utc_datetime(orm_event.timestamp),
             event_origin=event_origin,
             ingestion=orm_event.ingestion,
             legs=legs,
@@ -320,7 +320,7 @@ class SeedEventRepository:
         ]
         return SeedEvent(
             id=CorrectionId(orm_event.id),
-            timestamp=add_utc_to_datetime(orm_event.timestamp),
+            timestamp=ensure_utc_datetime(orm_event.timestamp),
             price_per_token=orm_event.price_per_token,
             legs=legs,
         )
