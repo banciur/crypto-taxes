@@ -30,9 +30,16 @@
 ## Data importers
 - Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `event_origin`/`ingestion` metadata.
 - Current importers:
+  - Coinbase Track account history: `src/importers/coinbase/coinbase_importer.py`
   - Kraken CSV ledger: `src/importers/kraken/kraken_importer.py`
   - on-chain transactions through Moralis importer: `src/importers/moralis/moralis_importer.py`
   - Seed CSV events (for missing history): `src/importers/seed_events.py` loads `SeedEvent`s from `artifacts/seed_lots.csv` (corrections layer, not `LedgerEvent`s).
+
+## Cache-backed services
+- Moralis and Coinbase both persist raw upstream data in the SQLite cache DB at `artifacts/transactions_cache.db`.
+- Cache code is split by source under `src/db/tx_cache_moralis.py` and `src/db/tx_cache_coinbase.py`, with shared SQLite/bootstrap helpers in `src/db/tx_cache_common.py`.
+- Coinbase runtime paths use `CoinbaseService`, which decides between cached data and a full Coinbase refresh using the same `SyncMode` enum as Moralis.
+- Prefer full Coinbase syncs over per-wallet incremental checkpoints; the importer consolidates Coinbase sub-wallets into one tax wallet.
 
 ### Running commands and scripts with uv
 - Use `uv run <command or path to python file>` to execute project-aware tooling and Python scripts inside the managed virtualenv;

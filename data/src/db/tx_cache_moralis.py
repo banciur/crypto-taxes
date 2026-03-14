@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import datetime
 from typing import Sequence, TypedDict
 
-from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint, create_engine, select
+from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint, select
 from sqlalchemy.dialects.sqlite import insert
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
+from db.tx_cache_common import TransactionsCacheBase, add_utc_to_datetime
 from domain.ledger import EventLocation, WalletAddress
 from type_defs import RawTxs
-
-
-class TransactionsCacheBase(DeclarativeBase):
-    pass
 
 
 class MoralisTransactionOrm(TransactionsCacheBase):
@@ -52,7 +48,7 @@ class TransactionRow(TypedDict):
     payload: str
 
 
-class TransactionsCacheRepository:
+class MoralisCacheRepository:
     def __init__(self, session: Session):
         self.session = session
 
@@ -80,10 +76,7 @@ class TransactionsCacheRepository:
             .where(MoralisSyncStateOrm.location == location.value, MoralisSyncStateOrm.address == str(address))
             .limit(1)
         )
-        last_synced_at = self.session.scalar(stmt)
-        if last_synced_at is None or last_synced_at.tzinfo is not None:
-            return last_synced_at
-        return last_synced_at.replace(tzinfo=timezone.utc)  # SQLite does not preserve timezone info for datetimes.
+        return add_utc_to_datetime(self.session.scalar(stmt))
 
     def mark_synced(self, location: EventLocation, address: WalletAddress, when: datetime) -> None:
         stmt = insert(MoralisSyncStateOrm).values(
@@ -94,12 +87,3 @@ class TransactionsCacheRepository:
         )
         self.session.execute(stmt)
         self.session.commit()
-
-
-def init_transactions_cache_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(f"sqlite:///{db_path}", echo=echo)
-    if reset:
-        TransactionsCacheBase.metadata.drop_all(engine)
-    TransactionsCacheBase.metadata.create_all(engine)
-    return sessionmaker(engine)()

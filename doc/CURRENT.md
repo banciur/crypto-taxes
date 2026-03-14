@@ -105,3 +105,21 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Importer output currently covers ERC20 and native transfers plus fees for owned accounts. NFT transfers are ignored.
 - Within one imported transaction, legs are netted by (`asset_id`, `account_chain_id`, `is_fee`) so same-token in/out round-trips on the same account collapse to a single net leg.
 - When the Moralis payload marks a transaction with `possible_spam=true` and the importer emits a `LedgerEvent`, the importer creates spam correction in the correction for this event.
+
+## External data: Coinbase Track account history (DB-backed cache)
+
+- Purpose: translate cached Coinbase Track account history into domain `LedgerEvent`s without calling the API during normal imports.
+- Entry point: `CoinbaseImporter.load_events()` calls `CoinbaseService.get_history(sync_mode)`; the service decides whether to reuse cached Coinbase history from `artifacts/transactions_cache.db` or fetch a full Coinbase refresh.
+- Coinbase uses the same `SyncMode` enum as Moralis, but freshness is tracked for the whole Coinbase source rather than per wallet/location.
+- Coinbase is modeled as one consolidated `account_chain_id="coinbase"` for tax purposes even though the raw snapshot is split across per-asset Coinbase wallets.
+- Logical grouping rules:
+  - `buy` rows group by `buy.id`;
+  - `sell` rows group by `sell.id`;
+  - `trade` rows group by `trade.id`;
+  - `wrap_asset` rows pair into one swap event when opposite-sign rows occur within two seconds.
+- Internal/non-economic patterns are dropped:
+  - `staking_transfer` pairs are skipped as internal wallet moves;
+  - `retail_eth2_deprecation` is skipped as an `ETH2 -> ETH` migration;
+  - same-account `fiat_deposit` + `exchange_deposit` pass-through pairs are skipped as exchange hand-offs.
+- Coinbase Pro boundary rows (`pro_deposit`, `pro_withdrawal`) are explicitly deferred for now.
+- Asset normalization currently aliases `ETH2 -> ETH`.

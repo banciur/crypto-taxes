@@ -20,7 +20,8 @@ from accounts import AccountRegistry, load_accounts
 from clients.moralis import MoralisClient
 from config import CORRECTIONS_DB_PATH, TRANSACTIONS_CACHE_DB_PATH, config
 from db.corrections import SpamCorrectionRepository, init_corrections_db
-from db.transactions_cache import TransactionsCacheRepository, init_transactions_cache_db
+from db.tx_cache_common import init_transactions_cache_db
+from db.tx_cache_moralis import MoralisCacheRepository
 from importers.moralis import MoralisImporter
 from services.moralis import MoralisService, SyncMode
 
@@ -57,7 +58,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     corrections_session = init_corrections_db(db_path=CORRECTIONS_DB_PATH, reset=False)
     service = MoralisService(
         MoralisClient(api_key=config().moralis_api_key),
-        TransactionsCacheRepository(cache_session),
+        MoralisCacheRepository(cache_session),
         accounts=accounts,
     )
     importer = MoralisImporter(

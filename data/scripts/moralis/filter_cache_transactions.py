@@ -16,7 +16,8 @@ if str(SRC_DIR) not in sys.path:
 from sqlalchemy import select
 
 from config import TRANSACTIONS_CACHE_DB_PATH
-from db.transactions_cache import MoralisTransactionOrm, init_transactions_cache_db
+from db.tx_cache_common import init_transactions_cache_db
+from db.tx_cache_moralis import MoralisTransactionOrm
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:

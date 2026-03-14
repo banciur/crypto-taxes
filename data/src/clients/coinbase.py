@@ -5,7 +5,6 @@ from typing import Any, cast
 from coinbase.rest import RESTClient
 
 _API_RESP_LIMIT = 100
-_TRACK_ACCOUNTS_ENDPOINT = "/v2/accounts"
 
 
 class CoinbaseClient:
@@ -15,24 +14,31 @@ class CoinbaseClient:
             api_secret=api_secret,
         )
 
+    def fetch_accounts(self) -> list[dict[str, Any]]:
+        return self._fetch_data(url="/v2/accounts")
+
+    def fetch_account_transactions(
+        self,
+        account_id: str,
+        *,
+        order: str = "desc",
+    ) -> list[dict[str, Any]]:
+        return self._fetch_data(
+            url=f"/v2/accounts/{account_id}/transactions",
+            params={"order": order},
+        )
+
     def fetch_transactions(
         self,
         *,
         order: str = "desc",
+        accounts: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
-        accounts = self._fetch_data(
-            url=_TRACK_ACCOUNTS_ENDPOINT,
-        )
-        transactions: list[dict] = []
-        for account in accounts:
+        fetched_accounts = accounts if accounts is not None else self.fetch_accounts()
+        transactions: list[dict[str, Any]] = []
+        for account in fetched_accounts:
             account_id = cast(str, account["id"])
-            account_transactions = self._fetch_data(
-                url=f"/v2/accounts/{account_id}/transactions",
-                params={
-                    "order": order,
-                },
-            )
-            transactions.extend(account_transactions)
+            transactions.extend(self.fetch_account_transactions(account_id, order=order))
 
         return sorted(
             transactions,

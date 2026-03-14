@@ -9,9 +9,9 @@ from typing import Sequence
 
 from accounts import AccountConfig
 from clients.moralis import MoralisClient
-from db.transactions_cache import (
+from db.tx_cache_moralis import (
+    MoralisCacheRepository,
     TransactionRow,
-    TransactionsCacheRepository,
 )
 from domain.ledger import EventLocation
 from type_defs import RawTxs
@@ -29,7 +29,7 @@ class MoralisService:
     def __init__(
         self,
         client: MoralisClient,
-        cache_repo: TransactionsCacheRepository,
+        cache_repo: MoralisCacheRepository,
         accounts: Sequence[AccountConfig],
         now_fn: Callable[[], datetime] = utc_now,
     ):
