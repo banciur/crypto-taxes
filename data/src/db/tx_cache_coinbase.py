@@ -9,7 +9,8 @@ from sqlalchemy import DateTime, Index, Integer, String, Text, delete, select
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from db.tx_cache_common import TransactionsCacheBase, add_utc_to_datetime
+from db.tx_cache_common import TransactionsCacheBase
+from utils.misc import add_utc_to_datetime
 
 
 class CoinbaseAccountOrm(TransactionsCacheBase):

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import create_engine
@@ -9,12 +8,6 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 class TransactionsCacheBase(DeclarativeBase):
     pass
-
-
-def add_utc_to_datetime(value: datetime | None) -> datetime | None:
-    if value is None or value.tzinfo is not None:
-        return value
-    return value.replace(tzinfo=timezone.utc)
 
 
 def init_transactions_cache_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:

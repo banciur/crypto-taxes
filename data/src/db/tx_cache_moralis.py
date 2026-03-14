@@ -8,9 +8,10 @@ from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint,
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from db.tx_cache_common import TransactionsCacheBase, add_utc_to_datetime
+from db.tx_cache_common import TransactionsCacheBase
 from domain.ledger import EventLocation, WalletAddress
 from type_defs import RawTxs
+from utils.misc import add_utc_to_datetime
 
 
 class MoralisTransactionOrm(TransactionsCacheBase):
