@@ -16,7 +16,6 @@ During task discussion and implementation, update the task-specific sections bel
 - Keep only information that is relevant to the current task.
 - The order of steps should reflect the implementation order.
 
-
 ## Current Task
 
 Implement API and UI support for `Replacement` ingestion corrections so operators can inspect persisted replacements, create new ones from raw-event sources, and remove them safely.
@@ -132,7 +131,7 @@ The implementation must stay aligned with the existing backend/domain model:
 
 - [x] Add UI API modules and types for replacement corrections and load them into the corrections lane.
 
-- [ ] Add a replacement correction card to the corrections lane and wire delete-by-ID from the client.
+- [x] Add a replacement correction card to the corrections lane and wire delete-by-ID from the client.
 
 - [ ] Implement the replacement creation workflow in the UI using raw-event `EventOrigin` sources and authoritative synthetic payload editing.
 

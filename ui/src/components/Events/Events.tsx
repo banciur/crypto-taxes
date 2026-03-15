@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 
+import { deleteReplacementCorrection } from "@/api/replacementCorrections";
 import {
   createSpamCorrection,
   deleteSpamCorrection,
@@ -21,6 +22,8 @@ type EventsProps = {
 export function Events({ eventsByTimestamp }: EventsProps) {
   const [isMarkingSpam, setIsMarkingSpam] = useState(false);
   const [isRemovingSpamCorrection, setIsRemovingSpamCorrection] =
+    useState(false);
+  const [isRemovingReplacementCorrection, setIsRemovingReplacementCorrection] =
     useState(false);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
   const { selectedEvents, toggleEventSelection, clearEventSelection } =
@@ -89,11 +92,42 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     [],
   );
 
+  const handleRemoveReplacementCorrection = useCallback(
+    async (correctionId: string) => {
+      setFeedback(null);
+      setIsRemovingReplacementCorrection(true);
+
+      try {
+        await deleteReplacementCorrection(correctionId);
+        setFeedback({
+          tone: "success",
+          message:
+            "Replacement removed. Re-run the pipeline and reload the UI to refresh the lanes.",
+        });
+      } catch (error) {
+        console.error("Failed to remove replacement correction", error);
+        setFeedback({
+          tone: "danger",
+          message:
+            "Removing the replacement failed. Check the console for details.",
+        });
+      } finally {
+        setIsRemovingReplacementCorrection(false);
+      }
+    },
+    [],
+  );
+
+  const isCorrectionChangePending =
+    isMarkingSpam ||
+    isRemovingSpamCorrection ||
+    isRemovingReplacementCorrection;
+
   return (
     <div className="d-flex h-100 w-100 flex-column">
       <EventsActionBar
         selectedEventCount={selectedEvents.size}
-        isRemovingSpamCorrection={isRemovingSpamCorrection}
+        isCorrectionChangePending={isCorrectionChangePending}
         isMarkingSpam={isMarkingSpam}
         feedback={feedback}
         onMarkSelectedAsSpam={handleMarkSelectedAsSpam}
@@ -101,10 +135,11 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       <VirtualizedDateSections
         eventsByTimestamp={eventsByTimestamp}
         selectedEvents={selectedEvents}
-        isSpamMarkerChangePending={isMarkingSpam || isRemovingSpamCorrection}
+        isCorrectionChangePending={isCorrectionChangePending}
         className="flex-grow-1"
         onToggleEventSelection={toggleEventSelection}
         onRemoveSpamCorrection={handleRemoveSpamCorrection}
+        onRemoveReplacementCorrection={handleRemoveReplacementCorrection}
       />
     </div>
   );

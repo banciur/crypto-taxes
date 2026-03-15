@@ -17,9 +17,10 @@ import type {
 type EventDateSectionProps = {
   itemsByColumn: EventsByTimestamp[string];
   selectedEvents: ReadonlyMap<string, EventOrigin>;
-  isSpamMarkerChangePending: boolean;
+  isCorrectionChangePending: boolean;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
+  onRemoveReplacementCorrection: (correctionId: string) => void;
 };
 
 const isSelectedEvent = (
@@ -32,9 +33,10 @@ const isSelectedEvent = (
 export function EventDateSection({
   itemsByColumn,
   selectedEvents,
-  isSpamMarkerChangePending,
+  isCorrectionChangePending,
   onToggleEventSelection,
   onRemoveSpamCorrection,
+  onRemoveReplacementCorrection,
 }: EventDateSectionProps) {
   const { selected } = useUrlColumnSelection();
   const orderedSelectedColumns = useMemo(
@@ -55,9 +57,10 @@ export function EventDateSection({
               key={item.id}
               item={item}
               isSelected={isSelectedEvent(item, selectedEvents)}
-              isSpamMarkerChangePending={isSpamMarkerChangePending}
+              isCorrectionChangePending={isCorrectionChangePending}
               onToggleEventSelection={onToggleEventSelection}
               onRemoveSpamCorrection={onRemoveSpamCorrection}
+              onRemoveReplacementCorrection={onRemoveReplacementCorrection}
             />
           ))}
         </Col>

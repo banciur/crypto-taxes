@@ -11,7 +11,7 @@ export type EventsActionFeedback = {
 
 type EventsActionBarProps = {
   selectedEventCount: number;
-  isRemovingSpamCorrection: boolean;
+  isCorrectionChangePending: boolean;
   isMarkingSpam: boolean;
   feedback: EventsActionFeedback | null;
   onMarkSelectedAsSpam: () => void;
@@ -19,7 +19,7 @@ type EventsActionBarProps = {
 
 export function EventsActionBar({
   selectedEventCount,
-  isRemovingSpamCorrection,
+  isCorrectionChangePending,
   isMarkingSpam,
   feedback,
   onMarkSelectedAsSpam,
@@ -49,7 +49,7 @@ export function EventsActionBar({
               disabled={
                 selectedEventCount === 0 ||
                 isMarkingSpam ||
-                isRemovingSpamCorrection
+                isCorrectionChangePending
               }
               onClick={onMarkSelectedAsSpam}
             >

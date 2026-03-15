@@ -1,4 +1,4 @@
-import { getFromApi } from "@/api/core";
+import { doApiRequest, getFromApi } from "@/api/core";
 import { orderByTimestamp } from "@/lib/sort";
 import type { ReplacementCorrection } from "@/types/events";
 
@@ -9,4 +9,12 @@ export const getReplacementCorrections = async (): Promise<
     "/replacement-corrections",
   );
   return orderByTimestamp(events);
+};
+
+export const deleteReplacementCorrection = async (
+  correctionId: string,
+): Promise<void> => {
+  await doApiRequest(`/replacement-corrections/${correctionId}`, {
+    method: "DELETE",
+  });
 };

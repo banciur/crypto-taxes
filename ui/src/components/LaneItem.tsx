@@ -1,6 +1,7 @@
 "use client";
 
 import { EventCard } from "@/components/EventCard";
+import { ReplacementCorrectionItem } from "@/components/ReplacementCorrectionItem";
 import { SeedCorrectionItem } from "@/components/SeedCorrectionItem";
 import { SpamCorrectionItem } from "@/components/SpamCorrectionItem";
 import type { EventOrigin, LaneItemData } from "@/types/events";
@@ -8,17 +9,19 @@ import type { EventOrigin, LaneItemData } from "@/types/events";
 type LaneItemProps = {
   item: LaneItemData;
   isSelected: boolean;
-  isSpamMarkerChangePending: boolean;
+  isCorrectionChangePending: boolean;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
+  onRemoveReplacementCorrection: (correctionId: string) => void;
 };
 
 export function LaneItem({
   item,
   isSelected,
-  isSpamMarkerChangePending,
+  isCorrectionChangePending,
   onToggleEventSelection,
   onRemoveSpamCorrection,
+  onRemoveReplacementCorrection,
 }: LaneItemProps) {
   switch (item.kind) {
     case "raw-event":
@@ -29,7 +32,7 @@ export function LaneItem({
           eventOrigin={item.eventOrigin}
           legs={item.legs}
           isSelected={isSelected}
-          selectionDisabled={isSpamMarkerChangePending}
+          selectionDisabled={isCorrectionChangePending}
           onSelectionChange={() => onToggleEventSelection(item.eventOrigin)}
         />
       );
@@ -41,7 +44,7 @@ export function LaneItem({
           eventOrigin={item.eventOrigin}
           legs={item.legs}
           isSelected={isSelected}
-          selectionDisabled={isSpamMarkerChangePending}
+          selectionDisabled={isCorrectionChangePending}
           onSelectionChange={() => onToggleEventSelection(item.eventOrigin)}
         />
       );
@@ -52,8 +55,19 @@ export function LaneItem({
         <SpamCorrectionItem
           timestamp={item.timestamp}
           eventOrigin={item.eventOrigin}
-          actionDisabled={isSpamMarkerChangePending}
+          actionDisabled={isCorrectionChangePending}
           onRemove={() => onRemoveSpamCorrection(item.eventOrigin)}
+        />
+      );
+    case "replacement-correction":
+      return (
+        <ReplacementCorrectionItem
+          correctionId={item.id}
+          timestamp={item.timestamp}
+          sources={item.sources}
+          legs={item.legs}
+          actionDisabled={isCorrectionChangePending}
+          onRemove={() => onRemoveReplacementCorrection(item.id)}
         />
       );
   }

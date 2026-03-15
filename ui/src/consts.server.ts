@@ -28,10 +28,10 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
     load: async () => {
       const [seedEvents, spamCorrections, replacementCorrections] =
         await Promise.all([
-        getSeedEvents(),
-        getSpamCorrections(),
-        getReplacementCorrections(),
-      ]);
+          getSeedEvents(),
+          getSpamCorrections(),
+          getReplacementCorrections(),
+        ]);
       return orderByTimestamp([
         ...seedEvents.map((event) => ({
           id: event.id,
