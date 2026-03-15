@@ -36,10 +36,7 @@
   - Seed CSV events (for missing history): `src/importers/seed_events.py` loads `SeedEvent`s from `artifacts/seed_lots.csv` (corrections layer, not `LedgerEvent`s).
 
 ## Cache-backed services
-- Moralis and Coinbase both persist raw upstream data in the SQLite cache DB at `artifacts/transactions_cache.db`.
-- Cache code is split by source under `src/db/tx_cache_moralis.py` and `src/db/tx_cache_coinbase.py`, with shared SQLite/bootstrap helpers in `src/db/tx_cache_common.py`.
-- Coinbase runtime paths use `CoinbaseService`, which decides between cached data and a full Coinbase refresh using the same `SyncMode` enum as Moralis.
-- Prefer full Coinbase syncs over per-wallet incremental checkpoints; the importer consolidates Coinbase sub-wallets into one tax wallet.
+Moralis and Coinbase persist raw upstream data in the SQLite cache DB at `artifacts/transactions_cache.db` to reduce API calls during syncs.
 
 ### Running commands and scripts with uv
 - Use `uv run <command or path to python file>` to execute project-aware tooling and Python scripts inside the managed virtualenv;

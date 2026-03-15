@@ -1,10 +1,5 @@
 First stage: compute German taxes
 
-TODO: Coinbase importer
-  - https://docs.cdp.coinbase.com/coinbase-app/track-apis/transactions#python-2
-  - https://github.com/coinbase/coinbase-advanced-py/
-  - I imagine coinbase will also need a cache. This might be a good place for some unified approach.
-TODO: tzinfo is None is scattered around the code maybe it could be shared function.
 TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
 TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:

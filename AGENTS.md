@@ -25,4 +25,3 @@ Treat other files under `doc/` as background/templates unless explicitly referen
 ## Secrets and local artifacts
 - API keys/config live in `data/.env` (see `data/.env.example`); do not commit secrets.
 - `artifacts/` are local outputs/inputs and are not committed.
-- Coinbase Track imports currently persist raw rows in `artifacts/transactions_cache.db`. Treat Coinbase as one consolidated account and prefer full-snapshot sync over per-wallet incremental logic unless explicitly told otherwise.
