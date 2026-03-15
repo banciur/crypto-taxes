@@ -48,6 +48,12 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `kind: TaxEventKind` (`DISPOSAL`, `REWARD`)
   - `taxable_gain: Decimal`
 
+- Replacement
+  - `id: UUID`
+  - `timestamp: datetime`
+  - `sources: Sequence[EventOrigin]` (raw events consumed by the correction)
+  - `legs: list[LedgerLeg]` (authoritative synthetic payload; may differ from source legs)
+
 - EventOrigin
   - `location: EventLocation` (`ETHEREUM`, `ARBITRUM`, `KRAKEN`, `COINBASE`...)
   - `external_id: str`
@@ -71,7 +77,10 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Synthetic seed lots can be injected ahead of importer output using `--seed-csv` (default `artifacts/seed_lots.csv`) with rows `asset_id,account_id,quantity[,timestamp,price_per_token]`; `timestamp` defaults to `2000-01-01T00:00:00Z` and `price_per_token` defaults to `0`.
 - Each event captures `event_origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 - Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
+- Ingestion corrections are applied in this order: validate spam/replacement interactions, remove spammed raw events, replace referenced raw events with synthetic replacement events, append seed events, then sort once before persisting corrected events.
 - Spam corrections are persisted in a separate DB so they survive resets of the main analytics DB. That persistence layer keeps soft-delete tombstones and provenance metadata internally so automatic imports can avoid recreating markers that were removed manually.
+- Replacement corrections are persisted in the corrections DB. They are corrections stored as a header row plus source rows plus leg rows.
+- Replacement validation is strict: a raw event cannot be both spammed and replaced, and a raw event cannot be consumed by more than one replacement source.
 
 ---
 
@@ -91,8 +100,8 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
 - CLI inventory summary aggregates quantities and EUR values per asset across owned accounts.
 - Tax calculations currently focus on disposal links.
-- CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
-- The UI renders raw, corrections, and corrected lanes. Raw and corrected event cards allow per-event spam selection keyed by `event_origin`, the corrections lane displays seed events and spam markers, and the corrected lane shows corrected ledger events.
+- CLI run persists ledger events plus corrected ledger events to SQLite, and the backend correction pipeline currently supports spam markers, manual replacements, and seed events.
+- The UI renders raw, corrections, and corrected lanes. Raw and corrected event cards allow per-event spam selection keyed by `event_origin`, the corrections lane currently displays seed events and spam markers, and the corrected lane shows corrected ledger events, including synthetic replacement events when present.
 
 ---
 

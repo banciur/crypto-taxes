@@ -8,6 +8,7 @@ During task discussion and implementation, update the task-specific sections bel
 - Keep completed work marked with `[x]` so the historical record is preserved.
 - Keep remaining work marked with `[ ]` until it is actually finished.
 - Continue implementation from the first unchecked item unless the task scope is intentionally reordered.
+- Implement steps one by one. After each completed step, stop and let the operator validate the output before continuing to the next step.
 - Update the task-specific sections immediately when decisions change; do not wait to batch updates later.
 - Keep only information that is relevant to the current task.
 - The order of steps should reflect the implementation order.
