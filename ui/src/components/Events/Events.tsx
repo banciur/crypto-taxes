@@ -39,7 +39,9 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     setIsMarkingSpam(true);
 
     const results = await Promise.allSettled(
-      selectedEventOrigins.map((eventOrigin) => createSpamCorrection(eventOrigin)),
+      selectedEventOrigins.map((eventOrigin) =>
+        createSpamCorrection(eventOrigin),
+      ),
     );
 
     setIsMarkingSpam(false);

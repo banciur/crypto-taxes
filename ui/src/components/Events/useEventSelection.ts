@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { eventOriginKey } from "@/lib/eventOrigin";
 import type { EventOrigin, EventsByTimestamp } from "@/types/events";
-import { collectSelectableEventOrigins } from "./selectableEvents";
+import { collectSelectableEvents } from "./selectableEvents";
 
 type UseEventSelectionResult = {
   selectedEventOrigins: readonly EventOrigin[];
@@ -20,57 +20,56 @@ export const useEventSelection = (
     Set<string>
   >(() => new Set());
 
-  const { selectableEventOrigins, selectableEventOriginKeys } = useMemo(
-    () => collectSelectableEventOrigins(eventsByTimestamp),
+  const selectableEvents = useMemo(
+    () => collectSelectableEvents(eventsByTimestamp),
     [eventsByTimestamp],
   );
 
-  const selectedEventOrigins = useMemo(
-    () =>
-      selectableEventOrigins.filter((eventOrigin) =>
-        selectedEventOriginKeys.has(eventOriginKey(eventOrigin)),
-      ),
-    [selectableEventOrigins, selectedEventOriginKeys],
-  );
-
-  useEffect(() => {
-    setSelectedEventOriginKeys((current) => {
-      if (current.size === 0) {
-        return current;
-      }
-
-      const next = new Set(
-        Array.from(current).filter((originKey) =>
-          selectableEventOriginKeys.has(originKey),
+  const { effectiveSelectedEventOriginKeys, selectedEventOrigins } =
+    useMemo(() => {
+      const effectiveSelectedEventOriginKeys = new Set(
+        Array.from(selectedEventOriginKeys).filter((originKey) =>
+          selectableEvents.has(originKey),
         ),
       );
-      if (next.size === current.size) {
-        return current;
-      }
-      return next;
-    });
-  }, [selectableEventOriginKeys]);
 
-  const toggleEventSelection = useCallback((eventOrigin: EventOrigin) => {
-    const originKey = eventOriginKey(eventOrigin);
-    setSelectedEventOriginKeys((current) => {
-      const next = new Set(current);
+      const selectedEventOrigins = Array.from(effectiveSelectedEventOriginKeys)
+        .map((originKey) => selectableEvents.get(originKey))
+        .filter(
+          (eventOrigin): eventOrigin is EventOrigin =>
+            eventOrigin !== undefined,
+        );
 
-      if (next.has(originKey)) {
-        next.delete(originKey);
-      } else {
-        next.add(originKey);
-      }
-      return next;
-    });
-  }, []);
+      return { effectiveSelectedEventOriginKeys, selectedEventOrigins };
+    }, [selectableEvents, selectedEventOriginKeys]);
+
+  const toggleEventSelection = useCallback(
+    (eventOrigin: EventOrigin) => {
+      const originKey = eventOriginKey(eventOrigin);
+      setSelectedEventOriginKeys((current) => {
+        const next = new Set(
+          Array.from(current).filter((selectedOriginKey) =>
+            selectableEvents.has(selectedOriginKey),
+          ),
+        );
+
+        if (next.has(originKey)) {
+          next.delete(originKey);
+        } else {
+          next.add(originKey);
+        }
+        return next;
+      });
+    },
+    [selectableEvents],
+  );
 
   const clearEventSelection = useCallback(() => {
     setSelectedEventOriginKeys(new Set());
   }, []);
 
   return {
-    selectedEventOriginKeys,
+    selectedEventOriginKeys: effectiveSelectedEventOriginKeys,
     selectedEventOrigins,
     toggleEventSelection,
     clearEventSelection,
