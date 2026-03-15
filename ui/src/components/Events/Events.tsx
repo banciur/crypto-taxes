@@ -12,19 +12,12 @@ import {
 } from "@/components/EventsActionBar";
 import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
 import { eventOriginKey } from "@/lib/eventOrigin";
-import type {
-  EventOrigin,
-  EventsByTimestamp,
-  LaneItemData,
-  RawEventCardData,
-} from "@/types/events";
+import type { EventOrigin, EventsByTimestamp } from "@/types/events";
+import { collectSelectableEventOrigins } from "./selectableEvents";
 
 type EventsProps = {
   eventsByTimestamp: EventsByTimestamp;
 };
-
-const isRawEvent = (item: LaneItemData): item is RawEventCardData =>
-  item.kind === "raw-event";
 
 export function Events({ eventsByTimestamp }: EventsProps) {
   const [selectedEventOriginKeys, setSelectedEventOriginKeys] = useState<
@@ -35,35 +28,18 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     useState(false);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
 
-  const rawEventsByOriginKey = useMemo(() => {
-    const items = new Map<string, RawEventCardData>();
-
-    for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
-      for (const columnItems of Object.values(columnsByTimestamp)) {
-        if (!columnItems) {
-          continue;
-        }
-
-        for (const item of columnItems) {
-          if (isRawEvent(item)) {
-            items.set(eventOriginKey(item.eventOrigin), item);
-          }
-        }
-      }
-    }
-
-    return items;
-  }, [eventsByTimestamp]);
-
-  const selectedEvents = useMemo(
-    () =>
-      Array.from(selectedEventOriginKeys)
-        .map((originKey) => rawEventsByOriginKey.get(originKey))
-        .filter((item): item is RawEventCardData => item !== undefined),
-    [rawEventsByOriginKey, selectedEventOriginKeys],
+  const { selectableEventOrigins, selectableEventOriginKeys } = useMemo(
+    () => collectSelectableEventOrigins(eventsByTimestamp),
+    [eventsByTimestamp],
   );
 
-  const isSpamMarkerChangePending = isMarkingSpam || isRemovingSpamCorrection;
+  const selectedEventOrigins = useMemo(
+    () =>
+      selectableEventOrigins.filter((eventOrigin) =>
+        selectedEventOriginKeys.has(eventOriginKey(eventOrigin)),
+      ),
+    [selectableEventOrigins, selectedEventOriginKeys],
+  );
 
   useEffect(() => {
     setSelectedEventOriginKeys((current) => {
@@ -73,7 +49,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
 
       const next = new Set(
         Array.from(current).filter((originKey) =>
-          rawEventsByOriginKey.has(originKey),
+          selectableEventOriginKeys.has(originKey),
         ),
       );
       if (next.size === current.size) {
@@ -81,7 +57,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       }
       return next;
     });
-  }, [rawEventsByOriginKey]);
+  }, [selectableEventOriginKeys]);
 
   const handleToggleEventSelection = useCallback(
     (eventOrigin: EventOrigin) => {
@@ -101,7 +77,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
   );
 
   const handleMarkSelectedAsSpam = useCallback(async () => {
-    if (selectedEvents.length === 0) {
+    if (selectedEventOrigins.length === 0) {
       return;
     }
 
@@ -109,7 +85,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     setIsMarkingSpam(true);
 
     const results = await Promise.allSettled(
-      selectedEvents.map((event) => createSpamCorrection(event.eventOrigin)),
+      selectedEventOrigins.map((eventOrigin) => createSpamCorrection(eventOrigin)),
     );
 
     setIsMarkingSpam(false);
@@ -133,7 +109,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       message:
         "Spam markers saved. Re-run the pipeline and reload the UI to refresh the lanes.",
     });
-  }, [selectedEvents]);
+  }, [selectedEventOrigins]);
 
   const handleRemoveSpamCorrection = useCallback(
     async (eventOrigin: EventOrigin) => {
@@ -164,7 +140,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
   return (
     <div className="d-flex h-100 w-100 flex-column">
       <EventsActionBar
-        selectedEventCount={selectedEvents.length}
+        selectedEventCount={selectedEventOrigins.length}
         isRemovingSpamCorrection={isRemovingSpamCorrection}
         isMarkingSpam={isMarkingSpam}
         feedback={feedback}
@@ -173,7 +149,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       <VirtualizedDateSections
         eventsByTimestamp={eventsByTimestamp}
         selectedEventOriginKeys={selectedEventOriginKeys}
-        isSpamMarkerChangePending={isSpamMarkerChangePending}
+        isSpamMarkerChangePending={isMarkingSpam || isRemovingSpamCorrection}
         className="flex-grow-1"
         onToggleEventSelection={handleToggleEventSelection}
         onRemoveSpamCorrection={handleRemoveSpamCorrection}

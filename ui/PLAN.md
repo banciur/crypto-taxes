@@ -24,11 +24,11 @@ Add checkbox selection to cards in the `Corrected events` lane so users can mark
 
 - [x] Create this persistent task plan in `ui/PLAN.md` from `doc/PLAN_TEMPLATE.md`.
 
-- [x] Refactor the event selection state in `ui/src/components/Events.tsx` from raw-specific naming to shared event-selection naming while keeping `eventOriginKey(eventOrigin)` as the canonical identity.
+- [x] Refactor the event selection state in `ui/src/components/Events/Events.tsx` from raw-specific naming to shared event-selection naming while keeping `eventOriginKey(eventOrigin)` as the canonical identity.
 
 - [x] Rename raw-specific selection props and callbacks in `ui/src/components/VirtualizedDateSections.tsx`, `ui/src/components/EventDateSection.tsx`, and `ui/src/components/LaneItem.tsx` to generic event-selection naming.
 
-- [ ] Derive the full selectable event dataset from loaded `raw-event` and `corrected-event` items in `eventsByTimestamp`, and use that dataset both to resolve selected `EventOrigin` values for spam creation and to prune stale selections when loaded selectable items change.
+- [x] Derive the full selectable event dataset from loaded `raw-event` and `corrected-event` items in `eventsByTimestamp`, and use that dataset both to resolve selected `EventOrigin` values for spam creation and to prune stale selections when loaded selectable items change.
 
 - [ ] Render checkbox controls for both `raw-event` and `corrected-event` cards through `ui/src/components/EventCard.tsx`, and update checkbox labels to refer to `event` rather than `raw event`.
 
