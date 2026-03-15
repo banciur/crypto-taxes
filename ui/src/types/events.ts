@@ -19,6 +19,13 @@ export type SpamCorrection = {
   timestamp: string;
 };
 
+export type ReplacementCorrection = {
+  id: string;
+  timestamp: string;
+  sources: EventOrigin[];
+  legs: LedgerLeg[];
+};
+
 export type SeedEvent = {
   id: string;
   timestamp: string;
@@ -70,11 +77,18 @@ export type SpamCorrectionItemData = ItemBase & {
   eventOrigin: EventOrigin;
 };
 
+export type ReplacementCorrectionItemData = ItemBase & {
+  kind: "replacement-correction";
+  sources: EventOrigin[];
+  legs: LedgerLeg[];
+};
+
 export type LaneItemData =
   | RawEventCardData
   | CorrectedEventCardData
   | SeedCorrectionItemData
-  | SpamCorrectionItemData;
+  | SpamCorrectionItemData
+  | ReplacementCorrectionItemData;
 
 export type EventsByTimestamp = Record<
   string,

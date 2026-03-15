@@ -2,6 +2,7 @@ First stage: compute German taxes
 
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
   - When hovering over the replacement event highlight raw events that are being replaced (if raw events lane is visible)
+  - Maybe change how sources of replacement are rendered now it's the same as in other items
   - Review downstream components from Events I have a feeling internal structures are too complicated etc.
   - Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok.
   - Review the hierarchy of types. Hierarchy from types/events ItemBase to LaneItemData vs EventDateSection.

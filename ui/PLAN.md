@@ -129,7 +129,7 @@ The implementation must stay aligned with the existing backend/domain model:
 
 - [x] Add backend API tests for replacement correction list/create/delete behavior, conflict validation, and idempotent delete semantics.
 
-- [ ] Add UI API modules and types for replacement corrections and load them into the corrections lane.
+- [x] Add UI API modules and types for replacement corrections and load them into the corrections lane.
 
 - [ ] Add a replacement correction card to the corrections lane and wire delete-by-ID from the client.
 
