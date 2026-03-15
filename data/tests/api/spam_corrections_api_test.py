@@ -14,7 +14,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import api.api as api_module
-from db.corrections import CorrectionsBase
+from db.corrections_common import CorrectionsBase
 from db.models import Base
 from db.repositories import LedgerEventRepository
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg

@@ -149,7 +149,7 @@ Pipeline wiring tests:
   - Add `Replacement`.
   - Use `sources` for referenced raw-event origins.
 
-- [ ] Extend the corrections DB schema in `data/src/db/corrections.py`.
+- [x] Extend the corrections DB schema in `data/src/db/corrections.py`.
   - Add ORM models for replacement headers, legs, and sources.
   - Add the unique source-origin constraint for active replacements.
 

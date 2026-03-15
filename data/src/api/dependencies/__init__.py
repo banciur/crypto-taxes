@@ -3,7 +3,7 @@ from typing import Annotated, Generator
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
-from db.corrections import SpamCorrectionRepository
+from db.corrections_spam import SpamCorrectionRepository
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
 
 

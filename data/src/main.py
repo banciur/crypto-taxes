@@ -19,7 +19,8 @@ from config import (
 )
 from corrections.seed_events import apply_seed_event_corrections
 from corrections.spam import apply_spam_corrections
-from db.corrections import SpamCorrectionRepository, init_corrections_db
+from db.corrections_common import init_corrections_db
+from db.corrections_spam import SpamCorrectionRepository
 from db.db import init_db
 from db.repositories import (
     AcquisitionLotRepository,

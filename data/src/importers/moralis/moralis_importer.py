@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any, Iterable, Mapping, cast
 
 from accounts import AccountRegistry
-from db.corrections import SpamCorrectionRepository, SpamCorrectionSource
+from db.corrections_spam import SpamCorrectionRepository, SpamCorrectionSource
 from domain.ledger import (
     AccountChainId,
     AssetId,

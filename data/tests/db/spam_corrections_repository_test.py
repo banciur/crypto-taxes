@@ -5,7 +5,8 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from db.corrections import SpamCorrectionOrm, SpamCorrectionRepository, SpamCorrectionSource, init_corrections_db
+from db.corrections_common import init_corrections_db
+from db.corrections_spam import SpamCorrectionOrm, SpamCorrectionRepository, SpamCorrectionSource
 from domain.ledger import EventLocation, EventOrigin
 
 
