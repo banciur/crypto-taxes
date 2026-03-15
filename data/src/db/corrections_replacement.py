@@ -4,11 +4,14 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, UniqueConstraint, Uuid
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, UniqueConstraint, Uuid, select
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from db.corrections_common import CorrectionsBase
 from db.models import DecimalAsString
+from domain.correction import CorrectionId, Replacement
+from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerLeg, LegId
+from utils.misc import ensure_utc_datetime
 
 
 class ReplacementCorrectionOrm(CorrectionsBase):
@@ -72,3 +75,78 @@ class ReplacementCorrectionSourceOrm(CorrectionsBase):
     )
 
     replacement_correction: Mapped[ReplacementCorrectionOrm] = relationship(back_populates="sources")
+
+
+class ReplacementCorrectionRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, replacement: Replacement) -> Replacement:
+        orm_replacement = ReplacementCorrectionOrm(
+            id=replacement.id,
+            timestamp=replacement.timestamp,
+        )
+        orm_replacement.legs = [
+            ReplacementCorrectionLegOrm(
+                id=leg.id,
+                asset_id=leg.asset_id,
+                quantity=leg.quantity,
+                account_chain_id=leg.account_chain_id,
+                is_fee=leg.is_fee,
+            )
+            for leg in replacement.legs
+        ]
+        orm_replacement.sources = [
+            ReplacementCorrectionSourceOrm(
+                origin_location=source.location.value,
+                origin_external_id=source.external_id,
+            )
+            for source in replacement.sources
+        ]
+        self._session.add(orm_replacement)
+        self._session.commit()
+        return replacement
+
+    def list(self) -> list[Replacement]:
+        stmt = select(ReplacementCorrectionOrm).order_by(
+            ReplacementCorrectionOrm.timestamp.asc(),
+            ReplacementCorrectionOrm.id.asc(),
+        )
+        rows = self._session.execute(stmt).unique().scalars().all()
+        return [self._to_domain(row) for row in rows]
+
+    def delete(self, correction_id: CorrectionId) -> None:
+        row = self._session.get(ReplacementCorrectionOrm, correction_id)
+        if row is None:
+            return
+        self._session.delete(row)
+        self._session.commit()
+
+    @staticmethod
+    def _to_domain(row: ReplacementCorrectionOrm) -> Replacement:
+        legs = [
+            LedgerLeg(
+                id=LegId(leg.id),
+                asset_id=AssetId(leg.asset_id),
+                quantity=leg.quantity,
+                account_chain_id=AccountChainId(leg.account_chain_id),
+                is_fee=leg.is_fee,
+            )
+            for leg in sorted(row.legs, key=lambda leg: leg.id)
+        ]
+        sources = [
+            EventOrigin(
+                location=EventLocation(source.origin_location),
+                external_id=source.origin_external_id,
+            )
+            for source in sorted(
+                row.sources,
+                key=lambda source: (source.origin_location, source.origin_external_id),
+            )
+        ]
+        return Replacement(
+            id=CorrectionId(row.id),
+            timestamp=ensure_utc_datetime(row.timestamp),
+            legs=legs,
+            sources=sources,
+        )

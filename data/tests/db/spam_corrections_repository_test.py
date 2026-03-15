@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
-
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from db.corrections_common import init_corrections_db
 from db.corrections_spam import SpamCorrectionOrm, SpamCorrectionRepository, SpamCorrectionSource
 from domain.ledger import EventLocation, EventOrigin
-
-
-def _origin(location: EventLocation, external_id: str) -> EventOrigin:
-    return EventOrigin(location=location, external_id=external_id)
 
 
 def _row(session: Session, origin: EventOrigin) -> SpamCorrectionOrm:
@@ -24,65 +18,60 @@ def _row(session: Session, origin: EventOrigin) -> SpamCorrectionOrm:
     return row
 
 
-def test_mark_as_spam_and_list(tmp_path: Path) -> None:
-    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
-    repo = SpamCorrectionRepository(session)
-    origin = _origin(EventLocation.ARBITRUM, "0xabc")
+@pytest.fixture()
+def repo(corrections_session: Session) -> SpamCorrectionRepository:
+    return SpamCorrectionRepository(corrections_session)
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+
+def test_mark_as_spam_and_list(corrections_session: Session, repo: SpamCorrectionRepository) -> None:
+    event_origin = EventOrigin(location=EventLocation.ARBITRUM, external_id="0xabc")
+
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.MANUAL)
 
     active = repo.list()
 
     assert len(active) == 1
     (reloaded,) = active
-    assert reloaded.event_origin == origin
-    assert _row(session, origin).source == SpamCorrectionSource.MANUAL.value
+    assert reloaded.event_origin == event_origin
+    assert _row(corrections_session, event_origin).source == SpamCorrectionSource.MANUAL.value
 
 
-def test_mark_as_spam_same_origin_and_source_is_idempotent(tmp_path: Path) -> None:
-    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
-    repo = SpamCorrectionRepository(session)
-    origin = _origin(EventLocation.BASE, "0xdup")
+def test_mark_as_spam_same_origin_and_source_is_idempotent(repo: SpamCorrectionRepository) -> None:
+    event_origin = EventOrigin(location=EventLocation.BASE, external_id="0xdup")
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.MANUAL)
     first = repo.list()[0]
-    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.MANUAL)
 
     active = repo.list()
     assert len(active) == 1
     assert active[0].id == first.id
 
 
-def test_remove_spam_mark_hides_record_from_list(tmp_path: Path) -> None:
-    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
-    repo = SpamCorrectionRepository(session)
-    origin = _origin(EventLocation.ETHEREUM, "0xspam")
-    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+def test_remove_spam_mark_hides_record_from_list(repo: SpamCorrectionRepository) -> None:
+    event_origin = EventOrigin(location=EventLocation.ETHEREUM, external_id="0xspam")
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.MANUAL)
 
-    repo.remove_spam_mark(origin)
+    repo.remove_spam_mark(event_origin)
 
     assert repo.list() == []
 
 
-def test_mark_as_spam_after_remove_restores_same_row(tmp_path: Path) -> None:
-    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
-    repo = SpamCorrectionRepository(session)
-    origin = _origin(EventLocation.OPTIMISM, "0xrestore")
+def test_mark_as_spam_after_remove_restores_same_row(repo: SpamCorrectionRepository) -> None:
+    event_origin = EventOrigin(location=EventLocation.OPTIMISM, external_id="0xrestore")
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.MANUAL)
     first = repo.list()[0]
-    repo.remove_spam_mark(origin)
+    repo.remove_spam_mark(event_origin)
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.MANUAL)
     restored = repo.list()[0]
     assert restored.id == first.id
 
 
-def test_different_origins_are_stored_independently(tmp_path: Path) -> None:
-    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
-    repo = SpamCorrectionRepository(session)
-    origin_a = _origin(EventLocation.ARBITRUM, "0xb")
-    origin_b = _origin(EventLocation.ARBITRUM, "0xa")
+def test_different_origins_are_stored_independently(repo: SpamCorrectionRepository) -> None:
+    origin_a = EventOrigin(location=EventLocation.ARBITRUM, external_id="0xb")
+    origin_b = EventOrigin(location=EventLocation.ARBITRUM, external_id="0xa")
 
     repo.mark_as_spam(origin_a, SpamCorrectionSource.MANUAL)
     repo.mark_as_spam(origin_b, SpamCorrectionSource.MANUAL)
@@ -91,60 +80,64 @@ def test_different_origins_are_stored_independently(tmp_path: Path) -> None:
     assert [record.event_origin.external_id for record in active] == [origin_b.external_id, origin_a.external_id]
 
 
-def test_mark_as_spam_same_origin_updates_source_and_reuses_row(tmp_path: Path) -> None:
-    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
-    repo = SpamCorrectionRepository(session)
-    origin = _origin(EventLocation.BASE, "0xall")
+def test_mark_as_spam_same_origin_updates_source_and_reuses_row(
+    corrections_session: Session,
+    repo: SpamCorrectionRepository,
+) -> None:
+    event_origin = EventOrigin(location=EventLocation.BASE, external_id="0xall")
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.MANUAL)
     manual = repo.list()[0]
-    repo.mark_as_spam(origin, SpamCorrectionSource.AUTO_MORALIS)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.AUTO_MORALIS)
     auto = repo.list()[0]
 
     assert auto.id == manual.id
     assert repo.list() == [auto]
-    assert _row(session, origin).source == SpamCorrectionSource.AUTO_MORALIS.value
+    assert _row(corrections_session, event_origin).source == SpamCorrectionSource.AUTO_MORALIS.value
 
 
-def test_mark_as_spam_with_skip_if_exists_inserts_when_absent(tmp_path: Path) -> None:
-    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
-    repo = SpamCorrectionRepository(session)
-    origin = _origin(EventLocation.KRAKEN, "0xnew")
+def test_mark_as_spam_with_skip_if_exists_inserts_when_absent(
+    corrections_session: Session,
+    repo: SpamCorrectionRepository,
+) -> None:
+    event_origin = EventOrigin(location=EventLocation.KRAKEN, external_id="0xnew")
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.AUTO_MORALIS, skip_if_exists=True)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.AUTO_MORALIS, skip_if_exists=True)
 
     active = repo.list()
     assert len(active) == 1
-    assert active[0].event_origin == origin
-    assert _row(session, origin).source == SpamCorrectionSource.AUTO_MORALIS.value
+    assert active[0].event_origin == event_origin
+    assert _row(corrections_session, event_origin).source == SpamCorrectionSource.AUTO_MORALIS.value
 
 
-def test_mark_as_spam_with_skip_if_exists_leaves_existing_active_row_untouched(tmp_path: Path) -> None:
-    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
-    repo = SpamCorrectionRepository(session)
-    origin = _origin(EventLocation.BASE, "0xkeep")
+def test_mark_as_spam_with_skip_if_exists_leaves_existing_active_row_untouched(
+    corrections_session: Session,
+    repo: SpamCorrectionRepository,
+) -> None:
+    event_origin = EventOrigin(location=EventLocation.BASE, external_id="0xkeep")
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.MANUAL)
     first = repo.list()[0]
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.AUTO_MORALIS, skip_if_exists=True)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.AUTO_MORALIS, skip_if_exists=True)
 
     active = repo.list()
     assert active == [first]
-    assert _row(session, origin).source == SpamCorrectionSource.MANUAL.value
+    assert _row(corrections_session, event_origin).source == SpamCorrectionSource.MANUAL.value
 
 
-def test_mark_as_spam_with_skip_if_exists_does_not_revive_deleted_row(tmp_path: Path) -> None:
-    session = init_corrections_db(db_path=tmp_path / "corrections.db", reset=True)
-    repo = SpamCorrectionRepository(session)
-    origin = _origin(EventLocation.ETHEREUM, "0xtombstone")
+def test_mark_as_spam_with_skip_if_exists_does_not_revive_deleted_row(
+    corrections_session: Session,
+    repo: SpamCorrectionRepository,
+) -> None:
+    event_origin = EventOrigin(location=EventLocation.ETHEREUM, external_id="0xtombstone")
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.MANUAL)
-    repo.remove_spam_mark(origin)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.MANUAL)
+    repo.remove_spam_mark(event_origin)
 
-    repo.mark_as_spam(origin, SpamCorrectionSource.AUTO_MORALIS, skip_if_exists=True)
+    repo.mark_as_spam(event_origin, SpamCorrectionSource.AUTO_MORALIS, skip_if_exists=True)
 
     assert repo.list() == []
-    row = _row(session, origin)
+    row = _row(corrections_session, event_origin)
     assert row.is_deleted is True
     assert row.source == SpamCorrectionSource.MANUAL.value

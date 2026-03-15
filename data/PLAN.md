@@ -153,11 +153,11 @@ Pipeline wiring tests:
   - Add ORM models for replacement headers, legs, and sources.
   - Add the unique source-origin constraint for active replacements.
 
-- [ ] Add replacement persistence support.
+- [x] Add replacement persistence support.
   - Implement a repository for `Replacement`.
   - Support `create`, `list`, and `delete`.
 
-- [ ] Add replacement correction application logic under `data/src/corrections/`.
+- [x] Add replacement correction application logic under `data/src/corrections/`.
   - Remove referenced raw events.
   - Materialize synthetic replacement events with `INTERNAL/replacement:{id}` origin.
   - Reuse deterministic corrected-event sorting.

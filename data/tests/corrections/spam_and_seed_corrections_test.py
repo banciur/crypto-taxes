@@ -38,8 +38,7 @@ def test_spam_filter_runs_before_seed_event_merge() -> None:
     )
     corrected = apply_seed_event_corrections(raw_events=filtered, seed_events=[seed_event])
 
-    assert {event.event_origin.external_id for event in corrected} == {
+    assert [event.event_origin.external_id for event in corrected] == [
         kept_raw.event_origin.external_id,
         f"seed:{seed_event.id}",
-    }
-    assert corrected[0].event_origin.external_id == f"seed:{seed_event.id}"
+    ]

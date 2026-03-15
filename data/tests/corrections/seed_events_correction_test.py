@@ -8,7 +8,7 @@ from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId
 from tests.constants import BTC, KRAKEN_WALLET
 
 
-def test_apply_seed_event_corrections_merges_and_sorts() -> None:
+def test_apply_seed_event_corrections_merges_without_sorting() -> None:
     seed_timestamp = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
     seed_quantity = Decimal("0.5")
     seed_event = SeedEvent(
@@ -30,6 +30,6 @@ def test_apply_seed_event_corrections_merges_and_sorts() -> None:
     corrected = apply_seed_event_corrections(raw_events=[raw_event], seed_events=[seed_event])
 
     assert len(corrected) == 2
-    assert corrected[0].timestamp == seed_timestamp
-    assert corrected[1].id == raw_event_id
-    assert {event.event_origin.external_id for event in corrected} == {"raw-ext", f"seed:{seed_event.id}"}
+    assert corrected[0].id == raw_event_id
+    assert corrected[1].timestamp == seed_timestamp
+    assert [event.event_origin.external_id for event in corrected] == ["raw-ext", f"seed:{seed_event.id}"]

@@ -159,6 +159,14 @@ def run(
         perf_counter() - corrections_started,
     )
 
+    corrected_events.sort(
+        key=lambda event: (
+            event.timestamp,
+            event.event_origin.location.value,
+            event.event_origin.external_id,
+            event.ingestion,
+        )
+    )
     # Save corrections
     logger.info("Persisting corrected events")
     corrected_started = perf_counter()
