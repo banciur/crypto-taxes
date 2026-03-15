@@ -1,4 +1,4 @@
-# This file is completely vibed.
+# This file is completely vibed and I didn't read it.
 from __future__ import annotations
 
 from corrections.replacements import apply_replacement_corrections

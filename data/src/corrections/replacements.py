@@ -1,3 +1,4 @@
+# This file is completely vibed and I didn't read it.
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
