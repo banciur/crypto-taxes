@@ -10,7 +10,7 @@ export type EventsActionFeedback = {
 };
 
 type EventsActionBarProps = {
-  selectedRawEventCount: number;
+  selectedEventCount: number;
   isRemovingSpamCorrection: boolean;
   isMarkingSpam: boolean;
   feedback: EventsActionFeedback | null;
@@ -18,7 +18,7 @@ type EventsActionBarProps = {
 };
 
 export function EventsActionBar({
-  selectedRawEventCount,
+  selectedEventCount,
   isRemovingSpamCorrection,
   isMarkingSpam,
   feedback,
@@ -32,9 +32,9 @@ export function EventsActionBar({
   }
 
   const selectionStatus =
-    selectedRawEventCount === 0
+    selectedEventCount === 0
       ? "Select raw events to create spam markers."
-      : `${selectedRawEventCount} raw event${selectedRawEventCount === 1 ? "" : "s"} selected.`;
+      : `${selectedEventCount} raw event${selectedEventCount === 1 ? "" : "s"} selected.`;
 
   return (
     <div className="flex-shrink-0 border-bottom bg-body px-3 py-2">
@@ -47,7 +47,7 @@ export function EventsActionBar({
               size="sm"
               variant="warning"
               disabled={
-                selectedRawEventCount === 0 ||
+                selectedEventCount === 0 ||
                 isMarkingSpam ||
                 isRemovingSpamCorrection
               }

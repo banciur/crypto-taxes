@@ -1,7 +1,5 @@
 First stage: compute German taxes
 
-TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
-TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
   - Checkboxes to combine, mark as spam transactions should be also on the corrections lane.
   - When hovering over the "combine" event highlight events that are being replaced
@@ -15,6 +13,9 @@ TODO: I'm not sure about the corrections directory and which code should go wher
 
 Review the order of todos
 ------------------
+TODO: Need icons for coinbase and kraken
+TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
+TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?
 TODO: Add a optional note field to ledger entry
 TODO: For onchain (moralis) add called function name. It will make it more readable.
 TODO: Implement more sophisitcated logic for tokens to handle this logic when token with same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
