@@ -8,8 +8,8 @@ import type {
 } from "@/types/events";
 
 type SelectableEventData = {
-  selectableEventOrigins: EventOrigin[];
-  selectableEventOriginKeys: Set<string>;
+  selectableEventOrigins: readonly EventOrigin[];
+  selectableEventOriginKeys: ReadonlySet<string>;
 };
 
 const isSelectableEvent = (

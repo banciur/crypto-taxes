@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 
 import {
   createSpamCorrection,
@@ -11,70 +11,24 @@ import {
   type EventsActionFeedback,
 } from "@/components/EventsActionBar";
 import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
-import { eventOriginKey } from "@/lib/eventOrigin";
 import type { EventOrigin, EventsByTimestamp } from "@/types/events";
-import { collectSelectableEventOrigins } from "./selectableEvents";
+import { useEventSelection } from "./useEventSelection";
 
 type EventsProps = {
   eventsByTimestamp: EventsByTimestamp;
 };
 
 export function Events({ eventsByTimestamp }: EventsProps) {
-  const [selectedEventOriginKeys, setSelectedEventOriginKeys] = useState<
-    Set<string>
-  >(() => new Set());
   const [isMarkingSpam, setIsMarkingSpam] = useState(false);
   const [isRemovingSpamCorrection, setIsRemovingSpamCorrection] =
     useState(false);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
-
-  const { selectableEventOrigins, selectableEventOriginKeys } = useMemo(
-    () => collectSelectableEventOrigins(eventsByTimestamp),
-    [eventsByTimestamp],
-  );
-
-  const selectedEventOrigins = useMemo(
-    () =>
-      selectableEventOrigins.filter((eventOrigin) =>
-        selectedEventOriginKeys.has(eventOriginKey(eventOrigin)),
-      ),
-    [selectableEventOrigins, selectedEventOriginKeys],
-  );
-
-  useEffect(() => {
-    setSelectedEventOriginKeys((current) => {
-      if (current.size === 0) {
-        return current;
-      }
-
-      const next = new Set(
-        Array.from(current).filter((originKey) =>
-          selectableEventOriginKeys.has(originKey),
-        ),
-      );
-      if (next.size === current.size) {
-        return current;
-      }
-      return next;
-    });
-  }, [selectableEventOriginKeys]);
-
-  const handleToggleEventSelection = useCallback(
-    (eventOrigin: EventOrigin) => {
-      const originKey = eventOriginKey(eventOrigin);
-      setSelectedEventOriginKeys((current) => {
-        const next = new Set(current);
-
-        if (next.has(originKey)) {
-          next.delete(originKey);
-        } else {
-          next.add(originKey);
-        }
-        return next;
-      });
-    },
-    [],
-  );
+  const {
+    selectedEventOriginKeys,
+    selectedEventOrigins,
+    toggleEventSelection,
+    clearEventSelection,
+  } = useEventSelection(eventsByTimestamp);
 
   const handleMarkSelectedAsSpam = useCallback(async () => {
     if (selectedEventOrigins.length === 0) {
@@ -103,13 +57,13 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       return;
     }
 
-    setSelectedEventOriginKeys(new Set());
+    clearEventSelection();
     setFeedback({
       tone: "success",
       message:
         "Spam markers saved. Re-run the pipeline and reload the UI to refresh the lanes.",
     });
-  }, [selectedEventOrigins]);
+  }, [clearEventSelection, selectedEventOrigins]);
 
   const handleRemoveSpamCorrection = useCallback(
     async (eventOrigin: EventOrigin) => {
@@ -151,7 +105,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         selectedEventOriginKeys={selectedEventOriginKeys}
         isSpamMarkerChangePending={isMarkingSpam || isRemovingSpamCorrection}
         className="flex-grow-1"
-        onToggleEventSelection={handleToggleEventSelection}
+        onToggleEventSelection={toggleEventSelection}
         onRemoveSpamCorrection={handleRemoveSpamCorrection}
       />
     </div>

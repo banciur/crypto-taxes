@@ -22,7 +22,7 @@
 ## UI Structure
 
 - `src/app/page.tsx` loads the selected columns, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
-- `src/components/Events/` owns event selection state, spam marker actions, and the action bar shown above the timeline.
+- `src/components/Events/` owns event selection state, spam marker actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
 - `src/components/LaneItem.tsx` dispatches each lane item to its visual component such as `EventCard`, `SeedCorrectionItem`, or `SpamCorrectionItem`.
