@@ -82,7 +82,7 @@ Domain model:
 
 - Replace the unused `LinkMarker` in `data/src/domain/correction.py` with `Replacement`.
 - `Replacement` should extend `Correction` and `AbstractEvent`.
-- `Replacement` should expose `source_event_origins: list[EventOrigin]`.
+- `Replacement` should expose `sources: Sequence[EventOrigin]`.
 
 Repository surface:
 
@@ -144,10 +144,10 @@ Pipeline wiring tests:
 
 - [x] Lock task scope and agreed replacement semantics in this plan.
 
-- [ ] Update `data/src/domain/correction.py`.
+- [x] Update `data/src/domain/correction.py`.
   - Remove `LinkMarker`.
   - Add `Replacement`.
-  - Keep naming explicit: `source_event_origins`.
+  - Use `sources` for referenced raw-event origins.
 
 - [ ] Extend the corrections DB schema in `data/src/db/corrections.py`.
   - Add ORM models for replacement headers, legs, and sources.
