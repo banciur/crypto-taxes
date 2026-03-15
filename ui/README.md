@@ -1,5 +1,33 @@
 # UI Guidelines
 
+## UI Overview
+
+- The page is split into a left toolbar and a main event section.
+- The left toolbar contains the column chooser and date chooser.
+- The main event section shows the selected lanes of ledger data plus the action bar for lane-level actions and feedback.
+
+### Lane behavior
+
+- `Raw events` shows imported ledger events before corrections are applied.
+- `Corrections` shows synthetic seed events and persisted spam markers.
+- `Corrected events` shows the ledger after spam and seed corrections are applied.
+
+### Supported actions
+
+- Users can select one or more event cards and mark them as spam.
+- Users can remove an existing spam marker from the `Corrections` lane.
+- The date chooser scrolls the main timeline to the selected day.
+- The column chooser controls which lanes are loaded and rendered.
+
+## UI Structure
+
+- `src/app/page.tsx` loads the selected columns, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
+- `src/components/Events.tsx` owns event selection state, spam marker actions, and the action bar shown above the timeline.
+- `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
+- `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
+- `src/components/LaneItem.tsx` dispatches each lane item to its visual component such as `EventCard`, `SeedCorrectionItem`, or `SpamCorrectionItem`.
+- `src/components/EventCard.tsx` is the shared card UI for raw and corrected ledger events.
+
 ## Architecture and Integration
 
 ### Communication with the backend
