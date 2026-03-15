@@ -13,6 +13,7 @@ TODO: I'm not sure about the corrections directory and which code should go wher
 
 Review the order of todos
 ------------------
+TODO: Need icons for coinbase and kraken
 TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
 TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?
 TODO: Add a optional note field to ledger entry

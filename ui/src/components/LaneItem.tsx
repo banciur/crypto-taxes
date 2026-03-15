@@ -9,7 +9,7 @@ type LaneItemProps = {
   item: LaneItemData;
   isSelected: boolean;
   isSpamMarkerChangePending: boolean;
-  onToggleRawEventSelection: (eventOrigin: EventOrigin) => void;
+  onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
 };
 
@@ -17,7 +17,7 @@ export function LaneItem({
   item,
   isSelected,
   isSpamMarkerChangePending,
-  onToggleRawEventSelection,
+  onToggleEventSelection,
   onRemoveSpamCorrection,
 }: LaneItemProps) {
   switch (item.kind) {
@@ -30,7 +30,7 @@ export function LaneItem({
           legs={item.legs}
           isSelected={isSelected}
           selectionDisabled={isSpamMarkerChangePending}
-          onSelectionChange={() => onToggleRawEventSelection(item.eventOrigin)}
+          onSelectionChange={() => onToggleEventSelection(item.eventOrigin)}
         />
       );
     case "corrected-event":
