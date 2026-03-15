@@ -125,9 +125,9 @@ The implementation must stay aligned with the existing backend/domain model:
 
 - [x] Resolve whether the existing spam-selection path should also be narrowed to the raw lane in this task.
 
-- [ ] Implement backend replacement correction API endpoints, dependencies, request/response models, and validation/error mapping.
+- [x] Implement backend replacement correction API endpoints, dependencies, request/response models, and validation/error mapping.
 
-- [ ] Add backend API tests for replacement correction list/create/delete behavior, conflict validation, and idempotent delete semantics.
+- [x] Add backend API tests for replacement correction list/create/delete behavior, conflict validation, and idempotent delete semantics.
 
 - [ ] Add UI API modules and types for replacement corrections and load them into the corrections lane.
 

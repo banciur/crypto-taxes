@@ -1,21 +1,36 @@
 from datetime import datetime
 from typing import Annotated, Iterable
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from pydantic import Field
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from api.dependencies import (
+    get_corrections_session,
     get_raw_events_repository,
+    get_replacement_correction_repository,
     get_seed_events_repository,
     get_spam_correction_repository,
 )
+from corrections.validation import CorrectionValidationError, validate_ingestion_corrections
+from db.corrections_replacement import ReplacementCorrectionRepository
 from db.corrections_spam import SpamCorrectionRepository
 from db.repositories import LedgerEventRepository, SeedEventRepository
-from domain.correction import SeedEvent, Spam
-from domain.ledger import EventLocation, EventOrigin
+from domain.correction import CorrectionId, Replacement, SeedEvent, Spam
+from domain.ledger import EventLocation, EventOrigin, LedgerLeg
+from pydantic_base import StrictBaseModel
 
 
 class ApiSpamCorrection(Spam):
     timestamp: datetime
+
+
+class CreateReplacementCorrectionPayload(StrictBaseModel):
+    timestamp: datetime
+    sources: list[EventOrigin] = Field(min_length=1)
+    legs: list[LedgerLeg] = Field(min_length=1)
 
 
 def _event_origin_key(event_origin: EventOrigin) -> tuple[EventLocation, str]:
@@ -90,4 +105,60 @@ def delete_spam_correction(
     repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
 ) -> Response:
     repo.remove_spam_mark(payload)
+    return Response(status_code=204)
+
+
+@router.get("/replacement-corrections")
+def get_replacement_corrections(
+    repo: Annotated[ReplacementCorrectionRepository, Depends(get_replacement_correction_repository)],
+) -> list[Replacement]:
+    return repo.list()
+
+
+@router.post(
+    "/replacement-corrections",
+    response_model=Replacement,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_replacement_correction(
+    payload: CreateReplacementCorrectionPayload,
+    repo: Annotated[ReplacementCorrectionRepository, Depends(get_replacement_correction_repository)],
+    raw_repo: Annotated[LedgerEventRepository, Depends(get_raw_events_repository)],
+    spam_repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
+    corrections_session: Annotated[Session, Depends(get_corrections_session)],
+) -> Replacement:
+    replacement = Replacement(
+        timestamp=payload.timestamp,
+        sources=payload.sources,
+        legs=payload.legs,
+    )
+
+    try:
+        validate_ingestion_corrections(
+            raw_events=raw_repo.list(),
+            spam_markers=spam_repo.list(),
+            replacements=[*repo.list(), replacement],
+        )
+    except CorrectionValidationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(error),
+        ) from error
+
+    try:
+        return repo.create(replacement)
+    except IntegrityError as error:
+        corrections_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Replacement source is already consumed by another replacement",
+        ) from error
+
+
+@router.delete("/replacement-corrections/{correction_id}", status_code=204)
+def delete_replacement_correction(
+    correction_id: UUID,
+    repo: Annotated[ReplacementCorrectionRepository, Depends(get_replacement_correction_repository)],
+) -> Response:
+    repo.delete(CorrectionId(correction_id))
     return Response(status_code=204)
