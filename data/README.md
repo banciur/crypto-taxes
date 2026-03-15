@@ -1,22 +1,18 @@
 # Data Guidelines
 
-## Tech stack
-- Python 3.13;
-- Uses `uv` to manage dependencies and virtual environments;
-- Pydantic v2 models under `src/domain`;
-- Tests written in `pytest` under `tests`.
+## Capabilities and Structure
 
-## Directory structure
+### Directory structure
 - `src/`: Python application code and domain modules.
 - `src/api/`: FastAPI service layer that exposes the backend contract consumed by the UI.
 - `tests/`: pytest suite.
 - `scripts/`: helper scripts.
 
-## API
+### API
 - The API is implemented with FastAPI under `src/api/`.
 - Its purpose is to expose ledger/corrections/accounts data to the UI through a stable HTTP interface.
 
-## Domain modules
+### Domain modules
 - Ledger and lots: `src/domain/ledger.py`
 - Inventory engine and lot matching: `src/domain/inventory.py`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
@@ -24,19 +20,25 @@
 - Tax event projection types: `src/domain/tax_event.py`
 - Wallet balance tracking and insufficient-balance errors: `src/domain/wallet_balance_tracker.py`
 
-## Price services
+### Price services
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
 
-## Data importers
+### Data importers
 - Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `event_origin`/`ingestion` metadata.
 - Current importers:
   - Coinbase Track account history: `src/importers/coinbase/coinbase_importer.py`
   - Kraken CSV ledger: `src/importers/kraken/kraken_importer.py`
   - on-chain transactions through Moralis importer: `src/importers/moralis/moralis_importer.py`
   - Seed CSV events (for missing history): `src/importers/seed_events.py` loads `SeedEvent`s from `artifacts/seed_lots.csv` (corrections layer, not `LedgerEvent`s).
+- Moralis and Coinbase persist raw upstream data in the SQLite cache DB at `artifacts/transactions_cache.db` to reduce API calls during syncs.
 
-## Cache-backed services
-Moralis and Coinbase persist raw upstream data in the SQLite cache DB at `artifacts/transactions_cache.db` to reduce API calls during syncs.
+## Technical Workflow
+
+### Tech stack
+- Python 3.13;
+- Uses `uv` to manage dependencies and virtual environments;
+- Pydantic v2 models under `src/domain`;
+- Tests written in `pytest` under `tests`.
 
 ### Running commands and scripts with uv
 - Use `uv run <command or path to python file>` to execute project-aware tooling and Python scripts inside the managed virtualenv;
@@ -45,17 +47,17 @@ Moralis and Coinbase persist raw upstream data in the SQLite cache DB at `artifa
   - `uv run src/main.py` for running the main entrypoint;
   - `uv run --group dev pytest -s tests/domain/inventory_test.py` for running the test file;
 
-## Development commands
+### Development commands
 - `make deps` syncs the project and `dev` dependency groups into the local `.venv` via uv.
 - `make code_check` runs `ruff check`, `ruff format --check`, and `mypy` to gate linting and types.
 - `make code_fix` executes `ruff check --fix`, `ruff format`, and `mypy` to auto-fix linting and re-run types.
 - `make test` runs the pytest suite. If you want to test a single file, use `uv run --group dev pytest tests/test_foo.py`
 
-## Suggested workflow
+### Suggested workflow
 - ALWAYS after making python code changes `make code_fix` to auto-apply lint fixes.
 - ALWAYS after making python code changes run `make test` to ensure the suite passes before committing.
 
-## Project Practices
+### Project practices
 - Use `str` for identifiers (e.g., `asset_id: str`) and `UUID` for UUIDs (e.g., `asset_id: UUID`). Avoid `int` for identifiers.
 - Use `Decimal` for numeric quantities/rates; avoid floats.
 - Time fields use `datetime` named `timestamp` and are stored in UTC.
