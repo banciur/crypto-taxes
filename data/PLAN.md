@@ -162,18 +162,18 @@ Pipeline wiring tests:
   - Materialize synthetic replacement events with `INTERNAL/replacement:{id}` origin.
   - Reuse deterministic corrected-event sorting.
 
-- [ ] Add ingestion-layer validation that spans spam and replacement corrections.
+- [x] Add ingestion-layer validation that spans spam and replacement corrections.
   - Fail on missing raw-event references.
   - Fail on spam/replacement overlap.
   - Fail on duplicate replacement consumption.
 
-- [ ] Wire replacement loading and application into `data/src/main.py`.
+- [x] Wire replacement loading and application into `data/src/main.py`.
   - Load replacements from the corrections DB.
   - Apply spam, replacement, and seed corrections in the agreed order.
 
-- [ ] Add tests covering replacement persistence, correction application, validation failures, and main-pipeline wiring.
+- [x] Add tests covering replacement persistence, correction application, validation failures, and main-pipeline wiring.
 
-- [ ] Run `make code_fix` and `make test`.
+- [x] Run `make code_fix` and `make test`.
 
 - [ ] Update documentation after implementation.
   - Update `doc/CURRENT.md`.

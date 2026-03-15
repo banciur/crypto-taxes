@@ -17,9 +17,9 @@ from config import (
     TRANSACTIONS_CACHE_DB_PATH,
     config,
 )
-from corrections.seed_events import apply_seed_event_corrections
-from corrections.spam import apply_spam_corrections
+from corrections.ingestion import apply_ingestion_corrections
 from db.corrections_common import init_corrections_db
+from db.corrections_replacement import ReplacementCorrectionRepository
 from db.corrections_spam import SpamCorrectionRepository
 from db.db import init_db
 from db.repositories import (
@@ -85,6 +85,7 @@ def run(
     disposal_repository = DisposalLinkRepository(session)
     tax_event_repository = TaxEventRepository(session)
     spam_correction_repository = SpamCorrectionRepository(corrections_session)
+    replacement_correction_repository = ReplacementCorrectionRepository(corrections_session)
 
     wallet_balance_tracker = WalletBalanceTracker()
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
@@ -148,25 +149,24 @@ def run(
     # Apply corrections
     spam_markers = spam_correction_repository.list()
     logger.info("Loaded %d active spam corrections", len(spam_markers))
+
+    replacements = replacement_correction_repository.list()
+    logger.info("Loaded %d active replacement corrections", len(replacements))
+
     logger.info("Applying corrections to %d raw events", len(events))
     corrections_started = perf_counter()
-    filtered_events = list(apply_spam_corrections(raw_events=events, spam_markers=spam_markers))
-    logger.info("Removed %d spam raw events", len(events) - len(filtered_events))
-    corrected_events = apply_seed_event_corrections(raw_events=filtered_events, seed_events=seed_events)
+    corrected_events = apply_ingestion_corrections(
+        raw_events=events,
+        spam_markers=spam_markers,
+        replacements=replacements,
+        seed_events=seed_events,
+    )
     logger.info(
-        "Applied spam+seed corrections: %d corrected events in %.2fs",
+        "Applied spam+replacement+seed corrections: %d corrected events in %.2fs",
         len(corrected_events),
         perf_counter() - corrections_started,
     )
 
-    corrected_events.sort(
-        key=lambda event: (
-            event.timestamp,
-            event.event_origin.location.value,
-            event.event_origin.external_id,
-            event.ingestion,
-        )
-    )
     # Save corrections
     logger.info("Persisting corrected events")
     corrected_started = perf_counter()
