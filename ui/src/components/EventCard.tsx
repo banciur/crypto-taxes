@@ -67,7 +67,7 @@ export function EventCard({
             checked={isSelected}
             disabled={selectionDisabled}
             onChange={handleSelectionChange}
-            aria-label={`Select raw event ${originId}`}
+            aria-label={`Select event ${originId}`}
           />
         )}
         {originId && (

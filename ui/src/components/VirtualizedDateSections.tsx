@@ -29,19 +29,19 @@ type TimelineRow = DayHeaderRow | EventBucketRow;
 
 type VirtualizedDateSectionsProps = {
   eventsByTimestamp: EventsByTimestamp;
-  selectedRawEventOriginKeys: ReadonlySet<string>;
+  selectedEvents: ReadonlyMap<string, EventOrigin>;
   isSpamMarkerChangePending: boolean;
   className?: string;
-  onToggleRawEventSelection: (eventOrigin: EventOrigin) => void;
+  onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
 };
 
 export function VirtualizedDateSections({
   eventsByTimestamp,
-  selectedRawEventOriginKeys,
+  selectedEvents,
   isSpamMarkerChangePending,
   className,
-  onToggleRawEventSelection,
+  onToggleEventSelection,
   onRemoveSpamCorrection,
 }: VirtualizedDateSectionsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -168,9 +168,9 @@ export function VirtualizedDateSections({
               ) : (
                 <EventDateSection
                   itemsByColumn={row.itemsByColumn}
-                  selectedRawEventOriginKeys={selectedRawEventOriginKeys}
+                  selectedEvents={selectedEvents}
                   isSpamMarkerChangePending={isSpamMarkerChangePending}
-                  onToggleRawEventSelection={onToggleRawEventSelection}
+                  onToggleEventSelection={onToggleEventSelection}
                   onRemoveSpamCorrection={onRemoveSpamCorrection}
                 />
               )}

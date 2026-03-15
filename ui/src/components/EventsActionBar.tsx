@@ -10,7 +10,7 @@ export type EventsActionFeedback = {
 };
 
 type EventsActionBarProps = {
-  selectedRawEventCount: number;
+  selectedEventCount: number;
   isRemovingSpamCorrection: boolean;
   isMarkingSpam: boolean;
   feedback: EventsActionFeedback | null;
@@ -18,28 +18,28 @@ type EventsActionBarProps = {
 };
 
 export function EventsActionBar({
-  selectedRawEventCount,
+  selectedEventCount,
   isRemovingSpamCorrection,
   isMarkingSpam,
   feedback,
   onMarkSelectedAsSpam,
 }: EventsActionBarProps) {
   const { selected } = useUrlColumnSelection();
-  const hasRawColumn = selected.has("raw");
+  const hasSelectableColumn = selected.has("raw") || selected.has("corrected");
 
-  if (!hasRawColumn && !feedback) {
+  if (!hasSelectableColumn && !feedback) {
     return null;
   }
 
   const selectionStatus =
-    selectedRawEventCount === 0
-      ? "Select raw events to create spam markers."
-      : `${selectedRawEventCount} raw event${selectedRawEventCount === 1 ? "" : "s"} selected.`;
+    selectedEventCount === 0
+      ? "Select events to create spam markers."
+      : `${selectedEventCount} event${selectedEventCount === 1 ? "" : "s"} selected.`;
 
   return (
     <div className="flex-shrink-0 border-bottom bg-body px-3 py-2">
       <div className="d-flex flex-wrap align-items-center gap-2">
-        {hasRawColumn && (
+        {hasSelectableColumn && (
           <>
             <span className="small text-muted">{selectionStatus}</span>
             <Button
@@ -47,7 +47,7 @@ export function EventsActionBar({
               size="sm"
               variant="warning"
               disabled={
-                selectedRawEventCount === 0 ||
+                selectedEventCount === 0 ||
                 isMarkingSpam ||
                 isRemovingSpamCorrection
               }
