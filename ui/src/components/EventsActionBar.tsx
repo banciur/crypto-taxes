@@ -25,21 +25,21 @@ export function EventsActionBar({
   onMarkSelectedAsSpam,
 }: EventsActionBarProps) {
   const { selected } = useUrlColumnSelection();
-  const hasRawColumn = selected.has("raw");
+  const hasSelectableColumn = selected.has("raw") || selected.has("corrected");
 
-  if (!hasRawColumn && !feedback) {
+  if (!hasSelectableColumn && !feedback) {
     return null;
   }
 
   const selectionStatus =
     selectedEventCount === 0
-      ? "Select raw events to create spam markers."
-      : `${selectedEventCount} raw event${selectedEventCount === 1 ? "" : "s"} selected.`;
+      ? "Select events to create spam markers."
+      : `${selectedEventCount} event${selectedEventCount === 1 ? "" : "s"} selected.`;
 
   return (
     <div className="flex-shrink-0 border-bottom bg-body px-3 py-2">
       <div className="d-flex flex-wrap align-items-center gap-2">
-        {hasRawColumn && (
+        {hasSelectableColumn && (
           <>
             <span className="small text-muted">{selectionStatus}</span>
             <Button

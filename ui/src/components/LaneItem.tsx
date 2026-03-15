@@ -40,6 +40,9 @@ export function LaneItem({
           timestamp={item.timestamp}
           eventOrigin={item.eventOrigin}
           legs={item.legs}
+          isSelected={isSelected}
+          selectionDisabled={isSpamMarkerChangePending}
+          onSelectionChange={() => onToggleEventSelection(item.eventOrigin)}
         />
       );
     case "seed-correction":

@@ -1,9 +1,8 @@
 First stage: compute German taxes
 
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
-  - Checkboxes to combine, mark as spam transactions should be also on the corrections lane.
   - When hovering over the "combine" event highlight events that are being replaced
-  - Events component is still messy, divide more?, put logic somewhere else. Internal structures are too complicated etc.
+  - Review downstream components from Events I have a feeling internal structures are too complicated etc.
   - Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok.
   - Review the hierarchy of types. Hierarchy from types/events ItemBase to LaneItemData vs EventDateSection.
   - Review names of components don't like VirtualizedDateSections and others.

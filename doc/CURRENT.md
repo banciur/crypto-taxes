@@ -92,7 +92,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - CLI inventory summary aggregates quantities and EUR values per asset across owned accounts.
 - Tax calculations currently focus on disposal links.
 - CLI run persists ledger events, acquisition lots, disposal links, and tax events to SQLite for inspection and reuse.
-- The UI now renders raw, corrections, and corrected lanes. The raw lane supports per-event spam selection, the corrections lane displays seed events with spam markers, and the corrected lane shows only corrected ledger events.
+- The UI renders raw, corrections, and corrected lanes. Raw and corrected event cards allow per-event spam selection keyed by `event_origin`, the corrections lane displays seed events and spam markers, and the corrected lane shows corrected ledger events.
 
 ---
 
