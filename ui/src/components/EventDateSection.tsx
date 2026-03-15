@@ -16,7 +16,7 @@ import type {
 
 type EventDateSectionProps = {
   itemsByColumn: EventsByTimestamp[string];
-  selectedEventOriginKeys: ReadonlySet<string>;
+  selectedEvents: ReadonlyMap<string, EventOrigin>;
   isSpamMarkerChangePending: boolean;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
@@ -24,14 +24,14 @@ type EventDateSectionProps = {
 
 const isSelectedRawEvent = (
   item: LaneItemData,
-  selectedEventOriginKeys: ReadonlySet<string>,
+  selectedEvents: ReadonlyMap<string, EventOrigin>,
 ) =>
   item.kind === "raw-event" &&
-  selectedEventOriginKeys.has(eventOriginKey(item.eventOrigin));
+  selectedEvents.has(eventOriginKey(item.eventOrigin));
 
 export function EventDateSection({
   itemsByColumn,
-  selectedEventOriginKeys,
+  selectedEvents,
   isSpamMarkerChangePending,
   onToggleEventSelection,
   onRemoveSpamCorrection,
@@ -54,7 +54,7 @@ export function EventDateSection({
             <LaneItem
               key={item.id}
               item={item}
-              isSelected={isSelectedRawEvent(item, selectedEventOriginKeys)}
+              isSelected={isSelectedRawEvent(item, selectedEvents)}
               isSpamMarkerChangePending={isSpamMarkerChangePending}
               onToggleEventSelection={onToggleEventSelection}
               onRemoveSpamCorrection={onRemoveSpamCorrection}

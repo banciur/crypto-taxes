@@ -7,8 +7,7 @@ import type { EventOrigin, EventsByTimestamp } from "@/types/events";
 import { collectSelectableEvents } from "./selectableEvents";
 
 type UseEventSelectionResult = {
-  selectedEventOrigins: readonly EventOrigin[];
-  selectedEventOriginKeys: ReadonlySet<string>;
+  selectedEvents: ReadonlyMap<string, EventOrigin>;
   toggleEventSelection: (eventOrigin: EventOrigin) => void;
   clearEventSelection: () => void;
 };
@@ -25,23 +24,24 @@ export const useEventSelection = (
     [eventsByTimestamp],
   );
 
-  const { effectiveSelectedEventOriginKeys, selectedEventOrigins } =
-    useMemo(() => {
-      const effectiveSelectedEventOriginKeys = new Set(
-        Array.from(selectedEventOriginKeys).filter((originKey) =>
-          selectableEvents.has(originKey),
-        ),
-      );
+  const selectedEvents = useMemo(() => {
+    const effectiveSelectedEventOriginKeys = new Set(
+      Array.from(selectedEventOriginKeys).filter((originKey) =>
+        selectableEvents.has(originKey),
+      ),
+    );
 
-      const selectedEventOrigins = Array.from(effectiveSelectedEventOriginKeys)
-        .map((originKey) => selectableEvents.get(originKey))
-        .filter(
-          (eventOrigin): eventOrigin is EventOrigin =>
-            eventOrigin !== undefined,
-        );
+    const selectedEvents = new Map<string, EventOrigin>();
 
-      return { effectiveSelectedEventOriginKeys, selectedEventOrigins };
-    }, [selectableEvents, selectedEventOriginKeys]);
+    for (const originKey of effectiveSelectedEventOriginKeys) {
+      const eventOrigin = selectableEvents.get(originKey);
+      if (eventOrigin) {
+        selectedEvents.set(originKey, eventOrigin);
+      }
+    }
+
+    return selectedEvents;
+  }, [selectableEvents, selectedEventOriginKeys]);
 
   const toggleEventSelection = useCallback(
     (eventOrigin: EventOrigin) => {
@@ -69,8 +69,7 @@ export const useEventSelection = (
   }, []);
 
   return {
-    selectedEventOriginKeys: effectiveSelectedEventOriginKeys,
-    selectedEventOrigins,
+    selectedEvents,
     toggleEventSelection,
     clearEventSelection,
   };

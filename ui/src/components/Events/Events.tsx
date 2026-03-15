@@ -23,15 +23,11 @@ export function Events({ eventsByTimestamp }: EventsProps) {
   const [isRemovingSpamCorrection, setIsRemovingSpamCorrection] =
     useState(false);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
-  const {
-    selectedEventOriginKeys,
-    selectedEventOrigins,
-    toggleEventSelection,
-    clearEventSelection,
-  } = useEventSelection(eventsByTimestamp);
+  const { selectedEvents, toggleEventSelection, clearEventSelection } =
+    useEventSelection(eventsByTimestamp);
 
   const handleMarkSelectedAsSpam = useCallback(async () => {
-    if (selectedEventOrigins.length === 0) {
+    if (selectedEvents.size === 0) {
       return;
     }
 
@@ -39,7 +35,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     setIsMarkingSpam(true);
 
     const results = await Promise.allSettled(
-      selectedEventOrigins.map((eventOrigin) =>
+      Array.from(selectedEvents.values()).map((eventOrigin) =>
         createSpamCorrection(eventOrigin),
       ),
     );
@@ -65,7 +61,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       message:
         "Spam markers saved. Re-run the pipeline and reload the UI to refresh the lanes.",
     });
-  }, [clearEventSelection, selectedEventOrigins]);
+  }, [clearEventSelection, selectedEvents]);
 
   const handleRemoveSpamCorrection = useCallback(
     async (eventOrigin: EventOrigin) => {
@@ -96,7 +92,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
   return (
     <div className="d-flex h-100 w-100 flex-column">
       <EventsActionBar
-        selectedEventCount={selectedEventOrigins.length}
+        selectedEventCount={selectedEvents.size}
         isRemovingSpamCorrection={isRemovingSpamCorrection}
         isMarkingSpam={isMarkingSpam}
         feedback={feedback}
@@ -104,7 +100,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       />
       <VirtualizedDateSections
         eventsByTimestamp={eventsByTimestamp}
-        selectedEventOriginKeys={selectedEventOriginKeys}
+        selectedEvents={selectedEvents}
         isSpamMarkerChangePending={isMarkingSpam || isRemovingSpamCorrection}
         className="flex-grow-1"
         onToggleEventSelection={toggleEventSelection}
