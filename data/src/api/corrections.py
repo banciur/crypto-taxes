@@ -8,7 +8,7 @@ from api.dependencies import (
     get_seed_events_repository,
     get_spam_correction_repository,
 )
-from db.corrections import SpamCorrectionRepository
+from db.corrections_spam import SpamCorrectionRepository
 from db.repositories import LedgerEventRepository, SeedEventRepository
 from domain.correction import SeedEvent, Spam
 from domain.ledger import EventLocation, EventOrigin

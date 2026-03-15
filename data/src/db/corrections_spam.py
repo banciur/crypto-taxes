@@ -1,18 +1,14 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from pathlib import Path
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, Index, String, UniqueConstraint, Uuid, create_engine, select
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
+from sqlalchemy import Boolean, Index, String, UniqueConstraint, Uuid, select
+from sqlalchemy.orm import Mapped, Session, mapped_column
 
+from db.corrections_common import CorrectionsBase
 from domain.correction import CorrectionId, Spam
 from domain.ledger import EventLocation, EventOrigin
-
-
-class CorrectionsBase(DeclarativeBase):
-    pass
 
 
 class SpamCorrectionSource(StrEnum):
@@ -101,12 +97,3 @@ class SpamCorrectionRepository:
                 external_id=row.origin_external_id,
             ),
         )
-
-
-def init_corrections_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(f"sqlite:///{db_path}", echo=echo)
-    if reset:
-        CorrectionsBase.metadata.drop_all(engine)
-    CorrectionsBase.metadata.create_all(engine)
-    return sessionmaker(engine)()

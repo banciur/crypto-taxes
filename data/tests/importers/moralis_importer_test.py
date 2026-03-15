@@ -10,7 +10,8 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import sessionmaker
 
 from accounts import AccountConfig, AccountRegistry
-from db.corrections import CorrectionsBase, SpamCorrectionOrm, SpamCorrectionRepository
+from db.corrections_common import CorrectionsBase
+from db.corrections_spam import SpamCorrectionOrm, SpamCorrectionRepository
 from domain.ledger import AccountChainId, AssetId
 from importers.moralis.moralis_importer import NATIVE_ASSET_ID, MoralisImporter
 from services.moralis import MoralisService

@@ -16,9 +16,16 @@
 - Ledger and lots: `src/domain/ledger.py`
 - Inventory engine and lot matching: `src/domain/inventory.py`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
-- Corrections model (spam markers, seed events, links): `src/domain/correction.py`
+- Corrections model (spam markers, replacements, seed events): `src/domain/correction.py`
 - Tax event projection types: `src/domain/tax_event.py`
 - Wallet balance tracking and insufficient-balance errors: `src/domain/wallet_balance_tracker.py`
+
+### Corrections persistence and application
+- Corrections DB common setup lives in `src/db/corrections_common.py`.
+- Spam correction persistence lives in `src/db/corrections_spam.py`.
+- Replacement correction persistence lives in `src/db/corrections_replacement.py`.
+- Ingestion-layer correction application and validation live under `src/corrections/`.
+- Current ingestion correction flow is: validate spam/replacement interactions, apply spam removals, apply replacements, append seed events, then sort corrected events once before persistence.
 
 ### Price services
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
@@ -62,5 +69,6 @@
 - Use `Decimal` for numeric quantities/rates; avoid floats.
 - Time fields use `datetime` named `timestamp` and are stored in UTC.
   - Convert inbound times to UTC at ingestion boundaries so internal models are always UTC.
-- Raw `ledger_events` are unique by `EventOrigin` (`origin_location` + `origin_external_id`) at the DB level; do not design import flows that emit multiple persisted raw events for the same upstream origin.
-- IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`).
+- `EventOrigin` (`origin_location` + `origin_external_id`) is the stable unique identifier of a raw ledger event. Design event identity and cross-event references around it.
+- Do not design event relationships around transient event UUIDs or leg UUIDs. Those are internal identifiers that may change across re-imports or rebuilds.
+- IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`), but these UUIDs are internal object references, not stable upstream event identity.

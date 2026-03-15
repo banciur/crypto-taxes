@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from collections.abc import Sequence
 from decimal import Decimal
 from typing import NewType
 from uuid import UUID, uuid4
@@ -33,5 +34,5 @@ class SeedEvent(Correction, AbstractEvent):
     price_per_token: Decimal = Decimal("0")
 
 
-class LinkMarker(Correction, AbstractEvent):
-    event_origins: list[EventOrigin]
+class Replacement(Correction, AbstractEvent):
+    sources: Sequence[EventOrigin] = Field(min_length=1)
