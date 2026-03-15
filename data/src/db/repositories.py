@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Iterable
 
 from sqlalchemy import select, tuple_
@@ -23,12 +23,7 @@ from domain.ledger import (
     LotId,
 )
 from domain.tax_event import TaxEvent, TaxEventKind
-
-
-def _timestamp_in_utc(timestamp: datetime) -> datetime:
-    if timestamp.tzinfo is None:
-        return timestamp.replace(tzinfo=timezone.utc)
-    return timestamp
+from utils.misc import ensure_utc_datetime
 
 
 class LedgerEventRepository:
@@ -96,7 +91,7 @@ class LedgerEventRepository:
         return [
             (
                 EventOrigin(location=EventLocation(origin_location), external_id=origin_external_id),
-                _timestamp_in_utc(timestamp),
+                ensure_utc_datetime(timestamp),
             )
             for origin_location, origin_external_id, timestamp in rows
         ]
@@ -118,7 +113,7 @@ class LedgerEventRepository:
         ]
         return LedgerEvent(
             id=LedgerEventId(orm_event.id),
-            timestamp=_timestamp_in_utc(orm_event.timestamp),
+            timestamp=ensure_utc_datetime(orm_event.timestamp),
             event_origin=event_origin,
             ingestion=orm_event.ingestion,
             legs=legs,
@@ -180,7 +175,7 @@ class CorrectedLedgerEventRepository:
         ]
         return LedgerEvent(
             id=LedgerEventId(orm_event.id),
-            timestamp=_timestamp_in_utc(orm_event.timestamp),
+            timestamp=ensure_utc_datetime(orm_event.timestamp),
             event_origin=event_origin,
             ingestion=orm_event.ingestion,
             legs=legs,
@@ -325,7 +320,7 @@ class SeedEventRepository:
         ]
         return SeedEvent(
             id=CorrectionId(orm_event.id),
-            timestamp=_timestamp_in_utc(orm_event.timestamp),
+            timestamp=ensure_utc_datetime(orm_event.timestamp),
             price_per_token=orm_event.price_per_token,
             legs=legs,
         )

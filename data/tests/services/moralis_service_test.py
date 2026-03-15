@@ -10,7 +10,8 @@ from sqlalchemy.orm import sessionmaker
 
 from accounts import AccountConfig
 from clients.moralis import MoralisClient
-from db.transactions_cache import TransactionsCacheBase, TransactionsCacheRepository
+from db.tx_cache_common import TransactionsCacheBase
+from db.tx_cache_moralis import MoralisCacheRepository
 from domain.ledger import EventLocation, WalletAddress
 from services.moralis import MoralisService, SyncMode
 from tests.constants import ETH_ADDRESS, LOCATION
@@ -53,7 +54,7 @@ class _StubClock:
 class _ServiceTestContext(NamedTuple):
     service: MoralisService
     client: _StubMoralisClient
-    cache_repo: TransactionsCacheRepository
+    cache_repo: MoralisCacheRepository
     clock: _StubClock
 
 
@@ -77,7 +78,7 @@ def _account(
 def test_ctx(db_engine: Engine) -> Generator[_ServiceTestContext, None, None]:
     TransactionsCacheBase.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
-        cache_repo = TransactionsCacheRepository(session)
+        cache_repo = MoralisCacheRepository(session)
         client = _StubMoralisClient()
         clock = _StubClock(FIXED_NOW)
         service = MoralisService(

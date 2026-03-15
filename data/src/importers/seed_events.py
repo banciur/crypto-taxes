@@ -7,6 +7,7 @@ from pathlib import Path
 
 from domain.correction import SeedEvent
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
+from utils.misc import ensure_utc_datetime
 
 DEFAULT_SEED_TIMESTAMP = datetime(2000, 1, 1, tzinfo=timezone.utc)
 SEED_CSV_INGESTION = "seed_csv"
@@ -73,9 +74,7 @@ def _parse_timestamp(raw: str | None) -> datetime:
     if normalized.endswith(("Z", "z")):
         normalized = f"{normalized[:-1]}+00:00"
     ts = datetime.fromisoformat(normalized)
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
-    return ts.astimezone(timezone.utc)
+    return ensure_utc_datetime(ts)
 
 
 def _parse_price_per_token(raw: str | None) -> Decimal:

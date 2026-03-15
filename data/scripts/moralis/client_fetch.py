@@ -10,6 +10,12 @@ from pathlib import Path
 from typing import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from utils import _parse_print_count
+
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -21,15 +27,6 @@ from domain.ledger import EventLocation, WalletAddress
 
 def _parse_date(value: str) -> date:
     return date.fromisoformat(value)
-
-
-def _parse_print_count(value: str) -> int | None:
-    if value.lower() == "all":
-        return None
-    count = int(value)
-    if count < 0:
-        raise argparse.ArgumentTypeError("print-count must be >= 0 or 'all'.")
-    return count
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:

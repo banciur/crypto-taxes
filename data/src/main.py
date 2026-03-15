@@ -7,8 +7,16 @@ from time import perf_counter
 from typing import Sequence
 
 from accounts import AccountRegistry, load_accounts
+from clients.coinbase import CoinbaseClient
 from clients.moralis import MoralisClient
-from config import ARTIFACTS_DIR, CORRECTIONS_DB_PATH, DB_PATH, PROJECT_ROOT, TRANSACTIONS_CACHE_DB_PATH, config
+from config import (
+    ARTIFACTS_DIR,
+    CORRECTIONS_DB_PATH,
+    DB_PATH,
+    PROJECT_ROOT,
+    TRANSACTIONS_CACHE_DB_PATH,
+    config,
+)
 from corrections.seed_events import apply_seed_event_corrections
 from corrections.spam import apply_spam_corrections
 from db.corrections import SpamCorrectionRepository, init_corrections_db
@@ -21,13 +29,17 @@ from db.repositories import (
     SeedEventRepository,
     TaxEventRepository,
 )
-from db.transactions_cache import TransactionsCacheRepository, init_transactions_cache_db
+from db.tx_cache_coinbase import CoinbaseCacheRepository
+from db.tx_cache_common import init_transactions_cache_db
+from db.tx_cache_moralis import MoralisCacheRepository
 from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import AccountChainId
 from domain.wallet_balance_tracker import WalletBalanceTracker
+from importers.coinbase import COINBASE_ACCOUNT_ID, CoinbaseImporter
 from importers.kraken import KRAKEN_ACCOUNT_ID, KrakenImporter
 from importers.moralis import MoralisImporter
 from importers.seed_events import load_seed_events
+from services.coinbase import CoinbaseService
 from services.coindesk_source import CoinDeskSource
 from services.moralis import MoralisService
 from services.open_exchange_rates_source import OpenExchangeRatesSource
@@ -79,24 +91,28 @@ def run(
 
     kraken_importer = KrakenImporter(str(csv_path))
 
-    accounts = load_accounts()
-    moralis_cache_session = init_transactions_cache_db(db_path=TRANSACTIONS_CACHE_DB_PATH)
-
-    moralis_service = MoralisService(
-        MoralisClient(api_key=config().moralis_api_key),
-        TransactionsCacheRepository(moralis_cache_session),
-        accounts=accounts,
+    tx_cache_session = init_transactions_cache_db(db_path=TRANSACTIONS_CACHE_DB_PATH)
+    coinbase_service = CoinbaseService(
+        CoinbaseClient(
+            api_key=config().coinbase_key_name,
+            api_secret=config().coinbase_key_prv,
+        ),
+        CoinbaseCacheRepository(tx_cache_session),
     )
+    coinbase_importer = CoinbaseImporter(service=coinbase_service)
 
-    account_registry = AccountRegistry(accounts)
+    accounts = load_accounts()
     moralis_importer = MoralisImporter(
-        service=moralis_service,
-        account_registry=account_registry,
+        service=MoralisService(
+            MoralisClient(api_key=config().moralis_api_key),
+            MoralisCacheRepository(tx_cache_session),
+            accounts=accounts,
+        ),
+        account_registry=AccountRegistry(accounts),
         spam_correction_repository=spam_correction_repository,
     )
 
-    owned_accounts: set[AccountChainId] = set()
-    owned_accounts.add(KRAKEN_ACCOUNT_ID)
+    owned_accounts: set[AccountChainId] = {COINBASE_ACCOUNT_ID, KRAKEN_ACCOUNT_ID}
 
     # Get corrections
     logger.info("Loading seed events from %s", seed_csv)
@@ -116,7 +132,12 @@ def run(
     moralis_events = moralis_importer.load_events()
     logger.info("Imported %d Moralis events in %.2fs", len(moralis_events), perf_counter() - moralis_started)
 
-    events = [*kraken_events, *moralis_events]
+    logger.info("Importing Coinbase events")
+    coinbase_started = perf_counter()
+    coinbase_events = coinbase_importer.load_events()
+    logger.info("Imported %d Coinbase events in %.2fs", len(coinbase_events), perf_counter() - coinbase_started)
+
+    events = [*kraken_events, *moralis_events, *coinbase_events]
     events.sort(key=lambda e: e.timestamp)
     logger.info("Persisting %d raw events", len(events))
     persist_started = perf_counter()
@@ -174,7 +195,7 @@ def print_base_inventory_summary(result: InventoryResult) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run Kraken importer and inventory engine.")
+    parser = argparse.ArgumentParser(description="Run Coinbase, Kraken, and Moralis importers.")
     parser.add_argument("--csv", type=Path, default=ARTIFACTS_DIR / "kraken-ledger.csv")
     parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "kraken_prices")
     parser.add_argument("--market", default="kraken")

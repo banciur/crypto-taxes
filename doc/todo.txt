@@ -1,19 +1,22 @@
 First stage: compute German taxes
 
-TODO: Coinbase importer
-  - I imagine coinbase will also need a cache. This mighet be a good place for some unified approach.
+TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
+TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
+  - Checkboxes to combine, mark as spam transactions should be also on the corrections lane.
+  - When hovering over the "combine" event highlight events that are being replaced
   - Events component is still messy, divide more?, put logic somewhere else. Internal structures are too complicated etc.
   - Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok.
   - Review the hierarchy of types. Hierarchy from types/events ItemBase to LaneItemData vs EventDateSection.
   - Review names of components don't like VirtualizedDateSections and others.
-  - Checkboxes to combine transactions should be also on corrections' lane.
   - Combination of events should be on raw events or corrected. Is it possible that I have to combine raw event with correction?
 
 TODO: I'm not sure about the corrections directory and which code should go where.
 
 Review the order of todos
 ------------------
+TODO: Add a optional note field to ledger entry
+TODO: For onchain (moralis) add called function name. It will make it more readable.
 TODO: Implement more sophisitcated logic for tokens to handle this logic when token with same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
 TODO: Review Kraken importer after event type removal and wallets structure changes
 TODO: When turning corrections lane on and off virtualized list gets a bit broken. Something about height computation.

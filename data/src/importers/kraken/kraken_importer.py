@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from csv import DictReader
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
@@ -12,6 +12,7 @@ from pydantic import field_validator
 
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from pydantic_base import StrictBaseModel
+from utils.misc import ensure_utc_datetime
 
 logger = logging.getLogger(__name__)
 KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"
@@ -57,11 +58,9 @@ class KrakenLedgerEntry(StrictBaseModel):
     @field_validator("time", mode="before")
     @classmethod
     def _parse_timestamp(cls, value: str | datetime) -> datetime:
-        if isinstance(value, datetime):
-            if value.tzinfo is None:
-                return value.replace(tzinfo=timezone.utc)
-            return value
-        return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        if isinstance(value, str):
+            value = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+        return ensure_utc_datetime(value)
 
     @field_validator("subtype", mode="before")
     @classmethod

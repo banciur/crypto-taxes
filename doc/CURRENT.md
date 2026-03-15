@@ -96,12 +96,8 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 ---
 
-## External data: on-chain transactions (via Moralis, cached)
+## Supported Sources
 
-- Purpose: fetch on-chain wallet transaction history via Moralis with the caching feature.
-- Entry point: `MoralisService.get_transactions(sync_mode)` in `data/src/services/moralis.py`; load accounts from `artifacts/accounts.json`, ensures configured locations are synced.
-- Accounts config entries include `name`, `locations`, and `skip_sync`; `locations` are names of `EventLocation` and `skip_sync=true` excludes that account from future fetches while retaining it in tracked account metadata.
-- Sync policy: supports `FRESH` (always refresh) and `BUDGET` (fetch at most once per UTC day). New account/location pairs fetch full history;
-- Importer output currently covers ERC20 and native transfers plus fees for owned accounts. NFT transfers are ignored.
-- Within one imported transaction, legs are netted by (`asset_id`, `account_chain_id`, `is_fee`) so same-token in/out round-trips on the same account collapse to a single net leg.
-- When the Moralis payload marks a transaction with `possible_spam=true` and the importer emits a `LedgerEvent`, the importer creates spam correction in the correction for this event.
+- Kraken ledger CSV
+- Coinbase Track account history
+- On-chain transactions via Moralis
