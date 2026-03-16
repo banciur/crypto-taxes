@@ -1,6 +1,9 @@
 import { doApiRequest, getFromApi } from "@/api/core";
 import { orderByTimestamp } from "@/lib/sort";
-import type { ReplacementCorrection } from "@/types/events";
+import type {
+  ReplacementCorrection,
+  ReplacementCorrectionCreatePayload,
+} from "@/types/events";
 
 export const getReplacementCorrections = async (): Promise<
   ReplacementCorrection[]
@@ -18,3 +21,14 @@ export const deleteReplacementCorrection = async (
     method: "DELETE",
   });
 };
+
+export const createReplacementCorrection = async (
+  payload: ReplacementCorrectionCreatePayload,
+): Promise<ReplacementCorrection> =>
+  (await doApiRequest<ReplacementCorrection>("/replacement-corrections", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: payload,
+  })) as ReplacementCorrection;

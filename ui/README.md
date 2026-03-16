@@ -9,20 +9,24 @@
 ### Lane behavior
 
 - `Raw events` shows imported ledger events before corrections are applied.
-- `Corrections` shows synthetic seed events and persisted spam markers.
-- `Corrected events` shows the ledger after spam and seed corrections are applied.
+- `Corrections` shows synthetic seed events plus persisted spam and replacement corrections.
+- `Corrected events` shows the ledger after spam, replacement, and seed corrections are applied.
 
 ### Supported actions
 
-- Users can select one or more event cards and mark them as spam.
+- Users can select one or more raw-backed event cards and mark them as spam.
+- Users can select one or more raw-backed event cards and create a replacement correction with an authoritative timestamp and legs.
 - Users can remove an existing spam marker from the `Corrections` lane.
+- Users can remove an existing replacement correction from the `Corrections` lane.
+- Synthetic corrected events with `INTERNAL/*` origins are display-only and never expose mutation checkboxes.
 - The date chooser scrolls the main timeline to the selected day.
 - The column chooser controls which lanes are loaded and rendered.
 
 ## UI Structure
 
 - `src/app/page.tsx` loads the selected columns, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
-- `src/components/Events/` owns event selection state, spam marker actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
+- `src/contexts/AccountsContext.tsx` exposes the server-loaded account list to client components that need selector options.
+- `src/components/Events/` owns event selection state, spam/replacement mutation actions, the replacement editor modal, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, pure event-derivation helpers in `selectableEvents.ts`, and replacement form UI in `ReplacementEditorModal.tsx`.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
 - `src/components/LaneItem.tsx` dispatches each lane item to its visual component such as `EventCard`, `SeedCorrectionItem`, or `SpamCorrectionItem`.
@@ -45,6 +49,7 @@
   - `GET /corrected-events`
   - `GET /accounts`
   - `GET | POST | DELETE /spam-corrections`
+  - `GET | POST | DELETE /replacement-corrections`
 
 ## Technical Workflow
 

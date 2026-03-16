@@ -8,27 +8,20 @@ import { LaneItem } from "@/components/LaneItem";
 import { orderColumnKeys } from "@/consts";
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
 import { eventOriginKey } from "@/lib/eventOrigin";
-import type {
-  EventOrigin,
-  EventsByTimestamp,
-  LaneItemData,
-} from "@/types/events";
+import type { EventsByTimestamp } from "@/types/events";
+import {
+  selectableEventFromLaneItem,
+  type SelectableEvent,
+} from "@/components/Events/selectableEvents";
 
 type EventDateSectionProps = {
   itemsByColumn: EventsByTimestamp[string];
-  selectedEvents: ReadonlyMap<string, EventOrigin>;
+  selectedEvents: ReadonlyMap<string, SelectableEvent>;
   isCorrectionChangePending: boolean;
-  onToggleEventSelection: (eventOrigin: EventOrigin) => void;
-  onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
+  onToggleEventSelection: (event: SelectableEvent) => void;
+  onRemoveSpamCorrection: (eventOrigin: SelectableEvent["eventOrigin"]) => void;
   onRemoveReplacementCorrection: (correctionId: string) => void;
 };
-
-const isSelectedEvent = (
-  item: LaneItemData,
-  selectedEvents: ReadonlyMap<string, EventOrigin>,
-) =>
-  (item.kind === "raw-event" || item.kind === "corrected-event") &&
-  selectedEvents.has(eventOriginKey(item.eventOrigin));
 
 export function EventDateSection({
   itemsByColumn,
@@ -52,17 +45,25 @@ export function EventDateSection({
           className="d-flex flex-column gap-2"
           key={`section-${columnKey}`}
         >
-          {itemsByColumn[columnKey]?.map((item) => (
-            <LaneItem
-              key={item.id}
-              item={item}
-              isSelected={isSelectedEvent(item, selectedEvents)}
-              isCorrectionChangePending={isCorrectionChangePending}
-              onToggleEventSelection={onToggleEventSelection}
-              onRemoveSpamCorrection={onRemoveSpamCorrection}
-              onRemoveReplacementCorrection={onRemoveReplacementCorrection}
-            />
-          ))}
+          {itemsByColumn[columnKey]?.map((item) => {
+            const selectableEvent = selectableEventFromLaneItem(item);
+            const isSelected =
+              selectableEvent !== null &&
+              selectedEvents.has(eventOriginKey(selectableEvent.eventOrigin));
+
+            return (
+              <LaneItem
+                key={item.id}
+                item={item}
+                selectableEvent={selectableEvent}
+                isSelected={isSelected}
+                isCorrectionChangePending={isCorrectionChangePending}
+                onToggleEventSelection={onToggleEventSelection}
+                onRemoveSpamCorrection={onRemoveSpamCorrection}
+                onRemoveReplacementCorrection={onRemoveReplacementCorrection}
+              />
+            );
+          })}
         </Col>
       ))}
     </>

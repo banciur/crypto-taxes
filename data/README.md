@@ -11,6 +11,10 @@
 ### API
 - The API is implemented with FastAPI under `src/api/`.
 - Its purpose is to expose ledger/corrections/accounts data to the UI through a stable HTTP interface.
+- Current correction endpoints exposed to the UI are:
+  - `GET | POST | DELETE /spam-corrections`
+  - `GET | POST | DELETE /replacement-corrections`
+- Replacement correction create/list/delete semantics use raw-event `EventOrigin` values as stable source identity; the replacement payload timestamp and legs are authoritative correction data.
 
 ### Domain modules
 - Ledger and lots: `src/domain/ledger.py`

@@ -108,30 +108,30 @@ This plan intentionally excludes backend work. The replacement correction API al
 
 ## Open Questions
 
-- None currently. The modal-based first pass and single-source prefill behavior are assumed for implementation unless the operator changes direction.
+- None currently.
 
 ## Steps
 
-- [ ] Introduce a dedicated replacement-creation plan reference in the broader UI plan if needed so active tracking is not split ambiguously.
+- [x] Introduce a dedicated replacement-creation plan reference in the broader UI plan if needed so active tracking is not split ambiguously.
 
-- [ ] Refactor the selection model in `ui/src/components/Events/` to return raw-backed selectable event records instead of bare `EventOrigin` values.
+- [x] Refactor the selection model in `ui/src/components/Events/` to return raw-backed selectable event records instead of bare `EventOrigin` values.
 
-- [ ] Tighten selectable eligibility so synthetic corrected events and all correction-lane items never render mutation checkboxes.
+- [x] Tighten selectable eligibility so synthetic corrected events and all correction-lane items never render mutation checkboxes.
 
-- [ ] Update the spam action flow to consume the new selection model while preserving current behavior for valid raw-backed events.
+- [x] Update the spam action flow to consume the new selection model while preserving current behavior for valid raw-backed events.
 
-- [ ] Add client-side accounts context/data plumbing so replacement forms can render account selectors from the existing server-loaded accounts dataset.
+- [x] Add client-side accounts context/data plumbing so replacement forms can render account selectors from the existing server-loaded accounts dataset.
 
-- [ ] Extend replacement correction API helpers and shared UI types to support create payloads and structured API error handling.
+- [x] Extend replacement correction API helpers and shared UI types to support create payloads and structured API error handling.
 
-- [ ] Implement a replacement editor modal with source summary, timestamp input, repeatable leg rows, and lightweight client-side validation.
+- [x] Implement a replacement editor modal with source summary, timestamp input, repeatable leg rows, and lightweight client-side validation.
 
-- [ ] Add the `Replace selected` action to the action bar and wire it to open the editor from the current selection.
+- [x] Add the `Replace selected` action to the action bar and wire it to open the editor from the current selection.
 
-- [ ] Implement replacement create submission, conflict/error feedback, success feedback, selection reset, and `router.refresh()` after successful create.
+- [x] Implement replacement create submission, conflict/error feedback, success feedback, selection reset, and `router.refresh()` after successful create.
 
-- [ ] Update existing delete success paths for spam and replacement corrections to use `router.refresh()` so the corrections lane reflects removals immediately.
+- [x] Update existing delete success paths for spam and replacement corrections to use `router.refresh()` so the corrections lane reflects removals immediately.
 
-- [ ] Update `ui/README.md`, `doc/CURRENT.md`, `data/README.md`, and `AGENTS.md` after implementation so the documented UI/API behavior matches the shipped workflow.
+- [x] Update `ui/README.md`, `doc/CURRENT.md`, `data/README.md`, and `AGENTS.md` after implementation so the documented UI/API behavior matches the shipped workflow.
 
-- [ ] Run the feasible checks for the touched UI code paths and record any limits if command execution remains unreliable in this environment.
+- [x] Run the feasible checks for the touched UI code paths and record any limits if command execution remains unreliable in this environment.

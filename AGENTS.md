@@ -18,6 +18,7 @@ Treat other files under `doc/` as background/templates unless explicitly referen
 ## Component interface (data ↔ ui)
 - Shared contract: FastAPI endpoints exposed by `data/src/api/`.
 - Base URL is configured via `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000` for local dev).
+- UI correction creation flows use stable raw-event `EventOrigin` identity for spam/replacement sources; corrected synthetic `INTERNAL/*` events are display-only and must not be treated as mutation inputs.
 
 ## Docs and drift control
 - When changing domain semantics, ingestion behavior, DB schema, API contracts, or UI expectations, update `doc/CURRENT.md`, this `AGENTS.md`, and any relevant `README.md` files immediately so the documented guidance stays in sync with the current implementation.

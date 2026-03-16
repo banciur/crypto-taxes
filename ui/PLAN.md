@@ -133,4 +133,4 @@ The implementation must stay aligned with the existing backend/domain model:
 
 - [x] Add a replacement correction card to the corrections lane and wire delete-by-ID from the client.
 
-- [ ] Complete the remaining replacement-creation UI work tracked in `ui/PLAN_REPLACEMENT_CREATION.md`.
+- [x] Complete the remaining replacement-creation UI work tracked in `ui/PLAN_REPLACEMENT_CREATION.md`.

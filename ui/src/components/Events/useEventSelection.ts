@@ -3,12 +3,15 @@
 import { useCallback, useMemo, useState } from "react";
 
 import { eventOriginKey } from "@/lib/eventOrigin";
-import type { EventOrigin, EventsByTimestamp } from "@/types/events";
-import { collectSelectableEvents } from "./selectableEvents";
+import type { EventsByTimestamp } from "@/types/events";
+import {
+  collectSelectableEvents,
+  type SelectableEvent,
+} from "./selectableEvents";
 
 type UseEventSelectionResult = {
-  selectedEvents: ReadonlyMap<string, EventOrigin>;
-  toggleEventSelection: (eventOrigin: EventOrigin) => void;
+  selectedEvents: ReadonlyMap<string, SelectableEvent>;
+  toggleEventSelection: (event: SelectableEvent) => void;
   clearEventSelection: () => void;
 };
 
@@ -31,12 +34,12 @@ export const useEventSelection = (
       ),
     );
 
-    const selectedEvents = new Map<string, EventOrigin>();
+    const selectedEvents = new Map<string, SelectableEvent>();
 
     for (const originKey of effectiveSelectedEventOriginKeys) {
-      const eventOrigin = selectableEvents.get(originKey);
-      if (eventOrigin) {
-        selectedEvents.set(originKey, eventOrigin);
+      const selectedEvent = selectableEvents.get(originKey);
+      if (selectedEvent) {
+        selectedEvents.set(originKey, selectedEvent);
       }
     }
 
@@ -44,8 +47,8 @@ export const useEventSelection = (
   }, [selectableEvents, selectedEventOriginKeys]);
 
   const toggleEventSelection = useCallback(
-    (eventOrigin: EventOrigin) => {
-      const originKey = eventOriginKey(eventOrigin);
+    (event: SelectableEvent) => {
+      const originKey = eventOriginKey(event.eventOrigin);
       setSelectedEventOriginKeys((current) => {
         const next = new Set(
           Array.from(current).filter((selectedOriginKey) =>

@@ -4,7 +4,7 @@ import { Col, Container, Row } from "react-bootstrap";
 
 import { COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
-import { loadAccountNamesById } from "@/lib/accounts";
+import { loadAccounts, loadAccountNamesById } from "@/lib/accounts";
 import {
   dayKeyForTimestampBucket,
   timestampBucketKeyFor,
@@ -13,6 +13,7 @@ import { COLUMN_DEFINITIONS } from "@/consts.server";
 import type { EventsByTimestamp } from "@/types/events";
 
 import styles from "./page.module.css";
+import { AccountsProvider } from "@/contexts/AccountsContext";
 import { AccountNamesProvider } from "@/contexts/AccountNamesContext";
 import { ColumnChooser } from "@/components/ColumnChooser";
 import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext";
@@ -52,7 +53,10 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   const accountsLoadStart = performance.now();
-  const accountNamesById = await loadAccountNamesById();
+  const [accounts, accountNamesById] = await Promise.all([
+    loadAccounts(),
+    loadAccountNamesById(),
+  ]);
 
   const columnsLoadStart = performance.now();
   console.log(
@@ -118,21 +122,23 @@ export default async function Home({ searchParams }: PageProps<"/">) {
         <h1>Ledger events</h1>
       </header>
       <Container fluid className={styles.layoutContent}>
-        <AccountNamesProvider accountNamesById={accountNamesById}>
-          <UrlColumnSelectionProvider>
-            <VisibleDayProvider>
-              <Row className={styles.layoutRow}>
-                <Col xs={2} className={styles.layoutColumn}>
-                  <ColumnChooser />
-                  <DateChooser dates={eventCountsByDate} />
-                </Col>
-                <Col xs={10} className={styles.layoutColumn}>
-                  <Events eventsByTimestamp={eventsByTimestamp} />
-                </Col>
-              </Row>
-            </VisibleDayProvider>
-          </UrlColumnSelectionProvider>
-        </AccountNamesProvider>
+        <AccountsProvider accounts={accounts}>
+          <AccountNamesProvider accountNamesById={accountNamesById}>
+            <UrlColumnSelectionProvider>
+              <VisibleDayProvider>
+                <Row className={styles.layoutRow}>
+                  <Col xs={2} className={styles.layoutColumn}>
+                    <ColumnChooser />
+                    <DateChooser dates={eventCountsByDate} />
+                  </Col>
+                  <Col xs={10} className={styles.layoutColumn}>
+                    <Events eventsByTimestamp={eventsByTimestamp} />
+                  </Col>
+                </Row>
+              </VisibleDayProvider>
+            </UrlColumnSelectionProvider>
+          </AccountNamesProvider>
+        </AccountsProvider>
       </Container>
     </div>
   );

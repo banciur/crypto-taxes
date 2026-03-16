@@ -5,18 +5,21 @@ import { ReplacementCorrectionItem } from "@/components/ReplacementCorrectionIte
 import { SeedCorrectionItem } from "@/components/SeedCorrectionItem";
 import { SpamCorrectionItem } from "@/components/SpamCorrectionItem";
 import type { EventOrigin, LaneItemData } from "@/types/events";
+import type { SelectableEvent } from "@/components/Events/selectableEvents";
 
 type LaneItemProps = {
   item: LaneItemData;
+  selectableEvent: SelectableEvent | null;
   isSelected: boolean;
   isCorrectionChangePending: boolean;
-  onToggleEventSelection: (eventOrigin: EventOrigin) => void;
+  onToggleEventSelection: (event: SelectableEvent) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
   onRemoveReplacementCorrection: (correctionId: string) => void;
 };
 
 export function LaneItem({
   item,
+  selectableEvent,
   isSelected,
   isCorrectionChangePending,
   onToggleEventSelection,
@@ -32,8 +35,14 @@ export function LaneItem({
           eventOrigin={item.eventOrigin}
           legs={item.legs}
           isSelected={isSelected}
-          selectionDisabled={isCorrectionChangePending}
-          onSelectionChange={() => onToggleEventSelection(item.eventOrigin)}
+          selectionDisabled={
+            selectableEvent === null || isCorrectionChangePending
+          }
+          onSelectionChange={
+            selectableEvent === null
+              ? undefined
+              : () => onToggleEventSelection(selectableEvent)
+          }
         />
       );
     case "corrected-event":
@@ -44,8 +53,14 @@ export function LaneItem({
           eventOrigin={item.eventOrigin}
           legs={item.legs}
           isSelected={isSelected}
-          selectionDisabled={isCorrectionChangePending}
-          onSelectionChange={() => onToggleEventSelection(item.eventOrigin)}
+          selectionDisabled={
+            selectableEvent === null || isCorrectionChangePending
+          }
+          onSelectionChange={
+            selectableEvent === null
+              ? undefined
+              : () => onToggleEventSelection(selectableEvent)
+          }
         />
       );
     case "seed-correction":

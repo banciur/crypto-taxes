@@ -6,6 +6,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { clsx } from "clsx";
 
 import { EventDateSection } from "@/components/EventDateSection";
+import type { SelectableEvent } from "@/components/Events/selectableEvents";
 import { useVisibleDay } from "@/contexts/VisibleDayContext";
 import { dayIdFor } from "@/lib/dayHash";
 import { dayKeyForTimestampBucket } from "@/lib/timestampBuckets";
@@ -29,10 +30,10 @@ type TimelineRow = DayHeaderRow | EventBucketRow;
 
 type VirtualizedDateSectionsProps = {
   eventsByTimestamp: EventsByTimestamp;
-  selectedEvents: ReadonlyMap<string, EventOrigin>;
+  selectedEvents: ReadonlyMap<string, SelectableEvent>;
   isCorrectionChangePending: boolean;
   className?: string;
-  onToggleEventSelection: (eventOrigin: EventOrigin) => void;
+  onToggleEventSelection: (event: SelectableEvent) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
   onRemoveReplacementCorrection: (correctionId: string) => void;
 };

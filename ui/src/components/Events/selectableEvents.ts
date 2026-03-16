@@ -3,19 +3,41 @@ import type {
   CorrectedEventCardData,
   EventOrigin,
   EventsByTimestamp,
+  LedgerLeg,
   LaneItemData,
   RawEventCardData,
 } from "@/types/events";
 
-const isSelectableEvent = (
+export type SelectableEvent = {
+  eventOrigin: EventOrigin;
+  timestamp: string;
+  legs: LedgerLeg[];
+};
+
+const isSelectableEventCard = (
   item: LaneItemData,
 ): item is RawEventCardData | CorrectedEventCardData =>
-  item.kind === "raw-event" || item.kind === "corrected-event";
+  (item.kind === "raw-event" || item.kind === "corrected-event") &&
+  item.eventOrigin.location !== "INTERNAL";
+
+export const selectableEventFromLaneItem = (
+  item: LaneItemData,
+): SelectableEvent | null => {
+  if (!isSelectableEventCard(item)) {
+    return null;
+  }
+
+  return {
+    eventOrigin: item.eventOrigin,
+    timestamp: item.timestamp,
+    legs: item.legs,
+  };
+};
 
 export const collectSelectableEvents = (
   eventsByTimestamp: EventsByTimestamp,
-): ReadonlyMap<string, EventOrigin> => {
-  const selectableEventsByOriginKey = new Map<string, EventOrigin>();
+): ReadonlyMap<string, SelectableEvent> => {
+  const selectableEventsByOriginKey = new Map<string, SelectableEvent>();
 
   for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
     for (const columnItems of Object.values(columnsByTimestamp)) {
@@ -24,16 +46,17 @@ export const collectSelectableEvents = (
       }
 
       for (const item of columnItems) {
-        if (!isSelectableEvent(item)) {
+        const selectableEvent = selectableEventFromLaneItem(item);
+        if (!selectableEvent) {
           continue;
         }
 
-        const originKey = eventOriginKey(item.eventOrigin);
+        const originKey = eventOriginKey(selectableEvent.eventOrigin);
         if (selectableEventsByOriginKey.has(originKey)) {
           continue;
         }
 
-        selectableEventsByOriginKey.set(originKey, item.eventOrigin);
+        selectableEventsByOriginKey.set(originKey, selectableEvent);
       }
     }
   }

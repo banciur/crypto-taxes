@@ -3,7 +3,7 @@ import type { ColumnKey } from "@/consts";
 export type Account = {
   accountChainId: string;
   name: string;
-  chain: string;
+  location: string;
   address: string;
   skipSync: boolean;
 };
@@ -24,6 +24,14 @@ export type ReplacementCorrection = {
   timestamp: string;
   sources: EventOrigin[];
   legs: LedgerLeg[];
+};
+
+export type LedgerLegInput = Omit<LedgerLeg, "id">;
+
+export type ReplacementCorrectionCreatePayload = {
+  timestamp: string;
+  sources: EventOrigin[];
+  legs: LedgerLegInput[];
 };
 
 export type SeedEvent = {

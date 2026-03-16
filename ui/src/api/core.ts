@@ -12,6 +12,20 @@ type ApiRequestInit = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
 
+export class ApiError extends Error {
+  path: string;
+  status: number;
+  detail: string;
+
+  constructor(path: string, status: number, detail: string) {
+    super(detail);
+    this.name = "ApiError";
+    this.path = path;
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
 const resolveApiUrl = (path: string) => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const proxyPath = `${API_PROXY_PREFIX}${normalizedPath}`;
@@ -25,6 +39,38 @@ const isObjectOrArray = (
   value: unknown,
 ): value is Record<string, unknown> | readonly unknown[] =>
   typeof value === "object" && value !== null;
+
+const apiErrorDetail = (bodyText: string) => {
+  if (bodyText.length === 0) {
+    return "missing details";
+  }
+
+  try {
+    const data = JSON.parse(bodyText) as unknown;
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "detail" in data &&
+      typeof data.detail === "string"
+    ) {
+      return data.detail;
+    }
+  } catch {}
+
+  return bodyText;
+};
+
+export const getApiErrorMessage = (error: unknown) => {
+  if (error instanceof ApiError) {
+    return error.detail;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Unknown error";
+};
 
 export const doApiRequest = async <T>(
   path: string,
@@ -46,10 +92,8 @@ export const doApiRequest = async <T>(
   });
 
   if (!response.ok) {
-    const details = await response.text().catch(() => "missing details");
-    throw new Error(
-      `Request failed for ${path}: ${response.status} : ${details || "missing details"}`,
-    );
+    const bodyText = await response.text().catch(() => "");
+    throw new ApiError(path, response.status, apiErrorDetail(bodyText));
   }
 
   if (response.status === 204) {
