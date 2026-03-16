@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { deleteReplacementCorrection } from "@/api/replacementCorrections";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/EventsActionBar";
 import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
 import type { EventOrigin, EventsByTimestamp } from "@/types/events";
+import { resolveSelectedSourceEvents } from "./selectableEvents";
 import { useEventSelection } from "./useEventSelection";
 
 type EventsProps = {
@@ -26,15 +27,16 @@ export function Events({ eventsByTimestamp }: EventsProps) {
   const [isRemovingReplacementCorrection, setIsRemovingReplacementCorrection] =
     useState(false);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
-  const {
-    selectedEventOriginKeys,
-    selectedEvents,
-    toggleEventSelection,
-    clearEventSelection,
-  } = useEventSelection(eventsByTimestamp);
+  const { selectedEventOriginKeys, toggleEventSelection, clearEventSelection } =
+    useEventSelection(eventsByTimestamp);
+  const selectedSourceEvents = useMemo(
+    () =>
+      resolveSelectedSourceEvents(eventsByTimestamp, selectedEventOriginKeys),
+    [eventsByTimestamp, selectedEventOriginKeys],
+  );
 
   const handleMarkSelectedAsSpam = useCallback(async () => {
-    if (selectedEvents.length === 0) {
+    if (selectedSourceEvents.length === 0) {
       return;
     }
 
@@ -42,8 +44,8 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     setIsMarkingSpam(true);
 
     const results = await Promise.allSettled(
-      selectedEvents.map((eventOrigin) =>
-        createSpamCorrection(eventOrigin),
+      selectedSourceEvents.map((sourceEvent) =>
+        createSpamCorrection(sourceEvent.eventOrigin),
       ),
     );
 
@@ -68,7 +70,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       message:
         "Spam markers saved. Re-run the pipeline and reload the UI to refresh the lanes.",
     });
-  }, [clearEventSelection, selectedEvents]);
+  }, [clearEventSelection, selectedSourceEvents]);
 
   const handleRemoveSpamCorrection = useCallback(
     async (eventOrigin: EventOrigin) => {

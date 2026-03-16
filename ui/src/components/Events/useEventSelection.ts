@@ -4,14 +4,10 @@ import { useCallback, useMemo, useState } from "react";
 
 import { eventOriginKey } from "@/lib/eventOrigin";
 import type { EventOrigin, EventsByTimestamp } from "@/types/events";
-import {
-  collectSelectableEventOriginKeys,
-  resolveSelectedSourceEvents,
-} from "./selectableEvents";
+import { collectSelectableEventOriginKeys } from "./selectableEvents";
 
 type UseEventSelectionResult = {
   selectedEventOriginKeys: ReadonlySet<string>;
-  selectedEvents: readonly EventOrigin[];
   toggleEventSelection: (eventOrigin: EventOrigin) => void;
   clearEventSelection: () => void;
 };
@@ -40,13 +36,6 @@ export const useEventSelection = (
     () => new Set(effectiveSelectedEventOriginKeys),
     [effectiveSelectedEventOriginKeys],
   );
-
-  const selectedEvents = useMemo(() => {
-    return resolveSelectedSourceEvents(
-      eventsByTimestamp,
-      effectiveSelectedEventOriginKeySet,
-    ).map((sourceEvent) => sourceEvent.eventOrigin);
-  }, [effectiveSelectedEventOriginKeySet, eventsByTimestamp]);
 
   const toggleEventSelection = useCallback(
     (eventOrigin: EventOrigin) => {
@@ -79,7 +68,6 @@ export const useEventSelection = (
 
   return {
     selectedEventOriginKeys: effectiveSelectedEventOriginKeySet,
-    selectedEvents,
     toggleEventSelection,
     clearEventSelection,
   };

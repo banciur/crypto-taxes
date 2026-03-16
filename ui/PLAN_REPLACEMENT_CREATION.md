@@ -159,7 +159,7 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 - [x] Add an action-time resolver for selected source events so spam and replacement flows can obtain `eventOrigin`, `timestamp`, and `legs` from `eventsByTimestamp` only when needed.
 
-- [ ] Update the spam action flow to consume the set-based selection model while preserving current behavior for valid raw-backed events.
+- [x] Update the spam action flow to consume the set-based selection model while preserving current behavior for valid raw-backed events.
 
 - [ ] Refactor `AccountRegistry` so it merges configured wallet accounts with built-in system exchange accounts.
 
