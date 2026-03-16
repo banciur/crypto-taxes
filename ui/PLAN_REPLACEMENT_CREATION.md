@@ -46,6 +46,7 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 - Current page data is server-rendered in `ui/src/app/page.tsx`, so mutation success should use `router.refresh()` instead of duplicating server grouping logic on the client.
 - `/accounts` currently returns records derived from `AccountRegistry.from_path()`, which means accounts coming only from importer constants such as Coinbase and Kraken are absent unless duplicated in `artifacts/accounts.json`.
 - The unused `owned_accounts` set in `data/src/main.py` does not solve the frontend problem because it is not shared with the API and currently sits on an unreachable path after the early `return`.
+- Exchange-owned accounts should become part of `AccountRegistry` itself so the backend has one canonical account catalog for both configured wallets and built-in system accounts.
 
 ## Scope Decisions
 
@@ -94,11 +95,16 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 ### Accounts data
 
 - The editor needs the full account list for the account selector, not just display-name lookup.
-- Extend the backend `/accounts` response so it returns both:
+- Extend `AccountRegistry` so it always merges:
   - configured on-chain account records from `accounts.json`
-  - built-in exchange account records for importer-owned accounts such as Coinbase and Kraken
+  - built-in system exchange accounts such as Coinbase and Kraken
 - Do not rely on `owned_accounts` in `data/src/main.py` as the source of truth for the API surface.
-- Prefer a dedicated helper in the accounts/API layer that assembles API-visible account records from both configured accounts and system exchange accounts, so future exchanges such as Binance can be added in one place.
+- Prefer a lightweight shared system-account definition module instead of importing importer modules into `accounts.py`, so future exchanges such as Binance can be added in one place.
+- Treat built-in exchange accounts as a separate input model from `AccountConfig`; do not represent them as fake address-based wallet config entries.
+- Use a unified API-visible account record model that can represent both:
+  - address-backed wallet accounts
+  - built-in system exchange accounts without inventing fake addresses
+- Keep `AccountRegistry.resolve_owned_id(...)` focused on address-backed wallet resolution while `records()` and `name_for(...)` operate on the merged catalog.
 - Load the merged account list on the server and expose it through a client context/provider near the existing account names provider.
 
 ### Mutation flow
@@ -119,6 +125,7 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 - The replacement editor must not rely on preserving leg order or source order beyond what the backend currently guarantees.
 - Client-side validation should stay lightweight and defer rule enforcement about raw/spam/replacement overlap to the backend.
 - The merged `/accounts` list must avoid duplicate `account_chain_id` entries if a future configuration path overlaps with a built-in system account.
+- The merged registry should also reject configured account names that conflict with reserved built-in system account names.
 
 ## Open Questions
 
@@ -134,7 +141,13 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 - [ ] Update the spam action flow to consume the new selection model while preserving current behavior for valid raw-backed events.
 
-- [ ] Extend the backend `/accounts` endpoint so it includes built-in exchange account records alongside configured on-chain accounts.
+- [ ] Refactor `AccountRegistry` so it merges configured wallet accounts with built-in system exchange accounts.
+
+- [ ] Introduce the minimal supporting account models/shared definitions needed for system exchange accounts without overloading `AccountConfig` with fake wallet data.
+
+- [ ] Add conflict validation for duplicate merged account IDs and configured names that collide with reserved built-in system account names.
+
+- [ ] Keep `/accounts` backed by `AccountRegistry` records so the API automatically exposes the merged catalog.
 
 - [ ] Add or update backend coverage for `/accounts` so exchange-owned accounts remain exposed to the UI.
 
