@@ -57,7 +57,7 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 - Do not add special corrected-lane affordances beyond removing invalid selection controls from synthetic events.
 - For initial editor defaults:
   - prefill the replacement timestamp with the latest timestamp among the selected source events
-  - allow the operator to edit both date and time manually before saving
+  - allow the operator to edit both date and time manually before saving, with the editor operating in UTC
   - prefill the replacement leg draft from all selected source-event legs
   - sort the initial leg draft by currency and then by account name
   - still require the operator to review and edit the authoritative replacement payload before saving
@@ -75,9 +75,10 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 #### Selection eligibility and UI affordance
 
 - Build selectable eligibility as `ReadonlySet<string>` of origin keys derived from the currently loaded lane items.
-- Treat selectable cards as:
-  - all `raw-event` items
-  - `corrected-event` items only when `eventOrigin.location !== "INTERNAL"`
+- Treat selectable cards as cards that still represent raw imported events:
+  - all `raw-event` items in the raw lane
+  - `corrected-event` items in the corrected lane only when they still carry a non-`INTERNAL` raw `EventOrigin`
+- If the same raw-backed event is visible in both the raw lane and the corrected lane, both cards map to the same origin-key selection and should behave as one selected source.
 - Treat non-selectable items as:
   - all correction lane items
   - corrected synthetic seed events
@@ -99,11 +100,12 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 - Add a dedicated client component under `ui/src/components/Events/` for replacement creation.
 - The editor should show:
   - selected source origins as read-only metadata
-  - authoritative replacement timestamp input with manual date/time editing
+  - authoritative replacement timestamp input with manual UTC date/time editing
   - repeatable leg rows with `assetId`, `accountChainId`, `quantity`, `isFee`
   - add/remove leg controls
   - client-side validation for missing timestamp, empty legs, zero/blank quantities, and blank required fields
-- Build the initial timestamp draft from the latest selected source-event timestamp before the operator makes manual edits.
+- Build the initial timestamp draft from the latest selected source-event timestamp before the operator makes manual UTC edits.
+- Keep timestamp display, editing, and API submission aligned to UTC to avoid browser-local timezone drift.
 - Build the initial leg rows by flattening all selected source-event legs and sorting them by `assetId` and then resolved account display name before the draft is shown.
 - Keep the payload editor structured; do not expose free-form JSON.
 
@@ -137,6 +139,7 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 - Changing selection helpers and eligibility rules will touch multiple layers: selection hook, action bar, date section, lane item, and event card rendering.
 - `router.refresh()` can invalidate the current selection state; success handlers should clear local selection first to avoid stale UI state during refresh.
+- Timestamp editing must remain UTC end to end; using browser-local date/time controls without explicit UTC handling would introduce drift.
 - The replacement editor must not rely on preserving leg order or source order beyond what the backend currently guarantees.
 - Client-side validation should stay lightweight and defer rule enforcement about raw/spam/replacement overlap to the backend.
 - The merged `/accounts` list must avoid duplicate `account_chain_id` entries if a future configuration path overlaps with a built-in system account.
@@ -148,11 +151,11 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 ## Steps
 
-- [ ] Introduce a dedicated replacement-creation plan reference in the broader UI plan if needed so active tracking is not split ambiguously.
+- [x] Introduce a dedicated replacement-creation plan reference in the broader UI plan if needed so active tracking is not split ambiguously.
 
 - [ ] Keep selection state in `ui/src/components/Events/` as `Set<string>` of origin keys and refactor selection helpers to expose selectable origin-key sets instead of event payload maps.
 
-- [ ] Tighten selectable eligibility so synthetic corrected events and all correction-lane items never render mutation checkboxes.
+- [ ] Tighten selectable eligibility so only raw-backed cards render mutation checkboxes, while synthetic corrected events and all correction-lane items never do.
 
 - [ ] Add an action-time resolver for selected source events so spam and replacement flows can obtain `eventOrigin`, `timestamp`, and `legs` from `eventsByTimestamp` only when needed.
 
