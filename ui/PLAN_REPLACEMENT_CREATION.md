@@ -66,10 +66,15 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 ### Selection model
 
-- Replace the current `ReadonlyMap<string, EventOrigin>` selection result with a richer raw-backed selection record that includes:
-  - `eventOrigin`
-  - source `timestamp`
-  - source `legs`
+#### Selection identity and storage
+
+- Keep selection keyed by raw-event identity using `eventOriginKey(eventOrigin)`.
+- Keep the mutable selection state simple as `Set<string>` of selected origin keys.
+- Do not introduce a persistent selection catalog that duplicates event payloads already present in `eventsByTimestamp`.
+
+#### Selection eligibility and UI affordance
+
+- Build selectable eligibility as `ReadonlySet<string>` of origin keys derived from the currently loaded lane items.
 - Treat selectable cards as:
   - all `raw-event` items
   - `corrected-event` items only when `eventOrigin.location !== "INTERNAL"`
@@ -78,6 +83,16 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
   - corrected synthetic seed events
   - corrected synthetic replacement events
 - Only render a checkbox for selectable items so the UI no longer implies invalid actions are supported.
+
+#### Action-time source resolution
+
+- When an action needs concrete source-event data, resolve it on demand from `eventsByTimestamp` using the selected origin-key set instead of storing duplicated event payloads in selection state.
+- Add a helper that returns the selected source events with:
+  - `eventOrigin`
+  - source `timestamp`
+  - source `legs`
+- Spam actions should consume only the resolved `eventOrigin` values.
+- Replacement creation should consume the resolved `eventOrigin`, `timestamp`, and `legs` values for draft prefilling.
 
 ### Replacement editor
 
@@ -120,7 +135,7 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 ## Risks And Watchpoints
 
-- Changing selection types will touch multiple layers: selection hook, action bar, date section, lane item, and event card rendering.
+- Changing selection helpers and eligibility rules will touch multiple layers: selection hook, action bar, date section, lane item, and event card rendering.
 - `router.refresh()` can invalidate the current selection state; success handlers should clear local selection first to avoid stale UI state during refresh.
 - The replacement editor must not rely on preserving leg order or source order beyond what the backend currently guarantees.
 - Client-side validation should stay lightweight and defer rule enforcement about raw/spam/replacement overlap to the backend.
@@ -129,17 +144,19 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 ## Open Questions
 
-- None currently. The modal-based first pass and single-source prefill behavior are assumed for implementation unless the operator changes direction.
+- None currently. The modal-based first pass and set-based selection plus action-time source resolution approach are assumed for implementation unless the operator changes direction.
 
 ## Steps
 
 - [ ] Introduce a dedicated replacement-creation plan reference in the broader UI plan if needed so active tracking is not split ambiguously.
 
-- [ ] Refactor the selection model in `ui/src/components/Events/` to return raw-backed selectable event records instead of bare `EventOrigin` values.
+- [ ] Keep selection state in `ui/src/components/Events/` as `Set<string>` of origin keys and refactor selection helpers to expose selectable origin-key sets instead of event payload maps.
 
 - [ ] Tighten selectable eligibility so synthetic corrected events and all correction-lane items never render mutation checkboxes.
 
-- [ ] Update the spam action flow to consume the new selection model while preserving current behavior for valid raw-backed events.
+- [ ] Add an action-time resolver for selected source events so spam and replacement flows can obtain `eventOrigin`, `timestamp`, and `legs` from `eventsByTimestamp` only when needed.
+
+- [ ] Update the spam action flow to consume the set-based selection model while preserving current behavior for valid raw-backed events.
 
 - [ ] Refactor `AccountRegistry` so it merges configured wallet accounts with built-in system exchange accounts.
 
