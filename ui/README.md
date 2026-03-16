@@ -21,12 +21,13 @@
 
 ## UI Structure
 
-- `src/app/page.tsx` loads the selected columns, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
+- `src/app/page.tsx` loads the selected columns, loads the merged accounts catalog from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
 - `src/components/Events/` owns event selection state, spam marker actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
 - `src/components/LaneItem.tsx` dispatches each lane item to its visual component such as `EventCard`, `SeedCorrectionItem`, or `SpamCorrectionItem`.
 - `src/components/EventCard.tsx` is the shared card UI for raw and corrected ledger events.
+- `src/contexts/AccountNamesContext.tsx` exposes both the full merged account dataset and name-resolution helpers to client components.
 
 ## Architecture and Integration
 
@@ -43,7 +44,7 @@
   - `GET /raw-events`
   - `GET /seed-events`
   - `GET /corrected-events`
-  - `GET /accounts`
+  - `GET /accounts` (merged wallet + system exchange accounts; `address` may be `null`)
   - `GET | POST | DELETE /spam-corrections`
 
 ## Technical Workflow

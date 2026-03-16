@@ -161,17 +161,17 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 - [x] Update the spam action flow to consume the set-based selection model while preserving current behavior for valid raw-backed events.
 
-- [ ] Refactor `AccountRegistry` so it merges configured wallet accounts with built-in system exchange accounts.
+- [x] Refactor `AccountRegistry` so it merges configured wallet accounts with built-in system exchange accounts.
 
-- [ ] Introduce the minimal supporting account models/shared definitions needed for system exchange accounts without overloading `AccountConfig` with fake wallet data.
+- [x] Introduce the minimal supporting account models/shared definitions needed for system exchange accounts without overloading `AccountConfig` with fake wallet data.
 
-- [ ] Add conflict validation for duplicate merged account IDs and configured names that collide with reserved built-in system account names.
+- [x] Add conflict validation for duplicate merged account IDs and configured names that collide with reserved built-in system account names.
 
-- [ ] Keep `/accounts` backed by `AccountRegistry` records so the API automatically exposes the merged catalog.
+- [x] Keep `/accounts` backed by `AccountRegistry` records so the API automatically exposes the merged catalog.
 
-- [ ] Add or update backend coverage for `/accounts` so exchange-owned accounts remain exposed to the UI.
+- [x] Add or update backend coverage for `/accounts` so exchange-owned accounts remain exposed to the UI.
 
-- [ ] Add client-side accounts context/data plumbing so replacement forms can render account selectors from the merged server-loaded accounts dataset.
+- [x] Add client-side accounts context/data plumbing so replacement forms can render account selectors from the merged server-loaded accounts dataset.
 
 - [ ] Extend replacement correction API helpers and shared UI types to support create payloads and structured API error handling.
 

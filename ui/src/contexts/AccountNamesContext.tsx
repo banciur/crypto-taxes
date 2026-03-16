@@ -2,35 +2,60 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-type AccountNamesById = Record<string, string>;
+import type { Account } from "@/types/events";
+
+type AccountCatalog = {
+  accounts: readonly Account[];
+  accountNamesById: Record<string, string>;
+};
 type GetAccountName = (accountChainId: string) => string;
 
-const AccountNamesContext = createContext<AccountNamesById | undefined>(
+const AccountNamesContext = createContext<AccountCatalog | undefined>(
   undefined,
 );
 
 export function AccountNamesProvider({
-  accountNamesById,
+  accounts,
   children,
 }: {
-  accountNamesById: AccountNamesById;
+  accounts: Account[];
   children: ReactNode;
 }) {
+  const value = useMemo<AccountCatalog>(
+    () => ({
+      accounts,
+      accountNamesById: Object.fromEntries(
+        accounts.map((account) => [account.accountChainId, account.name]),
+      ),
+    }),
+    [accounts],
+  );
+
   return (
-    <AccountNamesContext.Provider value={accountNamesById}>
+    <AccountNamesContext.Provider value={value}>
       {children}
     </AccountNamesContext.Provider>
   );
 }
 
-export function useAccountNames(): AccountNamesById {
+export function useAccounts(): readonly Account[] {
   const context = useContext(AccountNamesContext);
 
   if (!context) {
     throw new Error("useAccountNames must be used within AccountNamesProvider");
   }
 
-  return context;
+  return context.accounts;
+}
+
+export function useAccountNames(): Record<string, string> {
+  const context = useContext(AccountNamesContext);
+
+  if (!context) {
+    throw new Error("useAccountNames must be used within AccountNamesProvider");
+  }
+
+  return context.accountNamesById;
 }
 
 export function useAccountNameResolver(): GetAccountName {

@@ -5,8 +5,15 @@ from pathlib import Path
 
 import pytest
 
-from accounts import AccountConfig, AccountRegistry, load_accounts, location_address_from_account_chain_id
+from accounts import (
+    AccountConfig,
+    AccountRegistry,
+    account_chain_id_for,
+    load_accounts,
+    location_address_from_account_chain_id,
+)
 from domain.ledger import EventLocation, WalletAddress
+from system_accounts import COINBASE_ACCOUNT_ID, KRAKEN_ACCOUNT_ID, SystemAccount
 from tests.constants import ETH_ADDRESS, LOCATION
 
 
@@ -124,3 +131,64 @@ def test_registry_resolves_owned_account_chain_ids(tmp_path: Path) -> None:
         LOCATION,
         ETH_ADDRESS,
     )
+
+
+def test_registry_includes_default_system_accounts() -> None:
+    address = WalletAddress("0x4838b106fce9647bdf1e7877bf73ce8b0bad5f97")
+    wallet_account = AccountConfig(
+        name="Primary",
+        address=address,
+        locations=frozenset({EventLocation.BASE}),
+        skip_sync=False,
+    )
+
+    registry = AccountRegistry([wallet_account])
+
+    assert registry.name_for(COINBASE_ACCOUNT_ID) == "Coinbase"
+    assert registry.name_for(KRAKEN_ACCOUNT_ID) == "Kraken"
+    assert registry.location_address_for(COINBASE_ACCOUNT_ID) is None
+    assert registry.location_address_for(KRAKEN_ACCOUNT_ID) is None
+    assert registry.resolve_owned_id(location=EventLocation.BASE, address=address) == account_chain_id_for(
+        location=EventLocation.BASE,
+        address=address,
+    )
+
+
+def test_registry_rejects_configured_name_that_conflicts_with_system_account() -> None:
+    with pytest.raises(ValueError, match="reserved system account name"):
+        AccountRegistry(
+            [
+                AccountConfig(
+                    name="Coinbase",
+                    address=ETH_ADDRESS,
+                    locations=frozenset({EventLocation.BASE}),
+                    skip_sync=False,
+                )
+            ]
+        )
+
+
+def test_registry_rejects_duplicate_merged_account_chain_id() -> None:
+    address = WalletAddress("0x4838b106fce9647bdf1e7877bf73ce8b0bad5f97")
+    wallet_account = AccountConfig(
+        name="Primary",
+        address=address,
+        locations=frozenset({EventLocation.BASE}),
+        skip_sync=False,
+    )
+    duplicate_account_chain_id = account_chain_id_for(
+        location=EventLocation.BASE,
+        address=address,
+    )
+
+    with pytest.raises(ValueError, match="Duplicate account_chain_id"):
+        AccountRegistry(
+            [wallet_account],
+            system_accounts=[
+                SystemAccount(
+                    account_chain_id=duplicate_account_chain_id,
+                    name="Duplicate",
+                    location=EventLocation.INTERNAL,
+                )
+            ],
+        )

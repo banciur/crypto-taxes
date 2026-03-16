@@ -11,6 +11,10 @@
 ### API
 - The API is implemented with FastAPI under `src/api/`.
 - Its purpose is to expose ledger/corrections/accounts data to the UI through a stable HTTP interface.
+- `GET /accounts` is backed by `AccountRegistry` and returns the merged account catalog used by the UI:
+  - configured wallet accounts loaded from `artifacts/accounts.json`
+  - built-in system exchange accounts such as Coinbase and Kraken
+- Wallet account records include `address`; built-in system accounts expose `address=null` and still provide `account_chain_id`, `name`, `location`, and `skip_sync=false`.
 
 ### Domain modules
 - Ledger and lots: `src/domain/ledger.py`
@@ -72,3 +76,4 @@
 - `EventOrigin` (`origin_location` + `origin_external_id`) is the stable unique identifier of a raw ledger event. Design event identity and cross-event references around it.
 - Do not design event relationships around transient event UUIDs or leg UUIDs. Those are internal identifiers that may change across re-imports or rebuilds.
 - IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`), but these UUIDs are internal object references, not stable upstream event identity.
+- `AccountRegistry` is the canonical merged account catalog. Keep address-backed wallet resolution (`resolve_owned_id`) separate from built-in system exchange accounts, which are selectable in the UI but do not participate in wallet-address ownership lookup.
