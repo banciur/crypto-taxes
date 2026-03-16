@@ -26,6 +26,14 @@ export type ReplacementCorrection = {
   legs: LedgerLeg[];
 };
 
+export type ReplacementCorrectionDraftLeg = Omit<LedgerLeg, "id">;
+
+export type CreateReplacementCorrectionPayload = {
+  timestamp: string;
+  sources: EventOrigin[];
+  legs: ReplacementCorrectionDraftLeg[];
+};
+
 export type SeedEvent = {
   id: string;
   timestamp: string;

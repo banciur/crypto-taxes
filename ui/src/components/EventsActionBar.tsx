@@ -15,6 +15,7 @@ type EventsActionBarProps = {
   isMarkingSpam: boolean;
   feedback: EventsActionFeedback | null;
   onMarkSelectedAsSpam: () => void;
+  onReplaceSelected: () => void;
 };
 
 export function EventsActionBar({
@@ -23,6 +24,7 @@ export function EventsActionBar({
   isMarkingSpam,
   feedback,
   onMarkSelectedAsSpam,
+  onReplaceSelected,
 }: EventsActionBarProps) {
   const { selected } = useUrlColumnSelection();
   const hasSelectableColumn = selected.has("raw") || selected.has("corrected");
@@ -33,7 +35,7 @@ export function EventsActionBar({
 
   const selectionStatus =
     selectedEventCount === 0
-      ? "Select events to create spam markers."
+      ? "Select events to create spam markers or replacements."
       : `${selectedEventCount} event${selectedEventCount === 1 ? "" : "s"} selected.`;
 
   return (
@@ -61,6 +63,15 @@ export function EventsActionBar({
               ) : (
                 "Mark as spam"
               )}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="primary"
+              disabled={selectedEventCount === 0 || isCorrectionChangePending}
+              onClick={onReplaceSelected}
+            >
+              Replace selected
             </Button>
           </>
         )}

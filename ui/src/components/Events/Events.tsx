@@ -1,8 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
-import { deleteReplacementCorrection } from "@/api/replacementCorrections";
+import { ApiError } from "@/api/core";
+import {
+  createReplacementCorrection,
+  deleteReplacementCorrection,
+} from "@/api/replacementCorrections";
 import {
   createSpamCorrection,
   deleteSpamCorrection,
@@ -13,6 +18,8 @@ import {
 } from "@/components/EventsActionBar";
 import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
 import type { EventOrigin, EventsByTimestamp } from "@/types/events";
+import type { CreateReplacementCorrectionPayload } from "@/types/events";
+import { ReplacementEditorModal } from "./ReplacementEditorModal";
 import { resolveSelectedSourceEvents } from "./selectableEvents";
 import { useEventSelection } from "./useEventSelection";
 
@@ -21,11 +28,17 @@ type EventsProps = {
 };
 
 export function Events({ eventsByTimestamp }: EventsProps) {
+  const router = useRouter();
   const [isMarkingSpam, setIsMarkingSpam] = useState(false);
   const [isRemovingSpamCorrection, setIsRemovingSpamCorrection] =
     useState(false);
   const [isRemovingReplacementCorrection, setIsRemovingReplacementCorrection] =
     useState(false);
+  const [isCreatingReplacement, setIsCreatingReplacement] = useState(false);
+  const [isReplacementEditorOpen, setIsReplacementEditorOpen] = useState(false);
+  const [replacementEditorError, setReplacementEditorError] = useState<
+    string | null
+  >(null);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
   const { selectedEventOriginKeys, toggleEventSelection, clearEventSelection } =
     useEventSelection(eventsByTimestamp);
@@ -68,9 +81,58 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     setFeedback({
       tone: "success",
       message:
-        "Spam markers saved. Re-run the pipeline and reload the UI to refresh the lanes.",
+        "Spam markers saved and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
     });
-  }, [clearEventSelection, selectedSourceEvents]);
+    router.refresh();
+  }, [clearEventSelection, router, selectedSourceEvents]);
+
+  const handleOpenReplacementEditor = useCallback(() => {
+    if (selectedSourceEvents.length === 0) {
+      return;
+    }
+
+    setReplacementEditorError(null);
+    setIsReplacementEditorOpen(true);
+  }, [selectedSourceEvents.length]);
+
+  const handleCloseReplacementEditor = useCallback(() => {
+    if (isCreatingReplacement) {
+      return;
+    }
+
+    setReplacementEditorError(null);
+    setIsReplacementEditorOpen(false);
+  }, [isCreatingReplacement]);
+
+  const handleCreateReplacement = useCallback(
+    async (payload: CreateReplacementCorrectionPayload) => {
+      setFeedback(null);
+      setReplacementEditorError(null);
+      setIsCreatingReplacement(true);
+
+      try {
+        await createReplacementCorrection(payload);
+        clearEventSelection();
+        setIsReplacementEditorOpen(false);
+        setFeedback({
+          tone: "success",
+          message:
+            "Replacement saved and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
+        });
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to create replacement correction", error);
+        setReplacementEditorError(
+          error instanceof ApiError
+            ? error.detail
+            : "Saving the replacement failed. Check the console for details.",
+        );
+      } finally {
+        setIsCreatingReplacement(false);
+      }
+    },
+    [clearEventSelection, router],
+  );
 
   const handleRemoveSpamCorrection = useCallback(
     async (eventOrigin: EventOrigin) => {
@@ -82,8 +144,9 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         setFeedback({
           tone: "success",
           message:
-            "Spam marker removed. Re-run the pipeline and reload the UI to refresh the lanes.",
+            "Spam marker removed and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
         });
+        router.refresh();
       } catch (error) {
         console.error("Failed to remove spam correction", error);
         setFeedback({
@@ -95,7 +158,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         setIsRemovingSpamCorrection(false);
       }
     },
-    [],
+    [router],
   );
 
   const handleRemoveReplacementCorrection = useCallback(
@@ -108,8 +171,9 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         setFeedback({
           tone: "success",
           message:
-            "Replacement removed. Re-run the pipeline and reload the UI to refresh the lanes.",
+            "Replacement removed and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
         });
+        router.refresh();
       } catch (error) {
         console.error("Failed to remove replacement correction", error);
         setFeedback({
@@ -121,13 +185,14 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         setIsRemovingReplacementCorrection(false);
       }
     },
-    [],
+    [router],
   );
 
   const isCorrectionChangePending =
     isMarkingSpam ||
     isRemovingSpamCorrection ||
-    isRemovingReplacementCorrection;
+    isRemovingReplacementCorrection ||
+    isCreatingReplacement;
 
   return (
     <div className="d-flex h-100 w-100 flex-column">
@@ -137,7 +202,18 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         isMarkingSpam={isMarkingSpam}
         feedback={feedback}
         onMarkSelectedAsSpam={handleMarkSelectedAsSpam}
+        onReplaceSelected={handleOpenReplacementEditor}
       />
+      {isReplacementEditorOpen && (
+        <ReplacementEditorModal
+          show
+          selectedSourceEvents={selectedSourceEvents}
+          isSaving={isCreatingReplacement}
+          errorMessage={replacementEditorError}
+          onHide={handleCloseReplacementEditor}
+          onSubmit={handleCreateReplacement}
+        />
+      )}
       <VirtualizedDateSections
         eventsByTimestamp={eventsByTimestamp}
         selectedEventOriginKeys={selectedEventOriginKeys}

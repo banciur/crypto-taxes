@@ -12,6 +12,32 @@ type ApiRequestInit = Omit<RequestInit, "body"> & {
   body?: unknown;
 };
 
+type ApiErrorBody = {
+  detail?: string;
+};
+
+export class ApiError extends Error {
+  readonly path: string;
+  readonly status: number;
+  readonly detail: string;
+
+  constructor({
+    path,
+    status,
+    detail,
+  }: {
+    path: string;
+    status: number;
+    detail: string;
+  }) {
+    super(`Request failed for ${path}: ${status} : ${detail}`);
+    this.name = "ApiError";
+    this.path = path;
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
 const resolveApiUrl = (path: string) => {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const proxyPath = `${API_PROXY_PREFIX}${normalizedPath}`;
@@ -25,6 +51,24 @@ const isObjectOrArray = (
   value: unknown,
 ): value is Record<string, unknown> | readonly unknown[] =>
   typeof value === "object" && value !== null;
+
+const parseApiErrorDetail = async (response: Response): Promise<string> => {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    const data = (await response.json().catch(() => undefined)) as unknown;
+    if (isObjectOrArray(data)) {
+      const camelizedData = camelcaseKeys(data, { deep: true }) as ApiErrorBody;
+      if (typeof camelizedData.detail === "string" && camelizedData.detail) {
+        return camelizedData.detail;
+      }
+    }
+  }
+
+  return (
+    (await response.text().catch(() => "missing details")) || "missing details"
+  );
+};
 
 export const doApiRequest = async <T>(
   path: string,
@@ -46,10 +90,11 @@ export const doApiRequest = async <T>(
   });
 
   if (!response.ok) {
-    const details = await response.text().catch(() => "missing details");
-    throw new Error(
-      `Request failed for ${path}: ${response.status} : ${details || "missing details"}`,
-    );
+    throw new ApiError({
+      path,
+      status: response.status,
+      detail: await parseApiErrorDetail(response),
+    });
   }
 
   if (response.status === 204) {
@@ -73,12 +118,12 @@ export const getFromApi = async <T>(path: string): Promise<T> => {
   return (await doApiRequest<T>(path)) as T;
 };
 
-export const mutateApi = async (
+export const mutateApi = async <T = void>(
   path: string,
   method: "POST" | "PUT" | "PATCH" | "DELETE",
   payload: object,
-): Promise<void> => {
-  await doApiRequest(path, {
+): Promise<T | undefined> => {
+  return doApiRequest<T>(path, {
     method,
     headers: {
       "Content-Type": "application/json",

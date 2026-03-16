@@ -11,6 +11,7 @@
 ### API
 - The API is implemented with FastAPI under `src/api/`.
 - Its purpose is to expose ledger/corrections/accounts data to the UI through a stable HTTP interface.
+- Replacement corrections are available to the UI through `GET | POST | DELETE /replacement-corrections`.
 - `GET /accounts` is backed by `AccountRegistry` and returns the merged account catalog used by the UI:
   - configured wallet accounts loaded from `artifacts/accounts.json`
   - built-in system exchange accounts such as Coinbase and Kraken

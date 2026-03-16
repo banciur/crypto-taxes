@@ -82,6 +82,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Spam corrections are persisted in a separate DB so they survive resets of the main analytics DB. That persistence layer keeps soft-delete tombstones and provenance metadata internally so automatic imports can avoid recreating markers that were removed manually.
 - Replacement corrections are persisted in the corrections DB. They are corrections stored as a header row plus source rows plus leg rows.
 - Replacement validation is strict: a raw event cannot be both spammed and replaced, and a raw event cannot be consumed by more than one replacement source.
+- The UI can author replacement corrections from selected raw-backed events. The replacement editor seeds its draft with the latest selected source timestamp, preloads all source legs, and submits an authoritative replacement payload to the backend.
 
 ---
 
@@ -102,7 +103,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - CLI inventory summary aggregates quantities and EUR values per asset across owned accounts.
 - Tax calculations currently focus on disposal links.
 - CLI run persists ledger events plus corrected ledger events to SQLite, and the backend correction pipeline currently supports spam markers, manual replacements, and seed events.
-- The UI renders raw, corrections, and corrected lanes. Raw and corrected event cards allow per-event spam selection keyed by `event_origin`, the corrections lane currently displays seed events and spam markers, and the corrected lane shows corrected ledger events, including synthetic replacement events when present.
+- The UI renders raw, corrections, and corrected lanes. Raw-backed event cards in the raw/corrected lanes support selection keyed by `event_origin` for spam and replacement actions, the corrections lane displays seed events plus persisted spam/replacement corrections, and the corrected lane shows corrected ledger events including synthetic replacement events. After correction mutations the UI refreshes the server-rendered page so the corrections lane updates immediately; the corrected lane still requires a pipeline rerun.
 
 ---
 

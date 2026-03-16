@@ -1,6 +1,9 @@
-import { doApiRequest, getFromApi } from "@/api/core";
+import { doApiRequest, getFromApi, mutateApi } from "@/api/core";
 import { orderByTimestamp } from "@/lib/sort";
-import type { ReplacementCorrection } from "@/types/events";
+import type {
+  CreateReplacementCorrectionPayload,
+  ReplacementCorrection,
+} from "@/types/events";
 
 export const getReplacementCorrections = async (): Promise<
   ReplacementCorrection[]
@@ -10,6 +13,15 @@ export const getReplacementCorrections = async (): Promise<
   );
   return orderByTimestamp(events);
 };
+
+export const createReplacementCorrection = async (
+  payload: CreateReplacementCorrectionPayload,
+): Promise<ReplacementCorrection> =>
+  (await mutateApi<ReplacementCorrection>(
+    "/replacement-corrections",
+    "POST",
+    payload,
+  )) as ReplacementCorrection;
 
 export const deleteReplacementCorrection = async (
   correctionId: string,

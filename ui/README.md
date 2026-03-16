@@ -15,7 +15,9 @@
 ### Supported actions
 
 - Users can select one or more event cards and mark them as spam.
+- Users can select one or more raw-backed event cards and create a replacement correction from those selected sources.
 - Users can remove an existing spam marker from the `Corrections` lane.
+- Users can remove an existing replacement correction from the `Corrections` lane.
 - The date chooser scrolls the main timeline to the selected day.
 - The column chooser controls which lanes are loaded and rendered.
 
@@ -23,6 +25,7 @@
 
 - `src/app/page.tsx` loads the selected columns, loads the merged accounts catalog from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
 - `src/components/Events/` owns event selection state, spam marker actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
+- `src/components/Events/ReplacementEditorModal.tsx` owns the structured replacement-creation form, including UTC timestamp editing and leg authoring.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
 - `src/components/LaneItem.tsx` dispatches each lane item to its visual component such as `EventCard`, `SeedCorrectionItem`, or `SpamCorrectionItem`.
@@ -45,6 +48,7 @@
   - `GET /seed-events`
   - `GET /corrected-events`
   - `GET /accounts` (merged wallet + system exchange accounts; `address` may be `null`)
+  - `GET | POST | DELETE /replacement-corrections`
   - `GET | POST | DELETE /spam-corrections`
 
 ## Technical Workflow
