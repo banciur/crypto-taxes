@@ -157,7 +157,7 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 - [x] Tighten selectable eligibility so only raw-backed cards render mutation checkboxes, while synthetic corrected events and all correction-lane items never do.
 
-- [ ] Add an action-time resolver for selected source events so spam and replacement flows can obtain `eventOrigin`, `timestamp`, and `legs` from `eventsByTimestamp` only when needed.
+- [x] Add an action-time resolver for selected source events so spam and replacement flows can obtain `eventOrigin`, `timestamp`, and `legs` from `eventsByTimestamp` only when needed.
 
 - [ ] Update the spam action flow to consume the set-based selection model while preserving current behavior for valid raw-backed events.
 

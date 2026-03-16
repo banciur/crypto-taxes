@@ -4,7 +4,10 @@ import { useCallback, useMemo, useState } from "react";
 
 import { eventOriginKey } from "@/lib/eventOrigin";
 import type { EventOrigin, EventsByTimestamp } from "@/types/events";
-import { collectSelectableEventOriginKeys } from "./selectableEvents";
+import {
+  collectSelectableEventOriginKeys,
+  resolveSelectedSourceEvents,
+} from "./selectableEvents";
 
 type UseEventSelectionResult = {
   selectedEventOriginKeys: ReadonlySet<string>;
@@ -33,43 +36,17 @@ export const useEventSelection = (
     [selectableEventOriginKeys, selectedEventOriginKeys],
   );
 
+  const effectiveSelectedEventOriginKeySet = useMemo(
+    () => new Set(effectiveSelectedEventOriginKeys),
+    [effectiveSelectedEventOriginKeys],
+  );
+
   const selectedEvents = useMemo(() => {
-    const pendingSelectedEventOriginKeys = new Set(
-      effectiveSelectedEventOriginKeys,
-    );
-    const nextSelectedEvents: EventOrigin[] = [];
-
-    for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
-      for (const columnItems of Object.values(columnsByTimestamp)) {
-        if (!columnItems) {
-          continue;
-        }
-
-        for (const item of columnItems) {
-          if (
-            item.kind !== "raw-event" &&
-            item.kind !== "corrected-event"
-          ) {
-            continue;
-          }
-
-          const originKey = eventOriginKey(item.eventOrigin);
-          if (!pendingSelectedEventOriginKeys.has(originKey)) {
-            continue;
-          }
-
-          nextSelectedEvents.push(item.eventOrigin);
-          pendingSelectedEventOriginKeys.delete(originKey);
-
-          if (pendingSelectedEventOriginKeys.size === 0) {
-            return nextSelectedEvents;
-          }
-        }
-      }
-    }
-
-    return nextSelectedEvents;
-  }, [effectiveSelectedEventOriginKeys, eventsByTimestamp]);
+    return resolveSelectedSourceEvents(
+      eventsByTimestamp,
+      effectiveSelectedEventOriginKeySet,
+    ).map((sourceEvent) => sourceEvent.eventOrigin);
+  }, [effectiveSelectedEventOriginKeySet, eventsByTimestamp]);
 
   const toggleEventSelection = useCallback(
     (eventOrigin: EventOrigin) => {
@@ -101,7 +78,7 @@ export const useEventSelection = (
   }, []);
 
   return {
-    selectedEventOriginKeys: new Set(effectiveSelectedEventOriginKeys),
+    selectedEventOriginKeys: effectiveSelectedEventOriginKeySet,
     selectedEvents,
     toggleEventSelection,
     clearEventSelection,
