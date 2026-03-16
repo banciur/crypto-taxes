@@ -155,7 +155,7 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 - [x] Keep selection state in `ui/src/components/Events/` as `Set<string>` of origin keys and refactor selection helpers to expose selectable origin-key sets instead of event payload maps.
 
-- [ ] Tighten selectable eligibility so only raw-backed cards render mutation checkboxes, while synthetic corrected events and all correction-lane items never do.
+- [x] Tighten selectable eligibility so only raw-backed cards render mutation checkboxes, while synthetic corrected events and all correction-lane items never do.
 
 - [ ] Add an action-time resolver for selected source events so spam and replacement flows can obtain `eventOrigin`, `timestamp`, and `legs` from `eventsByTimestamp` only when needed.
 

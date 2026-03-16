@@ -8,6 +8,7 @@ import type { EventOrigin, LaneItemData } from "@/types/events";
 
 type LaneItemProps = {
   item: LaneItemData;
+  isSelectable: boolean;
   isSelected: boolean;
   isCorrectionChangePending: boolean;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
@@ -17,6 +18,7 @@ type LaneItemProps = {
 
 export function LaneItem({
   item,
+  isSelectable,
   isSelected,
   isCorrectionChangePending,
   onToggleEventSelection,
@@ -32,8 +34,12 @@ export function LaneItem({
           eventOrigin={item.eventOrigin}
           legs={item.legs}
           isSelected={isSelected}
-          selectionDisabled={isCorrectionChangePending}
-          onSelectionChange={() => onToggleEventSelection(item.eventOrigin)}
+          selectionDisabled={isSelectable && isCorrectionChangePending}
+          onSelectionChange={
+            isSelectable
+              ? () => onToggleEventSelection(item.eventOrigin)
+              : undefined
+          }
         />
       );
     case "corrected-event":
@@ -44,8 +50,12 @@ export function LaneItem({
           eventOrigin={item.eventOrigin}
           legs={item.legs}
           isSelected={isSelected}
-          selectionDisabled={isCorrectionChangePending}
-          onSelectionChange={() => onToggleEventSelection(item.eventOrigin)}
+          selectionDisabled={isSelectable && isCorrectionChangePending}
+          onSelectionChange={
+            isSelectable
+              ? () => onToggleEventSelection(item.eventOrigin)
+              : undefined
+          }
         />
       );
     case "seed-correction":

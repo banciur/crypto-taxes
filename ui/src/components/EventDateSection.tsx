@@ -13,6 +13,7 @@ import type {
   EventsByTimestamp,
   LaneItemData,
 } from "@/types/events";
+import { isSelectableEventItem } from "@/components/Events/selectableEvents";
 
 type EventDateSectionProps = {
   itemsByColumn: EventsByTimestamp[string];
@@ -27,7 +28,7 @@ const isSelectedEvent = (
   item: LaneItemData,
   selectedEventOriginKeys: ReadonlySet<string>,
 ) =>
-  (item.kind === "raw-event" || item.kind === "corrected-event") &&
+  isSelectableEventItem(item) &&
   selectedEventOriginKeys.has(eventOriginKey(item.eventOrigin));
 
 export function EventDateSection({
@@ -56,6 +57,7 @@ export function EventDateSection({
             <LaneItem
               key={item.id}
               item={item}
+              isSelectable={isSelectableEventItem(item)}
               isSelected={isSelectedEvent(item, selectedEventOriginKeys)}
               isCorrectionChangePending={isCorrectionChangePending}
               onToggleEventSelection={onToggleEventSelection}

@@ -6,10 +6,13 @@ import type {
   RawEventCardData,
 } from "@/types/events";
 
-const isSelectableEvent = (
+type SelectableEventItem = RawEventCardData | CorrectedEventCardData;
+
+export const isSelectableEventItem = (
   item: LaneItemData,
-): item is RawEventCardData | CorrectedEventCardData =>
-  item.kind === "raw-event" || item.kind === "corrected-event";
+): item is SelectableEventItem =>
+  item.kind === "raw-event" ||
+  (item.kind === "corrected-event" && item.eventOrigin.location !== "INTERNAL");
 
 export const collectSelectableEventOriginKeys = (
   eventsByTimestamp: EventsByTimestamp,
@@ -23,7 +26,7 @@ export const collectSelectableEventOriginKeys = (
       }
 
       for (const item of columnItems) {
-        if (!isSelectableEvent(item)) {
+        if (!isSelectableEventItem(item)) {
           continue;
         }
 
