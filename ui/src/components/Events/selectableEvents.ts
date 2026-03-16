@@ -1,7 +1,6 @@
 import { eventOriginKey } from "@/lib/eventOrigin";
 import type {
   CorrectedEventCardData,
-  EventOrigin,
   EventsByTimestamp,
   LaneItemData,
   RawEventCardData,
@@ -12,10 +11,10 @@ const isSelectableEvent = (
 ): item is RawEventCardData | CorrectedEventCardData =>
   item.kind === "raw-event" || item.kind === "corrected-event";
 
-export const collectSelectableEvents = (
+export const collectSelectableEventOriginKeys = (
   eventsByTimestamp: EventsByTimestamp,
-): ReadonlyMap<string, EventOrigin> => {
-  const selectableEventsByOriginKey = new Map<string, EventOrigin>();
+): ReadonlySet<string> => {
+  const selectableEventOriginKeys = new Set<string>();
 
   for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
     for (const columnItems of Object.values(columnsByTimestamp)) {
@@ -29,14 +28,10 @@ export const collectSelectableEvents = (
         }
 
         const originKey = eventOriginKey(item.eventOrigin);
-        if (selectableEventsByOriginKey.has(originKey)) {
-          continue;
-        }
-
-        selectableEventsByOriginKey.set(originKey, item.eventOrigin);
+        selectableEventOriginKeys.add(originKey);
       }
     }
   }
 
-  return selectableEventsByOriginKey;
+  return selectableEventOriginKeys;
 };

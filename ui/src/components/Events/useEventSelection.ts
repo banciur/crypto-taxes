@@ -4,10 +4,11 @@ import { useCallback, useMemo, useState } from "react";
 
 import { eventOriginKey } from "@/lib/eventOrigin";
 import type { EventOrigin, EventsByTimestamp } from "@/types/events";
-import { collectSelectableEvents } from "./selectableEvents";
+import { collectSelectableEventOriginKeys } from "./selectableEvents";
 
 type UseEventSelectionResult = {
-  selectedEvents: ReadonlyMap<string, EventOrigin>;
+  selectedEventOriginKeys: ReadonlySet<string>;
+  selectedEvents: readonly EventOrigin[];
   toggleEventSelection: (eventOrigin: EventOrigin) => void;
   clearEventSelection: () => void;
 };
@@ -19,29 +20,56 @@ export const useEventSelection = (
     Set<string>
   >(() => new Set());
 
-  const selectableEvents = useMemo(
-    () => collectSelectableEvents(eventsByTimestamp),
+  const selectableEventOriginKeys = useMemo(
+    () => collectSelectableEventOriginKeys(eventsByTimestamp),
     [eventsByTimestamp],
   );
 
-  const selectedEvents = useMemo(() => {
-    const effectiveSelectedEventOriginKeys = new Set(
+  const effectiveSelectedEventOriginKeys = useMemo(
+    () =>
       Array.from(selectedEventOriginKeys).filter((originKey) =>
-        selectableEvents.has(originKey),
+        selectableEventOriginKeys.has(originKey),
       ),
+    [selectableEventOriginKeys, selectedEventOriginKeys],
+  );
+
+  const selectedEvents = useMemo(() => {
+    const pendingSelectedEventOriginKeys = new Set(
+      effectiveSelectedEventOriginKeys,
     );
+    const nextSelectedEvents: EventOrigin[] = [];
 
-    const selectedEvents = new Map<string, EventOrigin>();
+    for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
+      for (const columnItems of Object.values(columnsByTimestamp)) {
+        if (!columnItems) {
+          continue;
+        }
 
-    for (const originKey of effectiveSelectedEventOriginKeys) {
-      const eventOrigin = selectableEvents.get(originKey);
-      if (eventOrigin) {
-        selectedEvents.set(originKey, eventOrigin);
+        for (const item of columnItems) {
+          if (
+            item.kind !== "raw-event" &&
+            item.kind !== "corrected-event"
+          ) {
+            continue;
+          }
+
+          const originKey = eventOriginKey(item.eventOrigin);
+          if (!pendingSelectedEventOriginKeys.has(originKey)) {
+            continue;
+          }
+
+          nextSelectedEvents.push(item.eventOrigin);
+          pendingSelectedEventOriginKeys.delete(originKey);
+
+          if (pendingSelectedEventOriginKeys.size === 0) {
+            return nextSelectedEvents;
+          }
+        }
       }
     }
 
-    return selectedEvents;
-  }, [selectableEvents, selectedEventOriginKeys]);
+    return nextSelectedEvents;
+  }, [effectiveSelectedEventOriginKeys, eventsByTimestamp]);
 
   const toggleEventSelection = useCallback(
     (eventOrigin: EventOrigin) => {
@@ -49,9 +77,13 @@ export const useEventSelection = (
       setSelectedEventOriginKeys((current) => {
         const next = new Set(
           Array.from(current).filter((selectedOriginKey) =>
-            selectableEvents.has(selectedOriginKey),
+            selectableEventOriginKeys.has(selectedOriginKey),
           ),
         );
+
+        if (!selectableEventOriginKeys.has(originKey)) {
+          return next;
+        }
 
         if (next.has(originKey)) {
           next.delete(originKey);
@@ -61,7 +93,7 @@ export const useEventSelection = (
         return next;
       });
     },
-    [selectableEvents],
+    [selectableEventOriginKeys],
   );
 
   const clearEventSelection = useCallback(() => {
@@ -69,6 +101,7 @@ export const useEventSelection = (
   }, []);
 
   return {
+    selectedEventOriginKeys: new Set(effectiveSelectedEventOriginKeys),
     selectedEvents,
     toggleEventSelection,
     clearEventSelection,

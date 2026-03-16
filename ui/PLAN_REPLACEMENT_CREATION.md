@@ -153,7 +153,7 @@ This plan is primarily UI-focused, but it includes a small backend `/accounts` c
 
 - [x] Introduce a dedicated replacement-creation plan reference in the broader UI plan if needed so active tracking is not split ambiguously.
 
-- [ ] Keep selection state in `ui/src/components/Events/` as `Set<string>` of origin keys and refactor selection helpers to expose selectable origin-key sets instead of event payload maps.
+- [x] Keep selection state in `ui/src/components/Events/` as `Set<string>` of origin keys and refactor selection helpers to expose selectable origin-key sets instead of event payload maps.
 
 - [ ] Tighten selectable eligibility so only raw-backed cards render mutation checkboxes, while synthetic corrected events and all correction-lane items never do.
 

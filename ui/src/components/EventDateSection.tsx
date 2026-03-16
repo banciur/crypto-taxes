@@ -16,7 +16,7 @@ import type {
 
 type EventDateSectionProps = {
   itemsByColumn: EventsByTimestamp[string];
-  selectedEvents: ReadonlyMap<string, EventOrigin>;
+  selectedEventOriginKeys: ReadonlySet<string>;
   isCorrectionChangePending: boolean;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
@@ -25,14 +25,14 @@ type EventDateSectionProps = {
 
 const isSelectedEvent = (
   item: LaneItemData,
-  selectedEvents: ReadonlyMap<string, EventOrigin>,
+  selectedEventOriginKeys: ReadonlySet<string>,
 ) =>
   (item.kind === "raw-event" || item.kind === "corrected-event") &&
-  selectedEvents.has(eventOriginKey(item.eventOrigin));
+  selectedEventOriginKeys.has(eventOriginKey(item.eventOrigin));
 
 export function EventDateSection({
   itemsByColumn,
-  selectedEvents,
+  selectedEventOriginKeys,
   isCorrectionChangePending,
   onToggleEventSelection,
   onRemoveSpamCorrection,
@@ -56,7 +56,7 @@ export function EventDateSection({
             <LaneItem
               key={item.id}
               item={item}
-              isSelected={isSelectedEvent(item, selectedEvents)}
+              isSelected={isSelectedEvent(item, selectedEventOriginKeys)}
               isCorrectionChangePending={isCorrectionChangePending}
               onToggleEventSelection={onToggleEventSelection}
               onRemoveSpamCorrection={onRemoveSpamCorrection}

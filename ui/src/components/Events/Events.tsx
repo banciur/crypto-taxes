@@ -26,11 +26,15 @@ export function Events({ eventsByTimestamp }: EventsProps) {
   const [isRemovingReplacementCorrection, setIsRemovingReplacementCorrection] =
     useState(false);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
-  const { selectedEvents, toggleEventSelection, clearEventSelection } =
-    useEventSelection(eventsByTimestamp);
+  const {
+    selectedEventOriginKeys,
+    selectedEvents,
+    toggleEventSelection,
+    clearEventSelection,
+  } = useEventSelection(eventsByTimestamp);
 
   const handleMarkSelectedAsSpam = useCallback(async () => {
-    if (selectedEvents.size === 0) {
+    if (selectedEvents.length === 0) {
       return;
     }
 
@@ -38,7 +42,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     setIsMarkingSpam(true);
 
     const results = await Promise.allSettled(
-      Array.from(selectedEvents.values()).map((eventOrigin) =>
+      selectedEvents.map((eventOrigin) =>
         createSpamCorrection(eventOrigin),
       ),
     );
@@ -126,7 +130,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
   return (
     <div className="d-flex h-100 w-100 flex-column">
       <EventsActionBar
-        selectedEventCount={selectedEvents.size}
+        selectedEventCount={selectedEventOriginKeys.size}
         isCorrectionChangePending={isCorrectionChangePending}
         isMarkingSpam={isMarkingSpam}
         feedback={feedback}
@@ -134,7 +138,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       />
       <VirtualizedDateSections
         eventsByTimestamp={eventsByTimestamp}
-        selectedEvents={selectedEvents}
+        selectedEventOriginKeys={selectedEventOriginKeys}
         isCorrectionChangePending={isCorrectionChangePending}
         className="flex-grow-1"
         onToggleEventSelection={toggleEventSelection}

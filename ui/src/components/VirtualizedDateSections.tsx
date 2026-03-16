@@ -29,7 +29,7 @@ type TimelineRow = DayHeaderRow | EventBucketRow;
 
 type VirtualizedDateSectionsProps = {
   eventsByTimestamp: EventsByTimestamp;
-  selectedEvents: ReadonlyMap<string, EventOrigin>;
+  selectedEventOriginKeys: ReadonlySet<string>;
   isCorrectionChangePending: boolean;
   className?: string;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
@@ -39,7 +39,7 @@ type VirtualizedDateSectionsProps = {
 
 export function VirtualizedDateSections({
   eventsByTimestamp,
-  selectedEvents,
+  selectedEventOriginKeys,
   isCorrectionChangePending,
   className,
   onToggleEventSelection,
@@ -170,7 +170,7 @@ export function VirtualizedDateSections({
               ) : (
                 <EventDateSection
                   itemsByColumn={row.itemsByColumn}
-                  selectedEvents={selectedEvents}
+                  selectedEventOriginKeys={selectedEventOriginKeys}
                   isCorrectionChangePending={isCorrectionChangePending}
                   onToggleEventSelection={onToggleEventSelection}
                   onRemoveSpamCorrection={onRemoveSpamCorrection}
