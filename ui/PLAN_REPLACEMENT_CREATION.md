@@ -23,8 +23,9 @@ Implement the remaining UI work for replacement corrections:
 - create replacement corrections from raw-event `EventOrigin` selections
 - tighten event selection so only raw-backed events participate in spam/replacement mutations
 - refresh the server-rendered page after correction mutations so the corrections lane updates immediately
+- expose exchange-owned leg accounts through `/accounts` so the replacement editor can offer all valid account choices
 
-This plan intentionally excludes backend work. The replacement correction API already exists and is treated as the source of truth for create/list/delete semantics.
+This plan is primarily UI-focused, but it includes a small backend `/accounts` change because the replacement editor cannot offer complete account choices unless exchange-owned system accounts are exposed through the API.
 
 ## Confirmed Constraints
 
@@ -43,6 +44,8 @@ This plan intentionally excludes backend work. The replacement correction API al
 - Synthetic corrected events are not valid mutation inputs and must not remain selectable in the UI.
 - Current client state is centered in `ui/src/components/Events/Events.tsx`.
 - Current page data is server-rendered in `ui/src/app/page.tsx`, so mutation success should use `router.refresh()` instead of duplicating server grouping logic on the client.
+- `/accounts` currently returns records derived from `AccountRegistry.from_path()`, which means accounts coming only from importer constants such as Coinbase and Kraken are absent unless duplicated in `artifacts/accounts.json`.
+- The unused `owned_accounts` set in `data/src/main.py` does not solve the frontend problem because it is not shared with the API and currently sits on an unreachable path after the early `return`.
 
 ## Scope Decisions
 
@@ -52,8 +55,11 @@ This plan intentionally excludes backend work. The replacement correction API al
 - Do not implement replacement editing in place.
 - Do not add special corrected-lane affordances beyond removing invalid selection controls from synthetic events.
 - For initial editor defaults:
-  - if one source event is selected, prefill timestamp and legs from that event
-  - if multiple source events are selected, prefill only the source list and require the operator to author timestamp and legs explicitly
+  - prefill the replacement timestamp with the latest timestamp among the selected source events
+  - allow the operator to edit both date and time manually before saving
+  - prefill the replacement leg draft from all selected source-event legs
+  - sort the initial leg draft by currency and then by account name
+  - still require the operator to review and edit the authoritative replacement payload before saving
 
 ## Design Outline
 
@@ -77,16 +83,23 @@ This plan intentionally excludes backend work. The replacement correction API al
 - Add a dedicated client component under `ui/src/components/Events/` for replacement creation.
 - The editor should show:
   - selected source origins as read-only metadata
-  - authoritative replacement timestamp input
+  - authoritative replacement timestamp input with manual date/time editing
   - repeatable leg rows with `assetId`, `accountChainId`, `quantity`, `isFee`
   - add/remove leg controls
   - client-side validation for missing timestamp, empty legs, zero/blank quantities, and blank required fields
+- Build the initial timestamp draft from the latest selected source-event timestamp before the operator makes manual edits.
+- Build the initial leg rows by flattening all selected source-event legs and sorting them by `assetId` and then resolved account display name before the draft is shown.
 - Keep the payload editor structured; do not expose free-form JSON.
 
 ### Accounts data
 
 - The editor needs the full account list for the account selector, not just display-name lookup.
-- Load accounts on the server and expose them through a client context/provider near the existing account names provider.
+- Extend the backend `/accounts` response so it returns both:
+  - configured on-chain account records from `accounts.json`
+  - built-in exchange account records for importer-owned accounts such as Coinbase and Kraken
+- Do not rely on `owned_accounts` in `data/src/main.py` as the source of truth for the API surface.
+- Prefer a dedicated helper in the accounts/API layer that assembles API-visible account records from both configured accounts and system exchange accounts, so future exchanges such as Binance can be added in one place.
+- Load the merged account list on the server and expose it through a client context/provider near the existing account names provider.
 
 ### Mutation flow
 
@@ -105,6 +118,7 @@ This plan intentionally excludes backend work. The replacement correction API al
 - `router.refresh()` can invalidate the current selection state; success handlers should clear local selection first to avoid stale UI state during refresh.
 - The replacement editor must not rely on preserving leg order or source order beyond what the backend currently guarantees.
 - Client-side validation should stay lightweight and defer rule enforcement about raw/spam/replacement overlap to the backend.
+- The merged `/accounts` list must avoid duplicate `account_chain_id` entries if a future configuration path overlaps with a built-in system account.
 
 ## Open Questions
 
@@ -120,7 +134,11 @@ This plan intentionally excludes backend work. The replacement correction API al
 
 - [ ] Update the spam action flow to consume the new selection model while preserving current behavior for valid raw-backed events.
 
-- [ ] Add client-side accounts context/data plumbing so replacement forms can render account selectors from the existing server-loaded accounts dataset.
+- [ ] Extend the backend `/accounts` endpoint so it includes built-in exchange account records alongside configured on-chain accounts.
+
+- [ ] Add or update backend coverage for `/accounts` so exchange-owned accounts remain exposed to the UI.
+
+- [ ] Add client-side accounts context/data plumbing so replacement forms can render account selectors from the merged server-loaded accounts dataset.
 
 - [ ] Extend replacement correction API helpers and shared UI types to support create payloads and structured API error handling.
 
