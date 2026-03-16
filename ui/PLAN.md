@@ -133,10 +133,4 @@ The implementation must stay aligned with the existing backend/domain model:
 
 - [x] Add a replacement correction card to the corrections lane and wire delete-by-ID from the client.
 
-- [ ] Implement the replacement creation workflow in the UI using raw-event `EventOrigin` sources and authoritative synthetic payload editing.
-
-- [ ] Tighten UI event selection so synthetic correction items and synthetic corrected events are not selectable mutation inputs, while preserving shared `EventOrigin`-based selection for raw-backed event cards.
-
-- [ ] Update `doc/CURRENT.md`, `AGENTS.md`, `data/README.md`, and `ui/README.md` to match the new API/UI behavior once implementation is complete.
-
-- [ ] Verify the backend test suite and the feasible UI checks for the changed paths.
+- [ ] Complete the remaining replacement-creation UI work tracked in `ui/PLAN_REPLACEMENT_CREATION.md`.
