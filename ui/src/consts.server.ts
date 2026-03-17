@@ -24,6 +24,18 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
       }));
     },
   },
+  corrected: {
+    load: async () => {
+      const events = await getCorrectedEvents();
+      return events.map((event) => ({
+        id: event.id,
+        kind: "corrected-event" as const,
+        timestamp: event.timestamp,
+        legs: event.legs,
+        eventOrigin: event.eventOrigin,
+      }));
+    },
+  },
   corrections: {
     load: async () => {
       const [seedEvents, spamCorrections, replacementCorrections] =
@@ -48,18 +60,6 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
           kind: "replacement-correction" as const,
         })),
       ]);
-    },
-  },
-  corrected: {
-    load: async () => {
-      const events = await getCorrectedEvents();
-      return events.map((event) => ({
-        id: event.id,
-        kind: "corrected-event" as const,
-        timestamp: event.timestamp,
-        eventOrigin: event.eventOrigin,
-        legs: event.legs,
-      }));
     },
   },
 } as const;

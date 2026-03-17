@@ -13,15 +13,16 @@ export type EventOrigin = {
   externalId: string;
 };
 
-export type SpamCorrection = {
+type ItemBase = {
   id: string;
-  eventOrigin: EventOrigin;
   timestamp: string;
 };
 
-export type ReplacementCorrection = {
-  id: string;
-  timestamp: string;
+export type SpamCorrection = ItemBase & {
+  eventOrigin: EventOrigin;
+};
+
+export type ReplacementCorrection = ItemBase & {
   sources: EventOrigin[];
   legs: LedgerLeg[];
 };
@@ -34,9 +35,7 @@ export type CreateReplacementCorrectionPayload = {
   legs: ReplacementCorrectionDraftLeg[];
 };
 
-export type SeedEvent = {
-  id: string;
-  timestamp: string;
+export type SeedEvent = ItemBase & {
   pricePerToken: string;
   legs: LedgerLeg[];
 };
@@ -49,17 +48,10 @@ export type LedgerLeg = {
   isFee: boolean;
 };
 
-export type LedgerEvent = {
-  id: string;
-  timestamp: string;
+export type LedgerEvent = ItemBase & {
   eventOrigin: EventOrigin;
   ingestion: string;
   legs: LedgerLeg[];
-};
-
-type ItemBase = {
-  id: string;
-  timestamp: string;
 };
 
 export type EventCardDisplayData = ItemBase & {
@@ -80,15 +72,12 @@ export type SeedCorrectionItemData = ItemBase & {
   legs: LedgerLeg[];
 };
 
-export type SpamCorrectionItemData = ItemBase & {
+export type SpamCorrectionItemData = SpamCorrection & {
   kind: "spam-correction";
-  eventOrigin: EventOrigin;
 };
 
-export type ReplacementCorrectionItemData = ItemBase & {
+export type ReplacementCorrectionItemData = ReplacementCorrection & {
   kind: "replacement-correction";
-  sources: EventOrigin[];
-  legs: LedgerLeg[];
 };
 
 export type LaneItemData =

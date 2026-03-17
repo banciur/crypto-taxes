@@ -27,21 +27,6 @@ export function LaneItem({
 }: LaneItemProps) {
   switch (item.kind) {
     case "raw-event":
-      return (
-        <EventCard
-          id={item.id}
-          timestamp={item.timestamp}
-          eventOrigin={item.eventOrigin}
-          legs={item.legs}
-          isSelected={isSelected}
-          selectionDisabled={isSelectable && isCorrectionChangePending}
-          onSelectionChange={
-            isSelectable
-              ? () => onToggleEventSelection(item.eventOrigin)
-              : undefined
-          }
-        />
-      );
     case "corrected-event":
       return (
         <EventCard
