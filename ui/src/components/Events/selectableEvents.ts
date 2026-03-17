@@ -1,20 +1,13 @@
 import { eventOriginKey } from "@/lib/eventOrigin";
 import type {
   CorrectedEventCardData,
-  EventOrigin,
   EventsByTimestamp,
-  LedgerLeg,
+  LedgerEvent,
   LaneItemData,
   RawEventCardData,
 } from "@/types/events";
 
 type SelectableEventItem = RawEventCardData | CorrectedEventCardData;
-
-export type SelectedSourceEvent = {
-  eventOrigin: EventOrigin;
-  timestamp: string;
-  legs: LedgerLeg[];
-};
 
 export const isSelectableEventItem = (
   item: LaneItemData,
@@ -50,9 +43,9 @@ export const collectSelectableEventOriginKeys = (
 export const getSelectedEvents = (
   eventsByTimestamp: EventsByTimestamp,
   selectedEventOriginKeys: ReadonlySet<string>,
-): readonly SelectedSourceEvent[] => {
+): readonly LedgerEvent[] => {
   const pendingSelectedEventOriginKeys = new Set(selectedEventOriginKeys);
-  const selectedSourceEvents: SelectedSourceEvent[] = [];
+  const selectedEvents: LedgerEvent[] = [];
 
   for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
     for (const columnItems of Object.values(columnsByTimestamp)) {
@@ -70,19 +63,15 @@ export const getSelectedEvents = (
           continue;
         }
 
-        selectedSourceEvents.push({
-          eventOrigin: item.eventOrigin,
-          timestamp: item.timestamp,
-          legs: item.legs,
-        });
+        selectedEvents.push(item);
         pendingSelectedEventOriginKeys.delete(originKey);
 
         if (pendingSelectedEventOriginKeys.size === 0) {
-          return selectedSourceEvents;
+          return selectedEvents;
         }
       }
     }
   }
 
-  return selectedSourceEvents;
+  return selectedEvents;
 };

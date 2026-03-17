@@ -18,9 +18,9 @@ import {
 } from "@/contexts/AccountNamesContext";
 import type {
   CreateReplacementCorrectionPayload,
+  LedgerEvent,
   ReplacementCorrectionDraftLeg,
 } from "@/types/events";
-import type { SelectedSourceEvent } from "./selectableEvents";
 
 type DraftLeg = ReplacementCorrectionDraftLeg & {
   draftId: string;
@@ -28,7 +28,7 @@ type DraftLeg = ReplacementCorrectionDraftLeg & {
 
 type ReplacementEditorModalProps = {
   show: boolean;
-  selectedSourceEvents: readonly SelectedSourceEvent[];
+  selectedSourceEvents: readonly LedgerEvent[];
   isSaving: boolean;
   errorMessage: string | null;
   onHide: () => void;
@@ -65,7 +65,7 @@ const combineUtcTimestamp = (date: string, time: string): string | null => {
 };
 
 const latestSourceTimestamp = (
-  selectedSourceEvents: readonly SelectedSourceEvent[],
+  selectedSourceEvents: readonly LedgerEvent[],
 ): string | null =>
   selectedSourceEvents
     .map((sourceEvent) => sourceEvent.timestamp)
@@ -73,7 +73,7 @@ const latestSourceTimestamp = (
     .at(-1) ?? null;
 
 const buildInitialDraftLegs = (
-  selectedSourceEvents: readonly SelectedSourceEvent[],
+  selectedSourceEvents: readonly LedgerEvent[],
   resolveAccountName: (accountChainId: string) => string,
 ): DraftLeg[] =>
   selectedSourceEvents
