@@ -4,21 +4,20 @@ import { CorrectionItem } from "@/components/CorrectionItem";
 import { CorrectionRemoveButton } from "@/components/CorrectionRemoveButton";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
-import type { EventOrigin } from "@/types/events";
+import type { SpamCorrectionItemData } from "@/types/events";
 
 type SpamCorrectionItemProps = {
-  timestamp: string;
-  eventOrigin: EventOrigin;
+  item: SpamCorrectionItemData;
   actionDisabled: boolean;
   onRemove: () => void;
 };
 
 export function SpamCorrectionItem({
-  timestamp,
-  eventOrigin,
+  item,
   actionDisabled,
   onRemove,
 }: SpamCorrectionItemProps) {
+  const { timestamp, eventOrigin } = item;
   const place = eventOrigin.location.toLowerCase();
   const action = (
     <CorrectionRemoveButton

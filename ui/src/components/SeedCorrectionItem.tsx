@@ -5,12 +5,11 @@ import { ListGroup, ListGroupItem } from "react-bootstrap";
 import { clsx } from "clsx";
 import { CorrectionItem } from "@/components/CorrectionItem";
 import { useAccountNameResolver } from "@/contexts/AccountNamesContext";
-import type { LedgerLeg } from "@/types/events";
+import type { LedgerLeg, SeedCorrectionItemData } from "@/types/events";
 import styles from "./EventCard.module.css";
 
 type SeedCorrectionItemProps = {
-  timestamp: string;
-  legs: LedgerLeg[];
+  item: SeedCorrectionItemData;
 };
 
 const legQuantityClassName = (leg: LedgerLeg) => {
@@ -24,10 +23,8 @@ const legQuantityClassName = (leg: LedgerLeg) => {
   return "text-success";
 };
 
-export function SeedCorrectionItem({
-  timestamp,
-  legs,
-}: SeedCorrectionItemProps) {
+export function SeedCorrectionItem({ item }: SeedCorrectionItemProps) {
+  const { timestamp, legs } = item;
   const resolveAccountName = useAccountNameResolver();
 
   return (

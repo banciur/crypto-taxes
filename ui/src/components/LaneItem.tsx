@@ -30,10 +30,7 @@ export function LaneItem({
     case "corrected-event":
       return (
         <EventCard
-          id={item.id}
-          timestamp={item.timestamp}
-          eventOrigin={item.eventOrigin}
-          legs={item.legs}
+          event={item}
           isSelected={isSelected}
           selectionDisabled={isSelectable && isCorrectionChangePending}
           onSelectionChange={
@@ -44,12 +41,11 @@ export function LaneItem({
         />
       );
     case "seed-correction":
-      return <SeedCorrectionItem timestamp={item.timestamp} legs={item.legs} />;
+      return <SeedCorrectionItem item={item} />;
     case "spam-correction":
       return (
         <SpamCorrectionItem
-          timestamp={item.timestamp}
-          eventOrigin={item.eventOrigin}
+          item={item}
           actionDisabled={isCorrectionChangePending}
           onRemove={() => onRemoveSpamCorrection(item.eventOrigin)}
         />
@@ -57,10 +53,7 @@ export function LaneItem({
     case "replacement-correction":
       return (
         <ReplacementCorrectionItem
-          correctionId={item.id}
-          timestamp={item.timestamp}
-          sources={item.sources}
-          legs={item.legs}
+          item={item}
           actionDisabled={isCorrectionChangePending}
           onRemove={() => onRemoveReplacementCorrection(item.id)}
         />

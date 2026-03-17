@@ -16,11 +16,8 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
     load: async () => {
       const events = await getRawEvents();
       return events.map((event) => ({
-        id: event.id,
+        ...event,
         kind: "raw-event" as const,
-        timestamp: event.timestamp,
-        legs: event.legs,
-        eventOrigin: event.eventOrigin,
       }));
     },
   },
@@ -28,11 +25,8 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
     load: async () => {
       const events = await getCorrectedEvents();
       return events.map((event) => ({
-        id: event.id,
+        ...event,
         kind: "corrected-event" as const,
-        timestamp: event.timestamp,
-        legs: event.legs,
-        eventOrigin: event.eventOrigin,
       }));
     },
   },
@@ -46,10 +40,8 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
         ]);
       return orderByTimestamp([
         ...seedEvents.map((event) => ({
-          id: event.id,
+          ...event,
           kind: "seed-correction" as const,
-          timestamp: event.timestamp,
-          legs: event.legs,
         })),
         ...spamCorrections.map((event) => ({
           ...event,

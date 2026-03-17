@@ -15,22 +15,26 @@ import styles from "./EventCard.module.css";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNameResolver } from "@/contexts/AccountNamesContext";
-import type { EventCardDisplayData, LedgerLeg } from "@/types/events";
+import type {
+  CorrectedEventCardData,
+  LedgerLeg,
+  RawEventCardData,
+} from "@/types/events";
 
-type EventCardProps = EventCardDisplayData & {
+type EventCardProps = {
+  event: RawEventCardData | CorrectedEventCardData;
   isSelected?: boolean;
   onSelectionChange?: (isSelected: boolean) => void;
   selectionDisabled?: boolean;
 };
 
 export function EventCard({
-  timestamp,
-  eventOrigin,
-  legs,
+  event,
   isSelected = false,
   onSelectionChange,
   selectionDisabled = false,
 }: EventCardProps) {
+  const { timestamp, eventOrigin, legs } = event;
   const resolveAccountName = useAccountNameResolver();
   const place = eventOrigin.location.toLowerCase();
   const originId = eventOrigin.externalId;

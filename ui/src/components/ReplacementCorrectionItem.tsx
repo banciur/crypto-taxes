@@ -7,14 +7,11 @@ import { CorrectionItem } from "@/components/CorrectionItem";
 import { CorrectionRemoveButton } from "@/components/CorrectionRemoveButton";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNameResolver } from "@/contexts/AccountNamesContext";
-import type { EventOrigin, LedgerLeg } from "@/types/events";
+import type { LedgerLeg, ReplacementCorrectionItemData } from "@/types/events";
 import styles from "./EventCard.module.css";
 
 type ReplacementCorrectionItemProps = {
-  correctionId: string;
-  timestamp: string;
-  sources: EventOrigin[];
-  legs: LedgerLeg[];
+  item: ReplacementCorrectionItemData;
   actionDisabled: boolean;
   onRemove: () => void;
 };
@@ -31,17 +28,15 @@ const legQuantityClassName = (leg: LedgerLeg) => {
 };
 
 export function ReplacementCorrectionItem({
-  correctionId,
-  timestamp,
-  sources,
-  legs,
+  item,
   actionDisabled,
   onRemove,
 }: ReplacementCorrectionItemProps) {
+  const { id, timestamp, sources, legs } = item;
   const resolveAccountName = useAccountNameResolver();
   const action = (
     <CorrectionRemoveButton
-      label={`Remove replacement correction ${correctionId}`}
+      label={`Remove replacement correction ${id}`}
       disabled={actionDisabled}
       onClick={onRemove}
     />

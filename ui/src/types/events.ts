@@ -54,22 +54,16 @@ export type LedgerEvent = ItemBase & {
   legs: LedgerLeg[];
 };
 
-export type EventCardDisplayData = ItemBase & {
-  eventOrigin: EventOrigin;
-  legs: LedgerLeg[];
-};
-
-export type RawEventCardData = EventCardDisplayData & {
+export type RawEventCardData = LedgerEvent & {
   kind: "raw-event";
 };
 
-export type CorrectedEventCardData = EventCardDisplayData & {
+export type CorrectedEventCardData = LedgerEvent & {
   kind: "corrected-event";
 };
 
-export type SeedCorrectionItemData = ItemBase & {
+export type SeedCorrectionItemData = SeedEvent & {
   kind: "seed-correction";
-  legs: LedgerLeg[];
 };
 
 export type SpamCorrectionItemData = SpamCorrection & {
