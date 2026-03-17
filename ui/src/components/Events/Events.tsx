@@ -48,9 +48,6 @@ export function Events({ eventsByTimestamp }: EventsProps) {
 
   const handleMarkSelectedAsSpam = useCallback(async () => {
     const selectedSourceEvents = getSelectedEvents();
-    if (selectedSourceEvents.length === 0) {
-      return;
-    }
 
     setFeedback(null);
     setIsMarkingSpam(true);
