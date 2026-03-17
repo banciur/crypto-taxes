@@ -22,10 +22,6 @@ export const collectSelectableEventOriginKeys = (
 
   for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
     for (const columnItems of Object.values(columnsByTimestamp)) {
-      if (!columnItems) {
-        continue;
-      }
-
       for (const item of columnItems) {
         if (!isSelectableEventItem(item)) {
           continue;
@@ -49,10 +45,6 @@ export const getSelectedEvents = (
 
   for (const columnsByTimestamp of Object.values(eventsByTimestamp)) {
     for (const columnItems of Object.values(columnsByTimestamp)) {
-      if (!columnItems) {
-        continue;
-      }
-
       for (const item of columnItems) {
         if (!isSelectableEventItem(item)) {
           continue;
