@@ -47,7 +47,7 @@ export const collectSelectableEventOriginKeys = (
   return selectableEventOriginKeys;
 };
 
-export const resolveSelectedSourceEvents = (
+export const getSelectedEvents = (
   eventsByTimestamp: EventsByTimestamp,
   selectedEventOriginKeys: ReadonlySet<string>,
 ): readonly SelectedSourceEvent[] => {

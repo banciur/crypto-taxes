@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ApiError } from "@/api/core";
@@ -20,7 +20,6 @@ import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
 import type { EventOrigin, EventsByTimestamp } from "@/types/events";
 import type { CreateReplacementCorrectionPayload } from "@/types/events";
 import { ReplacementEditorModal } from "./ReplacementEditorModal";
-import { resolveSelectedSourceEvents } from "./selectableEvents";
 import { useEventSelection } from "./useEventSelection";
 
 type EventsProps = {
@@ -40,15 +39,15 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     string | null
   >(null);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
-  const { selectedEventOriginKeys, toggleEventSelection, clearEventSelection } =
-    useEventSelection(eventsByTimestamp);
-  const selectedSourceEvents = useMemo(
-    () =>
-      resolveSelectedSourceEvents(eventsByTimestamp, selectedEventOriginKeys),
-    [eventsByTimestamp, selectedEventOriginKeys],
-  );
+  const {
+    selectedEventOriginKeys,
+    toggleEventSelection,
+    clearEventSelection,
+    getSelectedEvents,
+  } = useEventSelection(eventsByTimestamp);
 
   const handleMarkSelectedAsSpam = useCallback(async () => {
+    const selectedSourceEvents = getSelectedEvents();
     if (selectedSourceEvents.length === 0) {
       return;
     }
@@ -84,16 +83,17 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         "Spam markers saved and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
     });
     router.refresh();
-  }, [clearEventSelection, router, selectedSourceEvents]);
+  }, [clearEventSelection, getSelectedEvents, router]);
 
   const handleOpenReplacementEditor = useCallback(() => {
+    const selectedSourceEvents = getSelectedEvents();
     if (selectedSourceEvents.length === 0) {
       return;
     }
 
     setReplacementEditorError(null);
     setIsReplacementEditorOpen(true);
-  }, [selectedSourceEvents.length]);
+  }, [getSelectedEvents]);
 
   const handleCloseReplacementEditor = useCallback(() => {
     if (isCreatingReplacement) {
@@ -207,7 +207,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       {isReplacementEditorOpen && (
         <ReplacementEditorModal
           show
-          selectedSourceEvents={selectedSourceEvents}
+          selectedSourceEvents={getSelectedEvents()}
           isSaving={isCreatingReplacement}
           errorMessage={replacementEditorError}
           onHide={handleCloseReplacementEditor}
