@@ -19,7 +19,7 @@ Treat other files under `doc/` as background/templates unless explicitly referen
 - Shared contract: FastAPI endpoints exposed by `data/src/api/`.
 - Base URL is configured via `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000` for local dev).
 - The UI replacement workflow uses `GET | POST | DELETE /replacement-corrections` plus `GET /accounts` and expects the page to refresh server-rendered lane data after correction mutations.
-- `GET /accounts` returns the merged account catalog used by the UI: configured wallet accounts from `artifacts/accounts.json` plus built-in system exchange accounts such as Coinbase and Kraken. Wallet records include an address; built-in system accounts intentionally expose `address=null`.
+- `GET /accounts` returns the merged account catalog used by the UI: configured wallet accounts from `artifacts/accounts.json` plus built-in system exchange accounts such as Coinbase and Kraken.
 
 ## Docs and drift control
 - When changing domain semantics, ingestion behavior, DB schema, API contracts, or UI expectations, update `doc/CURRENT.md`, this `AGENTS.md`, and any relevant `README.md` files immediately so the documented guidance stays in sync with the current implementation.

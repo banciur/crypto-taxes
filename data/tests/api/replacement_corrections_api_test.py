@@ -10,11 +10,12 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 
+from accounts import KRAKEN_ACCOUNT_ID
 from db.corrections_replacement import ReplacementCorrectionRepository
 from domain.correction import Replacement
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from tests.api.conftest import raw_event
-from tests.constants import BTC, ETH, KRAKEN_WALLET, LEDGER_WALLET
+from tests.constants import BTC, ETH, LEDGER_WALLET
 
 
 class ReplacementSourcePayload(TypedDict):
@@ -47,7 +48,7 @@ def _replacement_payload(
             {
                 "asset_id": BTC,
                 "quantity": "-0.1",
-                "account_chain_id": KRAKEN_WALLET,
+                "account_chain_id": KRAKEN_ACCOUNT_ID,
                 "is_fee": False,
             },
             {
@@ -59,7 +60,7 @@ def _replacement_payload(
             {
                 "asset_id": ETH,
                 "quantity": "-0.001",
-                "account_chain_id": KRAKEN_WALLET,
+                "account_chain_id": KRAKEN_ACCOUNT_ID,
                 "is_fee": True,
             },
         ],

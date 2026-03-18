@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from accounts import KRAKEN_ACCOUNT_ID
 from db.corrections_replacement import (
     ReplacementCorrectionLegOrm,
     ReplacementCorrectionOrm,
@@ -16,7 +17,7 @@ from db.corrections_replacement import (
 )
 from domain.correction import Replacement
 from domain.ledger import EventLocation, EventOrigin, LedgerLeg
-from tests.constants import BTC, ETH, KRAKEN_WALLET, LEDGER_WALLET
+from tests.constants import BTC, ETH, LEDGER_WALLET
 
 
 def _replacement(
@@ -37,7 +38,7 @@ def _replacement(
             LedgerLeg(
                 asset_id=BTC,
                 quantity=Decimal("-0.1"),
-                account_chain_id=KRAKEN_WALLET,
+                account_chain_id=KRAKEN_ACCOUNT_ID,
             ),
             LedgerLeg(
                 asset_id=BTC,
@@ -47,7 +48,7 @@ def _replacement(
             LedgerLeg(
                 asset_id=ETH,
                 quantity=Decimal("-0.001"),
-                account_chain_id=KRAKEN_WALLET,
+                account_chain_id=KRAKEN_ACCOUNT_ID,
                 is_fee=True,
             ),
         ],

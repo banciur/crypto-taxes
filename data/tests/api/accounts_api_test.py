@@ -6,7 +6,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api.api as api
-from accounts import AccountConfig, AccountRegistry
+from accounts import (
+    COINBASE_ACCOUNT_ID,
+    COINBASE_ACCOUNT_NAME,
+    KRAKEN_ACCOUNT_ID,
+    KRAKEN_ACCOUNT_NAME,
+    AccountConfig,
+    AccountRegistry,
+)
 from domain.ledger import EventLocation, WalletAddress
 
 
@@ -35,26 +42,20 @@ def test_get_accounts_returns_merged_wallet_and_system_accounts(
     response = client.get("/accounts")
 
     assert response.status_code == 200
-    assert response.json() == [
-        {
+    assert {account["account_chain_id"]: account for account in response.json()} == {
+        f"{EventLocation.BASE}:{address}": {
             "account_chain_id": f"{EventLocation.BASE}:{address}",
             "name": "Main Wallet",
-            "location": EventLocation.BASE,
-            "address": address,
             "skip_sync": False,
         },
-        {
-            "account_chain_id": "coinbase",
-            "name": "Coinbase",
-            "location": EventLocation.COINBASE,
-            "address": None,
+        COINBASE_ACCOUNT_ID: {
+            "account_chain_id": COINBASE_ACCOUNT_ID,
+            "name": COINBASE_ACCOUNT_NAME,
             "skip_sync": False,
         },
-        {
-            "account_chain_id": "kraken",
-            "name": "Kraken",
-            "location": EventLocation.KRAKEN,
-            "address": None,
+        KRAKEN_ACCOUNT_ID: {
+            "account_chain_id": KRAKEN_ACCOUNT_ID,
+            "name": KRAKEN_ACCOUNT_NAME,
             "skip_sync": False,
         },
-    ]
+    }

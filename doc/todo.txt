@@ -5,7 +5,6 @@ TODO: Corrections, combine and/or modify events (complicated transfers etc). Whe
   - Maybe change how sources of replacement are rendered now it's the same as in other items
   - Review downstream components from Events I have a feeling internal structures are too complicated etc.
   - Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok.
-  - Review the hierarchy of types. Hierarchy from types/events ItemBase to LaneItemData vs EventDateSection.
   - Review names of components don't like VirtualizedDateSections and others.
   - Combination of events should be on raw events or corrected. Is it possible that I have to combine raw event with correction?
 
@@ -13,6 +12,7 @@ TODO: I'm not sure about the corrections directory and which code should go wher
 
 Review the order of todos
 ------------------
+TODO: In system rename seed events to seed correctios (or something like that)
 TODO: Need icons for coinbase and kraken
 TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
 TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?

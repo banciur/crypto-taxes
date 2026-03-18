@@ -47,7 +47,7 @@
   - `GET /raw-events`
   - `GET /seed-events`
   - `GET /corrected-events`
-  - `GET /accounts` (merged wallet + system exchange accounts; `address` may be `null`)
+  - `GET /accounts` (merged wallet + system exchange accounts; records expose `account_chain_id`, `name`, `skip_sync`)
   - `GET | POST | DELETE /replacement-corrections`
   - `GET | POST | DELETE /spam-corrections`
 

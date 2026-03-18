@@ -14,13 +14,14 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import api.api as api
+from accounts import KRAKEN_ACCOUNT_ID
 from db.corrections_common import CorrectionsBase
 from db.corrections_replacement import ReplacementCorrectionRepository
 from db.models import Base
 from db.repositories import LedgerEventRepository
 from domain.correction import Replacement
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
-from tests.constants import BTC, EUR, KRAKEN_WALLET
+from tests.constants import BTC, EUR
 
 
 @pytest.fixture()
@@ -68,8 +69,8 @@ def raw_event(
         event_origin=EventOrigin(location=location, external_id=external_id),
         ingestion="api_test",
         legs=[
-            LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_WALLET, is_fee=False),
-            LedgerLeg(asset_id=EUR, quantity=Decimal("-100"), account_chain_id=KRAKEN_WALLET, is_fee=False),
+            LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
+            LedgerLeg(asset_id=EUR, quantity=Decimal("-100"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
         ],
     )
 

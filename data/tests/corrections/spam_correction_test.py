@@ -4,10 +4,11 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
+from accounts import KRAKEN_ACCOUNT_ID
 from corrections.spam import apply_spam_corrections
 from domain.correction import Spam
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
-from tests.constants import BTC, KRAKEN_WALLET
+from tests.constants import BTC
 
 
 def _raw_event(*, location: EventLocation, external_id: str, hour: int) -> LedgerEvent:
@@ -16,7 +17,7 @@ def _raw_event(*, location: EventLocation, external_id: str, hour: int) -> Ledge
         timestamp=datetime(2024, 1, 1, hour, 0, tzinfo=timezone.utc),
         event_origin=EventOrigin(location=location, external_id=external_id),
         ingestion="test",
-        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False)],
     )
 
 

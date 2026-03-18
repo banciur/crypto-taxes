@@ -10,9 +10,9 @@ from typing import Iterable
 
 from pydantic import field_validator
 
+from accounts import KRAKEN_ACCOUNT_ID
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from pydantic_base import StrictBaseModel
-from system_accounts import KRAKEN_ACCOUNT_ID
 from utils.misc import ensure_utc_datetime
 
 logger = logging.getLogger(__name__)

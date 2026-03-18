@@ -3,8 +3,6 @@ import type { ColumnKey } from "@/consts";
 export type Account = {
   accountChainId: string;
   name: string;
-  location: string;
-  address: string | null;
   skipSync: boolean;
 };
 

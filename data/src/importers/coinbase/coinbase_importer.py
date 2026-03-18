@@ -8,10 +8,10 @@ from datetime import timedelta
 from decimal import Decimal
 from typing import Protocol, TypeVar
 
+from accounts import COINBASE_ACCOUNT_ID
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from services.coinbase import CoinbaseAccountHistory, CoinbaseMoney, CoinbaseTransaction
 from services.moralis import SyncMode
-from system_accounts import COINBASE_ACCOUNT_ID
 from utils.misc import ensure_utc_datetime
 
 logger = logging.getLogger(__name__)

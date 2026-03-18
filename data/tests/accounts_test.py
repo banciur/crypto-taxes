@@ -6,14 +6,18 @@ from pathlib import Path
 import pytest
 
 from accounts import (
+    COINBASE_ACCOUNT_ID,
+    COINBASE_ACCOUNT_NAME,
+    KRAKEN_ACCOUNT_ID,
+    KRAKEN_ACCOUNT_NAME,
     AccountConfig,
+    AccountRecord,
     AccountRegistry,
     account_chain_id_for,
     load_accounts,
     location_address_from_account_chain_id,
 )
 from domain.ledger import EventLocation, WalletAddress
-from system_accounts import COINBASE_ACCOUNT_ID, KRAKEN_ACCOUNT_ID, SystemAccount
 from tests.constants import ETH_ADDRESS, LOCATION
 
 
@@ -144,14 +148,31 @@ def test_registry_includes_default_system_accounts() -> None:
 
     registry = AccountRegistry([wallet_account])
 
-    assert registry.name_for(COINBASE_ACCOUNT_ID) == "Coinbase"
-    assert registry.name_for(KRAKEN_ACCOUNT_ID) == "Kraken"
-    assert registry.location_address_for(COINBASE_ACCOUNT_ID) is None
-    assert registry.location_address_for(KRAKEN_ACCOUNT_ID) is None
+    assert registry.name_for(COINBASE_ACCOUNT_ID) == COINBASE_ACCOUNT_NAME
+    assert registry.name_for(KRAKEN_ACCOUNT_ID) == KRAKEN_ACCOUNT_NAME
+    assert (
+        registry.resolve_owned_id(
+            location=EventLocation.COINBASE,
+            address=WalletAddress(COINBASE_ACCOUNT_NAME),
+        )
+        is None
+    )
     assert registry.resolve_owned_id(location=EventLocation.BASE, address=address) == account_chain_id_for(
         location=EventLocation.BASE,
         address=address,
     )
+
+
+def test_account_config_account_chain_id_for_raises_when_location_is_not_configured() -> None:
+    account = AccountConfig(
+        name="Primary",
+        address=ETH_ADDRESS,
+        locations=frozenset({EventLocation.BASE}),
+        skip_sync=False,
+    )
+
+    with pytest.raises(ValueError, match="does not support location ETHEREUM"):
+        account.account_chain_id_for(EventLocation.ETHEREUM)
 
 
 def test_registry_rejects_configured_name_that_conflicts_with_system_account() -> None:
@@ -159,7 +180,7 @@ def test_registry_rejects_configured_name_that_conflicts_with_system_account() -
         AccountRegistry(
             [
                 AccountConfig(
-                    name="Coinbase",
+                    name=COINBASE_ACCOUNT_NAME,
                     address=ETH_ADDRESS,
                     locations=frozenset({EventLocation.BASE}),
                     skip_sync=False,
@@ -185,10 +206,9 @@ def test_registry_rejects_duplicate_merged_account_chain_id() -> None:
         AccountRegistry(
             [wallet_account],
             system_accounts=[
-                SystemAccount(
+                AccountRecord(
                     account_chain_id=duplicate_account_chain_id,
                     name="Duplicate",
-                    location=EventLocation.INTERNAL,
                 )
             ],
         )

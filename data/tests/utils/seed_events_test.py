@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
+from accounts import KRAKEN_ACCOUNT_ID
 from domain.correction import SeedEvent
 from domain.ledger import EventLocation, LedgerLeg
 from importers.seed_events import (
@@ -10,7 +11,7 @@ from importers.seed_events import (
     ledger_events_from_seed_events,
     load_seed_events,
 )
-from tests.constants import BTC, KRAKEN_WALLET
+from tests.constants import BTC
 
 
 def test_load_seed_events_defaults(tmp_path: Path) -> None:
@@ -37,7 +38,7 @@ def test_load_seed_events_with_timestamp_and_price_per_token(tmp_path: Path) -> 
     timestamp = datetime(2020, 1, 1, 12, tzinfo=timezone.utc)
     price_per_token = Decimal("1.23")
     csv_file.write_text(
-        f"asset_id,account_id,quantity,timestamp,price_per_token\nBTC,kraken,0.25,{timestamp.isoformat().replace('+00:00', 'Z')},{price_per_token}\n"
+        f"asset_id,account_id,quantity,timestamp,price_per_token\nBTC,{KRAKEN_ACCOUNT_ID},0.25,{timestamp.isoformat().replace('+00:00', 'Z')},{price_per_token}\n"
     )
 
     events = load_seed_events(csv_file)
@@ -49,7 +50,7 @@ def test_load_seed_events_with_timestamp_and_price_per_token(tmp_path: Path) -> 
     (leg,) = event.legs
     assert leg.asset_id == "BTC"
     assert leg.quantity == Decimal("0.25")
-    assert leg.account_chain_id == "kraken"
+    assert leg.account_chain_id == KRAKEN_ACCOUNT_ID
 
 
 def test_missing_seed_file_returns_empty(tmp_path: Path) -> None:
@@ -65,7 +66,7 @@ def test_ledger_events_from_seed_events() -> None:
     seed_event = SeedEvent(
         timestamp=timestamp,
         price_per_token=price_per_token,
-        legs=[LedgerLeg(asset_id=BTC, quantity=quantity, account_chain_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=quantity, account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False)],
     )
 
     ledger_events = ledger_events_from_seed_events([seed_event])
@@ -80,5 +81,5 @@ def test_ledger_events_from_seed_events() -> None:
     (leg,) = event.legs
     assert leg.asset_id == BTC
     assert leg.quantity == quantity
-    assert leg.account_chain_id == KRAKEN_WALLET
+    assert leg.account_chain_id == KRAKEN_ACCOUNT_ID
     assert leg.is_fee is False

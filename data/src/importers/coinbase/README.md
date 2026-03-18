@@ -2,7 +2,7 @@
 
 - Purpose: translate cached Coinbase Track account history into domain `LedgerEvent`s.
 - Source of truth: the Coinbase tables in `artifacts/transactions_cache.db`.
-- Scope: Coinbase Track wallet activity only; Coinbase is modeled as one consolidated `account_chain_id="coinbase"` rather than per-asset wallets.
+- Scope: Coinbase Track wallet activity only; Coinbase is modeled as one consolidated `account_chain_id="COINBASE:coinbase"` rather than per-asset wallets.
 
 ## Flow
 

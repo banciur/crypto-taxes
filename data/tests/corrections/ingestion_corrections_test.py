@@ -7,11 +7,12 @@ from uuid import uuid4
 
 import pytest
 
+from accounts import KRAKEN_ACCOUNT_ID
 from corrections.ingestion import apply_ingestion_corrections
 from corrections.validation import CorrectionValidationError
 from domain.correction import Replacement, SeedEvent, Spam
 from domain.ledger import AccountChainId, EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
-from tests.constants import BTC, ETH, KRAKEN_WALLET, LEDGER_WALLET
+from tests.constants import BTC, ETH, LEDGER_WALLET
 
 
 def _raw_event(
@@ -37,14 +38,14 @@ def test_apply_ingestion_corrections_applies_spam_replacement_seed_and_final_sor
         external_id="0xspam",
         hour=2,
         quantity=Decimal("1"),
-        wallet_id=KRAKEN_WALLET,
+        wallet_id=KRAKEN_ACCOUNT_ID,
     )
     replaced_first = _raw_event(
         location=EventLocation.ETHEREUM,
         external_id="0xsend",
         hour=3,
         quantity=Decimal("-0.1"),
-        wallet_id=KRAKEN_WALLET,
+        wallet_id=KRAKEN_ACCOUNT_ID,
     )
     replaced_second = _raw_event(
         location=EventLocation.COINBASE,
@@ -58,15 +59,15 @@ def test_apply_ingestion_corrections_applies_spam_replacement_seed_and_final_sor
         external_id="kraken-keep",
         hour=5,
         quantity=Decimal("0.25"),
-        wallet_id=KRAKEN_WALLET,
+        wallet_id=KRAKEN_ACCOUNT_ID,
     )
     replacement = Replacement(
         timestamp=datetime(2024, 1, 1, 4, 30, tzinfo=timezone.utc),
         sources=[replaced_first.event_origin, replaced_second.event_origin],
         legs=[
-            LedgerLeg(asset_id=BTC, quantity=Decimal("-0.1"), account_chain_id=KRAKEN_WALLET),
+            LedgerLeg(asset_id=BTC, quantity=Decimal("-0.1"), account_chain_id=KRAKEN_ACCOUNT_ID),
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.09995"), account_chain_id=LEDGER_WALLET),
-            LedgerLeg(asset_id=ETH, quantity=Decimal("-0.001"), account_chain_id=KRAKEN_WALLET, is_fee=True),
+            LedgerLeg(asset_id=ETH, quantity=Decimal("-0.001"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=True),
         ],
     )
     seed_event = SeedEvent(
@@ -94,7 +95,7 @@ def test_apply_ingestion_corrections_raises_on_invalid_correction_overlap() -> N
         external_id="0xshared",
         hour=3,
         quantity=Decimal("-0.1"),
-        wallet_id=KRAKEN_WALLET,
+        wallet_id=KRAKEN_ACCOUNT_ID,
     )
     replacement = Replacement(
         timestamp=datetime(2024, 1, 1, 4, 30, tzinfo=timezone.utc),
