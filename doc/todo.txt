@@ -1,11 +1,5 @@
 First stage: compute German taxes
 
-srednio szybki review.
-- Trzeba popracowac nad modalem. Arytmetyka dla nog dodawanie i odejmiwanie?
-- pomysl czy nie wrocic do zastapienia selectedEventOriginKeys: ReadonlySet<string>; mapa klucz wartosc. Tak jak to bylo wczesniej. Zalety jeden zwracany obiekt wady czesciej trzeba przeliczac
-- czy page powinien przeksztalcac dane do struktury ktora pasuje dla komponentu events. ktora potem i tak dalej musze przeksztalcac
-- There is duplication of the code that handle errors. Simplify it as AI went to far in errors
-
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
   - When hovering over the replacement event highlight raw events that are being replaced (if raw events lane is visible)
   - Maybe change how sources of replacement are rendered now it's the same as in other items
@@ -20,6 +14,9 @@ TODO: Unify corrections. Spam and seed are just replacements with no entry or no
 
 Review the order of todos
 ------------------
+TODO: Revaluate idea of replace selectedEventOriginKeys / getSelectedEvents with one map like it was before.
+TODO: Thing to think about: Should page.tsx transform data to for format that is used by the Events component? It is transformed further there.
+TODO: A lot of duplication in handler of API communication in Event, also not sure about error handling in ui/src/api/core.ts
 TODO: Backups of databases they are starting to contain manual work
 TODO: Need icons for coinbase and kraken
 TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed

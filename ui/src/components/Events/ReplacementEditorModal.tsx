@@ -1,3 +1,4 @@
+// This file is completely vibed and I didn't read it.
 "use client";
 
 import { useMemo, useState } from "react";
