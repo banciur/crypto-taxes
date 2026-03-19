@@ -121,13 +121,15 @@ export const getFromApi = async <T>(path: string): Promise<T> => {
 export const mutateApi = async <T = void>(
   path: string,
   method: "POST" | "PUT" | "PATCH" | "DELETE",
-  payload: object,
+  payload?: object,
 ): Promise<T | undefined> => {
   return doApiRequest<T>(path, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: payload
+      ? {
+          "Content-Type": "application/json",
+        }
+      : undefined,
     body: payload,
   });
 };

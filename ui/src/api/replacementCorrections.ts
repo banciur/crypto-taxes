@@ -1,4 +1,4 @@
-import { doApiRequest, getFromApi, mutateApi } from "@/api/core";
+import { getFromApi, mutateApi } from "@/api/core";
 import { orderByTimestamp } from "@/lib/sort";
 import type {
   CreateReplacementCorrectionPayload,
@@ -25,8 +25,5 @@ export const createReplacementCorrection = async (
 
 export const deleteReplacementCorrection = async (
   correctionId: string,
-): Promise<void> => {
-  await doApiRequest(`/replacement-corrections/${correctionId}`, {
-    method: "DELETE",
-  });
-};
+): Promise<void> =>
+  mutateApi(`/replacement-corrections/${correctionId}`, "DELETE");

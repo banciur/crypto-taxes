@@ -43,13 +43,11 @@
 ### API contract
 
 - Base URL comes from `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000`).
-- Current endpoints:
-  - `GET /raw-events`
-  - `GET /seed-events`
-  - `GET /corrected-events`
-  - `GET /accounts` (merged wallet + system exchange accounts; records expose `account_chain_id`, `name`, `skip_sync`)
-  - `GET | POST | DELETE /replacement-corrections`
-  - `GET | POST | DELETE /spam-corrections`
+- UI-specific expectations from that contract:
+  - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `name`, and `skip_sync`.
+  - Replacement correction mutations refresh the server-rendered lane data after they are complete.
+  - Spam correction mutations are keyed by `EventOrigin`, with delete using the path-based raw-event identity route.
+  - After manual spam or replacement correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.
 
 ## Technical Workflow
 

@@ -14,6 +14,10 @@ def _payload(*, location: str = "ARBITRUM", external_id: str = "0xabc") -> dict[
     return {"location": location, "external_id": external_id}
 
 
+def _delete_path(*, location: str = "ARBITRUM", external_id: str = "0xabc") -> str:
+    return f"/spam-corrections/{location}/{external_id}"
+
+
 def test_post_creates_and_get_lists_active_spam_corrections(
     client: TestClient,
     persist_raw_events: Callable[[list[LedgerEvent]], None],
@@ -128,7 +132,7 @@ def test_delete_hides_record_and_post_restores_same_id(
     create_response = client.post("/spam-corrections", json=payload)
     created = client.get("/spam-corrections").json()[0]
 
-    delete_response = client.request("DELETE", "/spam-corrections", json=payload)
+    delete_response = client.delete(_delete_path(**payload))
     after_delete = client.get("/spam-corrections")
     restore_response = client.post("/spam-corrections", json=payload)
     restored = client.get("/spam-corrections").json()[0]
@@ -167,7 +171,30 @@ def test_duplicate_post_is_idempotent(
 
 
 def test_delete_is_idempotent_for_missing_record(client: TestClient) -> None:
-    response = client.request("DELETE", "/spam-corrections", json=_payload(external_id="0xmissing"))
+    payload = _payload(external_id="0xmissing")
+    response = client.delete(_delete_path(**payload))
+
+    assert response.status_code == 204
+    assert client.get("/spam-corrections").json() == []
+
+
+def test_delete_supports_external_ids_with_slashes(
+    client: TestClient,
+    persist_raw_events: Callable[[list[LedgerEvent]], None],
+) -> None:
+    payload = _payload(external_id="wrap/in/out")
+    persist_raw_events(
+        [
+            raw_event(
+                location=EventLocation(payload["location"]),
+                external_id=payload["external_id"],
+                timestamp=datetime(2024, 1, 5, 13, 0, tzinfo=timezone.utc),
+            )
+        ],
+    )
+    client.post("/spam-corrections", json=payload)
+
+    response = client.delete(_delete_path(**payload))
 
     assert response.status_code == 204
     assert client.get("/spam-corrections").json() == []

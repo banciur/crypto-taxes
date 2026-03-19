@@ -11,12 +11,6 @@
 ### API
 - The API is implemented with FastAPI under `src/api/`.
 - Its purpose is to expose ledger/corrections/accounts data to the UI through a stable HTTP interface.
-- Replacement corrections are available to the UI through `GET | POST | DELETE /replacement-corrections`.
-- `GET /accounts` is backed by `AccountRegistry` and returns the merged account catalog used by the UI:
-  - configured wallet accounts loaded from `artifacts/accounts.json`
-  - built-in system exchange accounts such as Coinbase and Kraken
-- Account records expose `account_chain_id`, `name`, and `skip_sync`.
-- Wallet/system location and address details can be derived from `account_chain_id`.
 
 ### Domain modules
 - Ledger and lots: `src/domain/ledger.py`

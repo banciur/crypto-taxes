@@ -13,4 +13,8 @@ export const createSpamCorrection = async (
 
 export const deleteSpamCorrection = async (
   eventOrigin: EventOrigin,
-): Promise<void> => mutateApi("/spam-corrections", "DELETE", eventOrigin);
+): Promise<void> => {
+  const location = encodeURIComponent(eventOrigin.location);
+  const externalId = encodeURIComponent(eventOrigin.externalId);
+  return mutateApi(`/spam-corrections/${location}/${externalId}`, "DELETE");
+};

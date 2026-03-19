@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated, Iterable
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Response, status
 from pydantic import Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -99,12 +99,13 @@ def create_spam_correction(
     return Response(status_code=204)
 
 
-@router.delete("/spam-corrections", status_code=204)
+@router.delete("/spam-corrections/{location}/{external_id:path}", status_code=204)
 def delete_spam_correction(
-    payload: EventOrigin,
+    location: EventLocation,
+    external_id: Annotated[str, Path(min_length=1)],
     repo: Annotated[SpamCorrectionRepository, Depends(get_spam_correction_repository)],
 ) -> Response:
-    repo.remove_spam_mark(payload)
+    repo.remove_spam_mark(EventOrigin(location=location, external_id=external_id))
     return Response(status_code=204)
 
 
