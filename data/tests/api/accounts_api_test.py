@@ -27,7 +27,7 @@ def test_get_accounts_returns_merged_wallet_and_system_accounts(
             AccountConfig(
                 name="Main Wallet",
                 address=address,
-                locations=frozenset({EventLocation.BASE}),
+                locations=frozenset({EventLocation.BASE, EventLocation.ETHEREUM}),
                 skip_sync=False,
             )
         ]
@@ -45,17 +45,22 @@ def test_get_accounts_returns_merged_wallet_and_system_accounts(
     assert {account["account_chain_id"]: account for account in response.json()} == {
         f"{EventLocation.BASE}:{address}": {
             "account_chain_id": f"{EventLocation.BASE}:{address}",
-            "name": "Main Wallet",
+            "display_name": "Main Wallet:bas",
+            "skip_sync": False,
+        },
+        f"{EventLocation.ETHEREUM}:{address}": {
+            "account_chain_id": f"{EventLocation.ETHEREUM}:{address}",
+            "display_name": "Main Wallet:eth",
             "skip_sync": False,
         },
         COINBASE_ACCOUNT_ID: {
             "account_chain_id": COINBASE_ACCOUNT_ID,
-            "name": COINBASE_ACCOUNT_NAME,
+            "display_name": COINBASE_ACCOUNT_NAME,
             "skip_sync": False,
         },
         KRAKEN_ACCOUNT_ID: {
             "account_chain_id": KRAKEN_ACCOUNT_ID,
-            "name": KRAKEN_ACCOUNT_NAME,
+            "display_name": KRAKEN_ACCOUNT_NAME,
             "skip_sync": False,
         },
     }

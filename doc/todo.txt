@@ -1,5 +1,11 @@
 First stage: compute German taxes
 
+srednio szybki review.
+- Trzeba popracowac nad modalem. Arytmetyka dla nog dodawanie i odejmiwanie?
+- pomysl czy nie wrocic do zastapienia selectedEventOriginKeys: ReadonlySet<string>; mapa klucz wartosc. Tak jak to bylo wczesniej. Zalety jeden zwracany obiekt wady czesciej trzeba przeliczac
+- czy page powinien przeksztalcac dane do struktury ktora pasuje dla komponentu events. ktora potem i tak dalej musze przeksztalcac
+- There is duplication of the code that handle errors. Simplify it as AI went to far in errors
+
 TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
   - When hovering over the replacement event highlight raw events that are being replaced (if raw events lane is visible)
   - Maybe change how sources of replacement are rendered now it's the same as in other items
@@ -10,9 +16,11 @@ TODO: Corrections, combine and/or modify events (complicated transfers etc). Whe
 
 TODO: I'm not sure about the corrections directory and which code should go where.
 
+TODO: Unify corrections. Spam and seed are just replacements with no entry or no outcome.
+
 Review the order of todos
 ------------------
-TODO: In system rename seed events to seed correctios (or something like that)
+TODO: Backups of databases they are starting to contain manual work
 TODO: Need icons for coinbase and kraken
 TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
 TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?

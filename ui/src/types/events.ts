@@ -2,7 +2,7 @@ import type { ColumnKey } from "@/consts";
 
 export type Account = {
   accountChainId: string;
-  name: string;
+  displayName: string;
   skipSync: boolean;
 };
 

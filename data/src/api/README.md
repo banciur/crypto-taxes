@@ -17,5 +17,6 @@
 
 - `EventOrigin` (`location` + `external_id`) is the stable raw-event identity across API and UI.
 - Path-based delete routes that address raw events should be keyed by `EventOrigin`.
-- `GET /accounts` returns the merged wallet + system exchange catalog. Records expose `account_chain_id`, `name`, and `skip_sync`.
+- `GET /accounts` returns the merged wallet + system exchange catalog. Records expose `account_chain_id`, `display_name`, and `skip_sync`.
+- Multi-location configured wallets are expanded into one record per location, with `display_name` suffixed as `<configured name>:<first 3 lowercase letters of location>` (for example `Farming:eth`).
 - Keep snake_case at the Python boundary; the UI API modules handle camelCase translation on the TypeScript side.

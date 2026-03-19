@@ -130,7 +130,7 @@ def test_registry_resolves_owned_account_chain_ids(tmp_path: Path) -> None:
     assert resolved is not None
     assert str(resolved) == f"{LOCATION}:{ETH_ADDRESS}"
     assert registry.is_owned(resolved)
-    assert registry.name_for(resolved) == "Primary"
+    assert registry.display_name_for(resolved) == "Primary"
     assert location_address_from_account_chain_id(resolved) == (
         LOCATION,
         ETH_ADDRESS,
@@ -148,8 +148,8 @@ def test_registry_includes_default_system_accounts() -> None:
 
     registry = AccountRegistry([wallet_account])
 
-    assert registry.name_for(COINBASE_ACCOUNT_ID) == COINBASE_ACCOUNT_NAME
-    assert registry.name_for(KRAKEN_ACCOUNT_ID) == KRAKEN_ACCOUNT_NAME
+    assert registry.display_name_for(COINBASE_ACCOUNT_ID) == COINBASE_ACCOUNT_NAME
+    assert registry.display_name_for(KRAKEN_ACCOUNT_ID) == KRAKEN_ACCOUNT_NAME
     assert (
         registry.resolve_owned_id(
             location=EventLocation.COINBASE,
@@ -208,7 +208,33 @@ def test_registry_rejects_duplicate_merged_account_chain_id() -> None:
             system_accounts=[
                 AccountRecord(
                     account_chain_id=duplicate_account_chain_id,
-                    name="Duplicate",
+                    display_name="Duplicate",
                 )
             ],
         )
+
+
+def test_registry_uses_location_suffix_for_multi_location_display_names() -> None:
+    address = WalletAddress("0x4838b106fce9647bdf1e7877bf73ce8b0bad5f97")
+    account = AccountConfig(
+        name="Farming",
+        address=address,
+        locations=frozenset(
+            {
+                EventLocation.ETHEREUM,
+                EventLocation.ARBITRUM,
+                EventLocation.OPTIMISM,
+                EventLocation.BASE,
+            }
+        ),
+        skip_sync=False,
+    )
+
+    registry = AccountRegistry([account], system_accounts=())
+
+    assert [record.display_name for record in registry.records()] == [
+        "Farming:arb",
+        "Farming:bas",
+        "Farming:eth",
+        "Farming:opt",
+    ]

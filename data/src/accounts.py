@@ -25,7 +25,7 @@ class AccountConfig(StrictBaseModel):
 
 class AccountRecord(StrictBaseModel):
     account_chain_id: AccountChainId
-    name: str
+    display_name: str
     skip_sync: bool = False
 
 
@@ -53,11 +53,11 @@ KRAKEN_ACCOUNT_ID = account_chain_id_for(
 DEFAULT_SYSTEM_ACCOUNTS: tuple[AccountRecord, ...] = (
     AccountRecord(
         account_chain_id=COINBASE_ACCOUNT_ID,
-        name=COINBASE_ACCOUNT_NAME,
+        display_name=COINBASE_ACCOUNT_NAME,
     ),
     AccountRecord(
         account_chain_id=KRAKEN_ACCOUNT_ID,
-        name=KRAKEN_ACCOUNT_NAME,
+        display_name=KRAKEN_ACCOUNT_NAME,
     ),
 )
 
@@ -108,7 +108,7 @@ class AccountRegistry:
                     f"Duplicate account_chain_id {system_account.account_chain_id} in merged account registry."
                 )
             self._by_account_chain_id[system_account.account_chain_id] = system_account
-            reserved_system_names.add(system_account.name.casefold())
+            reserved_system_names.add(system_account.display_name.casefold())
             self._system_account_ids.add(system_account.account_chain_id)
 
         for account in accounts:
@@ -124,7 +124,9 @@ class AccountRegistry:
 
                 self._by_account_chain_id[account_chain_id] = AccountRecord(
                     account_chain_id=account_chain_id,
-                    name=account.name,
+                    display_name=(
+                        account.name if len(account.locations) == 1 else f"{account.name}:{location.value[:3].lower()}"
+                    ),
                     skip_sync=account.skip_sync,
                 )
 
@@ -142,11 +144,11 @@ class AccountRegistry:
     def is_owned(self, account_chain_id: AccountChainId) -> bool:
         return account_chain_id in self._by_account_chain_id
 
-    def name_for(self, account_chain_id: AccountChainId) -> str | None:
+    def display_name_for(self, account_chain_id: AccountChainId) -> str | None:
         record = self._by_account_chain_id.get(account_chain_id)
         if record is None:
             return None
-        return record.name
+        return record.display_name
 
     def records(self) -> list[AccountRecord]:
         return list(self._by_account_chain_id.values())

@@ -30,7 +30,7 @@
 - `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
 - `src/components/LaneItem.tsx` dispatches each lane item to its visual component such as `EventCard`, `SeedCorrectionItem`, or `SpamCorrectionItem`.
 - `src/components/EventCard.tsx` is the shared card UI for raw and corrected ledger events.
-- `src/contexts/AccountNamesContext.tsx` exposes both the full merged account dataset and name-resolution helpers to client components.
+- `src/contexts/AccountNamesContext.tsx` exposes the merged account dataset plus account-label resolution helpers to client components.
 
 ## Architecture and Integration
 
@@ -44,7 +44,7 @@
 
 - Base URL comes from `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000`).
 - UI-specific expectations from that contract:
-  - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `name`, and `skip_sync`.
+  - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
   - Replacement correction mutations refresh the server-rendered lane data after they are complete.
   - Spam correction mutations are keyed by `EventOrigin`, with delete using the path-based raw-event identity route.
   - After manual spam or replacement correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.

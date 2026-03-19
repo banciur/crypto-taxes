@@ -6,7 +6,7 @@ import { clsx } from "clsx";
 import { CorrectionItem } from "@/components/CorrectionItem";
 import { CorrectionRemoveButton } from "@/components/CorrectionRemoveButton";
 import { OriginId } from "@/components/OriginId";
-import { useAccountNameResolver } from "@/contexts/AccountNamesContext";
+import { useAccountNames } from "@/contexts/AccountNamesContext";
 import type { LedgerLeg, ReplacementCorrectionItemData } from "@/types/events";
 import styles from "./EventCard.module.css";
 
@@ -33,7 +33,7 @@ export function ReplacementCorrectionItem({
   onRemove,
 }: ReplacementCorrectionItemProps) {
   const { id, timestamp, sources, legs } = item;
-  const resolveAccountName = useAccountNameResolver();
+  const { resolveAccountName } = useAccountNames();
   const action = (
     <CorrectionRemoveButton
       label={`Remove replacement correction ${id}`}

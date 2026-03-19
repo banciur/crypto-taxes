@@ -13,8 +13,7 @@ import {
 } from "react-bootstrap";
 
 import {
-  useAccounts,
-  useAccountNameResolver,
+  useAccountNames,
 } from "@/contexts/AccountNamesContext";
 import type {
   CreateReplacementCorrectionPayload,
@@ -111,8 +110,7 @@ export function ReplacementEditorModal({
   onHide,
   onSubmit,
 }: ReplacementEditorModalProps) {
-  const accounts = useAccounts();
-  const resolveAccountName = useAccountNameResolver();
+  const { accounts, resolveAccountName } = useAccountNames();
   const initialTimestamp = latestSourceTimestamp(selectedSourceEvents);
   const [timestampDate, setTimestampDate] = useState(() =>
     initialTimestamp ? formatUtcDateInput(initialTimestamp) : "",
@@ -131,7 +129,7 @@ export function ReplacementEditorModal({
     () =>
       [...accounts].sort(
         (left, right) =>
-          left.name.localeCompare(right.name) ||
+          left.displayName.localeCompare(right.displayName) ||
           left.accountChainId.localeCompare(right.accountChainId),
       ),
     [accounts],
@@ -332,7 +330,7 @@ export function ReplacementEditorModal({
                           key={account.accountChainId}
                           value={account.accountChainId}
                         >
-                          {account.name} ({account.accountChainId})
+                          {account.displayName}
                         </option>
                       ))}
                     </Form.Select>

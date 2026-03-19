@@ -2,9 +2,9 @@ import { performance } from "node:perf_hooks";
 
 import { Col, Container, Row } from "react-bootstrap";
 
+import { getAccounts } from "@/api/accounts";
 import { COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
-import { loadAccounts } from "@/lib/accounts";
 import {
   dayKeyForTimestampBucket,
   timestampBucketKeyFor,
@@ -52,7 +52,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   const accountsLoadStart = performance.now();
-  const accounts = await loadAccounts();
+  const accounts = await getAccounts();
 
   const columnsLoadStart = performance.now();
   console.log(

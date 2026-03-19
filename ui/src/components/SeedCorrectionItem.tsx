@@ -4,7 +4,7 @@ import { ListGroup, ListGroupItem } from "react-bootstrap";
 
 import { clsx } from "clsx";
 import { CorrectionItem } from "@/components/CorrectionItem";
-import { useAccountNameResolver } from "@/contexts/AccountNamesContext";
+import { useAccountNames } from "@/contexts/AccountNamesContext";
 import type { LedgerLeg, SeedCorrectionItemData } from "@/types/events";
 import styles from "./EventCard.module.css";
 
@@ -25,7 +25,7 @@ const legQuantityClassName = (leg: LedgerLeg) => {
 
 export function SeedCorrectionItem({ item }: SeedCorrectionItemProps) {
   const { timestamp, legs } = item;
-  const resolveAccountName = useAccountNameResolver();
+  const { resolveAccountName } = useAccountNames();
 
   return (
     <CorrectionItem

@@ -14,7 +14,7 @@ import { clsx } from "clsx";
 import styles from "./EventCard.module.css";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
-import { useAccountNameResolver } from "@/contexts/AccountNamesContext";
+import { useAccountNames } from "@/contexts/AccountNamesContext";
 import type {
   CorrectedEventCardData,
   LedgerLeg,
@@ -35,7 +35,7 @@ export function EventCard({
   selectionDisabled = false,
 }: EventCardProps) {
   const { timestamp, eventOrigin, legs } = event;
-  const resolveAccountName = useAccountNameResolver();
+  const { resolveAccountName } = useAccountNames();
   const place = eventOrigin.location.toLowerCase();
   const originId = eventOrigin.externalId;
   const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
