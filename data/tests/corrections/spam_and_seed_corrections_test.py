@@ -4,11 +4,12 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
+from accounts import KRAKEN_ACCOUNT_ID
 from corrections.seed_events import apply_seed_event_corrections
 from corrections.spam import apply_spam_corrections
 from domain.correction import SeedEvent, Spam
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
-from tests.constants import BTC, KRAKEN_WALLET
+from tests.constants import BTC
 
 
 def _raw_event(*, external_id: str, hour: int) -> LedgerEvent:
@@ -17,7 +18,7 @@ def _raw_event(*, external_id: str, hour: int) -> LedgerEvent:
         timestamp=datetime(2024, 1, 1, hour, 0, tzinfo=timezone.utc),
         event_origin=EventOrigin(location=EventLocation.ARBITRUM, external_id=external_id),
         ingestion="moralis",
-        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False)],
     )
 
 
@@ -27,7 +28,7 @@ def test_spam_filter_runs_before_seed_event_merge() -> None:
     seed_event = SeedEvent(
         timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc),
         price_per_token=Decimal("0"),
-        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("0.5"), account_chain_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("0.5"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False)],
     )
 
     filtered = list(

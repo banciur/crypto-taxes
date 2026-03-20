@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Mapping
 
-from importers.coinbase import COINBASE_ACCOUNT_ID, CoinbaseImporter
+from accounts import COINBASE_ACCOUNT_ID
+from importers.coinbase import CoinbaseImporter
 from services.coinbase import CoinbaseAccountHistory
 from services.moralis import SyncMode
 

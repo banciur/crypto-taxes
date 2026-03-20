@@ -7,10 +7,11 @@ from uuid import uuid4
 
 import pytest
 
+from accounts import KRAKEN_ACCOUNT_ID
 from corrections.validation import CorrectionValidationError, validate_ingestion_corrections
 from domain.correction import Replacement, Spam
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
-from tests.constants import BTC, ETH, KRAKEN_WALLET, LEDGER_WALLET
+from tests.constants import BTC, ETH, LEDGER_WALLET
 
 
 def _raw_event(*, location: EventLocation, external_id: str, hour: int) -> LedgerEvent:
@@ -19,7 +20,7 @@ def _raw_event(*, location: EventLocation, external_id: str, hour: int) -> Ledge
         timestamp=datetime(2024, 1, 1, hour, 0, tzinfo=timezone.utc),
         event_origin=EventOrigin(location=location, external_id=external_id),
         ingestion="raw_ingestion",
-        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False)],
     )
 
 
@@ -28,9 +29,9 @@ def _replacement(*, timestamp_hour: int, sources: list[EventOrigin]) -> Replacem
         timestamp=datetime(2024, 1, 1, timestamp_hour, 30, tzinfo=timezone.utc),
         sources=sources,
         legs=[
-            LedgerLeg(asset_id=BTC, quantity=Decimal("-0.1"), account_chain_id=KRAKEN_WALLET),
+            LedgerLeg(asset_id=BTC, quantity=Decimal("-0.1"), account_chain_id=KRAKEN_ACCOUNT_ID),
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.09995"), account_chain_id=LEDGER_WALLET),
-            LedgerLeg(asset_id=ETH, quantity=Decimal("-0.001"), account_chain_id=KRAKEN_WALLET, is_fee=True),
+            LedgerLeg(asset_id=ETH, quantity=Decimal("-0.001"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=True),
         ],
     )
 

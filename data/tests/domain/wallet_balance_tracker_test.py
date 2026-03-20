@@ -2,14 +2,15 @@ from decimal import Decimal
 
 import pytest
 
+from accounts import KRAKEN_ACCOUNT_ID
 from domain.wallet_balance_tracker import WalletBalanceError, WalletBalanceTracker
-from tests.constants import BTC, ETH, KRAKEN_WALLET, LEDGER_WALLET, OUTSIDE_WALLET, SPOT_WALLET
+from tests.constants import BTC, ETH, LEDGER_WALLET, OUTSIDE_WALLET, SPOT_WALLET
 
 
 def test_wallet_balance_tracker_updates_balances() -> None:
     tracker = WalletBalanceTracker()
     asset_id = ETH
-    account_chain_id = KRAKEN_WALLET
+    account_chain_id = KRAKEN_ACCOUNT_ID
 
     starting_quantity = Decimal("1.5")
     tracker.apply_movement(asset_id=asset_id, account_chain_id=account_chain_id, quantity=starting_quantity)
@@ -40,15 +41,15 @@ def test_asset_balances_for_filters_wallets() -> None:
     btc_kraken = Decimal("0.2")
 
     # "My" wallets
-    tracker.apply_movement(asset_id=ETH, account_chain_id=KRAKEN_WALLET, quantity=eth_kraken)
+    tracker.apply_movement(asset_id=ETH, account_chain_id=KRAKEN_ACCOUNT_ID, quantity=eth_kraken)
     tracker.apply_movement(asset_id=ETH, account_chain_id=SPOT_WALLET, quantity=eth_spot)
-    tracker.apply_movement(asset_id=BTC, account_chain_id=KRAKEN_WALLET, quantity=btc_kraken)
+    tracker.apply_movement(asset_id=BTC, account_chain_id=KRAKEN_ACCOUNT_ID, quantity=btc_kraken)
 
     # "Other" wallets"
     tracker.apply_movement(asset_id=ETH, account_chain_id=OUTSIDE_WALLET, quantity=Decimal("0.3"))
     tracker.apply_movement(asset_id=BTC, account_chain_id=LEDGER_WALLET, quantity=Decimal("0.5"))
 
-    totals = tracker.asset_balances_for({KRAKEN_WALLET, SPOT_WALLET})
+    totals = tracker.asset_balances_for({KRAKEN_ACCOUNT_ID, SPOT_WALLET})
 
     assert totals[ETH] == eth_kraken + eth_spot
     assert totals[BTC] == btc_kraken

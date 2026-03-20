@@ -15,18 +15,22 @@
 ### Supported actions
 
 - Users can select one or more event cards and mark them as spam.
+- Users can select one or more raw-backed event cards and create a replacement correction from those selected sources.
 - Users can remove an existing spam marker from the `Corrections` lane.
+- Users can remove an existing replacement correction from the `Corrections` lane.
 - The date chooser scrolls the main timeline to the selected day.
 - The column chooser controls which lanes are loaded and rendered.
 
 ## UI Structure
 
-- `src/app/page.tsx` loads the selected columns, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
+- `src/app/page.tsx` loads the selected columns, loads the merged accounts catalog from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
 - `src/components/Events/` owns event selection state, spam marker actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
+- `src/components/Events/ReplacementEditorModal.tsx` owns the structured replacement-creation form, including UTC timestamp editing and leg authoring.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
 - `src/components/LaneItem.tsx` dispatches each lane item to its visual component such as `EventCard`, `SeedCorrectionItem`, or `SpamCorrectionItem`.
 - `src/components/EventCard.tsx` is the shared card UI for raw and corrected ledger events.
+- `src/contexts/AccountNamesContext.tsx` exposes the merged account dataset plus account-label resolution helpers to client components.
 
 ## Architecture and Integration
 
@@ -39,12 +43,18 @@
 ### API contract
 
 - Base URL comes from `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000`).
-- Current endpoints:
-  - `GET /raw-events`
-  - `GET /seed-events`
-  - `GET /corrected-events`
-  - `GET /accounts`
-  - `GET | POST | DELETE /spam-corrections`
+- UI-specific expectations from that contract:
+  - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
+  - Ledger leg quantities remain string-backed decimal values at the API boundary.
+  - Replacement correction mutations refresh the server-rendered lane data after they are complete.
+  - Spam correction mutations are keyed by `EventOrigin`, with delete using the path-based raw-event identity route.
+  - After manual spam or replacement correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.
+
+### Decimal handling
+
+- Keep backend decimal values as strings in shared UI types and API modules. Do not convert them to native `Number` values at the boundary.
+- When UI code needs to format, normalize, validate, or inspect the sign or zero state of decimal values, use shared helpers in `src/lib/decimalStrings.ts`.
+- When rendering ledger leg quantities, use `src/lib/ledgerLegQuantity.ts` so quantity formatting and sign-based presentation stay consistent across components.
 
 ## Technical Workflow
 

@@ -29,20 +29,22 @@ type TimelineRow = DayHeaderRow | EventBucketRow;
 
 type VirtualizedDateSectionsProps = {
   eventsByTimestamp: EventsByTimestamp;
-  selectedEvents: ReadonlyMap<string, EventOrigin>;
-  isSpamMarkerChangePending: boolean;
+  selectedEventOriginKeys: ReadonlySet<string>;
+  isCorrectionChangePending: boolean;
   className?: string;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
+  onRemoveReplacementCorrection: (correctionId: string) => void;
 };
 
 export function VirtualizedDateSections({
   eventsByTimestamp,
-  selectedEvents,
-  isSpamMarkerChangePending,
+  selectedEventOriginKeys,
+  isCorrectionChangePending,
   className,
   onToggleEventSelection,
   onRemoveSpamCorrection,
+  onRemoveReplacementCorrection,
 }: VirtualizedDateSectionsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { activeDayKey, activeDaySource, setActiveDayKey } = useVisibleDay();
@@ -168,10 +170,11 @@ export function VirtualizedDateSections({
               ) : (
                 <EventDateSection
                   itemsByColumn={row.itemsByColumn}
-                  selectedEvents={selectedEvents}
-                  isSpamMarkerChangePending={isSpamMarkerChangePending}
+                  selectedEventOriginKeys={selectedEventOriginKeys}
+                  isCorrectionChangePending={isCorrectionChangePending}
                   onToggleEventSelection={onToggleEventSelection}
                   onRemoveSpamCorrection={onRemoveSpamCorrection}
+                  onRemoveReplacementCorrection={onRemoveReplacementCorrection}
                 />
               )}
             </Row>

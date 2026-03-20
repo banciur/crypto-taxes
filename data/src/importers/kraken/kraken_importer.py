@@ -10,13 +10,13 @@ from typing import Iterable
 
 from pydantic import field_validator
 
+from accounts import KRAKEN_ACCOUNT_ID
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from pydantic_base import StrictBaseModel
 from utils.misc import ensure_utc_datetime
 
 logger = logging.getLogger(__name__)
 KRAKEN_INGESTION_SOURCE = "kraken_ledger_csv"
-KRAKEN_ACCOUNT_ID = AccountChainId("kraken")
 
 ASSET_ALIASES = {
     "DOT28.S": "DOT",

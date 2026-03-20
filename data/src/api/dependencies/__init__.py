@@ -3,6 +3,7 @@ from typing import Annotated, Generator
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
+from db.corrections_replacement import ReplacementCorrectionRepository
 from db.corrections_spam import SpamCorrectionRepository
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository, SeedEventRepository
 
@@ -35,3 +36,9 @@ def get_spam_correction_repository(
     session: Annotated[Session, Depends(get_corrections_session)],
 ) -> SpamCorrectionRepository:
     return SpamCorrectionRepository(session)
+
+
+def get_replacement_correction_repository(
+    session: Annotated[Session, Depends(get_corrections_session)],
+) -> ReplacementCorrectionRepository:
+    return ReplacementCorrectionRepository(session)

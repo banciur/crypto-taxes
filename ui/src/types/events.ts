@@ -1,10 +1,10 @@
 import type { ColumnKey } from "@/consts";
 
+export type DecimalString = string;
+
 export type Account = {
   accountChainId: string;
-  name: string;
-  chain: string;
-  address: string;
+  displayName: string;
   skipSync: boolean;
 };
 
@@ -13,15 +13,29 @@ export type EventOrigin = {
   externalId: string;
 };
 
-export type SpamCorrection = {
+type ItemBase = {
   id: string;
-  eventOrigin: EventOrigin;
   timestamp: string;
 };
 
-export type SeedEvent = {
-  id: string;
+export type SpamCorrection = ItemBase & {
+  eventOrigin: EventOrigin;
+};
+
+export type ReplacementCorrection = ItemBase & {
+  sources: EventOrigin[];
+  legs: LedgerLeg[];
+};
+
+export type ReplacementCorrectionDraftLeg = Omit<LedgerLeg, "id">;
+
+export type CreateReplacementCorrectionPayload = {
   timestamp: string;
+  sources: EventOrigin[];
+  legs: ReplacementCorrectionDraftLeg[];
+};
+
+export type SeedEvent = ItemBase & {
   pricePerToken: string;
   legs: LedgerLeg[];
 };
@@ -30,51 +44,42 @@ export type LedgerLeg = {
   id: string;
   assetId: string;
   accountChainId: string;
-  quantity: string;
+  quantity: DecimalString;
   isFee: boolean;
 };
 
-export type LedgerEvent = {
-  id: string;
-  timestamp: string;
+export type LedgerEvent = ItemBase & {
   eventOrigin: EventOrigin;
   ingestion: string;
   legs: LedgerLeg[];
 };
 
-type ItemBase = {
-  id: string;
-  timestamp: string;
-};
-
-export type EventCardDisplayData = ItemBase & {
-  eventOrigin: EventOrigin;
-  legs: LedgerLeg[];
-};
-
-export type RawEventCardData = EventCardDisplayData & {
+export type RawEventCardData = LedgerEvent & {
   kind: "raw-event";
 };
 
-export type CorrectedEventCardData = EventCardDisplayData & {
+export type CorrectedEventCardData = LedgerEvent & {
   kind: "corrected-event";
 };
 
-export type SeedCorrectionItemData = ItemBase & {
+export type SeedCorrectionItemData = SeedEvent & {
   kind: "seed-correction";
-  legs: LedgerLeg[];
 };
 
-export type SpamCorrectionItemData = ItemBase & {
+export type SpamCorrectionItemData = SpamCorrection & {
   kind: "spam-correction";
-  eventOrigin: EventOrigin;
+};
+
+export type ReplacementCorrectionItemData = ReplacementCorrection & {
+  kind: "replacement-correction";
 };
 
 export type LaneItemData =
   | RawEventCardData
   | CorrectedEventCardData
   | SeedCorrectionItemData
-  | SpamCorrectionItemData;
+  | SpamCorrectionItemData
+  | ReplacementCorrectionItemData;
 
 export type EventsByTimestamp = Record<
   string,

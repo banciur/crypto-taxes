@@ -2,28 +2,44 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-type AccountNamesById = Record<string, string>;
-type GetAccountName = (accountChainId: string) => string;
+import type { Account } from "@/types/events";
 
-const AccountNamesContext = createContext<AccountNamesById | undefined>(
+type AccountCatalog = {
+  accounts: readonly Account[];
+  resolveAccountName: (accountChainId: string) => string;
+};
+
+const AccountNamesContext = createContext<AccountCatalog | undefined>(
   undefined,
 );
 
 export function AccountNamesProvider({
-  accountNamesById,
+  accounts,
   children,
 }: {
-  accountNamesById: AccountNamesById;
+  accounts: Account[];
   children: ReactNode;
 }) {
+  const value = useMemo<AccountCatalog>(() => {
+    const accountNamesById = Object.fromEntries(
+      accounts.map((account) => [account.accountChainId, account.displayName]),
+    );
+
+    return {
+      accounts,
+      resolveAccountName: (accountChainId: string) =>
+        accountNamesById[accountChainId] ?? accountChainId,
+    };
+  }, [accounts]);
+
   return (
-    <AccountNamesContext.Provider value={accountNamesById}>
+    <AccountNamesContext.Provider value={value}>
       {children}
     </AccountNamesContext.Provider>
   );
 }
 
-export function useAccountNames(): AccountNamesById {
+export function useAccountNames(): AccountCatalog {
   const context = useContext(AccountNamesContext);
 
   if (!context) {
@@ -31,14 +47,4 @@ export function useAccountNames(): AccountNamesById {
   }
 
   return context;
-}
-
-export function useAccountNameResolver(): GetAccountName {
-  const accountNamesById = useAccountNames();
-
-  return useMemo(
-    () => (accountChainId: string) =>
-      accountNamesById[accountChainId] ?? accountChainId,
-    [accountNamesById],
-  );
 }

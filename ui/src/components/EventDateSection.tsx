@@ -13,28 +13,31 @@ import type {
   EventsByTimestamp,
   LaneItemData,
 } from "@/types/events";
+import { isSelectableEventItem } from "@/components/Events/selectableEvents";
 
 type EventDateSectionProps = {
   itemsByColumn: EventsByTimestamp[string];
-  selectedEvents: ReadonlyMap<string, EventOrigin>;
-  isSpamMarkerChangePending: boolean;
+  selectedEventOriginKeys: ReadonlySet<string>;
+  isCorrectionChangePending: boolean;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
+  onRemoveReplacementCorrection: (correctionId: string) => void;
 };
 
 const isSelectedEvent = (
   item: LaneItemData,
-  selectedEvents: ReadonlyMap<string, EventOrigin>,
+  selectedEventOriginKeys: ReadonlySet<string>,
 ) =>
-  (item.kind === "raw-event" || item.kind === "corrected-event") &&
-  selectedEvents.has(eventOriginKey(item.eventOrigin));
+  isSelectableEventItem(item) &&
+  selectedEventOriginKeys.has(eventOriginKey(item.eventOrigin));
 
 export function EventDateSection({
   itemsByColumn,
-  selectedEvents,
-  isSpamMarkerChangePending,
+  selectedEventOriginKeys,
+  isCorrectionChangePending,
   onToggleEventSelection,
   onRemoveSpamCorrection,
+  onRemoveReplacementCorrection,
 }: EventDateSectionProps) {
   const { selected } = useUrlColumnSelection();
   const orderedSelectedColumns = useMemo(
@@ -54,10 +57,12 @@ export function EventDateSection({
             <LaneItem
               key={item.id}
               item={item}
-              isSelected={isSelectedEvent(item, selectedEvents)}
-              isSpamMarkerChangePending={isSpamMarkerChangePending}
+              isSelectable={isSelectableEventItem(item)}
+              isSelected={isSelectedEvent(item, selectedEventOriginKeys)}
+              isCorrectionChangePending={isCorrectionChangePending}
               onToggleEventSelection={onToggleEventSelection}
               onRemoveSpamCorrection={onRemoveSpamCorrection}
+              onRemoveReplacementCorrection={onRemoveReplacementCorrection}
             />
           ))}
         </Col>

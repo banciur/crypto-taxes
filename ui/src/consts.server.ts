@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getCorrectedEvents, getRawEvents, getSeedEvents } from "@/api/events";
+import { getReplacementCorrections } from "@/api/replacementCorrections";
 import { getSpamCorrections } from "@/api/spamCorrections";
 import type { LaneItemData } from "@/types/events";
 import type { ColumnKey } from "@/consts";
@@ -15,44 +16,42 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
     load: async () => {
       const events = await getRawEvents();
       return events.map((event) => ({
-        id: event.id,
+        ...event,
         kind: "raw-event" as const,
-        timestamp: event.timestamp,
-        legs: event.legs,
-        eventOrigin: event.eventOrigin,
       }));
-    },
-  },
-  corrections: {
-    load: async () => {
-      const [seedEvents, spamCorrections] = await Promise.all([
-        getSeedEvents(),
-        getSpamCorrections(),
-      ]);
-      return orderByTimestamp([
-        ...seedEvents.map((event) => ({
-          id: event.id,
-          kind: "seed-correction" as const,
-          timestamp: event.timestamp,
-          legs: event.legs,
-        })),
-        ...spamCorrections.map((event) => ({
-          ...event,
-          kind: "spam-correction" as const,
-        })),
-      ]);
     },
   },
   corrected: {
     load: async () => {
       const events = await getCorrectedEvents();
       return events.map((event) => ({
-        id: event.id,
+        ...event,
         kind: "corrected-event" as const,
-        timestamp: event.timestamp,
-        eventOrigin: event.eventOrigin,
-        legs: event.legs,
       }));
+    },
+  },
+  corrections: {
+    load: async () => {
+      const [seedEvents, spamCorrections, replacementCorrections] =
+        await Promise.all([
+          getSeedEvents(),
+          getSpamCorrections(),
+          getReplacementCorrections(),
+        ]);
+      return orderByTimestamp([
+        ...seedEvents.map((event) => ({
+          ...event,
+          kind: "seed-correction" as const,
+        })),
+        ...spamCorrections.map((event) => ({
+          ...event,
+          kind: "spam-correction" as const,
+        })),
+        ...replacementCorrections.map((event) => ({
+          ...event,
+          kind: "replacement-correction" as const,
+        })),
+      ]);
     },
   },
 } as const;

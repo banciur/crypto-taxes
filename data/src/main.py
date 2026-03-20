@@ -6,7 +6,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Sequence
 
-from accounts import AccountRegistry, load_accounts
+from accounts import COINBASE_ACCOUNT_ID, KRAKEN_ACCOUNT_ID, AccountRegistry, load_accounts
 from clients.coinbase import CoinbaseClient
 from clients.moralis import MoralisClient
 from config import (
@@ -36,8 +36,8 @@ from db.tx_cache_moralis import MoralisCacheRepository
 from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import AccountChainId
 from domain.wallet_balance_tracker import WalletBalanceTracker
-from importers.coinbase import COINBASE_ACCOUNT_ID, CoinbaseImporter
-from importers.kraken import KRAKEN_ACCOUNT_ID, KrakenImporter
+from importers.coinbase import CoinbaseImporter
+from importers.kraken import KrakenImporter
 from importers.moralis import MoralisImporter
 from importers.seed_events import load_seed_events
 from services.coinbase import CoinbaseService

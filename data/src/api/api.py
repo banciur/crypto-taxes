@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request, Response
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from accounts import AccountChainRecord, AccountRegistry
+from accounts import AccountRecord, AccountRegistry
 from api.corrections import router as corrections_router
 from api.events import router as events_router
 from config import CORRECTIONS_DB_PATH, DB_PATH
@@ -55,7 +55,7 @@ def create_app(
     fastapi_app.include_router(corrections_router)
 
     @fastapi_app.get("/accounts")
-    def get_accounts() -> list[AccountChainRecord]:
+    def get_accounts() -> list[AccountRecord]:
         return AccountRegistry.from_path().records()
 
     return fastapi_app

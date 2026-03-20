@@ -4,9 +4,10 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
+from accounts import KRAKEN_ACCOUNT_ID
 from domain.inventory import InventoryEngine
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
-from tests.constants import BTC, ETH, EUR, KRAKEN_WALLET, OUTSIDE_WALLET
+from tests.constants import BTC, ETH, EUR, OUTSIDE_WALLET
 from utils.inventory_summary import compute_inventory_summary
 
 
@@ -31,8 +32,8 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
             event_origin=EventOrigin(location=EventLocation.INTERNAL, external_id=f"evt-{uuid4()}"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=btc_lot_one_qty, account_chain_id=KRAKEN_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=btc_lot_one_qty, account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_ACCOUNT_ID),
             ],
         ),
         LedgerEvent(
@@ -40,8 +41,8 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
             event_origin=EventOrigin(location=EventLocation.INTERNAL, external_id=f"evt-{uuid4()}"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=btc_lot_two_qty, account_chain_id=KRAKEN_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=btc_lot_two_qty, account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_ACCOUNT_ID),
             ],
         ),
         LedgerEvent(
@@ -49,8 +50,8 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
             event_origin=EventOrigin(location=EventLocation.INTERNAL, external_id=f"evt-{uuid4()}"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=ETH, quantity=eth_qty, account_chain_id=KRAKEN_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=ETH, quantity=eth_qty, account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_ACCOUNT_ID),
             ],
         ),
     ]
@@ -58,7 +59,7 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
     inventory_engine.process(events)
 
     summary = compute_inventory_summary(
-        {KRAKEN_WALLET},
+        {KRAKEN_ACCOUNT_ID},
         wallet_balance_tracker=inventory_engine._wallet_balances,
         price_provider=price_service,
         as_of=as_of,
@@ -85,8 +86,8 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
             event_origin=EventOrigin(location=EventLocation.INTERNAL, external_id="evt-1"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("1.0"), account_chain_id=KRAKEN_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("1.0"), account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_ACCOUNT_ID),
             ],
         ),
         LedgerEvent(
@@ -103,7 +104,7 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
     inventory_engine.process(events)
 
     summary = compute_inventory_summary(
-        owned_account_chain_ids={KRAKEN_WALLET},
+        owned_account_chain_ids={KRAKEN_ACCOUNT_ID},
         wallet_balance_tracker=inventory_engine._wallet_balances,
         price_provider=price_service,
         as_of=as_of,

@@ -2,10 +2,11 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
+from accounts import KRAKEN_ACCOUNT_ID
 from corrections.seed_events import apply_seed_event_corrections
 from domain.correction import SeedEvent
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
-from tests.constants import BTC, KRAKEN_WALLET
+from tests.constants import BTC
 
 
 def test_apply_seed_event_corrections_merges_without_sorting() -> None:
@@ -13,7 +14,7 @@ def test_apply_seed_event_corrections_merges_without_sorting() -> None:
     seed_quantity = Decimal("0.5")
     seed_event = SeedEvent(
         timestamp=seed_timestamp,
-        legs=[LedgerLeg(asset_id=BTC, quantity=seed_quantity, account_chain_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=seed_quantity, account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False)],
     )
 
     raw_timestamp = datetime(2024, 1, 2, 12, 0, tzinfo=timezone.utc)
@@ -24,7 +25,7 @@ def test_apply_seed_event_corrections_merges_without_sorting() -> None:
         timestamp=raw_timestamp,
         event_origin=EventOrigin(location=EventLocation.KRAKEN, external_id="raw-ext"),
         ingestion="raw_ingestion",
-        legs=[LedgerLeg(asset_id=BTC, quantity=raw_quantity, account_chain_id=KRAKEN_WALLET, is_fee=False)],
+        legs=[LedgerLeg(asset_id=BTC, quantity=raw_quantity, account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False)],
     )
 
     corrected = apply_seed_event_corrections(raw_events=[raw_event], seed_events=[seed_event])

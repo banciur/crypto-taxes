@@ -4,9 +4,10 @@ from decimal import Decimal
 
 import pytest
 
+from accounts import KRAKEN_ACCOUNT_ID
 from domain.inventory import InventoryEngine, InventoryError
 from domain.ledger import AccountChainId, AssetId, LedgerLeg
-from tests.constants import ETH, EUR, KRAKEN_WALLET, LEDGER_WALLET
+from tests.constants import ETH, EUR, LEDGER_WALLET
 from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
 
 WALLET_ID = AccountChainId("wallet")
@@ -148,7 +149,7 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
 
 
 def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) -> None:
-    kraken_wallet = AccountChainId("kraken")
+    kraken_wallet = KRAKEN_ACCOUNT_ID
     hardware_wallet = AccountChainId("ledger")
 
     buy_amount = Decimal("1.5")
@@ -205,7 +206,7 @@ def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) ->
         make_event(
             legs=[
                 LedgerLeg(asset_id=ETH, quantity=Decimal("1.0"), account_chain_id=LEDGER_WALLET),
-                LedgerLeg(asset_id=ETH, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_WALLET),
+                LedgerLeg(asset_id=ETH, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_ACCOUNT_ID),
             ],
         )
     ]
@@ -216,7 +217,7 @@ def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) ->
 
 def test_transfer_with_sufficient_balance_passes(inventory_engine: InventoryEngine) -> None:
     asset_id = ETH
-    source_wallet = KRAKEN_WALLET
+    source_wallet = KRAKEN_ACCOUNT_ID
     destination_wallet = LEDGER_WALLET
     acquired_quantity = Decimal("1.0")
     purchase_cost = Decimal("2000")

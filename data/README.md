@@ -72,3 +72,4 @@
 - `EventOrigin` (`origin_location` + `origin_external_id`) is the stable unique identifier of a raw ledger event. Design event identity and cross-event references around it.
 - Do not design event relationships around transient event UUIDs or leg UUIDs. Those are internal identifiers that may change across re-imports or rebuilds.
 - IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`), but these UUIDs are internal object references, not stable upstream event identity.
+- `AccountRegistry` is the canonical merged account catalog. Keep address-backed wallet resolution (`resolve_owned_id`) separate from built-in system exchange accounts, which are selectable in the UI but do not participate in wallet-address ownership lookup. System account IDs are location-derived (`COINBASE:coinbase`, `KRAKEN:kraken`), so location/address can be recovered from `account_chain_id`.

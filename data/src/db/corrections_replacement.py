@@ -5,6 +5,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, UniqueConstraint, Uuid, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from db.corrections_common import CorrectionsBase
@@ -104,7 +105,11 @@ class ReplacementCorrectionRepository:
             for source in replacement.sources
         ]
         self._session.add(orm_replacement)
-        self._session.commit()
+        try:
+            self._session.commit()
+        except IntegrityError:
+            self._session.rollback()
+            raise
         return replacement
 
     def list(self) -> list[Replacement]:
