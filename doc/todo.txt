@@ -1,19 +1,18 @@
 First stage: compute German taxes
 
-TODO: Corrections, combine and/or modify events (complicated transfers etc). When implementing, think about leftovers from previous changes to the UI:
-  - When hovering over the replacement event highlight raw events that are being replaced (if raw events lane is visible)
-  - Maybe change how sources of replacement are rendered now it's the same as in other items
-  - Review downstream components from Events I have a feeling internal structures are too complicated etc.
-  - Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok.
-  - Review names of components don't like VirtualizedDateSections and others.
-  - Combination of events should be on raw events or corrected. Is it possible that I have to combine raw event with correction?
-
-TODO: I'm not sure about the corrections directory and which code should go where.
-
 TODO: Unify corrections. Spam and seed are just replacements with no entry or no outcome.
+TODO: Add an optional note field to ledger entry (also to correction) and corrected entry
+TODO: For onchain (moralis) add called function name. It will make it more readable.
+TODO: When hovering over the replacement event highlight raw events that are being replaced (if raw events lane is visible)
+TODO: Maybe change how sources of replacement are rendered now it's the same as in other items
+TODO: Review downstream components from Events I have a feeling internal structures are too complicated etc.
+TODO: Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok. Now I think I have partial composition. Still maybe this should be made more verbose
+TODO: I'm not sure about the corrections directory and which code should go where <- probably not needed after previous step
 
 Review the order of todos
 ------------------
+TODO: UI Make component that display ledger legs with colors etc. It will be reused in every component.
+TODO: When displaying legs first wallet, token, amount
 TODO: Revaluate idea of replace selectedEventOriginKeys / getSelectedEvents with one map like it was before.
 TODO: Thing to think about: Should page.tsx transform data to for format that is used by the Events component? It is transformed further there.
 TODO: A lot of duplication in handler of API communication in Event, also not sure about error handling in ui/src/api/core.ts
@@ -21,8 +20,6 @@ TODO: Backups of databases they are starting to contain manual work
 TODO: Need icons for coinbase and kraken
 TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
 TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?
-TODO: Add a optional note field to ledger entry
-TODO: For onchain (moralis) add called function name. It will make it more readable.
 TODO: Implement more sophisitcated logic for tokens to handle this logic when token with same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
 TODO: Review Kraken importer after event type removal and wallets structure changes
 TODO: When turning corrections lane on and off virtualized list gets a bit broken. Something about height computation.

@@ -7,24 +7,14 @@ import { CorrectionItem } from "@/components/CorrectionItem";
 import { CorrectionRemoveButton } from "@/components/CorrectionRemoveButton";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNames } from "@/contexts/AccountNamesContext";
-import type { LedgerLeg, ReplacementCorrectionItemData } from "@/types/events";
+import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
+import type { ReplacementCorrectionItemData } from "@/types/events";
 import styles from "./EventCard.module.css";
 
 type ReplacementCorrectionItemProps = {
   item: ReplacementCorrectionItemData;
   actionDisabled: boolean;
   onRemove: () => void;
-};
-
-const legQuantityClassName = (leg: LedgerLeg) => {
-  if (leg.isFee) {
-    return "text-info";
-  }
-  const quantityValue = Number(leg.quantity);
-  if (quantityValue < 0) {
-    return "text-danger";
-  }
-  return "text-success";
 };
 
 export function ReplacementCorrectionItem({
@@ -61,20 +51,29 @@ export function ReplacementCorrectionItem({
         ))}
       </div>
       <ListGroup variant="flush" className="border rounded">
-        {legs.map((leg) => (
-          <ListGroupItem
-            key={leg.id}
-            className={clsx("d-flex align-items-center gap-1", styles.leg)}
-          >
-            <span>{leg.assetId}</span>
-            <span title={leg.accountChainId}>
-              {resolveAccountName(leg.accountChainId)}
-            </span>
-            <span className={clsx("flex-shrink-0", legQuantityClassName(leg))}>
-              {leg.quantity}
-            </span>
-          </ListGroupItem>
-        ))}
+        {legs.map((leg) => {
+          const quantityPresentation = getLedgerLegQuantityPresentation(leg);
+
+          return (
+            <ListGroupItem
+              key={leg.id}
+              className={clsx("d-flex align-items-center gap-1", styles.leg)}
+            >
+              <span>{leg.assetId}</span>
+              <span title={leg.accountChainId}>
+                {resolveAccountName(leg.accountChainId)}
+              </span>
+              <span
+                className={clsx(
+                  "flex-shrink-0",
+                  quantityPresentation.className,
+                )}
+              >
+                {quantityPresentation.text}
+              </span>
+            </ListGroupItem>
+          );
+        })}
       </ListGroup>
     </CorrectionItem>
   );

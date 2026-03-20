@@ -1,5 +1,7 @@
 import type { ColumnKey } from "@/consts";
 
+export type DecimalString = string;
+
 export type Account = {
   accountChainId: string;
   displayName: string;
@@ -42,7 +44,7 @@ export type LedgerLeg = {
   id: string;
   assetId: string;
   accountChainId: string;
-  quantity: string;
+  quantity: DecimalString;
   isFee: boolean;
 };
 

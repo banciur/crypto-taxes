@@ -15,11 +15,8 @@ import styles from "./EventCard.module.css";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNames } from "@/contexts/AccountNamesContext";
-import type {
-  CorrectedEventCardData,
-  LedgerLeg,
-  RawEventCardData,
-} from "@/types/events";
+import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
+import type { CorrectedEventCardData, RawEventCardData } from "@/types/events";
 
 type EventCardProps = {
   event: RawEventCardData | CorrectedEventCardData;
@@ -44,17 +41,6 @@ export function EventCard({
     minute: "2-digit",
     second: "2-digit",
   });
-  const legQuantityClassName = (leg: LedgerLeg) => {
-    if (leg.isFee) {
-      return "text-info";
-    }
-    const quantityValue = Number(leg.quantity);
-    if (quantityValue < 0) {
-      return "text-danger";
-    } else {
-      return "text-success";
-    }
-  };
   const hasSelectionControl = onSelectionChange !== undefined;
 
   const handleSelectionChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -86,22 +72,29 @@ export function EventCard({
       </CardHeader>
       <CardBody>
         <ListGroup variant="flush" className="border rounded">
-          {legs.map((leg) => (
-            <ListGroupItem
-              key={leg.id}
-              className={clsx("d-flex align-items-center gap-1", styles.leg)}
-            >
-              <span>{leg.assetId}</span>
-              <span title={leg.accountChainId}>
-                {resolveAccountName(leg.accountChainId)}
-              </span>
-              <span
-                className={clsx("flex-shrink-0", legQuantityClassName(leg))}
+          {legs.map((leg) => {
+            const quantityPresentation = getLedgerLegQuantityPresentation(leg);
+
+            return (
+              <ListGroupItem
+                key={leg.id}
+                className={clsx("d-flex align-items-center gap-1", styles.leg)}
               >
-                {leg.quantity}
-              </span>
-            </ListGroupItem>
-          ))}
+                <span>{leg.assetId}</span>
+                <span title={leg.accountChainId}>
+                  {resolveAccountName(leg.accountChainId)}
+                </span>
+                <span
+                  className={clsx(
+                    "flex-shrink-0",
+                    quantityPresentation.className,
+                  )}
+                >
+                  {quantityPresentation.text}
+                </span>
+              </ListGroupItem>
+            );
+          })}
         </ListGroup>
       </CardBody>
     </Card>

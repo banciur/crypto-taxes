@@ -1,4 +1,3 @@
-// This file is completely vibed and I didn't read it.
 "use client";
 
 import { useMemo, useState } from "react";
@@ -13,9 +12,12 @@ import {
   Row,
 } from "react-bootstrap";
 
+import { useAccountNames } from "@/contexts/AccountNamesContext";
 import {
-  useAccountNames,
-} from "@/contexts/AccountNamesContext";
+  formatDecimalString,
+  isNonZeroDecimalString,
+  normalizeDecimalInput,
+} from "@/lib/decimalStrings";
 import type {
   CreateReplacementCorrectionPayload,
   LedgerEvent,
@@ -98,7 +100,7 @@ const buildInitialDraftLegs = (
       createDraftLeg({
         assetId: leg.assetId,
         accountChainId: leg.accountChainId,
-        quantity: leg.quantity,
+        quantity: formatDecimalString(leg.quantity),
         isFee: leg.isFee,
       }),
     );
@@ -182,18 +184,20 @@ export function ReplacementEditorModal({
     for (const leg of draftLegs) {
       const assetId = leg.assetId.trim();
       const accountChainId = leg.accountChainId.trim();
-      const quantity = leg.quantity.trim();
+      const quantityInput = leg.quantity.trim();
 
-      if (!assetId || !accountChainId || !quantity) {
+      if (!assetId || !accountChainId || !quantityInput) {
         setValidationMessage(
           "Each leg must include asset, account, and quantity.",
         );
         return;
       }
 
-      const numericQuantity = Number(quantity);
-      if (Number.isNaN(numericQuantity) || numericQuantity === 0) {
-        setValidationMessage("Each leg quantity must be a non-zero number.");
+      const quantity = normalizeDecimalInput(quantityInput);
+      if (quantity === null || !isNonZeroDecimalString(quantity)) {
+        setValidationMessage(
+          "Each leg quantity must be a valid non-zero decimal.",
+        );
         return;
       }
 
@@ -219,7 +223,7 @@ export function ReplacementEditorModal({
     <Modal
       show={show}
       onHide={isSaving ? undefined : onHide}
-      size="lg"
+      size="xl"
       centered
     >
       <Modal.Header closeButton={!isSaving}>

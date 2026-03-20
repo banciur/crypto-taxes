@@ -45,9 +45,16 @@
 - Base URL comes from `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000`).
 - UI-specific expectations from that contract:
   - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
+  - Ledger leg quantities remain string-backed decimal values at the API boundary.
   - Replacement correction mutations refresh the server-rendered lane data after they are complete.
   - Spam correction mutations are keyed by `EventOrigin`, with delete using the path-based raw-event identity route.
   - After manual spam or replacement correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.
+
+### Decimal handling
+
+- Keep backend decimal values as strings in shared UI types and API modules. Do not convert them to native `Number` values at the boundary.
+- When UI code needs to format, normalize, validate, or inspect the sign or zero state of decimal values, use shared helpers in `src/lib/decimalStrings.ts`.
+- When rendering ledger leg quantities, use `src/lib/ledgerLegQuantity.ts` so quantity formatting and sign-based presentation stay consistent across components.
 
 ## Technical Workflow
 
