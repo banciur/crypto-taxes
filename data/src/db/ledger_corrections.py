@@ -171,8 +171,8 @@ class LedgerCorrectionRepository:
         return LedgerCorrection(
             id=CorrectionId(row.id),
             timestamp=ensure_utc_datetime(row.timestamp),
-            sources=sources,
-            legs=legs,
+            sources=frozenset(sources),
+            legs=frozenset(legs),
             price_per_token=row.price_per_token,
             note=row.note,
         )

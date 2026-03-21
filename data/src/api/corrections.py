@@ -84,8 +84,8 @@ def _build_correction(
     try:
         return LedgerCorrection(
             timestamp=timestamp,
-            sources=payload.sources,
-            legs=payload.legs,
+            sources=frozenset(payload.sources),
+            legs=frozenset(payload.legs),
             price_per_token=payload.price_per_token,
             note=payload.note,
         )

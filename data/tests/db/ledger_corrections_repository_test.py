@@ -23,19 +23,26 @@ from tests.constants import BTC, ETH, LEDGER_WALLET
 def _replacement(timestamp: datetime, external_id: str) -> LedgerCorrection:
     return LedgerCorrection(
         timestamp=timestamp,
-        sources=[EventOrigin(location=EventLocation.ETHEREUM, external_id=external_id)],
-        legs=[
-            LedgerLeg(asset_id=BTC, quantity=Decimal("-0.1"), account_chain_id=KRAKEN_ACCOUNT_ID),
-            LedgerLeg(asset_id=BTC, quantity=Decimal("0.09995"), account_chain_id=LEDGER_WALLET),
-            LedgerLeg(asset_id=ETH, quantity=Decimal("-0.001"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=True),
-        ],
+        sources=frozenset([EventOrigin(location=EventLocation.ETHEREUM, external_id=external_id)]),
+        legs=frozenset(
+            [
+                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.1"), account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("0.09995"), account_chain_id=LEDGER_WALLET),
+                LedgerLeg(
+                    asset_id=ETH,
+                    quantity=Decimal("-0.001"),
+                    account_chain_id=KRAKEN_ACCOUNT_ID,
+                    is_fee=True,
+                ),
+            ]
+        ),
     )
 
 
 def _opening_balance(timestamp: datetime) -> LedgerCorrection:
     return LedgerCorrection(
         timestamp=timestamp,
-        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("0.5"), account_chain_id=LEDGER_WALLET)],
+        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("0.5"), account_chain_id=LEDGER_WALLET)]),
         price_per_token=Decimal("1.23"),
     )
 
@@ -67,8 +74,9 @@ def test_delete_source_backed_soft_deletes_and_keeps_tombstone(
     repo.delete(correction.id)
 
     assert repo.list() == []
-    assert repo.has_source(correction.sources[0]) is False
-    assert repo.has_source(correction.sources[0], include_deleted=True) is True
+    source = next(iter(correction.sources))
+    assert repo.has_source(source) is False
+    assert repo.has_source(source, include_deleted=True) is True
 
     row = corrections_session.get(LedgerCorrectionOrm, correction.id)
     assert row is not None
@@ -103,7 +111,7 @@ def test_manual_create_can_reuse_source_after_tombstone(repo: LedgerCorrectionRe
 
     listed = repo.list()
     assert [correction.id for correction in listed] == [second.id]
-    assert repo.has_source(second.sources[0], include_deleted=True) is True
+    assert repo.has_source(next(iter(second.sources)), include_deleted=True) is True
 
 
 def test_create_rejects_duplicate_active_source(repo: LedgerCorrectionRepository) -> None:

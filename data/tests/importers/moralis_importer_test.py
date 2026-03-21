@@ -251,9 +251,9 @@ def test_load_events_marks_moralis_spam_transactions(test_ctx: _ImporterTestCont
     assert len(events) == 1
     corrections = test_ctx.correction_repo.list()
     assert len(corrections) == 1
-    assert corrections[0].sources == [events[0].event_origin]
+    assert corrections[0].sources == frozenset([events[0].event_origin])
     assert corrections[0].timestamp == events[0].timestamp
-    assert corrections[0].legs == []
+    assert corrections[0].legs == frozenset()
 
 
 def test_load_events_does_not_mark_non_spam_transactions(test_ctx: _ImporterTestContext) -> None:
@@ -275,7 +275,7 @@ def test_load_events_preserves_manual_spam_removals(test_ctx: _ImporterTestConte
     test_ctx.correction_repo.create(
         LedgerCorrection(
             timestamp=event.timestamp,
-            sources=[event_origin],
+            sources=frozenset([event_origin]),
         )
     )
     test_ctx.correction_repo.delete(test_ctx.correction_repo.list()[0].id)

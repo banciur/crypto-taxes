@@ -174,17 +174,19 @@ def test_migrate_legacy_corrections_carries_forward_active_and_deleted_sources(t
     active_spam = next(correction for correction in corrections if str(correction.id) == active_spam_id)
     replacement = next(correction for correction in corrections if str(correction.id) == replacement_id)
     assert active_spam.timestamp == datetime(2024, 2, 1, 10, 0, tzinfo=timezone.utc)
-    assert replacement.sources[0].external_id == "0xreplace"
+    replacement_source = next(iter(replacement.sources))
+    active_spam_source = next(iter(active_spam.sources))
+    assert replacement_source.external_id == "0xreplace"
     assert (
         repo.has_source(
-            event_origin=active_spam.sources[0],
+            event_origin=active_spam_source,
             include_deleted=False,
         )
         is True
     )
     assert (
         repo.has_source(
-            event_origin=type(active_spam.sources[0])(
+            event_origin=type(active_spam_source)(
                 location=EventLocation.ARBITRUM,
                 external_id="0xtombstone",
             ),

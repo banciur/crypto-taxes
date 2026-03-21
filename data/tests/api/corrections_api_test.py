@@ -215,11 +215,11 @@ def test_get_lists_persisted_corrections_in_desc_order(
 ) -> None:
     older = LedgerCorrection(
         timestamp=datetime(2024, 2, 1, 12, 0, tzinfo=timezone.utc),
-        legs=[LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)],
+        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
     )
     newer = LedgerCorrection(
         timestamp=datetime(2024, 2, 2, 12, 0, tzinfo=timezone.utc),
-        sources=[EventOrigin(location=EventLocation.BASE, external_id="0xorphan")],
+        sources=frozenset([EventOrigin(location=EventLocation.BASE, external_id="0xorphan")]),
     )
     persist_correction(older)
     persist_correction(newer)

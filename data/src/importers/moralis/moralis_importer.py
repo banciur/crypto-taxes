@@ -131,7 +131,7 @@ class MoralisImporter:
                 self.correction_repository.create(
                     LedgerCorrection(
                         timestamp=event.timestamp,
-                        sources=[event.event_origin],
+                        sources=frozenset([event.event_origin]),
                     )
                 )
 
