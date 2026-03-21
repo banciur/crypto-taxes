@@ -17,7 +17,7 @@
     "clsx": "2.1.1",
     "decamelize-keys": "^2.0.1",
     "decimal.js": "^10.6.0",
-    "next": "16.1.0",
+    "next": "16.1.7",
     "react": "19.2.1",
     "react-bootstrap": ">=3.0.0-beta.5 <4.0.0",
     "react-dom": "19.2.1"
