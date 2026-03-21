@@ -211,14 +211,19 @@ export function ReplacementEditorModal({
     }
 
     setValidationMessage(null);
-    await onSubmit({
+    const payload: CreateLedgerCorrectionPayload = {
       timestamp,
       sources: selectedSourceEvents.map(
         (sourceEvent) => sourceEvent.eventOrigin,
       ),
       legs: normalizedLegs,
-      note: note.trim() || null,
-    });
+    };
+    const trimmedNote = note.trim();
+    if (trimmedNote) {
+      payload.note = trimmedNote;
+    }
+
+    await onSubmit(payload);
   };
 
   return (

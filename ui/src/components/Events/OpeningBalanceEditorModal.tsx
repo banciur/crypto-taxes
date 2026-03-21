@@ -128,13 +128,20 @@ export function OpeningBalanceEditorModal({
     ];
 
     setValidationMessage(null);
-    await onSubmit({
+    const payload: CreateLedgerCorrectionPayload = {
       timestamp,
       sources: [],
       legs,
-      pricePerToken: normalizedPricePerToken,
-      note: note.trim() || null,
-    });
+    };
+    if (normalizedPricePerToken !== null) {
+      payload.pricePerToken = normalizedPricePerToken;
+    }
+    const trimmedNote = note.trim();
+    if (trimmedNote) {
+      payload.note = trimmedNote;
+    }
+
+    await onSubmit(payload);
   };
 
   return (

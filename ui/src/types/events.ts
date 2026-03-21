@@ -13,6 +13,24 @@ export type EventOrigin = {
   externalId: string;
 };
 
+export type LedgerLeg = {
+  id: string;
+  assetId: string;
+  accountChainId: string;
+  quantity: DecimalString;
+  isFee: boolean;
+};
+
+export type LedgerCorrectionDraftLeg = Omit<LedgerLeg, "id">;
+
+export type CreateLedgerCorrectionPayload = {
+  timestamp: string;
+  sources: EventOrigin[];
+  legs: LedgerCorrectionDraftLeg[];
+  pricePerToken?: DecimalString;
+  note?: string;
+};
+
 type ItemBase = {
   id: string;
   timestamp: string;
@@ -23,14 +41,6 @@ export type LedgerCorrection = ItemBase & {
   legs: LedgerLeg[];
   pricePerToken: DecimalString | null;
   note: string | null;
-};
-
-export type LedgerLeg = {
-  id: string;
-  assetId: string;
-  accountChainId: string;
-  quantity: DecimalString;
-  isFee: boolean;
 };
 
 export type LedgerEvent = ItemBase & {
@@ -45,16 +55,6 @@ export type RawEventCardData = LedgerEvent & {
 
 export type CorrectedEventCardData = LedgerEvent & {
   kind: "corrected-event";
-};
-
-export type LedgerCorrectionDraftLeg = Omit<LedgerLeg, "id">;
-
-export type CreateLedgerCorrectionPayload = {
-  timestamp: string;
-  sources: EventOrigin[];
-  legs: LedgerCorrectionDraftLeg[];
-  pricePerToken?: DecimalString | null;
-  note?: string | null;
 };
 
 export type CorrectionItemData = LedgerCorrection & {

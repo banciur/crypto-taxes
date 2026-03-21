@@ -54,7 +54,6 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         timestamp: sourceEvent.timestamp,
         sources: [sourceEvent.eventOrigin],
         legs: [],
-        note: null,
       }),
     );
 
