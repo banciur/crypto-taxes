@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Spinner } from "react-bootstrap";
+import { Button } from "react-bootstrap";
 
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
 
@@ -12,7 +12,6 @@ export type EventsActionFeedback = {
 type EventsActionBarProps = {
   selectedEventCount: number;
   isCorrectionChangePending: boolean;
-  isCreatingDiscard: boolean;
   feedback: EventsActionFeedback | null;
   onDiscardSelected: () => void;
   onReplaceSelected: () => void;
@@ -22,7 +21,6 @@ type EventsActionBarProps = {
 export function EventsActionBar({
   selectedEventCount,
   isCorrectionChangePending,
-  isCreatingDiscard,
   feedback,
   onDiscardSelected,
   onReplaceSelected,
@@ -51,21 +49,10 @@ export function EventsActionBar({
               type="button"
               size="sm"
               variant="warning"
-              disabled={
-                selectedEventCount === 0 ||
-                isCreatingDiscard ||
-                isCorrectionChangePending
-              }
+              disabled={selectedEventCount === 0 || isCorrectionChangePending}
               onClick={onDiscardSelected}
             >
-              {isCreatingDiscard ? (
-                <>
-                  <Spinner size="sm" className="me-2" />
-                  Saving...
-                </>
-              ) : (
-                "Discard selected"
-              )}
+              Discard selected
             </Button>
             <Button
               type="button"
@@ -78,17 +65,15 @@ export function EventsActionBar({
             </Button>
           </>
         )}
-        {hasCorrectionsColumn && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline-primary"
-            disabled={isCorrectionChangePending}
-            onClick={onAddOpeningBalance}
-          >
-            Add opening balance
-          </Button>
-        )}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline-primary"
+          disabled={isCorrectionChangePending}
+          onClick={onAddOpeningBalance}
+        >
+          Add opening balance
+        </Button>
         {feedback && (
           <span
             className={

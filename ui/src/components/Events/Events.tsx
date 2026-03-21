@@ -24,11 +24,8 @@ type EventsProps = {
 
 export function Events({ eventsByTimestamp }: EventsProps) {
   const router = useRouter();
-  const [isCreatingDiscard, setIsCreatingDiscard] = useState(false);
+  const [isCreatingCorrection, setIsCreatingCorrection] = useState(false);
   const [isRemovingCorrection, setIsRemovingCorrection] = useState(false);
-  const [isCreatingReplacement, setIsCreatingReplacement] = useState(false);
-  const [isCreatingOpeningBalance, setIsCreatingOpeningBalance] =
-    useState(false);
   const [isReplacementEditorOpen, setIsReplacementEditorOpen] = useState(false);
   const [isOpeningBalanceEditorOpen, setIsOpeningBalanceEditorOpen] =
     useState(false);
@@ -47,9 +44,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
   } = useEventSelection(eventsByTimestamp);
 
   const handleCreateDiscards = useCallback(async () => {
-    const selectedSourceEvents = getSelectedEvents();
-
-    const payloads: CreateLedgerCorrectionPayload[] = selectedSourceEvents.map(
+    const payloads: CreateLedgerCorrectionPayload[] = getSelectedEvents().map(
       (sourceEvent) => ({
         timestamp: sourceEvent.timestamp,
         sources: [sourceEvent.eventOrigin],
@@ -58,13 +53,10 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     );
 
     setFeedback(null);
-    setIsCreatingDiscard(true);
+    setIsCreatingCorrection(true);
 
-    const results = await Promise.allSettled(
-      payloads.map((payload) => createCorrection(payload)),
-    );
-
-    setIsCreatingDiscard(false);
+    const results = await Promise.allSettled(payloads.map(createCorrection));
+    setIsCreatingCorrection(false);
 
     const failures = results.flatMap((result) =>
       result.status === "rejected" ? [result.reason] : [],
@@ -90,44 +82,31 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     router.refresh();
   }, [clearEventSelection, getSelectedEvents, router]);
 
-  const handleOpenReplacementEditor = useCallback(() => {
-    const selectedSourceEvents = getSelectedEvents();
-    if (selectedSourceEvents.length === 0) {
-      return;
-    }
-
+  const handleOpenReplacementEditor = () => {
     setReplacementEditorError(null);
     setIsReplacementEditorOpen(true);
-  }, [getSelectedEvents]);
+  };
 
-  const handleCloseReplacementEditor = useCallback(() => {
-    if (isCreatingReplacement) {
-      return;
-    }
-
+  const handleCloseReplacementEditor = () => {
     setReplacementEditorError(null);
     setIsReplacementEditorOpen(false);
-  }, [isCreatingReplacement]);
+  };
 
   const handleOpenOpeningBalanceEditor = useCallback(() => {
     setOpeningBalanceEditorError(null);
     setIsOpeningBalanceEditorOpen(true);
   }, []);
 
-  const handleCloseOpeningBalanceEditor = useCallback(() => {
-    if (isCreatingOpeningBalance) {
-      return;
-    }
-
+  const handleCloseOpeningBalanceEditor = () => {
     setOpeningBalanceEditorError(null);
     setIsOpeningBalanceEditorOpen(false);
-  }, [isCreatingOpeningBalance]);
+  };
 
   const handleCreateReplacement = useCallback(
     async (payload: CreateLedgerCorrectionPayload) => {
       setFeedback(null);
       setReplacementEditorError(null);
-      setIsCreatingReplacement(true);
+      setIsCreatingCorrection(true);
 
       try {
         await createCorrection(payload);
@@ -147,7 +126,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
             : "Saving the replacement failed. Check the console for details.",
         );
       } finally {
-        setIsCreatingReplacement(false);
+        setIsCreatingCorrection(false);
       }
     },
     [clearEventSelection, router],
@@ -157,7 +136,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     async (payload: CreateLedgerCorrectionPayload) => {
       setFeedback(null);
       setOpeningBalanceEditorError(null);
-      setIsCreatingOpeningBalance(true);
+      setIsCreatingCorrection(true);
 
       try {
         await createCorrection(payload);
@@ -176,7 +155,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
             : "Saving the opening balance failed. Check the console for details.",
         );
       } finally {
-        setIsCreatingOpeningBalance(false);
+        setIsCreatingCorrection(false);
       }
     },
     [router],
@@ -210,17 +189,13 @@ export function Events({ eventsByTimestamp }: EventsProps) {
   );
 
   const isCorrectionChangePending =
-    isCreatingDiscard ||
-    isRemovingCorrection ||
-    isCreatingReplacement ||
-    isCreatingOpeningBalance;
+    isCreatingCorrection || isRemovingCorrection;
 
   return (
     <div className="d-flex h-100 w-100 flex-column">
       <EventsActionBar
         selectedEventCount={selectedEventOriginKeys.size}
         isCorrectionChangePending={isCorrectionChangePending}
-        isCreatingDiscard={isCreatingDiscard}
         feedback={feedback}
         onDiscardSelected={handleCreateDiscards}
         onReplaceSelected={handleOpenReplacementEditor}
@@ -230,7 +205,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         <ReplacementEditorModal
           show
           selectedSourceEvents={getSelectedEvents()}
-          isSaving={isCreatingReplacement}
+          isSaving={isCreatingCorrection}
           errorMessage={replacementEditorError}
           onHide={handleCloseReplacementEditor}
           onSubmit={handleCreateReplacement}
@@ -239,7 +214,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       {isOpeningBalanceEditorOpen && (
         <OpeningBalanceEditorModal
           show
-          isSaving={isCreatingOpeningBalance}
+          isSaving={isCreatingCorrection}
           errorMessage={openingBalanceEditorError}
           onHide={handleCloseOpeningBalanceEditor}
           onSubmit={handleCreateOpeningBalance}
