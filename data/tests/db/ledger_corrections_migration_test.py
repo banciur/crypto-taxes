@@ -7,11 +7,11 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import create_engine, text
 
-from db.corrections_common import init_corrections_db
-from db.ledger_corrections import LedgerCorrectionRepository
-from db.ledger_corrections_migration import migrate_legacy_corrections
+from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.models import Base
+from db.session import init_db_session
 from domain.ledger import EventLocation
+from scripts.migrate_ledger_corrections import migrate_legacy_corrections
 
 
 def _create_legacy_tables(corrections_db_path: Path) -> None:
@@ -164,7 +164,11 @@ def test_migrate_legacy_corrections_carries_forward_active_and_deleted_sources(t
 
     migrate_legacy_corrections(main_db_path=main_db_path, corrections_db_path=corrections_db_path)
 
-    corrections_session = init_corrections_db(db_path=corrections_db_path, reset=False)
+    corrections_session = init_db_session(
+        db_path=corrections_db_path,
+        metadata=CorrectionsBase.metadata,
+        reset=False,
+    )
     repo = LedgerCorrectionRepository(corrections_session)
     corrections = repo.list()
 

@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from db.corrections_common import CorrectionsBase
+from db.ledger_corrections import CorrectionsBase
 
 
 @pytest.fixture(scope="function")

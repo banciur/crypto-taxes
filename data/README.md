@@ -21,9 +21,8 @@
 - Wallet balance tracking and insufficient-balance errors: `src/domain/wallet_balance_tracker.py`
 
 ### Corrections persistence and application
-- Corrections DB common setup lives in `src/db/corrections_common.py`.
 - Unified correction persistence lives in `src/db/ledger_corrections.py`.
-- One-off migration from legacy spam/replacement tables lives in `src/db/ledger_corrections_migration.py` with CLI wrapper `scripts/migrate_ledger_corrections.py`.
+- One-off migration from legacy spam/replacement tables lives in `scripts/migrate_ledger_corrections.py`.
 - Ingestion-layer correction application and validation live under `src/corrections/`.
 - Current ingestion correction flow is: validate unified source ownership, remove all claimed raw events, emit synthetic events for corrections with legs, then sort corrected events once before persistence.
 

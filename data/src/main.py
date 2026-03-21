@@ -18,9 +18,8 @@ from config import (
     config,
 )
 from corrections.ingestion import apply_ingestion_corrections
-from db.corrections_common import init_corrections_db
-from db.db import init_db
-from db.ledger_corrections import LedgerCorrectionRepository
+from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
+from db.models import Base
 from db.repositories import (
     AcquisitionLotRepository,
     CorrectedLedgerEventRepository,
@@ -28,6 +27,7 @@ from db.repositories import (
     LedgerEventRepository,
     TaxEventRepository,
 )
+from db.session import init_db_session
 from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
@@ -72,13 +72,17 @@ def run(
 ) -> None:
     # Setup components
     logger.info("Initializing DB at %s", DB_PATH)
-    session = init_db(reset=True, db_path=DB_PATH)
-    corrections_session = init_corrections_db(db_path=CORRECTIONS_DB_PATH, reset=False)
-    event_repository = LedgerEventRepository(session)
-    corrected_event_repository = CorrectedLedgerEventRepository(session)
-    lot_repository = AcquisitionLotRepository(session)
-    disposal_repository = DisposalLinkRepository(session)
-    tax_event_repository = TaxEventRepository(session)
+    events_session = init_db_session(db_path=DB_PATH, metadata=Base.metadata, reset=True)
+    corrections_session = init_db_session(
+        db_path=CORRECTIONS_DB_PATH,
+        metadata=CorrectionsBase.metadata,
+        reset=False,
+    )
+    event_repository = LedgerEventRepository(events_session)
+    corrected_event_repository = CorrectedLedgerEventRepository(events_session)
+    lot_repository = AcquisitionLotRepository(events_session)
+    disposal_repository = DisposalLinkRepository(events_session)
+    tax_event_repository = TaxEventRepository(events_session)
     correction_repository = LedgerCorrectionRepository(corrections_session)
 
     wallet_balance_tracker = WalletBalanceTracker()

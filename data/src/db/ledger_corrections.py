@@ -6,13 +6,16 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Uuid, select, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
-from db.corrections_common import CorrectionsBase
 from db.models import DecimalAsString
 from domain.correction import CorrectionId, LedgerCorrection
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerLeg, LegId
 from utils.misc import ensure_utc_datetime
+
+
+class CorrectionsBase(DeclarativeBase):
+    pass
 
 
 class LedgerCorrectionOrm(CorrectionsBase):

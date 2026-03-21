@@ -10,8 +10,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import sessionmaker
 
 from accounts import AccountConfig, AccountRegistry
-from db.corrections_common import CorrectionsBase
-from db.ledger_corrections import LedgerCorrectionOrm, LedgerCorrectionRepository
+from db.ledger_corrections import CorrectionsBase, LedgerCorrectionOrm, LedgerCorrectionRepository
 from domain.correction import LedgerCorrection
 from domain.ledger import AccountChainId, AssetId
 from importers.moralis.moralis_importer import NATIVE_ASSET_ID, MoralisImporter

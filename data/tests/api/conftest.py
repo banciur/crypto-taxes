@@ -15,8 +15,7 @@ from sqlalchemy.pool import StaticPool
 
 import api.api as api
 from accounts import KRAKEN_ACCOUNT_ID
-from db.corrections_common import CorrectionsBase
-from db.ledger_corrections import LedgerCorrectionRepository
+from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.models import Base
 from db.repositories import LedgerEventRepository
 from domain.correction import LedgerCorrection
