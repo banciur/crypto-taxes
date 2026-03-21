@@ -110,8 +110,8 @@ def test_post_creates_and_get_lists_discard(
     assert created["timestamp"] == payload["timestamp"]
     assert created["sources"] == payload["sources"]
     assert created["legs"] == []
-    assert created["price_per_token"] is None
-    assert created["note"] is None
+    assert "price_per_token" not in created
+    assert "note" not in created
 
     assert list_response.status_code == 200
     assert [item["id"] for item in list_response.json()] == [created["id"]]
@@ -152,6 +152,7 @@ def test_post_creates_replacement(
     assert created["timestamp"] == payload["timestamp"]
     assert created["sources"] == payload["sources"]
     assert len(created["legs"]) == 3
+    assert "price_per_token" not in created
     assert created["note"] == "replacement note"
 
 

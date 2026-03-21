@@ -18,7 +18,11 @@ from domain.correction import CorrectionId, LedgerCorrection, LedgerCorrectionDr
 router = APIRouter()
 
 
-@router.get("/corrections")
+@router.get(
+    "/corrections",
+    response_model=list[LedgerCorrection],
+    response_model_exclude_none=True,
+)
 def get_corrections(
     repo: Annotated[LedgerCorrectionRepository, Depends(get_correction_repository)],
 ) -> list[LedgerCorrection]:
@@ -28,6 +32,7 @@ def get_corrections(
 @router.post(
     "/corrections",
     response_model=LedgerCorrection,
+    response_model_exclude_none=True,
     status_code=status.HTTP_201_CREATED,
 )
 def create_correction(

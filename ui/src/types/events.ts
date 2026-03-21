@@ -39,8 +39,8 @@ type ItemBase = {
 export type LedgerCorrection = ItemBase & {
   sources: EventOrigin[];
   legs: LedgerLeg[];
-  pricePerToken: DecimalString | null;
-  note: string | null;
+  pricePerToken?: DecimalString;
+  note?: string;
 };
 
 export type LedgerEvent = ItemBase & {
