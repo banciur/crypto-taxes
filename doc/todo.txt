@@ -1,13 +1,12 @@
 First stage: compute German taxes
 
-TODO: Unify corrections. Spam and seed are just replacements with no entry or no outcome.
+TODO: When hovering over the replacement event highlight raw events that are being replaced (if raw events lane is visible)
+
 TODO: Add an optional note field to ledger entry (also to correction) and corrected entry
 TODO: For onchain (moralis) add called function name. It will make it more readable.
-TODO: When hovering over the replacement event highlight raw events that are being replaced (if raw events lane is visible)
 TODO: Maybe change how sources of replacement are rendered now it's the same as in other items
 TODO: Review downstream components from Events I have a feeling internal structures are too complicated etc.
 TODO: Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok. Now I think I have partial composition. Still maybe this should be made more verbose
-TODO: I'm not sure about the corrections directory and which code should go where <- probably not needed after previous step
 
 Review the order of todos
 ------------------
