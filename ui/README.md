@@ -14,7 +14,7 @@
 
 ### Supported actions
 
-- Users can select one or more raw-backed event cards and create discard corrections for those sources.
+- Users can select one or more raw-backed event cards and create discard corrections for those sources immediately.
 - Users can select one or more raw-backed event cards and create replacement corrections from those selected sources.
 - Users can create a source-less opening-balance correction from the action bar.
 - Users can remove any existing correction from the `Corrections` lane by correction id.
@@ -44,12 +44,11 @@
 ### API contract
 
 - Base URL comes from `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000`).
-- UI-specific expectations from that contract:
-  - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
-  - Ledger leg quantities remain string-backed decimal values at the API boundary.
-  - `GET /corrections` returns one correction feed for discard, replacement, and opening-balance items.
-  - Correction mutations refresh the server-rendered lane data after they are complete.
-  - After manual correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.
+- `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
+- Ledger leg quantities remain string-backed decimal values at the API boundary.
+- `GET /corrections` returns feed for discard, replacement, and opening-balance items.
+- Correction mutations refresh the server-rendered lane data after they are complete.
+- After manual correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.
 
 ### Decimal handling
 

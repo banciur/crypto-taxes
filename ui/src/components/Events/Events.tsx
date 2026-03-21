@@ -46,20 +46,23 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     getSelectedEvents,
   } = useEventSelection(eventsByTimestamp);
 
-  const handleDiscardSelected = useCallback(async () => {
+  const handleCreateDiscards = useCallback(async () => {
     const selectedSourceEvents = getSelectedEvents();
+
+    const payloads: CreateLedgerCorrectionPayload[] = selectedSourceEvents.map(
+      (sourceEvent) => ({
+        timestamp: sourceEvent.timestamp,
+        sources: [sourceEvent.eventOrigin],
+        legs: [],
+        note: null,
+      }),
+    );
 
     setFeedback(null);
     setIsCreatingDiscard(true);
 
     const results = await Promise.allSettled(
-      selectedSourceEvents.map((sourceEvent) =>
-        createCorrection({
-          sources: [sourceEvent.eventOrigin],
-          legs: [],
-          note: null,
-        }),
-      ),
+      payloads.map((payload) => createCorrection(payload)),
     );
 
     setIsCreatingDiscard(false);
@@ -72,7 +75,9 @@ export function Events({ eventsByTimestamp }: EventsProps) {
       setFeedback({
         tone: "danger",
         message:
-          "Some discard corrections failed. Check the console, then rerun the pipeline manually if needed.",
+          failures[0] instanceof ApiError
+            ? failures[0].detail
+            : "Saving the discard corrections failed. Check the console for details.",
       });
       return;
     }
@@ -218,7 +223,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         isCorrectionChangePending={isCorrectionChangePending}
         isCreatingDiscard={isCreatingDiscard}
         feedback={feedback}
-        onDiscardSelected={handleDiscardSelected}
+        onDiscardSelected={handleCreateDiscards}
         onReplaceSelected={handleOpenReplacementEditor}
         onAddOpeningBalance={handleOpenOpeningBalanceEditor}
       />
