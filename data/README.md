@@ -22,7 +22,7 @@
 
 ### Corrections persistence and application
 - Unified correction persistence lives in `src/db/ledger_corrections.py`.
-- One-off migration from legacy spam/replacement tables lives in `scripts/migrate_ledger_corrections.py`.
+- One-off migration from legacy spam/replacement/seed tables lives in `scripts/migrate_ledger_corrections.py`; it backfills missing legacy rows into `ledger_corrections`, skips already-covered spam sources, and migrates legacy seed/opening-balance rows from the main DB.
 - Ingestion-layer correction application and validation live under `src/corrections/`.
 - Current ingestion correction flow is: validate unified source ownership, remove all claimed raw events, emit synthetic events for corrections with legs, then sort corrected events once before persistence.
 
