@@ -19,7 +19,7 @@ class LedgerCorrection(StrictBaseModel):
     sources: frozenset[EventOrigin] = Field(default_factory=frozenset)
     legs: frozenset[LedgerLeg] = Field(default_factory=frozenset)
     price_per_token: Decimal | None = None
-    note: str = ""
+    note: str | None = None
 
     @field_validator("sources", "legs", mode="before")
     @classmethod

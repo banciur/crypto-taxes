@@ -22,7 +22,7 @@ export type LedgerCorrection = ItemBase & {
   sources: EventOrigin[];
   legs: LedgerLeg[];
   pricePerToken: DecimalString | null;
-  note: string;
+  note: string | null;
 };
 
 export type LedgerLeg = {
@@ -54,7 +54,7 @@ export type CreateLedgerCorrectionPayload = {
   sources: EventOrigin[];
   legs: LedgerCorrectionDraftLeg[];
   pricePerToken?: DecimalString | null;
-  note: string;
+  note?: string | null;
 };
 
 export type CorrectionItemData = LedgerCorrection & {

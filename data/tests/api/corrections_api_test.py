@@ -32,7 +32,7 @@ class CorrectionPayload(TypedDict, total=False):
     sources: list[CorrectionSourcePayload]
     legs: list[CorrectionLegPayload]
     price_per_token: str | None
-    note: str
+    note: str | None
 
 
 def _replacement_payload(*, external_id: str = "0xabc") -> CorrectionPayload:
@@ -109,7 +109,7 @@ def test_post_creates_and_get_lists_discard_with_timestamp_default(
     assert created["sources"] == payload["sources"]
     assert created["legs"] == []
     assert created["price_per_token"] is None
-    assert created["note"] == ""
+    assert created["note"] is None
 
     assert list_response.status_code == 200
     assert [item["id"] for item in list_response.json()] == [created["id"]]

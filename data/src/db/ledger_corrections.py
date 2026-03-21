@@ -24,7 +24,7 @@ class LedgerCorrectionOrm(CorrectionsBase):
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     price_per_token: Mapped[Decimal | None] = mapped_column(DecimalAsString, nullable=True)
-    note: Mapped[str] = mapped_column(String, nullable=False, default="")
+    note: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     sources: Mapped[list["LedgerCorrectionSourceOrm"]] = relationship(

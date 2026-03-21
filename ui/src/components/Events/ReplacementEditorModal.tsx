@@ -217,7 +217,7 @@ export function ReplacementEditorModal({
         (sourceEvent) => sourceEvent.eventOrigin,
       ),
       legs: normalizedLegs,
-      note: note.trim(),
+      note: note.trim() || null,
     });
   };
 

@@ -26,7 +26,7 @@ class CreateLedgerCorrectionPayload(StrictBaseModel):
     sources: list[EventOrigin] = Field(default_factory=list)
     legs: list[LedgerLeg] = Field(default_factory=list)
     price_per_token: Decimal | None = None
-    note: str = ""
+    note: str | None = None
 
 
 def _event_origin_key(event_origin: EventOrigin) -> tuple[EventLocation, str]:

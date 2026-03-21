@@ -57,7 +57,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         createCorrection({
           sources: [sourceEvent.eventOrigin],
           legs: [],
-          note: "",
+          note: null,
         }),
       ),
     );

@@ -133,7 +133,7 @@ export function OpeningBalanceEditorModal({
       sources: [],
       legs,
       pricePerToken: normalizedPricePerToken,
-      note: note.trim(),
+      note: note.trim() || null,
     });
   };
 

@@ -99,7 +99,7 @@ export function LedgerCorrectionItem({
         </div>
       )}
 
-      {item.note.trim() && (
+      {item.note?.trim() && (
         <div className="mt-3 small text-muted">{item.note}</div>
       )}
     </CorrectionItem>

@@ -54,7 +54,7 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `sources: list[EventOrigin]`
   - `legs: list[LedgerLeg]`
   - `price_per_token: Decimal | None`
-  - `note: str`
+  - `note: str | None`
   - Shape semantics:
     - `sources != []` and `legs == []` => discard correction
     - `sources != []` and `legs != []` => replacement correction

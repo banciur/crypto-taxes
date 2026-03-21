@@ -63,7 +63,7 @@ def _migrate_legacy_corrections(*, main_session: Session, corrections_session: S
             id=UUID(row["id"]),
             timestamp=timestamp,
             price_per_token=None,
-            note="",
+            note=None,
             is_deleted=is_deleted,
         )
         correction.sources = [
@@ -88,7 +88,7 @@ def _migrate_legacy_corrections(*, main_session: Session, corrections_session: S
             id=UUID(row["id"]),
             timestamp=datetime.fromisoformat(row["timestamp"].replace("Z", "+00:00")),
             price_per_token=None,
-            note="",
+            note=None,
             is_deleted=False,
         )
         correction.sources = [
