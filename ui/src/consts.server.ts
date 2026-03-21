@@ -1,8 +1,7 @@
 import "server-only";
 
-import { getCorrectedEvents, getRawEvents, getSeedEvents } from "@/api/events";
-import { getReplacementCorrections } from "@/api/replacementCorrections";
-import { getSpamCorrections } from "@/api/spamCorrections";
+import { getCorrections } from "@/api/corrections";
+import { getCorrectedEvents, getRawEvents } from "@/api/events";
 import type { LaneItemData } from "@/types/events";
 import type { ColumnKey } from "@/consts";
 import { orderByTimestamp } from "@/lib/sort";
@@ -32,26 +31,13 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   },
   corrections: {
     load: async () => {
-      const [seedEvents, spamCorrections, replacementCorrections] =
-        await Promise.all([
-          getSeedEvents(),
-          getSpamCorrections(),
-          getReplacementCorrections(),
-        ]);
-      return orderByTimestamp([
-        ...seedEvents.map((event) => ({
-          ...event,
-          kind: "seed-correction" as const,
+      const corrections = await getCorrections();
+      return orderByTimestamp(
+        corrections.map((correction) => ({
+          ...correction,
+          kind: "correction" as const,
         })),
-        ...spamCorrections.map((event) => ({
-          ...event,
-          kind: "spam-correction" as const,
-        })),
-        ...replacementCorrections.map((event) => ({
-          ...event,
-          kind: "replacement-correction" as const,
-        })),
-      ]);
+      );
     },
   },
 } as const;

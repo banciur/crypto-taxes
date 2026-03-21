@@ -33,8 +33,7 @@ type VirtualizedDateSectionsProps = {
   isCorrectionChangePending: boolean;
   className?: string;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
-  onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
-  onRemoveReplacementCorrection: (correctionId: string) => void;
+  onRemoveCorrection: (correctionId: string) => void;
 };
 
 export function VirtualizedDateSections({
@@ -43,8 +42,7 @@ export function VirtualizedDateSections({
   isCorrectionChangePending,
   className,
   onToggleEventSelection,
-  onRemoveSpamCorrection,
-  onRemoveReplacementCorrection,
+  onRemoveCorrection,
 }: VirtualizedDateSectionsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { activeDayKey, activeDaySource, setActiveDayKey } = useVisibleDay();
@@ -173,8 +171,7 @@ export function VirtualizedDateSections({
                   selectedEventOriginKeys={selectedEventOriginKeys}
                   isCorrectionChangePending={isCorrectionChangePending}
                   onToggleEventSelection={onToggleEventSelection}
-                  onRemoveSpamCorrection={onRemoveSpamCorrection}
-                  onRemoveReplacementCorrection={onRemoveReplacementCorrection}
+                  onRemoveCorrection={onRemoveCorrection}
                 />
               )}
             </Row>

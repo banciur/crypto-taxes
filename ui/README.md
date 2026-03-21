@@ -9,26 +9,27 @@
 ### Lane behavior
 
 - `Raw events` shows imported ledger events before corrections are applied.
-- `Corrections` shows synthetic seed events and persisted spam markers.
-- `Corrected events` shows the ledger after spam and seed corrections are applied.
+- `Corrections` shows one unified feed of persisted discard, replacement, and opening-balance corrections.
+- `Corrected events` shows the ledger after unified corrections are applied.
 
 ### Supported actions
 
-- Users can select one or more event cards and mark them as spam.
-- Users can select one or more raw-backed event cards and create a replacement correction from those selected sources.
-- Users can remove an existing spam marker from the `Corrections` lane.
-- Users can remove an existing replacement correction from the `Corrections` lane.
+- Users can select one or more raw-backed event cards and create discard corrections for those sources.
+- Users can select one or more raw-backed event cards and create replacement corrections from those selected sources.
+- Users can create a source-less opening-balance correction from the action bar.
+- Users can remove any existing correction from the `Corrections` lane by correction id.
 - The date chooser scrolls the main timeline to the selected day.
 - The column chooser controls which lanes are loaded and rendered.
 
 ## UI Structure
 
 - `src/app/page.tsx` loads the selected columns, loads the merged accounts catalog from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
-- `src/components/Events/` owns event selection state, spam marker actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
-- `src/components/Events/ReplacementEditorModal.tsx` owns the structured replacement-creation form, including UTC timestamp editing and leg authoring.
+- `src/components/Events/` owns event selection state, correction creation/removal actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
+- `src/components/Events/ReplacementEditorModal.tsx` owns the structured replacement-creation form, including UTC timestamp editing, leg authoring, and note capture.
+- `src/components/Events/OpeningBalanceEditorModal.tsx` owns the source-less opening-balance creation form.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
-- `src/components/LaneItem.tsx` dispatches each lane item to its visual component such as `EventCard`, `SeedCorrectionItem`, or `SpamCorrectionItem`.
+- `src/components/LaneItem.tsx` dispatches each lane item to either `EventCard` or the unified `LedgerCorrectionItem`.
 - `src/components/EventCard.tsx` is the shared card UI for raw and corrected ledger events.
 - `src/contexts/AccountNamesContext.tsx` exposes the merged account dataset plus account-label resolution helpers to client components.
 
@@ -46,9 +47,9 @@
 - UI-specific expectations from that contract:
   - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
   - Ledger leg quantities remain string-backed decimal values at the API boundary.
-  - Replacement correction mutations refresh the server-rendered lane data after they are complete.
-  - Spam correction mutations are keyed by `EventOrigin`, with delete using the path-based raw-event identity route.
-  - After manual spam or replacement correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.
+  - `GET /corrections` returns one correction feed for discard, replacement, and opening-balance items.
+  - Correction mutations refresh the server-rendered lane data after they are complete.
+  - After manual correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.
 
 ### Decimal handling
 

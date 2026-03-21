@@ -12,30 +12,33 @@ export type EventsActionFeedback = {
 type EventsActionBarProps = {
   selectedEventCount: number;
   isCorrectionChangePending: boolean;
-  isMarkingSpam: boolean;
+  isCreatingDiscard: boolean;
   feedback: EventsActionFeedback | null;
-  onMarkSelectedAsSpam: () => void;
+  onDiscardSelected: () => void;
   onReplaceSelected: () => void;
+  onAddOpeningBalance: () => void;
 };
 
 export function EventsActionBar({
   selectedEventCount,
   isCorrectionChangePending,
-  isMarkingSpam,
+  isCreatingDiscard,
   feedback,
-  onMarkSelectedAsSpam,
+  onDiscardSelected,
   onReplaceSelected,
+  onAddOpeningBalance,
 }: EventsActionBarProps) {
   const { selected } = useUrlColumnSelection();
   const hasSelectableColumn = selected.has("raw") || selected.has("corrected");
+  const hasCorrectionsColumn = selected.has("corrections");
 
-  if (!hasSelectableColumn && !feedback) {
+  if (!hasSelectableColumn && !hasCorrectionsColumn && !feedback) {
     return null;
   }
 
   const selectionStatus =
     selectedEventCount === 0
-      ? "Select events to create spam markers or replacements."
+      ? "Select events to discard or replace."
       : `${selectedEventCount} event${selectedEventCount === 1 ? "" : "s"} selected.`;
 
   return (
@@ -50,18 +53,18 @@ export function EventsActionBar({
               variant="warning"
               disabled={
                 selectedEventCount === 0 ||
-                isMarkingSpam ||
+                isCreatingDiscard ||
                 isCorrectionChangePending
               }
-              onClick={onMarkSelectedAsSpam}
+              onClick={onDiscardSelected}
             >
-              {isMarkingSpam ? (
+              {isCreatingDiscard ? (
                 <>
                   <Spinner size="sm" className="me-2" />
-                  Marking...
+                  Saving...
                 </>
               ) : (
-                "Mark as spam"
+                "Discard selected"
               )}
             </Button>
             <Button
@@ -74,6 +77,17 @@ export function EventsActionBar({
               Replace selected
             </Button>
           </>
+        )}
+        {hasCorrectionsColumn && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline-primary"
+            disabled={isCorrectionChangePending}
+            onClick={onAddOpeningBalance}
+          >
+            Add opening balance
+          </Button>
         )}
         {feedback && (
           <span

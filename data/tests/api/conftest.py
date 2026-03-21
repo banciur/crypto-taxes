@@ -16,10 +16,10 @@ from sqlalchemy.pool import StaticPool
 import api.api as api
 from accounts import KRAKEN_ACCOUNT_ID
 from db.corrections_common import CorrectionsBase
-from db.corrections_replacement import ReplacementCorrectionRepository
+from db.ledger_corrections import LedgerCorrectionRepository
 from db.models import Base
 from db.repositories import LedgerEventRepository
-from domain.correction import Replacement
+from domain.correction import LedgerCorrection
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
 from tests.constants import BTC, EUR
 
@@ -86,10 +86,10 @@ def persist_raw_events(client: TestClient) -> Callable[[list[LedgerEvent]], None
 
 
 @pytest.fixture()
-def persist_replacement(client: TestClient) -> Callable[[Replacement], None]:
-    def persist(replacement: Replacement) -> None:
+def persist_correction(client: TestClient) -> Callable[[LedgerCorrection], None]:
+    def persist(correction: LedgerCorrection) -> None:
         app = cast(FastAPI, client.app)
         with app.state.corrections_sessionmaker() as session:
-            ReplacementCorrectionRepository(session).create(replacement)
+            LedgerCorrectionRepository(session).create(correction)
 
     return persist

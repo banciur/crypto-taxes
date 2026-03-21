@@ -1,41 +1,30 @@
-# This file is completely vibed and I didn't read it.
 from __future__ import annotations
 
-from corrections.replacements import apply_replacement_corrections
-from corrections.seed_events import apply_seed_event_corrections
-from corrections.spam import apply_spam_corrections
+from corrections.ledger_corrections import ledger_event_from_correction
 from corrections.validation import validate_ingestion_corrections
-from domain.correction import Replacement, SeedEvent, Spam
+from domain.correction import LedgerCorrection
 from domain.ledger import LedgerEvent
 
 
 def apply_ingestion_corrections(
     *,
     raw_events: list[LedgerEvent],
-    spam_markers: list[Spam],
-    replacements: list[Replacement],
-    seed_events: list[SeedEvent],
+    corrections: list[LedgerCorrection],
 ) -> list[LedgerEvent]:
     validate_ingestion_corrections(
         raw_events=raw_events,
-        spam_markers=spam_markers,
-        replacements=replacements,
+        corrections=corrections,
     )
-    spam_filtered_events = list(
-        apply_spam_corrections(
-            raw_events=raw_events,
-            spam_markers=spam_markers,
-        )
-    )
-    replacement_corrected_events = list(
-        apply_replacement_corrections(
-            raw_events=spam_filtered_events,
-            replacements=replacements,
-        )
-    )
-    corrected_events = apply_seed_event_corrections(
-        raw_events=replacement_corrected_events,
-        seed_events=seed_events,
+    claimed_source_keys = {
+        (source.location.value, source.external_id) for correction in corrections for source in correction.sources
+    }
+    corrected_events = [
+        event
+        for event in raw_events
+        if (event.event_origin.location.value, event.event_origin.external_id) not in claimed_source_keys
+    ]
+    corrected_events.extend(
+        ledger_event_from_correction(correction) for correction in corrections if len(correction.legs) > 0
     )
     corrected_events.sort(
         key=lambda event: (

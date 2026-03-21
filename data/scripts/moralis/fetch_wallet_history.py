@@ -19,7 +19,8 @@ if str(SRC_DIR) not in sys.path:
 from accounts import AccountRegistry, load_accounts
 from clients.moralis import MoralisClient
 from config import CORRECTIONS_DB_PATH, TRANSACTIONS_CACHE_DB_PATH, config
-from db.corrections import SpamCorrectionRepository, init_corrections_db
+from db.corrections_common import init_corrections_db
+from db.ledger_corrections import LedgerCorrectionRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
 from importers.moralis import MoralisImporter
@@ -64,7 +65,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     importer = MoralisImporter(
         service=service,
         account_registry=AccountRegistry(accounts),
-        spam_correction_repository=SpamCorrectionRepository(corrections_session),
+        correction_repository=LedgerCorrectionRepository(corrections_session),
         sync_mode=args.sync_mode,
     )
     events = importer.load_events()

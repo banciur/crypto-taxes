@@ -98,46 +98,46 @@ The intended outcome is:
 
 - [x] Finalize `LedgerCorrection` semantics, invariants, corrected-event provenance, migration rules, and task scope with the operator.
 
-- [ ] Introduce the target `LedgerCorrection` domain model in `data/src/domain/` and remove `Spam`, `Replacement`, and `SeedEvent` from correction-domain usage. Encode only the agreed invariants:
+- [x] Introduce the target `LedgerCorrection` domain model in `data/src/domain/` and remove `Spam`, `Replacement`, and `SeedEvent` from correction-domain usage. Encode only the agreed invariants:
   - forbid empty `sources` plus empty `legs`
   - require exactly one positive non-fee leg when `sources` is empty
   - forbid duplicate `sources`
   - forbid `EventLocation.INTERNAL` in `sources`
   - keep `price_per_token` nullable for source-less corrections only
 
-- [ ] Add a unified helper that converts a `LedgerCorrection` with legs into a synthetic `LedgerEvent`:
+- [x] Add a unified helper that converts a `LedgerCorrection` with legs into a synthetic `LedgerEvent`:
   - use `EventLocation.INTERNAL`
   - use `str(correction.id)` as `event_origin.external_id`
   - use ingestion `ledger_correction`
 
-- [ ] Replace the current multi-stage correction validation with unified `LedgerCorrection` validation:
+- [x] Replace the current multi-stage correction validation with unified `LedgerCorrection` validation:
   - every claimed source must match exactly one raw event when a correction is validated against raw events
   - no raw source may be claimed by more than one active correction
   - source-less corrections bypass raw-source existence checks
   - duplicate sources inside one correction are invalid
   - `INTERNAL` sources are invalid
 
-- [ ] Replace the current multi-stage correction application code with one unified ledger-correction application flow in `data/src/corrections/`:
+- [x] Replace the current multi-stage correction application code with one unified ledger-correction application flow in `data/src/corrections/`:
   - validate correction shapes and source ownership
   - remove all raw events claimed by source-backed corrections
   - emit synthetic corrected events only for corrections with legs
   - preserve current final sort behavior over corrected events
 
-- [ ] Design the unified corrections persistence schema in `data/src/db/`:
+- [x] Design the unified corrections persistence schema in `data/src/db/`:
   - one correction header table with soft-delete support
   - one correction sources table
   - one correction legs table
   - deleted source-backed corrections act as tombstones through soft-deleted rows
   - source uniqueness enforced for active non-deleted corrections
 
-- [ ] Implement repository behavior for the unified schema:
+- [x] Implement repository behavior for the unified schema:
   - list active corrections ordered by `timestamp DESC, id DESC`
   - create corrections with zero or more sources and zero or more legs
   - delete source-backed corrections by soft-deleting them while preserving tombstone behavior
   - delete source-less opening-balance corrections without creating tombstones
   - expose any tombstone lookup API needed by the Moralis importer without leaking persistence-only fields into the active domain object
 
-- [ ] Write the one-off migration script from existing correction storage:
+- [x] Write the one-off migration script from existing correction storage:
   - map `spam_corrections` rows to source-backed corrections with no legs
   - map `replacement_corrections` rows to source-backed corrections with legs
   - preserve existing correction ids where practical so downstream references and deletes stay stable
@@ -146,47 +146,47 @@ The intended outcome is:
   - carry forward deleted-spam suppression behavior into the new tombstone representation
   - do not migrate legacy seed CSV inputs
 
-- [ ] Remove the file-backed seed flow from the runtime pipeline:
+- [x] Remove the file-backed seed flow from the runtime pipeline:
   - stop loading seeds from `artifacts/seed_lots.csv` in `data/src/main.py`
   - remove seed-event persistence and correction-application code paths that only exist for CSV-backed seeds
   - keep opening-balance creation in the unified corrections repository/API instead
 
-- [ ] Update Moralis importer integration so automatic correction creation uses the unified correction repository:
+- [x] Update Moralis importer integration so automatic correction creation uses the unified correction repository:
   - auto-created possible-spam events become source-backed corrections with no legs
   - importer must skip raw origins already claimed by an active correction
   - importer must also respect deleted-source tombstones so previously deleted auto-generated corrections are not recreated
 
-- [ ] Design the unified API request/response shape for one correction resource that covers discard, replacement, and opening-balance cases
+- [x] Design the unified API request/response shape for one correction resource that covers discard, replacement, and opening-balance cases
   - use one create payload shape and one list item shape
   - delete uses `correction_id` only
   - keep request/response shapes explicit and stable for the UI
   - do not implement correction update endpoints in this task
 
-- [ ] Update API surface in `data/src/api/` to expose unified corrections:
+- [x] Update API surface in `data/src/api/` to expose unified corrections:
   - replace separate spam/replacement endpoints with unified correction list/create/delete endpoints
   - remove the seed-events endpoint
   - return correction lists ordered by `timestamp DESC, id DESC`
 
-- [ ] Rewrite data-layer tests around the unified model:
+- [x] Rewrite data-layer tests around the unified model:
   - domain validation tests
   - correction application tests
   - repository tests
   - API tests
   - migration tests covering spam and replacement carry-forward plus deleted-source suppression behavior
 
-- [ ] Update UI types and API modules to consume the unified correction resource
+- [x] Update UI types and API modules to consume the unified correction resource
 
-- [ ] Update correction rendering and actions to consume one unified correction item/feed while preserving the existing three-column timeline layout:
+- [x] Update correction rendering and actions to consume one unified correction item/feed while preserving the existing three-column timeline layout:
   - raw lane unchanged
   - corrected lane unchanged except for unified corrected-event provenance
   - corrections lane loads one unified correction feed, renders shape-driven states for discard, replacement, and opening balance, and displays newest timestamps first
   - correction create/remove flows match the new unified API
   - correction edit flows remain out of scope
 
-- [ ] Remove legacy correction code paths
+- [x] Remove legacy correction code paths
   - delete old spam/replacement/seed-specific modules that are no longer used
 
-- [ ] Update documentation for the unified correction model in the same change set:
+- [x] Update documentation for the unified correction model in the same change set:
   - `data/README.md`
   - `ui/README.md`
   - `doc/CURRENT.md`

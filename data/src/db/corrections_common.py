@@ -11,7 +11,7 @@ class CorrectionsBase(DeclarativeBase):
 
 
 def init_corrections_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
-    from db import corrections_replacement, corrections_spam  # noqa: F401
+    from db import ledger_corrections  # noqa: F401
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
     engine = create_engine(f"sqlite:///{db_path}", echo=echo)
