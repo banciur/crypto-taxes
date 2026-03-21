@@ -87,8 +87,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Corrections are persisted in the corrections DB as header rows plus source rows plus leg rows. Source-backed deletions become tombstones by soft-deleting the correction row while retaining its source rows for suppression checks; source-less opening-balance deletions are hard deletes.
 - Validation is strict: every claimed source must match exactly one raw event, and a raw event cannot be consumed by more than one active correction source.
 - Moralis possible-spam auto-generation creates discard corrections and respects deleted-source tombstones so manually removed auto-generated corrections are not recreated.
-- The UI can author discard, replacement, and opening-balance corrections through the unified corrections API. Replacement drafts still seed their timestamp from the latest selected source timestamp.
-
+- The UI can author discard, replacement, and opening-balance corrections through the unified corrections API.
 ---
 
 ## Fees

@@ -18,7 +18,7 @@ from accounts import KRAKEN_ACCOUNT_ID
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.models import Base
 from db.repositories import LedgerEventRepository
-from domain.correction import LedgerCorrection
+from domain.correction import LedgerCorrection, LedgerCorrectionDraft
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
 from tests.constants import BTC, EUR
 
@@ -85,10 +85,10 @@ def persist_raw_events(client: TestClient) -> Callable[[list[LedgerEvent]], None
 
 
 @pytest.fixture()
-def persist_correction(client: TestClient) -> Callable[[LedgerCorrection], None]:
-    def persist(correction: LedgerCorrection) -> None:
+def persist_correction(client: TestClient) -> Callable[[LedgerCorrectionDraft], LedgerCorrection]:
+    def persist(correction: LedgerCorrectionDraft) -> LedgerCorrection:
         app = cast(FastAPI, client.app)
         with app.state.corrections_sessionmaker() as session:
-            LedgerCorrectionRepository(session).create(correction)
+            return LedgerCorrectionRepository(session).create(correction)
 
     return persist

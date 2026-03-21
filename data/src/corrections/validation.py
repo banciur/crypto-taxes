@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable
 
-from domain.correction import LedgerCorrection
+from domain.correction import LedgerCorrectionDraft
 from domain.ledger import LedgerEvent
 
 
@@ -14,7 +14,7 @@ class CorrectionValidationError(Exception):
 def validate_ingestion_corrections(
     *,
     raw_events: Iterable[LedgerEvent],
-    corrections: Iterable[LedgerCorrection],
+    corrections: Iterable[LedgerCorrectionDraft],
 ) -> None:
     raw_event_counts = Counter(
         (event.event_origin.location.value, event.event_origin.external_id) for event in raw_events

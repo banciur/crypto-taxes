@@ -50,7 +50,7 @@ export type CorrectedEventCardData = LedgerEvent & {
 export type LedgerCorrectionDraftLeg = Omit<LedgerLeg, "id">;
 
 export type CreateLedgerCorrectionPayload = {
-  timestamp?: string;
+  timestamp: string;
   sources: EventOrigin[];
   legs: LedgerCorrectionDraftLeg[];
   pricePerToken?: DecimalString | null;

@@ -1,4 +1,5 @@
-from __future__ import annotations
+# TODO: Tests for corrections api were written quickly and do not cover most of the cases.
+#  Please review and improve this file when making changes.
 
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -9,7 +10,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from accounts import KRAKEN_ACCOUNT_ID
-from domain.correction import LedgerCorrection
+from domain.correction import LedgerCorrection, LedgerCorrectionDraft
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from tests.api.conftest import raw_event
 from tests.constants import BTC, ETH, LEDGER_WALLET
@@ -65,6 +66,7 @@ def _replacement_payload(*, external_id: str = "0xabc") -> CorrectionPayload:
 
 def _discard_payload(*, external_id: str = "0xspam") -> CorrectionPayload:
     return {
+        "timestamp": "2024-02-03T10:00:00Z",
         "sources": [CorrectionSourcePayload(location="ARBITRUM", external_id=external_id)],
     }
 
@@ -85,7 +87,7 @@ def _opening_balance_payload() -> CorrectionPayload:
     }
 
 
-def test_post_creates_and_get_lists_discard_with_timestamp_default(
+def test_post_creates_and_get_lists_discard(
     client: TestClient,
     persist_raw_events: Callable[[list[LedgerEvent]], None],
 ) -> None:
@@ -105,7 +107,7 @@ def test_post_creates_and_get_lists_discard_with_timestamp_default(
 
     assert create_response.status_code == 201
     created = create_response.json()
-    assert created["timestamp"] == "2024-02-03T10:00:00Z"
+    assert created["timestamp"] == payload["timestamp"]
     assert created["sources"] == payload["sources"]
     assert created["legs"] == []
     assert created["price_per_token"] is None
@@ -211,23 +213,23 @@ def test_delete_is_by_id_and_tombstone_blocks_recreate(
 
 def test_get_lists_persisted_corrections_in_desc_order(
     client: TestClient,
-    persist_correction: Callable[[LedgerCorrection], None],
+    persist_correction: Callable[[LedgerCorrectionDraft], LedgerCorrection],
 ) -> None:
-    older = LedgerCorrection(
+    older = LedgerCorrectionDraft(
         timestamp=datetime(2024, 2, 1, 12, 0, tzinfo=timezone.utc),
         legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
     )
-    newer = LedgerCorrection(
+    newer = LedgerCorrectionDraft(
         timestamp=datetime(2024, 2, 2, 12, 0, tzinfo=timezone.utc),
         sources=frozenset([EventOrigin(location=EventLocation.BASE, external_id="0xorphan")]),
     )
-    persist_correction(older)
-    persist_correction(newer)
+    persisted_older = persist_correction(older)
+    persisted_newer = persist_correction(newer)
 
     response = client.get("/corrections")
 
     assert response.status_code == 200
-    assert [item["id"] for item in response.json()] == [str(newer.id), str(older.id)]
+    assert [item["id"] for item in response.json()] == [str(persisted_newer.id), str(persisted_older.id)]
 
 
 def test_delete_is_idempotent_for_missing_correction(client: TestClient) -> None:

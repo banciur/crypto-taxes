@@ -13,8 +13,7 @@ from pydantic_base import StrictBaseModel
 CorrectionId = NewType("CorrectionId", UUID)
 
 
-class LedgerCorrection(StrictBaseModel):
-    id: CorrectionId = CorrectionId(Field(default_factory=uuid4))
+class LedgerCorrectionDraft(StrictBaseModel):
     timestamp: datetime
     sources: frozenset[EventOrigin] = Field(default_factory=frozenset)
     legs: frozenset[LedgerLeg] = Field(default_factory=frozenset)
@@ -41,7 +40,7 @@ class LedgerCorrection(StrictBaseModel):
         return value
 
     @model_validator(mode="after")
-    def _validate_shape(self) -> LedgerCorrection:
+    def _validate_shape(self) -> LedgerCorrectionDraft:
         if len(self.sources) == 0 and len(self.legs) == 0:
             raise ValueError("LedgerCorrection requires sources or legs")
 
@@ -62,3 +61,7 @@ class LedgerCorrection(StrictBaseModel):
         if self.price_per_token is not None:
             raise ValueError("Source-backed LedgerCorrection must not set price_per_token")
         return self
+
+
+class LedgerCorrection(LedgerCorrectionDraft):
+    id: CorrectionId = CorrectionId(Field(default_factory=uuid4))

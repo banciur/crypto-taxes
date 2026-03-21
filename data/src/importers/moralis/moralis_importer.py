@@ -8,7 +8,7 @@ from typing import Any, Iterable, Mapping, cast
 
 from accounts import AccountRegistry
 from db.ledger_corrections import LedgerCorrectionRepository
-from domain.correction import LedgerCorrection
+from domain.correction import LedgerCorrectionDraft
 from domain.ledger import (
     AccountChainId,
     AssetId,
@@ -129,7 +129,7 @@ class MoralisImporter:
                 event.event_origin, include_deleted=True
             ):
                 self.correction_repository.create(
-                    LedgerCorrection(
+                    LedgerCorrectionDraft(
                         timestamp=event.timestamp,
                         sources=frozenset([event.event_origin]),
                     )

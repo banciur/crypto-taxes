@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 from db.models import DecimalAsString
-from domain.correction import CorrectionId, LedgerCorrection
+from domain.correction import CorrectionId, LedgerCorrection, LedgerCorrectionDraft
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerLeg, LegId
 from utils.misc import ensure_utc_datetime
 
@@ -89,9 +89,8 @@ class LedgerCorrectionRepository:
         rows = self._session.execute(stmt).unique().scalars().all()
         return [self._to_domain(row) for row in rows]
 
-    def create(self, correction: LedgerCorrection) -> LedgerCorrection:
+    def create(self, correction: LedgerCorrectionDraft) -> LedgerCorrection:
         orm_correction = LedgerCorrectionOrm(
-            id=correction.id,
             timestamp=correction.timestamp,
             price_per_token=correction.price_per_token,
             note=correction.note,
@@ -120,7 +119,7 @@ class LedgerCorrectionRepository:
         except IntegrityError:
             self._session.rollback()
             raise
-        return correction
+        return self._to_domain(orm_correction)
 
     def delete(self, correction_id: CorrectionId) -> None:
         row = self._session.get(LedgerCorrectionOrm, correction_id)
