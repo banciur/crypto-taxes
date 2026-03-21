@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Uuid, select, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Uuid, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
@@ -45,7 +45,6 @@ class LedgerCorrectionSourceOrm(CorrectionsBase):
     correction_id: Mapped[UUID] = mapped_column(Uuid, ForeignKey("ledger_corrections.id"), primary_key=True)
     origin_location: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
     origin_external_id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
-    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     __table_args__ = (
         Index(
@@ -58,7 +57,6 @@ class LedgerCorrectionSourceOrm(CorrectionsBase):
             "origin_location",
             "origin_external_id",
             unique=True,
-            sqlite_where=text("is_deleted = 0"),
         ),
     )
 
@@ -103,7 +101,6 @@ class LedgerCorrectionRepository:
             LedgerCorrectionSourceOrm(
                 origin_location=source.location.value,
                 origin_external_id=source.external_id,
-                is_deleted=False,
             )
             for source in correction.sources
         ]
@@ -134,18 +131,16 @@ class LedgerCorrectionRepository:
             self._session.delete(row)
         else:
             row.is_deleted = True
-            for source in row.sources:
-                source.is_deleted = True
 
         self._session.commit()
 
     def has_source(self, event_origin: EventOrigin, *, include_deleted: bool = False) -> bool:
-        stmt = select(LedgerCorrectionSourceOrm).where(
+        stmt = select(LedgerCorrectionSourceOrm.correction_id).where(
             LedgerCorrectionSourceOrm.origin_location == event_origin.location.value,
             LedgerCorrectionSourceOrm.origin_external_id == event_origin.external_id,
         )
         if not include_deleted:
-            stmt = stmt.where(LedgerCorrectionSourceOrm.is_deleted.is_(False))
+            stmt = stmt.join(LedgerCorrectionOrm).where(LedgerCorrectionOrm.is_deleted.is_(False))
         return self._session.execute(stmt.limit(1)).scalar_one_or_none() is not None
 
     @staticmethod
@@ -159,7 +154,6 @@ class LedgerCorrectionRepository:
                 row.sources,
                 key=lambda source: (source.origin_location, source.origin_external_id),
             )
-            if source.is_deleted is False
         ]
         legs = [
             LedgerLeg(

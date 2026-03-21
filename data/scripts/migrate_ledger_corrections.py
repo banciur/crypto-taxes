@@ -1,3 +1,4 @@
+# This should not be a part of the final merge of PR. This is a one-off operation and will be removed after migration is complete
 from __future__ import annotations
 
 import argparse
@@ -69,7 +70,6 @@ def _migrate_legacy_corrections(*, main_session: Session, corrections_session: S
             LedgerCorrectionSourceOrm(
                 origin_location=row["origin_location"],
                 origin_external_id=row["origin_external_id"],
-                is_deleted=is_deleted,
             )
         ]
         corrections_session.add(correction)
@@ -95,7 +95,6 @@ def _migrate_legacy_corrections(*, main_session: Session, corrections_session: S
             LedgerCorrectionSourceOrm(
                 origin_location=source_row["origin_location"],
                 origin_external_id=source_row["origin_external_id"],
-                is_deleted=False,
             )
             for source_row in corrections_session.execute(
                 text(

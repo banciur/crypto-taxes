@@ -128,7 +128,7 @@ The intended outcome is:
   - one correction sources table
   - one correction legs table
   - deleted source-backed corrections act as tombstones through soft-deleted rows
-  - source uniqueness enforced for active non-deleted corrections
+  - source uniqueness enforced for active non-deleted corrections in repository/API logic
 
 - [x] Implement repository behavior for the unified schema:
   - list active corrections ordered by `timestamp DESC, id DESC`
