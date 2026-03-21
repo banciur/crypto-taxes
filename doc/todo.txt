@@ -2,6 +2,35 @@ First stage: compute German taxes
 
 TODO: When hovering over the replacement event highlight raw events that are being replaced (if raw events lane is visible)
 
+TODO: Fix following problem
+Current problem: source-backed corrections that are deleted are soft-deleted, not fully removed. Their rows in ledger_correction_sources stay in the DB, and the unique index on (origin_location, origin_external_id) still blocks any new correction from reusing that source.
+
+What that means in practice:
+
+the system treats the source as occupied even after the correction is deleted
+API returns 409
+current error text is misleading because it says the source is consumed by an active correction, but the blocker may actually be a deleted/tombstoned one
+Example action order that leads to it:
+
+Raw event OPTIMISM/0x0820... exists.
+User creates a source-backed correction for it, for example a replacement or discard.
+Later, user deletes that correction from the UI.
+Backend soft-deletes the correction row by setting ledger_corrections.is_deleted = 1, but keeps the source row in ledger_correction_sources.
+User tries to create a new correction using the same raw event source again.
+Insert hits the unique index on ledger_correction_sources(origin_location, origin_external_id).
+API returns 409, even though there is no active correction anymore.
+Concrete example from your DB:
+
+source: OPTIMISM/0x0820ff6a0f5939a5342fde22299276697eeee265f43d9406889cc0c59e6ec939
+existing deleted correction id: 5077356b7ee344e88eced9248e744182
+is_deleted = 1
+So the root issue is:
+
+tombstones are currently serving two roles at once:
+prevent Moralis auto-recreation
+block all manual recreation too
+If your intended product behavior is “block auto recreation, allow explicit manual recreation,” then the persistence model needs to distinguish those two cases more explicitly in the next PR.
+
 TODO: Add an optional note field to ledger entry (also to correction) and corrected entry
 TODO: For onchain (moralis) add called function name. It will make it more readable.
 TODO: Maybe change how sources of replacement are rendered now it's the same as in other items
