@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+# This file is completely vibed and I didn't read it.
 from collections import Counter
 from collections.abc import Iterable
 

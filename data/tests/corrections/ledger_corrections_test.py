@@ -7,8 +7,11 @@ from uuid import uuid4
 import pytest
 
 from accounts import KRAKEN_ACCOUNT_ID
-from corrections.ingestion import apply_ingestion_corrections
-from corrections.ledger_corrections import LEDGER_CORRECTION_INGESTION, ledger_event_from_correction
+from corrections.ingestion import (
+    LEDGER_CORRECTION_INGESTION,
+    apply_ingestion_corrections,
+    ledger_event_from_correction,
+)
 from corrections.validation import CorrectionValidationError, validate_ingestion_corrections
 from domain.correction import LedgerCorrection
 from domain.ledger import AccountChainId, EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
