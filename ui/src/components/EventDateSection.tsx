@@ -20,8 +20,7 @@ type EventDateSectionProps = {
   selectedEventOriginKeys: ReadonlySet<string>;
   isCorrectionChangePending: boolean;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
-  onRemoveSpamCorrection: (eventOrigin: EventOrigin) => void;
-  onRemoveReplacementCorrection: (correctionId: string) => void;
+  onRemoveCorrection: (correctionId: string) => void;
 };
 
 const isSelectedEvent = (
@@ -36,8 +35,7 @@ export function EventDateSection({
   selectedEventOriginKeys,
   isCorrectionChangePending,
   onToggleEventSelection,
-  onRemoveSpamCorrection,
-  onRemoveReplacementCorrection,
+  onRemoveCorrection,
 }: EventDateSectionProps) {
   const { selected } = useUrlColumnSelection();
   const orderedSelectedColumns = useMemo(
@@ -61,8 +59,7 @@ export function EventDateSection({
               isSelected={isSelectedEvent(item, selectedEventOriginKeys)}
               isCorrectionChangePending={isCorrectionChangePending}
               onToggleEventSelection={onToggleEventSelection}
-              onRemoveSpamCorrection={onRemoveSpamCorrection}
-              onRemoveReplacementCorrection={onRemoveReplacementCorrection}
+              onRemoveCorrection={onRemoveCorrection}
             />
           ))}
         </Col>

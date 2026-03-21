@@ -10,8 +10,8 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import sessionmaker
 
 from accounts import AccountConfig, AccountRegistry
-from db.corrections_common import CorrectionsBase
-from db.corrections_spam import SpamCorrectionOrm, SpamCorrectionRepository
+from db.ledger_corrections import CorrectionsBase, LedgerCorrectionOrm, LedgerCorrectionRepository
+from domain.correction import LedgerCorrection
 from domain.ledger import AccountChainId, AssetId
 from importers.moralis.moralis_importer import NATIVE_ASSET_ID, MoralisImporter
 from services.moralis import MoralisService
@@ -82,7 +82,7 @@ class _StubMoralisService:
 
 class _ImporterTestContext(NamedTuple):
     importer: MoralisImporter
-    spam_repo: SpamCorrectionRepository
+    correction_repo: LedgerCorrectionRepository
     service: _StubMoralisService
 
 
@@ -90,7 +90,7 @@ class _ImporterTestContext(NamedTuple):
 def test_ctx(db_engine: Engine) -> Generator[_ImporterTestContext, None, None]:
     CorrectionsBase.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
-        repo = SpamCorrectionRepository(session)
+        repo = LedgerCorrectionRepository(session)
         service = _StubMoralisService()
         importer = MoralisImporter(
             service=cast(MoralisService, service),
@@ -104,9 +104,9 @@ def test_ctx(db_engine: Engine) -> Generator[_ImporterTestContext, None, None]:
                     )
                 ]
             ),
-            spam_correction_repository=repo,
+            correction_repository=repo,
         )
-        yield _ImporterTestContext(importer=importer, spam_repo=repo, service=service)
+        yield _ImporterTestContext(importer=importer, correction_repo=repo, service=service)
     CorrectionsBase.metadata.drop_all(db_engine)
 
 
@@ -248,9 +248,11 @@ def test_load_events_marks_moralis_spam_transactions(test_ctx: _ImporterTestCont
     events = test_ctx.importer.load_events()
 
     assert len(events) == 1
-    spam_events = test_ctx.spam_repo.list()
-    assert len(spam_events) == 1
-    assert spam_events[0].event_origin == events[0].event_origin
+    corrections = test_ctx.correction_repo.list()
+    assert len(corrections) == 1
+    assert corrections[0].sources == frozenset([events[0].event_origin])
+    assert corrections[0].timestamp == events[0].timestamp
+    assert corrections[0].legs == frozenset()
 
 
 def test_load_events_does_not_mark_non_spam_transactions(test_ctx: _ImporterTestContext) -> None:
@@ -260,7 +262,7 @@ def test_load_events_does_not_mark_non_spam_transactions(test_ctx: _ImporterTest
     events = test_ctx.importer.load_events()
 
     assert len(events) == 1
-    assert test_ctx.spam_repo.list() == []
+    assert test_ctx.correction_repo.list() == []
 
 
 def test_load_events_preserves_manual_spam_removals(test_ctx: _ImporterTestContext) -> None:
@@ -269,13 +271,18 @@ def test_load_events_preserves_manual_spam_removals(test_ctx: _ImporterTestConte
     event = test_ctx.importer._build_event(tx)
     assert event is not None
     event_origin = event.event_origin
-    test_ctx.spam_repo.mark_as_spam(event_origin=event_origin)
-    test_ctx.spam_repo.remove_spam_mark(event_origin)
+    test_ctx.correction_repo.create(
+        LedgerCorrection(
+            timestamp=event.timestamp,
+            sources=frozenset([event_origin]),
+        )
+    )
+    test_ctx.correction_repo.delete(test_ctx.correction_repo.list()[0].id)
 
     events = test_ctx.importer.load_events()
 
     assert len(events) == 1
     assert events[0].event_origin == event_origin
-    assert test_ctx.spam_repo.list() == []
-    row = test_ctx.spam_repo._session.execute(select(SpamCorrectionOrm)).scalar_one()
+    assert test_ctx.correction_repo.list() == []
+    row = test_ctx.correction_repo._session.execute(select(LedgerCorrectionOrm)).unique().scalar_one()
     assert row.is_deleted is True

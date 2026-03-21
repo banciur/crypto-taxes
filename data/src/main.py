@@ -18,18 +18,16 @@ from config import (
     config,
 )
 from corrections.ingestion import apply_ingestion_corrections
-from db.corrections_common import init_corrections_db
-from db.corrections_replacement import ReplacementCorrectionRepository
-from db.corrections_spam import SpamCorrectionRepository
-from db.db import init_db
+from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
+from db.models import Base
 from db.repositories import (
     AcquisitionLotRepository,
     CorrectedLedgerEventRepository,
     DisposalLinkRepository,
     LedgerEventRepository,
-    SeedEventRepository,
     TaxEventRepository,
 )
+from db.session import init_db_session
 from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
@@ -39,7 +37,6 @@ from domain.wallet_balance_tracker import WalletBalanceTracker
 from importers.coinbase import CoinbaseImporter
 from importers.kraken import KrakenImporter
 from importers.moralis import MoralisImporter
-from importers.seed_events import load_seed_events
 from services.coinbase import CoinbaseService
 from services.coindesk_source import CoinDeskSource
 from services.moralis import MoralisService
@@ -72,20 +69,21 @@ def run(
     *,
     market: str,
     aggregate_minutes: int,
-    seed_csv: Path,
 ) -> None:
     # Setup components
     logger.info("Initializing DB at %s", DB_PATH)
-    session = init_db(reset=True, db_path=DB_PATH)
-    corrections_session = init_corrections_db(db_path=CORRECTIONS_DB_PATH, reset=False)
-    event_repository = LedgerEventRepository(session)
-    corrected_event_repository = CorrectedLedgerEventRepository(session)
-    seed_event_repository = SeedEventRepository(session)
-    lot_repository = AcquisitionLotRepository(session)
-    disposal_repository = DisposalLinkRepository(session)
-    tax_event_repository = TaxEventRepository(session)
-    spam_correction_repository = SpamCorrectionRepository(corrections_session)
-    replacement_correction_repository = ReplacementCorrectionRepository(corrections_session)
+    events_session = init_db_session(db_path=DB_PATH, metadata=Base.metadata, reset=True)
+    corrections_session = init_db_session(
+        db_path=CORRECTIONS_DB_PATH,
+        metadata=CorrectionsBase.metadata,
+        reset=False,
+    )
+    event_repository = LedgerEventRepository(events_session)
+    corrected_event_repository = CorrectedLedgerEventRepository(events_session)
+    lot_repository = AcquisitionLotRepository(events_session)
+    disposal_repository = DisposalLinkRepository(events_session)
+    tax_event_repository = TaxEventRepository(events_session)
+    correction_repository = LedgerCorrectionRepository(corrections_session)
 
     wallet_balance_tracker = WalletBalanceTracker()
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
@@ -111,17 +109,10 @@ def run(
             accounts=accounts,
         ),
         account_registry=AccountRegistry(accounts),
-        spam_correction_repository=spam_correction_repository,
+        correction_repository=correction_repository,
     )
 
     owned_accounts: set[AccountChainId] = {COINBASE_ACCOUNT_ID, KRAKEN_ACCOUNT_ID}
-
-    # Get corrections
-    logger.info("Loading seed events from %s", seed_csv)
-    seed_started = perf_counter()
-    seed_events = load_seed_events(seed_csv)
-    seed_event_repository.create_many(seed_events)
-    logger.info("Loaded and stored %d seed events in %.2fs", len(seed_events), perf_counter() - seed_started)
 
     # Get raw events
     logger.info("Importing Kraken events from %s", csv_path)
@@ -147,22 +138,17 @@ def run(
     logger.info("Persisted raw events in %.2fs", perf_counter() - persist_started)
 
     # Apply corrections
-    spam_markers = spam_correction_repository.list()
-    logger.info("Loaded %d active spam corrections", len(spam_markers))
-
-    replacements = replacement_correction_repository.list()
-    logger.info("Loaded %d active replacement corrections", len(replacements))
+    corrections = correction_repository.list()
+    logger.info("Loaded %d active ledger corrections", len(corrections))
 
     logger.info("Applying corrections to %d raw events", len(events))
     corrections_started = perf_counter()
     corrected_events = apply_ingestion_corrections(
         raw_events=events,
-        spam_markers=spam_markers,
-        replacements=replacements,
-        seed_events=seed_events,
+        corrections=corrections,
     )
     logger.info(
-        "Applied spam+replacement+seed corrections: %d corrected events in %.2fs",
+        "Applied ledger corrections: %d corrected events in %.2fs",
         len(corrected_events),
         perf_counter() - corrections_started,
     )
@@ -209,14 +195,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "kraken_prices")
     parser.add_argument("--market", default="kraken")
     parser.add_argument("--aggregate", type=int, default=60)
-    parser.add_argument("--seed-csv", type=Path, default=ARTIFACTS_DIR / "seed_lots.csv")
     args = parser.parse_args(argv)
     run(
         args.csv,
         args.price_cache_dir,
         market=args.market,
         aggregate_minutes=args.aggregate,
-        seed_csv=args.seed_csv,
     )
 
 

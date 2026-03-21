@@ -7,7 +7,8 @@ from decimal import Decimal
 from typing import Any, Iterable, Mapping, cast
 
 from accounts import AccountRegistry
-from db.corrections_spam import SpamCorrectionRepository, SpamCorrectionSource
+from db.ledger_corrections import LedgerCorrectionRepository
+from domain.correction import LedgerCorrectionDraft
 from domain.ledger import (
     AccountChainId,
     AssetId,
@@ -107,13 +108,13 @@ class MoralisImporter:
         *,
         service: MoralisService,
         account_registry: AccountRegistry,
-        spam_correction_repository: SpamCorrectionRepository,
+        correction_repository: LedgerCorrectionRepository,
         sync_mode: SyncMode = SyncMode.BUDGET,
     ) -> None:
         self.service = service
         self.account_registry = account_registry
         self.sync_mode = sync_mode
-        self.spam_correction_repository = spam_correction_repository
+        self.correction_repository = correction_repository
 
     def load_events(self) -> list[LedgerEvent]:
         transactions = self.service.get_transactions(self.sync_mode)
@@ -124,11 +125,14 @@ class MoralisImporter:
             if event is None:
                 continue
             events.append(event)
-            if tx.get("possible_spam"):
-                self.spam_correction_repository.mark_as_spam(
-                    event.event_origin,
-                    SpamCorrectionSource.AUTO_MORALIS,
-                    skip_if_exists=True,
+            if tx.get("possible_spam") and not self.correction_repository.has_source(
+                event.event_origin, include_deleted=True
+            ):
+                self.correction_repository.create(
+                    LedgerCorrectionDraft(
+                        timestamp=event.timestamp,
+                        sources=frozenset([event.event_origin]),
+                    )
                 )
 
         events.sort(key=lambda evt: evt.timestamp)

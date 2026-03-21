@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Spinner } from "react-bootstrap";
+import { Button } from "react-bootstrap";
 
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
 
@@ -12,30 +12,31 @@ export type EventsActionFeedback = {
 type EventsActionBarProps = {
   selectedEventCount: number;
   isCorrectionChangePending: boolean;
-  isMarkingSpam: boolean;
   feedback: EventsActionFeedback | null;
-  onMarkSelectedAsSpam: () => void;
+  onDiscardSelected: () => void;
   onReplaceSelected: () => void;
+  onAddOpeningBalance: () => void;
 };
 
 export function EventsActionBar({
   selectedEventCount,
   isCorrectionChangePending,
-  isMarkingSpam,
   feedback,
-  onMarkSelectedAsSpam,
+  onDiscardSelected,
   onReplaceSelected,
+  onAddOpeningBalance,
 }: EventsActionBarProps) {
   const { selected } = useUrlColumnSelection();
   const hasSelectableColumn = selected.has("raw") || selected.has("corrected");
+  const hasCorrectionsColumn = selected.has("corrections");
 
-  if (!hasSelectableColumn && !feedback) {
+  if (!hasSelectableColumn && !hasCorrectionsColumn && !feedback) {
     return null;
   }
 
   const selectionStatus =
     selectedEventCount === 0
-      ? "Select events to create spam markers or replacements."
+      ? "Select events to discard or replace."
       : `${selectedEventCount} event${selectedEventCount === 1 ? "" : "s"} selected.`;
 
   return (
@@ -48,21 +49,10 @@ export function EventsActionBar({
               type="button"
               size="sm"
               variant="warning"
-              disabled={
-                selectedEventCount === 0 ||
-                isMarkingSpam ||
-                isCorrectionChangePending
-              }
-              onClick={onMarkSelectedAsSpam}
+              disabled={selectedEventCount === 0 || isCorrectionChangePending}
+              onClick={onDiscardSelected}
             >
-              {isMarkingSpam ? (
-                <>
-                  <Spinner size="sm" className="me-2" />
-                  Marking...
-                </>
-              ) : (
-                "Mark as spam"
-              )}
+              Discard selected
             </Button>
             <Button
               type="button"
@@ -75,6 +65,15 @@ export function EventsActionBar({
             </Button>
           </>
         )}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline-primary"
+          disabled={isCorrectionChangePending}
+          onClick={onAddOpeningBalance}
+        >
+          Add opening balance
+        </Button>
         {feedback && (
           <span
             className={

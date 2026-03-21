@@ -8,7 +8,7 @@ Treat other files under `doc/` as background/templates unless explicitly referen
 - `data/`: Python project (domain, API, ingestion/importers, transforms, tests, DB schema).
 - `ui/`: Next.js app (presentation layer consuming the data API).
 - `doc/`: canonical domain reference and supporting notes/templates.
-- `artifacts/`: local-only inputs/outputs and caches (e.g., `accounts.json`, `seed_lots.csv`, transaction caches).
+- `artifacts/`: local-only inputs/outputs and caches (e.g., `accounts.json`, correction/main DB files, transaction caches).
 
 ## Required context lookup
 - As soon as it is clear a task touches `data/` or `ui/`, read the matching component guide as the first step: [data/README.md](data/README.md) for `data/` work and [ui/README.md](ui/README.md) for `ui/` work.

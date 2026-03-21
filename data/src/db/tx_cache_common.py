@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Session
+
+from db.session import init_db_session
 
 
 class TransactionsCacheBase(DeclarativeBase):
@@ -11,11 +12,13 @@ class TransactionsCacheBase(DeclarativeBase):
 
 
 def init_transactions_cache_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
-    from db import tx_cache_coinbase, tx_cache_moralis  # noqa: F401 unused-import
+    def _ensure_models_loaded() -> None:
+        from db import tx_cache_coinbase, tx_cache_moralis  # noqa: F401 unused-import
 
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(f"sqlite:///{db_path}", echo=echo)
-    if reset:
-        TransactionsCacheBase.metadata.drop_all(engine)
-    TransactionsCacheBase.metadata.create_all(engine)
-    return sessionmaker(engine)()
+    return init_db_session(
+        db_path=db_path,
+        metadata=TransactionsCacheBase.metadata,
+        ensure_models_loaded=_ensure_models_loaded,
+        echo=echo,
+        reset=reset,
+    )

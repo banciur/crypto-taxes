@@ -2,7 +2,7 @@
 
 > **Note:** The legal/tax interpretations described here stem from internal research supported by AI tools and may not be exhaustive. Validate against authoritative guidance before relying on them.
 
-This document captures the currently implemented domain for modeling crypto ledger activity fox tax purposes. It reflects the simplified approach we are taking now to keep iteration fast.
+This document captures the currently implemented domain for modeling crypto ledger activity for tax purposes. It reflects the simplified approach we are taking now to keep iteration fast.
 
 ---
 
@@ -21,7 +21,7 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `id: UUID`
   - `timestamp: datetime`
   - `event_origin: EventOrigin` (upstream location + external transaction id)
-  - `ingestion: str` (import pipeline label, e.g., `kraken_ledger_csv`, `seed_csv`)
+  - `ingestion: str` (import pipeline label, e.g., `kraken_ledger_csv`, `ledger_correction`)
   - `legs: list[LedgerLeg]`
 
 - LedgerLeg
@@ -48,11 +48,17 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `kind: TaxEventKind` (`DISPOSAL`, `REWARD`)
   - `taxable_gain: Decimal`
 
-- Replacement
+- LedgerCorrection
   - `id: UUID`
   - `timestamp: datetime`
-  - `sources: Sequence[EventOrigin]` (raw events consumed by the correction)
-  - `legs: list[LedgerLeg]` (authoritative synthetic payload; may differ from source legs)
+  - `sources: list[EventOrigin]`
+  - `legs: list[LedgerLeg]`
+  - `price_per_token: Decimal | None`
+  - `note: str | None`
+  - Shape semantics:
+    - `sources != []` and `legs == []` => discard correction
+    - `sources != []` and `legs != []` => replacement correction
+    - `sources == []` and `legs != []` => opening-balance correction
 
 - EventOrigin
   - `location: EventLocation` (`ETHEREUM`, `ARBITRUM`, `KRAKEN`, `COINBASE`...)
@@ -73,17 +79,15 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
 - Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine. Open lots are tracked per asset (not per account) and matched FIFO.
 - Internal account-to-account transfers are identified structurally (same-asset non-fee legs netting to zero inside one event) and only update balances. They do not create lots or disposal links.
-- Per-account balances are tracked for all non-EUR legs; any debit that would push an account negative raises an error. Fix missing history by seeding lots or adding prior movements into the source account before processing.
-- Synthetic seed lots can be injected ahead of importer output using `--seed-csv` (default `artifacts/seed_lots.csv`) with rows `asset_id,account_id,quantity[,timestamp,price_per_token]`; `timestamp` defaults to `2000-01-01T00:00:00Z` and `price_per_token` defaults to `0`.
+- Per-account balances are tracked for all non-EUR legs; any debit that would push an account negative raises an error. Fix missing history by adding prior movements into the source account or authoring an opening-balance correction.
 - Each event captures `event_origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 - Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
 - `AccountRegistry` is the canonical account catalog exposed to the UI. It merges configured wallet accounts from `accounts.json` with built-in system exchange accounts (currently Coinbase and Kraken). System accounts do not participate in address-based ownership resolution and use location-derived IDs such as `COINBASE:coinbase`.
-- Ingestion corrections are applied in this order: validate spam/replacement interactions, remove spammed raw events, replace referenced raw events with synthetic replacement events, append seed events, then sort once before persisting corrected events.
-- Spam corrections are persisted in a separate DB so they survive resets of the main analytics DB. That persistence layer keeps soft-delete tombstones and provenance metadata internally so automatic imports can avoid recreating markers that were removed manually.
-- Replacement corrections are persisted in the corrections DB. They are corrections stored as a header row plus source rows plus leg rows.
-- Replacement validation is strict: a raw event cannot be both spammed and replaced, and a raw event cannot be consumed by more than one replacement source.
-- The UI can author replacement corrections from selected raw-backed events. The replacement editor seeds its draft with the latest selected source timestamp, preloads all source legs, and submits an authoritative replacement payload to the backend.
-
+- Ingestion corrections are applied in this order: validate unified source ownership, remove claimed raw events, emit synthetic corrected events for corrections with legs, then sort once before persisting corrected events.
+- Corrections are persisted in the corrections DB as header rows plus source rows plus leg rows. Source-backed deletions become tombstones by soft-deleting the correction row while retaining its source rows for suppression checks; source-less opening-balance deletions are hard deletes.
+- Validation is strict: every claimed source must match exactly one raw event, and a raw event cannot be consumed by more than one active correction source.
+- Moralis possible-spam auto-generation creates discard corrections and respects deleted-source tombstones so manually removed auto-generated corrections are not recreated.
+- The UI can author discard, replacement, and opening-balance corrections through the unified corrections API.
 ---
 
 ## Fees
@@ -102,8 +106,8 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
 - CLI inventory summary aggregates quantities and EUR values per asset across owned accounts.
 - Tax calculations currently focus on disposal links.
-- CLI run persists ledger events plus corrected ledger events to SQLite, and the backend correction pipeline currently supports spam markers, manual replacements, and seed events.
-- The UI renders raw, corrections, and corrected lanes. Raw-backed event cards in the raw/corrected lanes support selection keyed by `event_origin` for spam and replacement actions, the corrections lane displays seed events plus persisted spam/replacement corrections, and the corrected lane shows corrected ledger events including synthetic replacement events. After correction mutations the UI refreshes the server-rendered page so the corrections lane updates immediately; the corrected lane still requires a pipeline rerun.
+- CLI run persists ledger events plus corrected ledger events to SQLite, and the backend correction pipeline supports unified `LedgerCorrection` records only.
+- The UI renders raw, corrections, and corrected lanes. Raw-backed event cards in the raw/corrected lanes support selection keyed by `event_origin` for discard and replacement actions, the corrections lane displays unified persisted corrections, and the corrected lane shows corrected ledger events including synthetic `ledger_correction` events. After correction mutations the UI refreshes the server-rendered page so the corrections lane updates immediately; the corrected lane still requires a pipeline rerun.
 
 ---
 

@@ -12,10 +12,8 @@ from db.repositories import (
     CorrectedLedgerEventRepository,
     DisposalLinkRepository,
     LedgerEventRepository,
-    SeedEventRepository,
     TaxEventRepository,
 )
-from domain.correction import SeedEvent
 from domain.ledger import (
     AcquisitionLot,
     DisposalId,
@@ -62,11 +60,6 @@ def disposal_repo(test_session: Session) -> DisposalLinkRepository:
 @pytest.fixture()
 def tax_repo(test_session: Session) -> TaxEventRepository:
     return TaxEventRepository(test_session)
-
-
-@pytest.fixture()
-def seed_repo(test_session: Session) -> SeedEventRepository:
-    return SeedEventRepository(test_session)
 
 
 @pytest.fixture()
@@ -227,31 +220,6 @@ def test_persist_tax_events(tax_repo: TaxEventRepository) -> None:
         reloaded = stored_by_source[expected.source_id]
         assert reloaded.kind == expected.kind
         assert reloaded.taxable_gain == expected.taxable_gain
-
-
-def test_persist_seed_events(seed_repo: SeedEventRepository) -> None:
-    timestamp = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
-    price_per_token = Decimal("1.23")
-    quantity = Decimal("0.5")
-    seed_event = SeedEvent(
-        timestamp=timestamp,
-        price_per_token=price_per_token,
-        legs=[LedgerLeg(asset_id=BTC, quantity=quantity, account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False)],
-    )
-
-    seed_repo.create_many([seed_event])
-
-    stored = seed_repo.list()
-    assert len(stored) == 1
-    (reloaded,) = stored
-    assert reloaded.id == seed_event.id
-    assert reloaded.timestamp == timestamp
-    assert reloaded.price_per_token == price_per_token
-    assert len(reloaded.legs) == 1
-    (leg,) = reloaded.legs
-    assert leg.asset_id == BTC
-    assert leg.quantity == quantity
-    assert leg.account_chain_id == KRAKEN_ACCOUNT_ID
 
 
 def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRepository) -> None:

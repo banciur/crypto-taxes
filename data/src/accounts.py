@@ -117,7 +117,7 @@ class AccountRegistry:
                     f"Configured account name '{account.name}' conflicts with reserved system account name."
                 )
 
-            for location in account.locations:
+            for location in sorted(account.locations, key=lambda location: location.value):
                 account_chain_id = account.account_chain_id_for(location)
                 if account_chain_id in self._by_account_chain_id:
                     raise ValueError(f"Duplicate account_chain_id {account_chain_id} in merged account registry.")
@@ -151,4 +151,7 @@ class AccountRegistry:
         return record.display_name
 
     def records(self) -> list[AccountRecord]:
-        return list(self._by_account_chain_id.values())
+        return sorted(
+            self._by_account_chain_id.values(),
+            key=lambda record: (record.display_name.casefold(), record.account_chain_id),
+        )

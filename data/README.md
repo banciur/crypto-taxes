@@ -16,16 +16,15 @@
 - Ledger and lots: `src/domain/ledger.py`
 - Inventory engine and lot matching: `src/domain/inventory.py`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
-- Corrections model (spam markers, replacements, seed events): `src/domain/correction.py`
+- Unified correction model (`LedgerCorrection` for discard, replacement, and opening balance): `src/domain/correction.py`
 - Tax event projection types: `src/domain/tax_event.py`
 - Wallet balance tracking and insufficient-balance errors: `src/domain/wallet_balance_tracker.py`
 
 ### Corrections persistence and application
-- Corrections DB common setup lives in `src/db/corrections_common.py`.
-- Spam correction persistence lives in `src/db/corrections_spam.py`.
-- Replacement correction persistence lives in `src/db/corrections_replacement.py`.
+- Unified correction persistence lives in `src/db/ledger_corrections.py`.
+- One-off migration from legacy spam/replacement/seed tables lives in `scripts/migrate_ledger_corrections.py`; it backfills missing legacy rows into `ledger_corrections`, skips already-covered spam sources, and migrates legacy seed/opening-balance rows from the main DB.
 - Ingestion-layer correction application and validation live under `src/corrections/`.
-- Current ingestion correction flow is: validate spam/replacement interactions, apply spam removals, apply replacements, append seed events, then sort corrected events once before persistence.
+- Current ingestion correction flow is: validate unified source ownership, remove all claimed raw events, emit synthetic events for corrections with legs, then sort corrected events once before persistence.
 
 ### Price services
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
@@ -36,7 +35,6 @@
   - Coinbase Track account history: `src/importers/coinbase/coinbase_importer.py`
   - Kraken CSV ledger: `src/importers/kraken/kraken_importer.py`
   - on-chain transactions through Moralis importer: `src/importers/moralis/moralis_importer.py`
-  - Seed CSV events (for missing history): `src/importers/seed_events.py` loads `SeedEvent`s from `artifacts/seed_lots.csv` (corrections layer, not `LedgerEvent`s).
 - Moralis and Coinbase persist raw upstream data in the SQLite cache DB at `artifacts/transactions_cache.db` to reduce API calls during syncs.
 
 ## Technical Workflow

@@ -4,21 +4,17 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ApiError } from "@/api/core";
-import {
-  createReplacementCorrection,
-  deleteReplacementCorrection,
-} from "@/api/replacementCorrections";
-import {
-  createSpamCorrection,
-  deleteSpamCorrection,
-} from "@/api/spamCorrections";
+import { createCorrection, deleteCorrection } from "@/api/corrections";
 import {
   EventsActionBar,
   type EventsActionFeedback,
 } from "@/components/EventsActionBar";
 import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
-import type { EventOrigin, EventsByTimestamp } from "@/types/events";
-import type { CreateReplacementCorrectionPayload } from "@/types/events";
+import type {
+  CreateLedgerCorrectionPayload,
+  EventsByTimestamp,
+} from "@/types/events";
+import { OpeningBalanceEditorModal } from "./OpeningBalanceEditorModal";
 import { ReplacementEditorModal } from "./ReplacementEditorModal";
 import { useEventSelection } from "./useEventSelection";
 
@@ -28,14 +24,15 @@ type EventsProps = {
 
 export function Events({ eventsByTimestamp }: EventsProps) {
   const router = useRouter();
-  const [isMarkingSpam, setIsMarkingSpam] = useState(false);
-  const [isRemovingSpamCorrection, setIsRemovingSpamCorrection] =
-    useState(false);
-  const [isRemovingReplacementCorrection, setIsRemovingReplacementCorrection] =
-    useState(false);
-  const [isCreatingReplacement, setIsCreatingReplacement] = useState(false);
+  const [isCreatingCorrection, setIsCreatingCorrection] = useState(false);
+  const [isRemovingCorrection, setIsRemovingCorrection] = useState(false);
   const [isReplacementEditorOpen, setIsReplacementEditorOpen] = useState(false);
+  const [isOpeningBalanceEditorOpen, setIsOpeningBalanceEditorOpen] =
+    useState(false);
   const [replacementEditorError, setReplacementEditorError] = useState<
+    string | null
+  >(null);
+  const [openingBalanceEditorError, setOpeningBalanceEditorError] = useState<
     string | null
   >(null);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
@@ -46,29 +43,32 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     getSelectedEvents,
   } = useEventSelection(eventsByTimestamp);
 
-  const handleMarkSelectedAsSpam = useCallback(async () => {
-    const selectedSourceEvents = getSelectedEvents();
-
-    setFeedback(null);
-    setIsMarkingSpam(true);
-
-    const results = await Promise.allSettled(
-      selectedSourceEvents.map((sourceEvent) =>
-        createSpamCorrection(sourceEvent.eventOrigin),
-      ),
+  const handleCreateDiscards = useCallback(async () => {
+    const payloads: CreateLedgerCorrectionPayload[] = getSelectedEvents().map(
+      (sourceEvent) => ({
+        timestamp: sourceEvent.timestamp,
+        sources: [sourceEvent.eventOrigin],
+        legs: [],
+      }),
     );
 
-    setIsMarkingSpam(false);
+    setFeedback(null);
+    setIsCreatingCorrection(true);
+
+    const results = await Promise.allSettled(payloads.map(createCorrection));
+    setIsCreatingCorrection(false);
 
     const failures = results.flatMap((result) =>
       result.status === "rejected" ? [result.reason] : [],
     );
     if (failures.length > 0) {
-      console.error("Failed to create spam corrections", failures);
+      console.error("Failed to create discard corrections", failures);
       setFeedback({
         tone: "danger",
         message:
-          "Some spam markers failed. Check the console, then rerun the pipeline manually if needed.",
+          failures[0] instanceof ApiError
+            ? failures[0].detail
+            : "Saving the discard corrections failed. Check the console for details.",
       });
       return;
     }
@@ -77,38 +77,39 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     setFeedback({
       tone: "success",
       message:
-        "Spam markers saved and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
+        "Discard corrections saved and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
     });
     router.refresh();
   }, [clearEventSelection, getSelectedEvents, router]);
 
-  const handleOpenReplacementEditor = useCallback(() => {
-    const selectedSourceEvents = getSelectedEvents();
-    if (selectedSourceEvents.length === 0) {
-      return;
-    }
-
+  const handleOpenReplacementEditor = () => {
     setReplacementEditorError(null);
     setIsReplacementEditorOpen(true);
-  }, [getSelectedEvents]);
+  };
 
-  const handleCloseReplacementEditor = useCallback(() => {
-    if (isCreatingReplacement) {
-      return;
-    }
-
+  const handleCloseReplacementEditor = () => {
     setReplacementEditorError(null);
     setIsReplacementEditorOpen(false);
-  }, [isCreatingReplacement]);
+  };
+
+  const handleOpenOpeningBalanceEditor = useCallback(() => {
+    setOpeningBalanceEditorError(null);
+    setIsOpeningBalanceEditorOpen(true);
+  }, []);
+
+  const handleCloseOpeningBalanceEditor = () => {
+    setOpeningBalanceEditorError(null);
+    setIsOpeningBalanceEditorOpen(false);
+  };
 
   const handleCreateReplacement = useCallback(
-    async (payload: CreateReplacementCorrectionPayload) => {
+    async (payload: CreateLedgerCorrectionPayload) => {
       setFeedback(null);
       setReplacementEditorError(null);
-      setIsCreatingReplacement(true);
+      setIsCreatingCorrection(true);
 
       try {
-        await createReplacementCorrection(payload);
+        await createCorrection(payload);
         clearEventSelection();
         setIsReplacementEditorOpen(false);
         setFeedback({
@@ -125,90 +126,98 @@ export function Events({ eventsByTimestamp }: EventsProps) {
             : "Saving the replacement failed. Check the console for details.",
         );
       } finally {
-        setIsCreatingReplacement(false);
+        setIsCreatingCorrection(false);
       }
     },
     [clearEventSelection, router],
   );
 
-  const handleRemoveSpamCorrection = useCallback(
-    async (eventOrigin: EventOrigin) => {
+  const handleCreateOpeningBalance = useCallback(
+    async (payload: CreateLedgerCorrectionPayload) => {
       setFeedback(null);
-      setIsRemovingSpamCorrection(true);
+      setOpeningBalanceEditorError(null);
+      setIsCreatingCorrection(true);
 
       try {
-        await deleteSpamCorrection(eventOrigin);
+        await createCorrection(payload);
         setFeedback({
           tone: "success",
           message:
-            "Spam marker removed and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
+            "Opening balance saved and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
         });
+        setIsOpeningBalanceEditorOpen(false);
         router.refresh();
       } catch (error) {
-        console.error("Failed to remove spam correction", error);
-        setFeedback({
-          tone: "danger",
-          message:
-            "Removing the spam marker failed. Check the console for details.",
-        });
+        console.error("Failed to create opening balance correction", error);
+        setOpeningBalanceEditorError(
+          error instanceof ApiError
+            ? error.detail
+            : "Saving the opening balance failed. Check the console for details.",
+        );
       } finally {
-        setIsRemovingSpamCorrection(false);
+        setIsCreatingCorrection(false);
       }
     },
     [router],
   );
 
-  const handleRemoveReplacementCorrection = useCallback(
+  const handleRemoveCorrection = useCallback(
     async (correctionId: string) => {
       setFeedback(null);
-      setIsRemovingReplacementCorrection(true);
+      setIsRemovingCorrection(true);
 
       try {
-        await deleteReplacementCorrection(correctionId);
+        await deleteCorrection(correctionId);
         setFeedback({
           tone: "success",
           message:
-            "Replacement removed and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
+            "Correction removed and the corrections lane refreshed. Re-run the pipeline to refresh corrected events.",
         });
         router.refresh();
       } catch (error) {
-        console.error("Failed to remove replacement correction", error);
+        console.error("Failed to remove correction", error);
         setFeedback({
           tone: "danger",
           message:
-            "Removing the replacement failed. Check the console for details.",
+            "Removing the correction failed. Check the console for details.",
         });
       } finally {
-        setIsRemovingReplacementCorrection(false);
+        setIsRemovingCorrection(false);
       }
     },
     [router],
   );
 
   const isCorrectionChangePending =
-    isMarkingSpam ||
-    isRemovingSpamCorrection ||
-    isRemovingReplacementCorrection ||
-    isCreatingReplacement;
+    isCreatingCorrection || isRemovingCorrection;
 
   return (
     <div className="d-flex h-100 w-100 flex-column">
       <EventsActionBar
         selectedEventCount={selectedEventOriginKeys.size}
         isCorrectionChangePending={isCorrectionChangePending}
-        isMarkingSpam={isMarkingSpam}
         feedback={feedback}
-        onMarkSelectedAsSpam={handleMarkSelectedAsSpam}
+        onDiscardSelected={handleCreateDiscards}
         onReplaceSelected={handleOpenReplacementEditor}
+        onAddOpeningBalance={handleOpenOpeningBalanceEditor}
       />
       {isReplacementEditorOpen && (
         <ReplacementEditorModal
           show
           selectedSourceEvents={getSelectedEvents()}
-          isSaving={isCreatingReplacement}
+          isSaving={isCreatingCorrection}
           errorMessage={replacementEditorError}
           onHide={handleCloseReplacementEditor}
           onSubmit={handleCreateReplacement}
+        />
+      )}
+      {isOpeningBalanceEditorOpen && (
+        <OpeningBalanceEditorModal
+          show
+          isSaving={isCreatingCorrection}
+          errorMessage={openingBalanceEditorError}
+          onHide={handleCloseOpeningBalanceEditor}
+          onSubmit={handleCreateOpeningBalance}
         />
       )}
       <VirtualizedDateSections
@@ -217,8 +226,7 @@ export function Events({ eventsByTimestamp }: EventsProps) {
         isCorrectionChangePending={isCorrectionChangePending}
         className="flex-grow-1"
         onToggleEventSelection={toggleEventSelection}
-        onRemoveSpamCorrection={handleRemoveSpamCorrection}
-        onRemoveReplacementCorrection={handleRemoveReplacementCorrection}
+        onRemoveCorrection={handleRemoveCorrection}
       />
     </div>
   );

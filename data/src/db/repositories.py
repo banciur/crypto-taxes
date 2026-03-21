@@ -7,7 +7,6 @@ from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from db import models
-from domain.correction import CorrectionId, SeedEvent
 from domain.ledger import (
     AccountChainId,
     AcquisitionLot,
@@ -274,53 +273,3 @@ class TaxEventRepository:
 
             persisted.append(TaxEvent(source_id=source_id, kind=kind, taxable_gain=tax_event.taxable_gain))
         return persisted
-
-
-class SeedEventRepository:
-    def __init__(self, session: Session) -> None:
-        self._session = session
-
-    def create_many(self, events: list[SeedEvent]) -> list[SeedEvent]:
-        orm_events: list[models.SeedEventOrm] = []
-        for event in events:
-            orm_event = models.SeedEventOrm(
-                id=event.id, timestamp=event.timestamp, price_per_token=event.price_per_token
-            )
-            orm_event.legs = [
-                models.SeedEventLegOrm(
-                    id=leg.id,
-                    asset_id=leg.asset_id,
-                    quantity=leg.quantity,
-                    account_chain_id=leg.account_chain_id,
-                    is_fee=leg.is_fee,
-                )
-                for leg in event.legs
-            ]
-            orm_events.append(orm_event)
-
-        self._session.add_all(orm_events)
-        self._session.commit()
-        return events
-
-    def list(self) -> list[SeedEvent]:
-        orm_events = self._session.query(models.SeedEventOrm).order_by(models.SeedEventOrm.timestamp.asc()).all()
-        return [self._to_domain(event) for event in orm_events]
-
-    @staticmethod
-    def _to_domain(orm_event: models.SeedEventOrm) -> SeedEvent:
-        legs = [
-            LedgerLeg(
-                id=LegId(leg.id),
-                asset_id=AssetId(leg.asset_id),
-                quantity=leg.quantity,
-                account_chain_id=AccountChainId(leg.account_chain_id),
-                is_fee=leg.is_fee,
-            )
-            for leg in orm_event.legs
-        ]
-        return SeedEvent(
-            id=CorrectionId(orm_event.id),
-            timestamp=ensure_utc_datetime(orm_event.timestamp),
-            price_per_token=orm_event.price_per_token,
-            legs=legs,
-        )

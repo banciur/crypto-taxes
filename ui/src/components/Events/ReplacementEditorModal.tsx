@@ -19,12 +19,12 @@ import {
   normalizeDecimalInput,
 } from "@/lib/decimalStrings";
 import type {
-  CreateReplacementCorrectionPayload,
+  CreateLedgerCorrectionPayload,
   LedgerEvent,
-  ReplacementCorrectionDraftLeg,
+  LedgerCorrectionDraftLeg,
 } from "@/types/events";
 
-type DraftLeg = ReplacementCorrectionDraftLeg & {
+type DraftLeg = LedgerCorrectionDraftLeg & {
   draftId: string;
 };
 
@@ -34,10 +34,10 @@ type ReplacementEditorModalProps = {
   isSaving: boolean;
   errorMessage: string | null;
   onHide: () => void;
-  onSubmit: (payload: CreateReplacementCorrectionPayload) => Promise<void>;
+  onSubmit: (payload: CreateLedgerCorrectionPayload) => Promise<void>;
 };
 
-const createDraftLeg = (leg: ReplacementCorrectionDraftLeg): DraftLeg => ({
+const createDraftLeg = (leg: LedgerCorrectionDraftLeg): DraftLeg => ({
   ...leg,
   draftId: crypto.randomUUID(),
 });
@@ -124,6 +124,7 @@ export function ReplacementEditorModal({
   const [draftLegs, setDraftLegs] = useState<DraftLeg[]>(() =>
     buildInitialDraftLegs(selectedSourceEvents, resolveAccountName),
   );
+  const [note, setNote] = useState("");
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
@@ -138,10 +139,10 @@ export function ReplacementEditorModal({
     [accounts],
   );
 
-  const handleLegChange = <K extends keyof ReplacementCorrectionDraftLeg>(
+  const handleLegChange = <K extends keyof LedgerCorrectionDraftLeg>(
     draftId: string,
     key: K,
-    value: ReplacementCorrectionDraftLeg[K],
+    value: LedgerCorrectionDraftLeg[K],
   ) => {
     setDraftLegs((current) =>
       current.map((leg) =>
@@ -180,7 +181,7 @@ export function ReplacementEditorModal({
       return;
     }
 
-    const normalizedLegs: ReplacementCorrectionDraftLeg[] = [];
+    const normalizedLegs: LedgerCorrectionDraftLeg[] = [];
     for (const leg of draftLegs) {
       const assetId = leg.assetId.trim();
       const accountChainId = leg.accountChainId.trim();
@@ -210,13 +211,19 @@ export function ReplacementEditorModal({
     }
 
     setValidationMessage(null);
-    await onSubmit({
+    const payload: CreateLedgerCorrectionPayload = {
       timestamp,
       sources: selectedSourceEvents.map(
         (sourceEvent) => sourceEvent.eventOrigin,
       ),
       legs: normalizedLegs,
-    });
+    };
+    const trimmedNote = note.trim();
+    if (trimmedNote) {
+      payload.note = trimmedNote;
+    }
+
+    await onSubmit(payload);
   };
 
   return (
@@ -387,6 +394,17 @@ export function ReplacementEditorModal({
             </div>
           ))}
         </div>
+
+        <Form.Group controlId="replacement-note">
+          <Form.Label>Note</Form.Label>
+          <Form.Control
+            as="textarea"
+            rows={3}
+            value={note}
+            disabled={isSaving}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </Form.Group>
 
         {(validationMessage || errorMessage) && (
           <Alert variant="danger" className="mb-0">
