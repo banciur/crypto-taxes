@@ -2,23 +2,16 @@
 
 import type { CSSProperties } from "react";
 
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  ListGroup,
-  ListGroupItem,
-} from "react-bootstrap";
+import { Card, CardBody, CardHeader } from "react-bootstrap";
 
 import { clsx } from "clsx";
 import styles from "./LedgerEventCard.module.css";
 import { isSelectableEventItem } from "@/components/Events/selectableEvents";
+import { LedgerLegList } from "@/components/LedgerLegList";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
-import { useAccountNames } from "@/contexts/AccountNamesContext";
 import { useCorrectionHighlight } from "@/contexts/CorrectionHighlightContext";
 import { eventOriginKey } from "@/lib/eventOrigin";
-import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
 import type {
   CorrectedEventCardData,
   EventOrigin,
@@ -39,7 +32,6 @@ export function LedgerEventCard({
   onToggleEventSelection,
 }: LedgerEventCardProps) {
   const { timestamp, eventOrigin, note, legs } = event;
-  const { resolveAccountName } = useAccountNames();
   const { getSourceHighlight } = useCorrectionHighlight();
   const place = eventOrigin.location.toLowerCase();
   const originId = eventOrigin.externalId;
@@ -104,36 +96,11 @@ export function LedgerEventCard({
         <span className="text-muted small">{timestampLabel}</span>
         <OriginIcon place={place} className="ms-auto flex-shrink-0" />
       </CardHeader>
-      <CardBody className={clsx(sourceHighlight && styles.highlightedSurface)}>
-        <ListGroup variant="flush" className="border rounded">
-          {legs.map((leg) => {
-            const quantityPresentation = getLedgerLegQuantityPresentation(leg);
-
-            return (
-              <ListGroupItem
-                key={leg.id}
-                className={clsx(
-                  "d-flex align-items-center gap-1",
-                  styles.leg,
-                  sourceHighlight && styles.highlightedSurface,
-                )}
-              >
-                <span>{leg.assetId}</span>
-                <span title={leg.accountChainId}>
-                  {resolveAccountName(leg.accountChainId)}
-                </span>
-                <span
-                  className={clsx(
-                    "flex-shrink-0",
-                    quantityPresentation.className,
-                  )}
-                >
-                  {quantityPresentation.text}
-                </span>
-              </ListGroupItem>
-            );
-          })}
-        </ListGroup>
+      <CardBody className={sourceHighlight && styles.highlightedSurface}>
+        <LedgerLegList
+          legs={legs}
+          itemClassName={sourceHighlight && styles.highlightedSurface}
+        />
         {note?.trim() && <div className="mt-3 small text-muted">{note}</div>}
       </CardBody>
     </Card>

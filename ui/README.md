@@ -31,6 +31,7 @@
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/TimestampBucketRow.tsx` renders one timestamp bucket across the currently selected columns and dispatches lane items to the appropriate card component.
 - `src/components/LedgerEventCard.tsx` is the shared card UI for raw and corrected ledger events.
+- `src/components/LedgerLegList.tsx` is the shared ledger-leg renderer for event and correction cards; it keeps leg rows in `wallet -> token -> amount` order and centralizes fee/quantity presentation.
 - `src/contexts/AccountNamesContext.tsx` exposes the merged account dataset plus account-label resolution helpers to client components.
 
 ## Architecture and Integration

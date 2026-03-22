@@ -2,21 +2,13 @@
 
 import type { CSSProperties } from "react";
 
-import {
-  Badge,
-  Card,
-  CardBody,
-  CardHeader,
-  ListGroup,
-  ListGroupItem,
-} from "react-bootstrap";
+import { Badge, Card, CardBody, CardHeader } from "react-bootstrap";
 
 import { clsx } from "clsx";
 import { CorrectionRemoveButton } from "@/components/CorrectionRemoveButton";
+import { LedgerLegList } from "@/components/LedgerLegList";
 import { OriginId } from "@/components/OriginId";
-import { useAccountNames } from "@/contexts/AccountNamesContext";
 import { useCorrectionHighlight } from "@/contexts/CorrectionHighlightContext";
-import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
 import type { CorrectionItemData } from "@/types/events";
 import styles from "./LedgerCorrectionCard.module.css";
 
@@ -44,7 +36,6 @@ export function LedgerCorrectionCard({
   actionDisabled,
   onRemove,
 }: LedgerCorrectionCardProps) {
-  const { resolveAccountName } = useAccountNames();
   const { clearHighlightedSources, getSourceHighlight, setHighlightedSources } =
     useCorrectionHighlight();
   const label = correctionLabel(item);
@@ -112,37 +103,7 @@ export function LedgerCorrectionCard({
           </div>
         )}
 
-        {item.legs.length > 0 && (
-          <ListGroup variant="flush" className="border rounded">
-            {item.legs.map((leg) => {
-              const quantityPresentation =
-                getLedgerLegQuantityPresentation(leg);
-
-              return (
-                <ListGroupItem
-                  key={leg.id}
-                  className={clsx(
-                    "d-flex align-items-center gap-1",
-                    styles.leg,
-                  )}
-                >
-                  <span>{leg.assetId}</span>
-                  <span title={leg.accountChainId}>
-                    {resolveAccountName(leg.accountChainId)}
-                  </span>
-                  <span
-                    className={clsx(
-                      "flex-shrink-0",
-                      quantityPresentation.className,
-                    )}
-                  >
-                    {quantityPresentation.text}
-                  </span>
-                </ListGroupItem>
-              );
-            })}
-          </ListGroup>
-        )}
+        {item.legs.length > 0 && <LedgerLegList legs={item.legs} />}
 
         {item.sources.length === 0 && item.pricePerToken !== undefined && (
           <div className="mt-3 small text-muted">
