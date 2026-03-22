@@ -11,7 +11,7 @@ import {
 } from "react-bootstrap";
 
 import { clsx } from "clsx";
-import styles from "./EventCard.module.css";
+import styles from "./LedgerEventCard.module.css";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNames } from "@/contexts/AccountNamesContext";
@@ -19,19 +19,19 @@ import { useCorrectionHighlight } from "@/contexts/CorrectionHighlightContext";
 import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
 import type { CorrectedEventCardData, RawEventCardData } from "@/types/events";
 
-type EventCardProps = {
+type LedgerEventCardProps = {
   event: RawEventCardData | CorrectedEventCardData;
   isSelected?: boolean;
   onSelectionChange?: (isSelected: boolean) => void;
   selectionDisabled?: boolean;
 };
 
-export function EventCard({
+export function LedgerEventCard({
   event,
   isSelected = false,
   onSelectionChange,
   selectionDisabled = false,
-}: EventCardProps) {
+}: LedgerEventCardProps) {
   const { timestamp, eventOrigin, legs } = event;
   const { resolveAccountName } = useAccountNames();
   const { getSourceHighlight } = useCorrectionHighlight();

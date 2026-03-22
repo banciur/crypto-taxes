@@ -14,12 +14,13 @@
 
 ### Supported actions
 
-- Users can select one or more raw-backed event cards and create discard corrections for those sources immediately.
-- Users can select one or more raw-backed event cards and create replacement corrections from those selected sources.
-- Users can create a source-less opening-balance correction from the action bar.
-- Users can remove any existing correction from the `Corrections` lane by correction id.
-- The date chooser scrolls the main timeline to the selected day.
-- The column chooser controls which lanes are loaded and rendered.
+- Selection is available only for raw-backed event cards; selected cards drive discard and replacement creation from the action bar.
+- Opening-balance creation is action-bar driven and does not require any selected source events.
+- Removing a correction is initiated from the corresponding card in the `Corrections` lane.
+- Hovering a source-backed correction activates shared source-highlighting state that colors the listed correction sources and every matching raw/corrected event card.
+- The date chooser updates the visible timeline day by scrolling the virtualized event list.
+- The column chooser updates which lanes are loaded and rendered.
+- Correction mutations refresh the server-rendered lane data immediately; corrected pipeline outputs still require a manual rerun outside the UI.
 
 ## UI Structure
 
@@ -29,8 +30,8 @@
 - `src/components/Events/OpeningBalanceEditorModal.tsx` owns the source-less opening-balance creation form.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
-- `src/components/LaneItem.tsx` dispatches each lane item to either `EventCard` or the unified `LedgerCorrectionItem`.
-- `src/components/EventCard.tsx` is the shared card UI for raw and corrected ledger events.
+- `src/components/LaneItem.tsx` dispatches each lane item to either `LedgerEventCard` or `LedgerCorrectionCard`.
+- `src/components/LedgerEventCard.tsx` is the shared card UI for raw and corrected ledger events.
 - `src/contexts/AccountNamesContext.tsx` exposes the merged account dataset plus account-label resolution helpers to client components.
 
 ## Architecture and Integration

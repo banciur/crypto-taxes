@@ -18,9 +18,9 @@ import { useAccountNames } from "@/contexts/AccountNamesContext";
 import { useCorrectionHighlight } from "@/contexts/CorrectionHighlightContext";
 import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
 import type { CorrectionItemData } from "@/types/events";
-import styles from "./LedgerCorrectionItem.module.css";
+import styles from "./LedgerCorrectionCard.module.css";
 
-type LedgerCorrectionItemProps = {
+type LedgerCorrectionCardProps = {
   item: CorrectionItemData;
   actionDisabled: boolean;
   onRemove: () => void;
@@ -39,11 +39,11 @@ const correctionLabel = (item: CorrectionItemData) => {
 const correctionLabelVariant = (item: CorrectionItemData) =>
   item.legs.length === 0 && item.sources.length > 0 ? "warning" : "secondary";
 
-export function LedgerCorrectionItem({
+export function LedgerCorrectionCard({
   item,
   actionDisabled,
   onRemove,
-}: LedgerCorrectionItemProps) {
+}: LedgerCorrectionCardProps) {
   const { resolveAccountName } = useAccountNames();
   const { clearHighlightedSources, getSourceHighlight, setHighlightedSources } =
     useCorrectionHighlight();

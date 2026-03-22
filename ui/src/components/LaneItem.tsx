@@ -1,7 +1,7 @@
 "use client";
 
-import { EventCard } from "@/components/EventCard";
-import { LedgerCorrectionItem } from "@/components/LedgerCorrectionItem";
+import { LedgerCorrectionCard } from "@/components/LedgerCorrectionCard";
+import { LedgerEventCard } from "@/components/LedgerEventCard";
 import type { EventOrigin, LaneItemData } from "@/types/events";
 
 type LaneItemProps = {
@@ -25,7 +25,7 @@ export function LaneItem({
     case "raw-event":
     case "corrected-event":
       return (
-        <EventCard
+        <LedgerEventCard
           event={item}
           isSelected={isSelected}
           selectionDisabled={isSelectable && isCorrectionChangePending}
@@ -38,7 +38,7 @@ export function LaneItem({
       );
     case "correction":
       return (
-        <LedgerCorrectionItem
+        <LedgerCorrectionCard
           item={item}
           actionDisabled={isCorrectionChangePending}
           onRemove={() => onRemoveCorrection(item.id)}
