@@ -29,8 +29,7 @@
 - `src/components/Events/ReplacementEditorModal.tsx` owns the structured replacement-creation form, including UTC timestamp editing, leg authoring, and note capture.
 - `src/components/Events/OpeningBalanceEditorModal.tsx` owns the source-less opening-balance creation form.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
-- `src/components/EventDateSection.tsx` renders one timestamp bucket across the currently selected columns.
-- `src/components/LaneItem.tsx` dispatches each lane item to either `LedgerEventCard` or `LedgerCorrectionCard`.
+- `src/components/TimestampBucketRow.tsx` renders one timestamp bucket across the currently selected columns and dispatches lane items to the appropriate card component.
 - `src/components/LedgerEventCard.tsx` is the shared card UI for raw and corrected ledger events.
 - `src/contexts/AccountNamesContext.tsx` exposes the merged account dataset plus account-label resolution helpers to client components.
 

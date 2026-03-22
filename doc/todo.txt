@@ -1,7 +1,5 @@
 First stage: compute German taxes
 
-TODO: When hovering over the replacement event highlight raw events that are being replaced (if raw events lane is visible)
-
 TODO: Fix following problem
 Current problem: source-backed corrections that are deleted are soft-deleted, not fully removed. Their rows in ledger_correction_sources stay in the DB, and the unique index on (origin_location, origin_external_id) still blocks any new correction from reusing that source.
 
@@ -31,10 +29,10 @@ prevent Moralis auto-recreation
 block all manual recreation too
 If your intended product behavior is “block auto recreation, allow explicit manual recreation,” then the persistence model needs to distinguish those two cases more explicitly in the next PR.
 
+TODO: Change instructions for AI agents so they change context when trying to run commands for data and ui
 TODO: Add an optional note field to ledger entry (also to correction) and corrected entry
 TODO: For onchain (moralis) add called function name. It will make it more readable.
 TODO: Maybe change how sources of replacement are rendered now it's the same as in other items
-TODO: Review downstream components from Events I have a feeling internal structures are too complicated etc.
 TODO: Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok. Now I think I have partial composition. Still maybe this should be made more verbose
 
 Review the order of todos

@@ -4,7 +4,9 @@ import { useMemo } from "react";
 
 import { Col } from "react-bootstrap";
 
-import { LaneItem } from "@/components/LaneItem";
+import { LedgerCorrectionCard } from "@/components/LedgerCorrectionCard";
+import { LedgerEventCard } from "@/components/LedgerEventCard";
+import { isSelectableEventItem } from "@/components/Events/selectableEvents";
 import { orderColumnKeys } from "@/consts";
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
 import { eventOriginKey } from "@/lib/eventOrigin";
@@ -13,9 +15,8 @@ import type {
   EventsByTimestamp,
   LaneItemData,
 } from "@/types/events";
-import { isSelectableEventItem } from "@/components/Events/selectableEvents";
 
-type EventDateSectionProps = {
+type TimestampBucketRowProps = {
   itemsByColumn: EventsByTimestamp[string];
   selectedEventOriginKeys: ReadonlySet<string>;
   isCorrectionChangePending: boolean;
@@ -30,13 +31,13 @@ const isSelectedEvent = (
   isSelectableEventItem(item) &&
   selectedEventOriginKeys.has(eventOriginKey(item.eventOrigin));
 
-export function EventDateSection({
+export function TimestampBucketRow({
   itemsByColumn,
   selectedEventOriginKeys,
   isCorrectionChangePending,
   onToggleEventSelection,
   onRemoveCorrection,
-}: EventDateSectionProps) {
+}: TimestampBucketRowProps) {
   const { selected } = useUrlColumnSelection();
   const orderedSelectedColumns = useMemo(
     () => orderColumnKeys(selected),
@@ -51,17 +52,34 @@ export function EventDateSection({
           className="d-flex flex-column gap-2"
           key={`section-${columnKey}`}
         >
-          {itemsByColumn[columnKey]?.map((item) => (
-            <LaneItem
-              key={item.id}
-              item={item}
-              isSelectable={isSelectableEventItem(item)}
-              isSelected={isSelectedEvent(item, selectedEventOriginKeys)}
-              isCorrectionChangePending={isCorrectionChangePending}
-              onToggleEventSelection={onToggleEventSelection}
-              onRemoveCorrection={onRemoveCorrection}
-            />
-          ))}
+          {itemsByColumn[columnKey]?.map((item) => {
+            if (item.kind === "correction") {
+              return (
+                <LedgerCorrectionCard
+                  key={item.id}
+                  item={item}
+                  actionDisabled={isCorrectionChangePending}
+                  onRemove={() => onRemoveCorrection(item.id)}
+                />
+              );
+            }
+
+            const isSelectable = isSelectableEventItem(item);
+
+            return (
+              <LedgerEventCard
+                key={item.id}
+                event={item}
+                isSelected={isSelectedEvent(item, selectedEventOriginKeys)}
+                selectionDisabled={isSelectable && isCorrectionChangePending}
+                onSelectionChange={
+                  isSelectable
+                    ? () => onToggleEventSelection(item.eventOrigin)
+                    : undefined
+                }
+              />
+            );
+          })}
         </Col>
       ))}
     </>

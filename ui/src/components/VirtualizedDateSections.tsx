@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { clsx } from "clsx";
 
-import { EventDateSection } from "@/components/EventDateSection";
+import { TimestampBucketRow } from "@/components/TimestampBucketRow";
 import { useVisibleDay } from "@/contexts/VisibleDayContext";
 import { dayIdFor } from "@/lib/dayHash";
 import { dayKeyForTimestampBucket } from "@/lib/timestampBuckets";
@@ -166,7 +166,7 @@ export function VirtualizedDateSections({
                   {row.dayKey}
                 </Col>
               ) : (
-                <EventDateSection
+                <TimestampBucketRow
                   itemsByColumn={row.itemsByColumn}
                   selectedEventOriginKeys={selectedEventOriginKeys}
                   isCorrectionChangePending={isCorrectionChangePending}
