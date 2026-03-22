@@ -1,11 +1,5 @@
 First stage: compute German taxes
 
-TODO: Add an optional note field to ledger entry (also to correction) and corrected entry
-TODO: For onchain (moralis) add called function name. It will make it more readable.
-
-TODO: UI Make component that display ledger legs with colors etc. It will be reused in every component.
-TODO: Oder of attributes when displaying first wallet, token, amount
-
 TODO: Need icons for coinbase and kraken
 TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
 
