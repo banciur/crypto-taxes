@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from accounts import KRAKEN_ACCOUNT_ID
 from db.ledger_corrections import (
+    LedgerCorrectionAutoSuppressionOrm,
     LedgerCorrectionLegOrm,
     LedgerCorrectionOrm,
     LedgerCorrectionRepository,
@@ -62,7 +63,7 @@ def test_create_and_list_orders_by_timestamp_desc(repo: LedgerCorrectionReposito
     assert [correction.id for correction in listed] == [later.id, earlier.id]
 
 
-def test_delete_source_backed_soft_deletes_and_keeps_tombstone(
+def test_delete_source_backed_hard_deletes_and_keeps_auto_suppression(
     corrections_session: Session,
     repo: LedgerCorrectionRepository,
 ) -> None:
@@ -71,17 +72,18 @@ def test_delete_source_backed_soft_deletes_and_keeps_tombstone(
 
     assert repo.list() == []
     source = next(iter(correction.sources))
-    assert repo.has_source(source) is False
-    assert repo.has_source(source, include_deleted=True) is True
+    assert repo.has_active_source(source) is False
+    assert repo.is_auto_suppressed(source) is True
 
-    row = corrections_session.get(LedgerCorrectionOrm, correction.id)
-    assert row is not None
-    assert row.is_deleted is True
-    source_rows = corrections_session.execute(select(LedgerCorrectionSourceOrm)).scalars().all()
-    assert len(source_rows) == 1
+    assert corrections_session.get(LedgerCorrectionOrm, correction.id) is None
+    assert corrections_session.execute(select(LedgerCorrectionSourceOrm)).scalars().all() == []
+    suppression_rows = corrections_session.execute(select(LedgerCorrectionAutoSuppressionOrm)).scalars().all()
+    assert len(suppression_rows) == 1
+    assert suppression_rows[0].origin_location == source.location.value
+    assert suppression_rows[0].origin_external_id == source.external_id
 
 
-def test_delete_source_less_hard_deletes_without_tombstone(
+def test_delete_source_less_hard_deletes_without_auto_suppression(
     corrections_session: Session,
     repo: LedgerCorrectionRepository,
 ) -> None:
@@ -92,16 +94,22 @@ def test_delete_source_less_hard_deletes_without_tombstone(
     assert corrections_session.get(LedgerCorrectionOrm, correction.id) is None
     assert corrections_session.execute(select(LedgerCorrectionLegOrm)).scalars().all() == []
     assert corrections_session.execute(select(LedgerCorrectionSourceOrm)).scalars().all() == []
+    assert corrections_session.execute(select(LedgerCorrectionAutoSuppressionOrm)).scalars().all() == []
 
 
-def test_manual_create_is_blocked_by_tombstone(repo: LedgerCorrectionRepository) -> None:
+def test_manual_create_reuses_source_after_delete_despite_auto_suppression(
+    corrections_session: Session,
+    repo: LedgerCorrectionRepository,
+) -> None:
     first = repo.create(_replacement(datetime(2024, 2, 3, 10, 30, tzinfo=timezone.utc), "0xshared"))
     second = _replacement(datetime(2024, 2, 4, 10, 30, tzinfo=timezone.utc), "0xshared")
 
     repo.delete(first.id)
+    recreated = repo.create(second)
 
-    with pytest.raises(IntegrityError):
-        repo.create(second)
+    assert next(iter(recreated.sources)).external_id == "0xshared"
+    suppression_rows = corrections_session.execute(select(LedgerCorrectionAutoSuppressionOrm)).scalars().all()
+    assert len(suppression_rows) == 1
 
 
 def test_create_rejects_duplicate_active_source(repo: LedgerCorrectionRepository) -> None:

@@ -25,7 +25,6 @@ class LedgerCorrectionOrm(CorrectionsBase):
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     price_per_token: Mapped[Decimal | None] = mapped_column(DecimalAsString, nullable=True)
     note: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
-    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     sources: Mapped[list["LedgerCorrectionSourceOrm"]] = relationship(
         cascade="all, delete-orphan",
@@ -63,6 +62,13 @@ class LedgerCorrectionSourceOrm(CorrectionsBase):
     correction: Mapped[LedgerCorrectionOrm] = relationship(back_populates="sources")
 
 
+class LedgerCorrectionAutoSuppressionOrm(CorrectionsBase):
+    __tablename__ = "ledger_correction_auto_suppressions"
+
+    origin_location: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
+    origin_external_id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
+
+
 class LedgerCorrectionLegOrm(CorrectionsBase):
     __tablename__ = "ledger_correction_legs"
 
@@ -81,11 +87,7 @@ class LedgerCorrectionRepository:
         self._session = session
 
     def list(self) -> list[LedgerCorrection]:
-        stmt = (
-            select(LedgerCorrectionOrm)
-            .where(LedgerCorrectionOrm.is_deleted.is_(False))
-            .order_by(LedgerCorrectionOrm.timestamp.desc(), LedgerCorrectionOrm.id.desc())
-        )
+        stmt = select(LedgerCorrectionOrm).order_by(LedgerCorrectionOrm.timestamp.desc(), LedgerCorrectionOrm.id.desc())
         rows = self._session.execute(stmt).unique().scalars().all()
         return [self._to_domain(row) for row in rows]
 
@@ -94,7 +96,6 @@ class LedgerCorrectionRepository:
             timestamp=correction.timestamp,
             price_per_token=correction.price_per_token,
             note=correction.note,
-            is_deleted=False,
         )
         orm_correction.sources = [
             LedgerCorrectionSourceOrm(
@@ -126,21 +127,40 @@ class LedgerCorrectionRepository:
         if row is None:
             return
 
-        if len(row.sources) == 0:
-            self._session.delete(row)
-        else:
-            row.is_deleted = True
-
+        for source in row.sources:
+            self._ensure_auto_suppression(
+                origin_location=source.origin_location,
+                origin_external_id=source.origin_external_id,
+            )
+        self._session.delete(row)
         self._session.commit()
 
-    def has_source(self, event_origin: EventOrigin, *, include_deleted: bool = False) -> bool:
+    def has_active_source(self, event_origin: EventOrigin) -> bool:
         stmt = select(LedgerCorrectionSourceOrm.correction_id).where(
             LedgerCorrectionSourceOrm.origin_location == event_origin.location.value,
             LedgerCorrectionSourceOrm.origin_external_id == event_origin.external_id,
         )
-        if not include_deleted:
-            stmt = stmt.join(LedgerCorrectionOrm).where(LedgerCorrectionOrm.is_deleted.is_(False))
-        return self._session.execute(stmt.limit(1)).scalar_one_or_none() is not None
+        return self._session.execute(stmt).scalar_one_or_none() is not None
+
+    def is_auto_suppressed(self, event_origin: EventOrigin) -> bool:
+        stmt = select(LedgerCorrectionAutoSuppressionOrm.origin_external_id).where(
+            LedgerCorrectionAutoSuppressionOrm.origin_location == event_origin.location.value,
+            LedgerCorrectionAutoSuppressionOrm.origin_external_id == event_origin.external_id,
+        )
+        return self._session.execute(stmt).scalar_one_or_none() is not None
+
+    def _ensure_auto_suppression(self, *, origin_location: str, origin_external_id: str) -> None:
+        existing = self._session.get(
+            LedgerCorrectionAutoSuppressionOrm,
+            (origin_location, origin_external_id),
+        )
+        if existing is None:
+            self._session.add(
+                LedgerCorrectionAutoSuppressionOrm(
+                    origin_location=origin_location,
+                    origin_external_id=origin_external_id,
+                )
+            )
 
     @staticmethod
     def _to_domain(row: LedgerCorrectionOrm) -> LedgerCorrection:

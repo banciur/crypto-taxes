@@ -84,9 +84,9 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
 - `AccountRegistry` is the canonical account catalog exposed to the UI. It merges configured wallet accounts from `accounts.json` with built-in system exchange accounts (currently Coinbase and Kraken). System accounts do not participate in address-based ownership resolution and use location-derived IDs such as `COINBASE:coinbase`.
 - Ingestion corrections are applied in this order: validate unified source ownership, remove claimed raw events, emit synthetic corrected events for corrections with legs, then sort once before persisting corrected events.
-- Corrections are persisted in the corrections DB as header rows plus source rows plus leg rows. Source-backed deletions become tombstones by soft-deleting the correction row while retaining its source rows for suppression checks; source-less opening-balance deletions are hard deletes.
+- Corrections are persisted in the corrections DB as active header rows plus source rows plus leg rows, with a separate source-level auto-suppression table. Deleting a source-backed correction hard-deletes the correction and frees the source for explicit manual reuse while preserving auto-suppression for future importer runs; deleting a source-less opening-balance correction is a plain hard delete.
 - Validation is strict: every claimed source must match exactly one raw event, and a raw event cannot be consumed by more than one active correction source.
-- Moralis possible-spam auto-generation creates discard corrections and respects deleted-source tombstones so manually removed auto-generated corrections are not recreated.
+- Moralis possible-spam auto-generation creates discard corrections and respects active source claims plus source-level auto-suppressions so manually removed corrections are not recreated automatically.
 - The UI can author discard, replacement, and opening-balance corrections through the unified corrections API.
 ---
 

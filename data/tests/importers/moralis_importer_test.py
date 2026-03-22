@@ -10,7 +10,12 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import sessionmaker
 
 from accounts import AccountConfig, AccountRegistry
-from db.ledger_corrections import CorrectionsBase, LedgerCorrectionOrm, LedgerCorrectionRepository
+from db.ledger_corrections import (
+    CorrectionsBase,
+    LedgerCorrectionAutoSuppressionOrm,
+    LedgerCorrectionOrm,
+    LedgerCorrectionRepository,
+)
 from domain.correction import LedgerCorrection
 from domain.ledger import AccountChainId, AssetId
 from importers.moralis.moralis_importer import NATIVE_ASSET_ID, MoralisImporter
@@ -284,5 +289,10 @@ def test_load_events_preserves_manual_spam_removals(test_ctx: _ImporterTestConte
     assert len(events) == 1
     assert events[0].event_origin == event_origin
     assert test_ctx.correction_repo.list() == []
-    row = test_ctx.correction_repo._session.execute(select(LedgerCorrectionOrm)).unique().scalar_one()
-    assert row.is_deleted is True
+    assert test_ctx.correction_repo._session.execute(select(LedgerCorrectionOrm)).scalars().all() == []
+    suppression_rows = (
+        test_ctx.correction_repo._session.execute(select(LedgerCorrectionAutoSuppressionOrm)).scalars().all()
+    )
+    assert len(suppression_rows) == 1
+    assert suppression_rows[0].origin_location == event_origin.location.value
+    assert suppression_rows[0].origin_external_id == event_origin.external_id

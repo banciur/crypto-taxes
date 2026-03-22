@@ -125,8 +125,10 @@ class MoralisImporter:
             if event is None:
                 continue
             events.append(event)
-            if tx.get("possible_spam") and not self.correction_repository.has_source(
-                event.event_origin, include_deleted=True
+            if (
+                tx.get("possible_spam")
+                and not self.correction_repository.has_active_source(event.event_origin)
+                and not self.correction_repository.is_auto_suppressed(event.event_origin)
             ):
                 self.correction_repository.create(
                     LedgerCorrectionDraft(
