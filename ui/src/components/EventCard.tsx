@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, CSSProperties } from "react";
 
 import {
   Card,
@@ -15,6 +15,7 @@ import styles from "./EventCard.module.css";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNames } from "@/contexts/AccountNamesContext";
+import { useCorrectionHighlight } from "@/contexts/CorrectionHighlightContext";
 import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
 import type { CorrectedEventCardData, RawEventCardData } from "@/types/events";
 
@@ -33,8 +34,10 @@ export function EventCard({
 }: EventCardProps) {
   const { timestamp, eventOrigin, legs } = event;
   const { resolveAccountName } = useAccountNames();
+  const { getSourceHighlight } = useCorrectionHighlight();
   const place = eventOrigin.location.toLowerCase();
   const originId = eventOrigin.externalId;
+  const sourceHighlight = getSourceHighlight(eventOrigin);
   const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
     timeZone: "UTC",
     hour: "2-digit",
@@ -47,9 +50,28 @@ export function EventCard({
     onSelectionChange?.(event.target.checked);
   };
 
+  const cardStyle = sourceHighlight
+    ? ({
+        "--source-highlight-accent": sourceHighlight.accentColor,
+        "--source-highlight-surface": sourceHighlight.surfaceColor,
+      } as CSSProperties)
+    : undefined;
+
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="d-flex flex-wrap align-items-center gap-2">
+    <Card
+      className={clsx(
+        "shadow-sm",
+        styles.card,
+        sourceHighlight && styles.highlightedCard,
+      )}
+      style={cardStyle}
+    >
+      <CardHeader
+        className={clsx(
+          "d-flex flex-wrap align-items-center gap-2",
+          sourceHighlight && styles.highlightedHeader,
+        )}
+      >
         {hasSelectionControl && (
           <input
             type="checkbox"
@@ -70,7 +92,7 @@ export function EventCard({
         <span className="text-muted small">{timestampLabel}</span>
         <OriginIcon place={place} className="ms-auto flex-shrink-0" />
       </CardHeader>
-      <CardBody>
+      <CardBody className={clsx(sourceHighlight && styles.highlightedSurface)}>
         <ListGroup variant="flush" className="border rounded">
           {legs.map((leg) => {
             const quantityPresentation = getLedgerLegQuantityPresentation(leg);
@@ -78,7 +100,11 @@ export function EventCard({
             return (
               <ListGroupItem
                 key={leg.id}
-                className={clsx("d-flex align-items-center gap-1", styles.leg)}
+                className={clsx(
+                  "d-flex align-items-center gap-1",
+                  styles.leg,
+                  sourceHighlight && styles.highlightedSurface,
+                )}
               >
                 <span>{leg.assetId}</span>
                 <span title={leg.accountChainId}>

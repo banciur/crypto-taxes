@@ -1,0 +1,11 @@
+.leg {
+  span {
+    overflow-x: hidden;
+    white-space: nowrap;
+    font-size: 0.75rem;
+  }
+}
+
+.highlightedSource {
+  color: var(--source-highlight-accent);
+}

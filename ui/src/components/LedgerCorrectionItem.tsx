@@ -1,5 +1,7 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 import { ListGroup, ListGroupItem } from "react-bootstrap";
 
 import { clsx } from "clsx";
@@ -7,9 +9,10 @@ import { CorrectionItem } from "@/components/CorrectionItem";
 import { CorrectionRemoveButton } from "@/components/CorrectionRemoveButton";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNames } from "@/contexts/AccountNamesContext";
+import { useCorrectionHighlight } from "@/contexts/CorrectionHighlightContext";
 import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
 import type { CorrectionItemData } from "@/types/events";
-import styles from "./EventCard.module.css";
+import styles from "./LedgerCorrectionItem.module.css";
 
 type LedgerCorrectionItemProps = {
   item: CorrectionItemData;
@@ -36,6 +39,7 @@ export function LedgerCorrectionItem({
   onRemove,
 }: LedgerCorrectionItemProps) {
   const { resolveAccountName } = useAccountNames();
+  const { getSourceHighlight } = useCorrectionHighlight();
   const action = (
     <CorrectionRemoveButton
       label={`Remove correction ${item.id}`}
@@ -50,18 +54,33 @@ export function LedgerCorrectionItem({
       labelVariant={correctionLabelVariant(item)}
       timestamp={item.timestamp}
       action={action}
+      highlightSources={item.sources}
     >
       {item.sources.length > 0 && (
         <div className="mb-3 d-flex flex-wrap align-items-center gap-2">
           <span className="text-muted small">Sources</span>
-          {item.sources.map((source) => (
-            <OriginId
-              key={`${source.location}:${source.externalId}`}
-              originId={source.externalId}
-              place={source.location.toLowerCase()}
-              className="small text-muted"
-            />
-          ))}
+          {item.sources.map((source) => {
+            const sourceHighlight = getSourceHighlight(source);
+            const sourceStyle = sourceHighlight
+              ? ({
+                  "--source-highlight-accent": sourceHighlight.accentColor,
+                  "--source-highlight-surface": sourceHighlight.surfaceColor,
+                } as CSSProperties)
+              : undefined;
+
+            return (
+              <OriginId
+                key={`${source.location}:${source.externalId}`}
+                originId={source.externalId}
+                place={source.location.toLowerCase()}
+                className={clsx(
+                  "small",
+                  sourceHighlight ? styles.highlightedSource : "text-muted",
+                )}
+                style={sourceStyle}
+              />
+            );
+          })}
         </div>
       )}
 

@@ -5,3 +5,30 @@
     font-size: 0.75rem;
   }
 }
+
+.card {
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    background-color 0.3s ease;
+}
+
+.highlightedCard {
+  border-color: var(--source-highlight-accent);
+  box-shadow:
+    0 0 0 1px var(--source-highlight-accent),
+    0 0 0 4px
+      color-mix(in srgb, var(--source-highlight-accent) 18%, transparent);
+}
+
+.highlightedHeader {
+  background-color: var(--source-highlight-surface);
+}
+
+.highlightedSurface {
+  background-color: color-mix(
+    in srgb,
+    var(--source-highlight-surface) 40%,
+    white
+  );
+}
