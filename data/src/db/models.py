@@ -34,6 +34,7 @@ class LedgerEventOrm(Base):
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ingestion: Mapped[str] = mapped_column(String, nullable=False)
+    note: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     origin_location: Mapped[str] = mapped_column(String, nullable=False)
     origin_external_id: Mapped[str] = mapped_column(String, nullable=False)
 
@@ -69,6 +70,7 @@ class CorrectedLedgerEventOrm(Base):
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ingestion: Mapped[str] = mapped_column(String, nullable=False)
+    note: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     origin_location: Mapped[str] = mapped_column(String, nullable=False)
     origin_external_id: Mapped[str] = mapped_column(String, nullable=False)
 

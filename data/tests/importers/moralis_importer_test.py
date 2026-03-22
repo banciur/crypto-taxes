@@ -34,6 +34,7 @@ def _build_tx(
     erc20_transfers: list[dict[str, object]] | None = None,
     from_address: str = ETH_ADDRESS_2,
     transaction_fee: str = "0",
+    method_label: str | None = None,
     possible_spam: bool | None = None,
 ) -> dict[str, object]:
     tx: dict[str, object] = {
@@ -45,6 +46,8 @@ def _build_tx(
         "erc20_transfers": erc20_transfers if erc20_transfers is not None else [],
         "transaction_fee": transaction_fee,
     }
+    if method_label is not None:
+        tx["method_label"] = method_label
     if possible_spam is not None:
         tx["possible_spam"] = possible_spam
     return tx
@@ -187,6 +190,18 @@ def test_fee_leg_added_for_outgoing_tx(test_ctx: _ImporterTestContext) -> None:
     assert leg.quantity == -fee
     assert leg.account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
     assert leg.is_fee is True
+
+
+def test_method_label_is_trimmed_into_event_note(test_ctx: _ImporterTestContext) -> None:
+    tx = _build_tx(
+        native_transfers=[_native_transfer(Decimal("0.5"))],
+        method_label="  depositAll  ",
+    )
+
+    event = test_ctx.importer._build_event(tx)
+
+    assert event is not None
+    assert event.note == "depositAll"
 
 
 def test_erc20_legs_net_per_asset_and_account(test_ctx: _ImporterTestContext) -> None:

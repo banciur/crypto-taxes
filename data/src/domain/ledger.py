@@ -68,6 +68,7 @@ class LedgerEvent(AbstractEvent):
 
     event_origin: EventOrigin
     ingestion: Annotated[str, Field(min_length=1)]
+    note: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)] | None = None
 
 
 class AcquisitionLot(StrictBaseModel):

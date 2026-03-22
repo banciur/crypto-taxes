@@ -46,6 +46,7 @@ export type LedgerCorrection = ItemBase & {
 export type LedgerEvent = ItemBase & {
   eventOrigin: EventOrigin;
   ingestion: string;
+  note?: string;
   legs: LedgerLeg[];
 };
 

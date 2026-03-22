@@ -17,7 +17,7 @@ import api.api as api
 from accounts import KRAKEN_ACCOUNT_ID
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.models import Base
-from db.repositories import LedgerEventRepository
+from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository
 from domain.correction import LedgerCorrection, LedgerCorrectionDraft
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
 from tests.constants import BTC, EUR
@@ -61,12 +61,14 @@ def raw_event(
     location: EventLocation,
     external_id: str,
     timestamp: datetime,
+    note: str | None = None,
 ) -> LedgerEvent:
     return LedgerEvent(
         id=LedgerEventId(uuid4()),
         timestamp=timestamp,
         event_origin=EventOrigin(location=location, external_id=external_id),
         ingestion="api_test",
+        note=note,
         legs=[
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
             LedgerLeg(asset_id=EUR, quantity=Decimal("-100"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
@@ -80,6 +82,16 @@ def persist_raw_events(client: TestClient) -> Callable[[list[LedgerEvent]], None
         app = cast(FastAPI, client.app)
         with app.state.sessionmaker() as session:
             LedgerEventRepository(session).create_many(events)
+
+    return persist
+
+
+@pytest.fixture()
+def persist_corrected_events(client: TestClient) -> Callable[[list[LedgerEvent]], None]:
+    def persist(events: list[LedgerEvent]) -> None:
+        app = cast(FastAPI, client.app)
+        with app.state.sessionmaker() as session:
+            CorrectedLedgerEventRepository(session).create_many(events)
 
     return persist
 

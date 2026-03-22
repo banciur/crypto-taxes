@@ -22,6 +22,7 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `timestamp: datetime`
   - `event_origin: EventOrigin` (upstream location + external transaction id)
   - `ingestion: str` (import pipeline label, e.g., `kraken_ledger_csv`, `ledger_correction`)
+  - `note: str | None`
   - `legs: list[LedgerLeg]`
 
 - LedgerLeg
@@ -81,6 +82,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Internal account-to-account transfers are identified structurally (same-asset non-fee legs netting to zero inside one event) and only update balances. They do not create lots or disposal links.
 - Per-account balances are tracked for all non-EUR legs; any debit that would push an account negative raises an error. Fix missing history by adding prior movements into the source account or authoring an opening-balance correction.
 - Each event captures `event_origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
+- `LedgerEvent.note` is optional display metadata. Moralis populates it from a trimmed upstream `method_label` when that label is available.
 - Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
 - `AccountRegistry` is the canonical account catalog exposed to the UI. It merges configured wallet accounts from `accounts.json` with built-in system exchange accounts (currently Coinbase and Kraken). System accounts do not participate in address-based ownership resolution and use location-derived IDs such as `COINBASE:coinbase`.
 - Ingestion corrections are applied in this order: validate unified source ownership, remove claimed raw events, emit synthetic corrected events for corrections with legs, then sort once before persisting corrected events.
