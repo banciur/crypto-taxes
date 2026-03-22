@@ -10,6 +10,7 @@ import {
   type EventsActionFeedback,
 } from "@/components/EventsActionBar";
 import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
+import { CorrectionHighlightProvider } from "@/contexts/CorrectionHighlightContext";
 import type {
   CreateLedgerCorrectionPayload,
   EventsByTimestamp,
@@ -192,42 +193,44 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     isCreatingCorrection || isRemovingCorrection;
 
   return (
-    <div className="d-flex h-100 w-100 flex-column">
-      <EventsActionBar
-        selectedEventCount={selectedEventOriginKeys.size}
-        isCorrectionChangePending={isCorrectionChangePending}
-        feedback={feedback}
-        onDiscardSelected={handleCreateDiscards}
-        onReplaceSelected={handleOpenReplacementEditor}
-        onAddOpeningBalance={handleOpenOpeningBalanceEditor}
-      />
-      {isReplacementEditorOpen && (
-        <ReplacementEditorModal
-          show
-          selectedSourceEvents={getSelectedEvents()}
-          isSaving={isCreatingCorrection}
-          errorMessage={replacementEditorError}
-          onHide={handleCloseReplacementEditor}
-          onSubmit={handleCreateReplacement}
+    <CorrectionHighlightProvider>
+      <div className="d-flex h-100 w-100 flex-column">
+        <EventsActionBar
+          selectedEventCount={selectedEventOriginKeys.size}
+          isCorrectionChangePending={isCorrectionChangePending}
+          feedback={feedback}
+          onDiscardSelected={handleCreateDiscards}
+          onReplaceSelected={handleOpenReplacementEditor}
+          onAddOpeningBalance={handleOpenOpeningBalanceEditor}
         />
-      )}
-      {isOpeningBalanceEditorOpen && (
-        <OpeningBalanceEditorModal
-          show
-          isSaving={isCreatingCorrection}
-          errorMessage={openingBalanceEditorError}
-          onHide={handleCloseOpeningBalanceEditor}
-          onSubmit={handleCreateOpeningBalance}
+        {isReplacementEditorOpen && (
+          <ReplacementEditorModal
+            show
+            selectedSourceEvents={getSelectedEvents()}
+            isSaving={isCreatingCorrection}
+            errorMessage={replacementEditorError}
+            onHide={handleCloseReplacementEditor}
+            onSubmit={handleCreateReplacement}
+          />
+        )}
+        {isOpeningBalanceEditorOpen && (
+          <OpeningBalanceEditorModal
+            show
+            isSaving={isCreatingCorrection}
+            errorMessage={openingBalanceEditorError}
+            onHide={handleCloseOpeningBalanceEditor}
+            onSubmit={handleCreateOpeningBalance}
+          />
+        )}
+        <VirtualizedDateSections
+          eventsByTimestamp={eventsByTimestamp}
+          selectedEventOriginKeys={selectedEventOriginKeys}
+          isCorrectionChangePending={isCorrectionChangePending}
+          className="flex-grow-1"
+          onToggleEventSelection={toggleEventSelection}
+          onRemoveCorrection={handleRemoveCorrection}
         />
-      )}
-      <VirtualizedDateSections
-        eventsByTimestamp={eventsByTimestamp}
-        selectedEventOriginKeys={selectedEventOriginKeys}
-        isCorrectionChangePending={isCorrectionChangePending}
-        className="flex-grow-1"
-        onToggleEventSelection={toggleEventSelection}
-        onRemoveCorrection={handleRemoveCorrection}
-      />
-    </div>
+      </div>
+    </CorrectionHighlightProvider>
   );
 }
