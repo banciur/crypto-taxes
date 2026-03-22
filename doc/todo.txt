@@ -1,58 +1,33 @@
 First stage: compute German taxes
 
-TODO: Fix following problem
-Current problem: source-backed corrections that are deleted are soft-deleted, not fully removed. Their rows in ledger_correction_sources stay in the DB, and the unique index on (origin_location, origin_external_id) still blocks any new correction from reusing that source.
-
-What that means in practice:
-
-the system treats the source as occupied even after the correction is deleted
-API returns 409
-current error text is misleading because it says the source is consumed by an active correction, but the blocker may actually be a deleted/tombstoned one
-Example action order that leads to it:
-
-Raw event OPTIMISM/0x0820... exists.
-User creates a source-backed correction for it, for example a replacement or discard.
-Later, user deletes that correction from the UI.
-Backend soft-deletes the correction row by setting ledger_corrections.is_deleted = 1, but keeps the source row in ledger_correction_sources.
-User tries to create a new correction using the same raw event source again.
-Insert hits the unique index on ledger_correction_sources(origin_location, origin_external_id).
-API returns 409, even though there is no active correction anymore.
-Concrete example from your DB:
-
-source: OPTIMISM/0x0820ff6a0f5939a5342fde22299276697eeee265f43d9406889cc0c59e6ec939
-existing deleted correction id: 5077356b7ee344e88eced9248e744182
-is_deleted = 1
-So the root issue is:
-
-tombstones are currently serving two roles at once:
-prevent Moralis auto-recreation
-block all manual recreation too
-If your intended product behavior is “block auto recreation, allow explicit manual recreation,” then the persistence model needs to distinguish those two cases more explicitly in the next PR.
-
 TODO: Add an optional note field to ledger entry (also to correction) and corrected entry
 TODO: For onchain (moralis) add called function name. It will make it more readable.
-TODO: Maybe change how sources of replacement are rendered now it's the same as in other items
-TODO: Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok. Now I think I have partial composition. Still maybe this should be made more verbose
 
-Review the order of todos
-------------------
 TODO: UI Make component that display ledger legs with colors etc. It will be reused in every component.
-TODO: When displaying legs first wallet, token, amount
-TODO: Revaluate idea of replace selectedEventOriginKeys / getSelectedEvents with one map like it was before.
-TODO: Thing to think about: Should page.tsx transform data to for format that is used by the Events component? It is transformed further there.
-TODO: A lot of duplication in handler of API communication in Event, also not sure about error handling in ui/src/api/core.ts
-TODO: Backups of databases they are starting to contain manual work
+TODO: Oder of attributes when displaying first wallet, token, amount
+
 TODO: Need icons for coinbase and kraken
 TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
-TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?
-TODO: Implement more sophisitcated logic for tokens to handle this logic when token with same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
-TODO: Review Kraken importer after event type removal and wallets structure changes
-TODO: When turning corrections lane on and off virtualized list gets a bit broken. Something about height computation.
+
+--- go back to processing of corrected events. Split current processing into two elements:
+  - tracking of wallets. This will be a good check of completness
+  - acquisitions and disposals creation
+TODO: Review and fix wallet tracking
+TODO: Have a summary of the wallets. No current value as this will be cimplicated
+TODO: Import data from Lido
+TODO: Import data from Stakewise
+
+--- here a manual review of existing transactions starts meanwhile
+
 TODO: Need automation to rerun computation (src/main.py)
-TODO: db init code for multiple dbs is in many places of the code. Also there is different one for main and for api.
-TODO: Review setup of databases in tests. Especially now we have one setup for api tests and one for other. Looks bad.
-TODO: Generally tests suck, think about how to improve it.
-TODO: Fix acquisition/disposal and tax computation after changes that were introduced
+  - have an ability to rerun from the UI
+  - return and display errors of the pipeline
+TODO: Review disposal and acquisition creation.
+TODO: Probably need smarter price service as there a
+
+Review the order of todos
+-----------------
+TODO: Implement more sophisitcated logic for tokens to handle this logic when token with same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
 TODO: Improvements around tokens maybe better structure etc. Broader topic to think through.
  - FE
   - shortened address elispsis and popup with full address?
@@ -61,6 +36,19 @@ TODO: Improvements around tokens maybe better structure etc. Broader topic to th
   - do we need a token registry and mapping symbol to address and multichain address?
   - some tokens can have the same symbol on different chains, but in reality there are different tokens, and it's not a mistake. Example fGHO in fluid different price on different chains (to be confirmed)
 TODO: Another review of fee legs. Now without is_fee (or equivalent semantics), residual same-asset differences in transfer-like events (onchain with gas) require partial leg decomposition, and the current engine can only classify whole legs, causing misclassification of internal transfers as taxable disposals/acquisitions.
+
+TODO: Maybe change how sources of replacement are rendered now it's the same as in other items
+TODO: Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok. Now I think I have partial composition. Still maybe this should be made more verbose
+TODO: Revaluate idea of replace selectedEventOriginKeys / getSelectedEvents with one map like it was before.
+TODO: Thing to think about: Should page.tsx transform data to for format that is used by the Events component? It is transformed further there.
+TODO: A lot of duplication in handler of API communication in Event, also not sure about error handling in ui/src/api/core.ts
+TODO: Backups of databases they are starting to contain manual work
+TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?
+TODO: Review Kraken importer after event type removal and wallets structure changes
+TODO: When turning corrections lane on and off virtualized list gets a bit broken. Something about height computation.
+TODO: db init code for multiple dbs is in many places of the code. Also there is different one for main and for api.
+TODO: Review setup of databases in tests. Especially now we have one setup for api tests and one for other. Looks bad.
+TODO: Generally tests suck, think about how to improve it.
 TODO: I think some accounts I flagged as mine are actually not mine, but Coinbase
 TODO: tooltip on OrginIcon doesn't work for corrections - probably doesn't have to? Or maybe it should. Actually, does the correction have a place where they are added? Don't know what I meant here
 TODO: code that creates legs for native and erc20 is similar to one for native transfers we could improve
@@ -75,33 +63,22 @@ TODO: I'm suspicious of the tax calculations. Think how we can debug it better.
 TODO: Restore inventory taxable and free.
 TODO: Do we need extra snapshot mechanism to, for example, output value of wallets?
 TODO: Review inventory again. I don't like those intermediate objects also ones in taxes.
-
-TODO: Import data from as this should be very easy:
-  - Lido
-  - Stakewise
 TODO: Verify against my own spreadsheet
-
 TODO: How to calculate income and taxes in case when I'm partly leaving the farm.
  Initial idea (from old model review)
  - ctokens only when token is sold compute gain as difference of value when bought (FIFO used for computing buy price)
  - atokens compute tax / gain every time it rebases and when selling no tax
-
 TODO: How to calculate Uniswap style (with NFT)
 TODO: How to calculate Vfat style with subcontract I think it doesn't store any tokens.
-
 TODO: Kraken scripts maybe move them to a separate directory, some common code can be extracted?
 TODO: Review Coindesk source it's the worst code ever also review OpenExchanger client
 TODO: DB improvements.
  - use Enums
  - use UUID type
-
 TODO: Export data in a format that can be used by Steuerberater
-
 TODO: Date chooser could be improved (in far futuren when I will need to make it nice)
  - it could follow (open/close) when the main section is being scrolled
  - active state of year and month should be properly stated
-
-TODO: better visualiation use some library to nicely print stuff or maybe switch to web app
 TODO: Features from WEALTH_MODEL.md
  - income
  - realized P/L
