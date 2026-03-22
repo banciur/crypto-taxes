@@ -2,10 +2,16 @@
 
 import type { CSSProperties } from "react";
 
-import { ListGroup, ListGroupItem } from "react-bootstrap";
+import {
+  Badge,
+  Card,
+  CardBody,
+  CardHeader,
+  ListGroup,
+  ListGroupItem,
+} from "react-bootstrap";
 
 import { clsx } from "clsx";
-import { CorrectionItem } from "@/components/CorrectionItem";
 import { CorrectionRemoveButton } from "@/components/CorrectionRemoveButton";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNames } from "@/contexts/AccountNamesContext";
@@ -39,88 +45,117 @@ export function LedgerCorrectionItem({
   onRemove,
 }: LedgerCorrectionItemProps) {
   const { resolveAccountName } = useAccountNames();
-  const { getSourceHighlight } = useCorrectionHighlight();
-  const action = (
-    <CorrectionRemoveButton
-      label={`Remove correction ${item.id}`}
-      disabled={actionDisabled}
-      onClick={onRemove}
-    />
-  );
+  const { clearHighlightedSources, getSourceHighlight, setHighlightedSources } =
+    useCorrectionHighlight();
+  const label = correctionLabel(item);
+  const labelVariant = correctionLabelVariant(item);
+
+  const timestampLabel = new Date(item.timestamp).toLocaleTimeString("en-GB", {
+    timeZone: "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const hasSources = item.sources.length > 0;
+  const handleMouseEnter = hasSources
+    ? () => setHighlightedSources(item.sources)
+    : undefined;
+  const handleMouseLeave = hasSources
+    ? clearHighlightedSources
+    : undefined;
 
   return (
-    <CorrectionItem
-      label={correctionLabel(item)}
-      labelVariant={correctionLabelVariant(item)}
-      timestamp={item.timestamp}
-      action={action}
-      highlightSources={item.sources}
+    <Card
+      className="shadow-sm"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      {item.sources.length > 0 && (
-        <div className="mb-3 d-flex flex-wrap align-items-center gap-2">
-          <span className="text-muted small">Sources</span>
-          {item.sources.map((source) => {
-            const sourceHighlight = getSourceHighlight(source);
-            const sourceStyle = sourceHighlight
-              ? ({
-                  "--source-highlight-accent": sourceHighlight.accentColor,
-                  "--source-highlight-surface": sourceHighlight.surfaceColor,
-                } as CSSProperties)
-              : undefined;
+      <CardHeader className="d-flex flex-wrap align-items-center gap-2">
+        <Badge
+          bg={labelVariant}
+          className={labelVariant === "warning" ? "text-dark" : undefined}
+        >
+          {label}
+        </Badge>
+        <span className="text-muted small">{timestampLabel}</span>
+        <CorrectionRemoveButton
+          label={`Remove correction ${item.id}`}
+          disabled={actionDisabled}
+          onClick={onRemove}
+          className="ms-auto"
+        />
+      </CardHeader>
+      <CardBody>
+        {hasSources && (
+          <div className="mb-3 d-flex flex-wrap align-items-center gap-2">
+            <span className="text-muted small">Sources</span>
+            {item.sources.map((source) => {
+              const sourceHighlight = getSourceHighlight(source);
+              const sourceStyle = sourceHighlight
+                ? ({
+                    "--source-highlight-accent": sourceHighlight.accentColor,
+                    "--source-highlight-surface": sourceHighlight.surfaceColor,
+                  } as CSSProperties)
+                : undefined;
 
-            return (
-              <OriginId
-                key={`${source.location}:${source.externalId}`}
-                originId={source.externalId}
-                place={source.location.toLowerCase()}
-                className={clsx(
-                  "small",
-                  sourceHighlight ? styles.highlightedSource : "text-muted",
-                )}
-                style={sourceStyle}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      {item.legs.length > 0 && (
-        <ListGroup variant="flush" className="border rounded">
-          {item.legs.map((leg) => {
-            const quantityPresentation = getLedgerLegQuantityPresentation(leg);
-
-            return (
-              <ListGroupItem
-                key={leg.id}
-                className={clsx("d-flex align-items-center gap-1", styles.leg)}
-              >
-                <span>{leg.assetId}</span>
-                <span title={leg.accountChainId}>
-                  {resolveAccountName(leg.accountChainId)}
-                </span>
-                <span
+              return (
+                <OriginId
+                  key={`${source.location}:${source.externalId}`}
+                  originId={source.externalId}
+                  place={source.location.toLowerCase()}
                   className={clsx(
-                    "flex-shrink-0",
-                    quantityPresentation.className,
+                    "small",
+                    sourceHighlight ? styles.highlightedSource : "text-muted",
+                  )}
+                  style={sourceStyle}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {item.legs.length > 0 && (
+          <ListGroup variant="flush" className="border rounded">
+            {item.legs.map((leg) => {
+              const quantityPresentation =
+                getLedgerLegQuantityPresentation(leg);
+
+              return (
+                <ListGroupItem
+                  key={leg.id}
+                  className={clsx(
+                    "d-flex align-items-center gap-1",
+                    styles.leg,
                   )}
                 >
-                  {quantityPresentation.text}
-                </span>
-              </ListGroupItem>
-            );
-          })}
-        </ListGroup>
-      )}
+                  <span>{leg.assetId}</span>
+                  <span title={leg.accountChainId}>
+                    {resolveAccountName(leg.accountChainId)}
+                  </span>
+                  <span
+                    className={clsx(
+                      "flex-shrink-0",
+                      quantityPresentation.className,
+                    )}
+                  >
+                    {quantityPresentation.text}
+                  </span>
+                </ListGroupItem>
+              );
+            })}
+          </ListGroup>
+        )}
 
-      {item.sources.length === 0 && item.pricePerToken !== undefined && (
-        <div className="mt-3 small text-muted">
-          Price per token: {item.pricePerToken}
-        </div>
-      )}
+        {item.sources.length === 0 && item.pricePerToken !== undefined && (
+          <div className="mt-3 small text-muted">
+            Price per token: {item.pricePerToken}
+          </div>
+        )}
 
-      {item.note?.trim() && (
-        <div className="mt-3 small text-muted">{item.note}</div>
-      )}
-    </CorrectionItem>
+        {item.note?.trim() && (
+          <div className="mt-3 small text-muted">{item.note}</div>
+        )}
+      </CardBody>
+    </Card>
   );
 }

@@ -1,23 +1,26 @@
 "use client";
 
+import { clsx } from "clsx";
 import { Button } from "react-bootstrap";
 
 type CorrectionRemoveButtonProps = {
   label: string;
   disabled: boolean;
   onClick: () => void;
+  className?: string;
 };
 
 export function CorrectionRemoveButton({
   label,
   disabled,
   onClick,
+  className,
 }: CorrectionRemoveButtonProps) {
   return (
     <Button
       type="button"
       variant="link"
-      className="p-0 text-danger"
+      className={clsx("p-0 text-danger", className)}
       disabled={disabled}
       onClick={onClick}
       aria-label={label}
