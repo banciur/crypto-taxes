@@ -29,7 +29,6 @@ prevent Moralis auto-recreation
 block all manual recreation too
 If your intended product behavior is “block auto recreation, allow explicit manual recreation,” then the persistence model needs to distinguish those two cases more explicitly in the next PR.
 
-TODO: Change instructions for AI agents so they change context when trying to run commands for data and ui
 TODO: Add an optional note field to ledger entry (also to correction) and corrected entry
 TODO: For onchain (moralis) add called function name. It will make it more readable.
 TODO: Maybe change how sources of replacement are rendered now it's the same as in other items
@@ -65,7 +64,6 @@ TODO: Another review of fee legs. Now without is_fee (or equivalent semantics), 
 TODO: I think some accounts I flagged as mine are actually not mine, but Coinbase
 TODO: tooltip on OrginIcon doesn't work for corrections - probably doesn't have to? Or maybe it should. Actually, does the correction have a place where they are added? Don't know what I meant here
 TODO: code that creates legs for native and erc20 is similar to one for native transfers we could improve
-TODO: Fix codex not being able to run pnpm commands
 TODO: Is there a possibility to have a whitelist of commands for codex?
 TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
 TODO: add loaders to the UI when data is being fetched, especially when changing visible columns

@@ -69,4 +69,12 @@
 
 ### Development commands
 
-Don't run pnpm commands from Codex/LLM terminal sessions. In the current setup, UI command execution is unreliable there.
+- Run UI commands from `ui/` (`cd ui`).
+- `pnpm prettier` formats the UI codebase with Prettier.
+- `pnpm lint` runs ESLint.
+- `pnpm types` runs `tsc --noEmit`.
+
+### Suggested workflow
+
+- Start in `ui/`.
+- **ALWAYS** Before finishing a change, run `pnpm prettier`, `pnpm lint`, and `pnpm types`.
