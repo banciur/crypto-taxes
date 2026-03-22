@@ -38,7 +38,7 @@ export function LedgerEventCard({
   isCorrectionChangePending = false,
   onToggleEventSelection,
 }: LedgerEventCardProps) {
-  const { timestamp, eventOrigin, legs } = event;
+  const { timestamp, eventOrigin, note, legs } = event;
   const { resolveAccountName } = useAccountNames();
   const { getSourceHighlight } = useCorrectionHighlight();
   const place = eventOrigin.location.toLowerCase();
@@ -134,6 +134,7 @@ export function LedgerEventCard({
             );
           })}
         </ListGroup>
+        {note?.trim() && <div className="mt-3 small text-muted">{note}</div>}
       </CardBody>
     </Card>
   );

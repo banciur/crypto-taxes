@@ -29,12 +29,13 @@ from domain.tax_event import TaxEvent, TaxEventKind
 from tests.constants import BTC, EUR
 
 
-def _sample_event(external_id: str, timestamp: datetime) -> LedgerEvent:
+def _sample_event(external_id: str, timestamp: datetime, *, note: str | None = None) -> LedgerEvent:
     return LedgerEvent(
         id=LedgerEventId(uuid4()),
         timestamp=timestamp,
         event_origin=EventOrigin(location=EventLocation.KRAKEN, external_id=external_id),
         ingestion="test_ingestion",
+        note=note,
         legs=[
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
             LedgerLeg(asset_id=EUR, quantity=Decimal("-2000"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
@@ -68,7 +69,8 @@ def corrected_repo(test_session: Session) -> CorrectedLedgerEventRepository:
 
 
 def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
-    event = _sample_event("ext-1", datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc))
+    note = "approve"
+    event = _sample_event("ext-1", datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc), note=note)
 
     repo.create_many([event])
 
@@ -77,6 +79,7 @@ def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
     assert fetched.id == event.id
     assert fetched.timestamp == event.timestamp
     assert fetched.event_origin.location == event.event_origin.location
+    assert fetched.note == note
     assert len(fetched.legs) == len(event.legs)
     assert {leg.asset_id for leg in fetched.legs} == {leg.asset_id for leg in event.legs}
 
@@ -225,7 +228,8 @@ def test_persist_tax_events(tax_repo: TaxEventRepository) -> None:
 def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRepository) -> None:
     external_id = "corrected-ext"
     timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-    event = _sample_event(external_id, timestamp)
+    note = "depositAll"
+    event = _sample_event(external_id, timestamp, note=note)
 
     corrected_repo.create_many([event])
 
@@ -235,4 +239,5 @@ def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRep
     assert reloaded.id == event.id
     assert reloaded.timestamp == timestamp
     assert reloaded.event_origin.external_id == external_id
+    assert reloaded.note == note
     assert {leg.id for leg in reloaded.legs} == {leg.id for leg in event.legs}

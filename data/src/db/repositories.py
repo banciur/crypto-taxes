@@ -36,6 +36,7 @@ class LedgerEventRepository:
                 id=event.id,
                 timestamp=event.timestamp,
                 ingestion=event.ingestion,
+                note=event.note,
                 origin_location=event.event_origin.location.value,
                 origin_external_id=event.event_origin.external_id,
             )
@@ -115,6 +116,7 @@ class LedgerEventRepository:
             timestamp=ensure_utc_datetime(orm_event.timestamp),
             event_origin=event_origin,
             ingestion=orm_event.ingestion,
+            note=orm_event.note,
             legs=legs,
         )
 
@@ -130,6 +132,7 @@ class CorrectedLedgerEventRepository:
                 id=event.id,
                 timestamp=event.timestamp,
                 ingestion=event.ingestion,
+                note=event.note,
                 origin_location=event.event_origin.location.value,
                 origin_external_id=event.event_origin.external_id,
             )
@@ -177,6 +180,7 @@ class CorrectedLedgerEventRepository:
             timestamp=ensure_utc_datetime(orm_event.timestamp),
             event_origin=event_origin,
             ingestion=orm_event.ingestion,
+            note=orm_event.note,
             legs=legs,
         )
 

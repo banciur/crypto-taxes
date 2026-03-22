@@ -69,6 +69,7 @@ def test_apply_ingestion_corrections_handles_discard_replacement_and_opening_bal
         timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc),
         legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("0.5"), account_chain_id=LEDGER_WALLET)]),
         price_per_token=Decimal("0"),
+        note="opening balance note",
     )
     discard = LedgerCorrection(
         timestamp=discarded.timestamp,
@@ -89,6 +90,7 @@ def test_apply_ingestion_corrections_handles_discard_replacement_and_opening_bal
                 ),
             ]
         ),
+        note="replacement note",
     )
 
     corrected = apply_ingestion_corrections(
@@ -105,12 +107,15 @@ def test_apply_ingestion_corrections_handles_discard_replacement_and_opening_bal
     assert corrected[1].ingestion == LEDGER_CORRECTION_INGESTION
     assert corrected[0].event_origin.location == EventLocation.INTERNAL
     assert corrected[1].event_origin.location == EventLocation.INTERNAL
+    assert corrected[0].note == opening_balance.note
+    assert corrected[1].note == replacement.note
 
 
 def test_ledger_event_from_correction_uses_unified_provenance() -> None:
     correction = LedgerCorrection(
         timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
         legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
+        note="opening balance note",
     )
 
     event = ledger_event_from_correction(correction)
@@ -119,6 +124,7 @@ def test_ledger_event_from_correction_uses_unified_provenance() -> None:
     assert event.event_origin.location == EventLocation.INTERNAL
     assert event.event_origin.external_id == str(correction.id)
     assert event.ingestion == LEDGER_CORRECTION_INGESTION
+    assert event.note == correction.note
     assert frozenset(event.legs) == correction.legs
 
 

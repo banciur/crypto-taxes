@@ -17,6 +17,7 @@ def ledger_event_from_correction(correction: LedgerCorrection) -> LedgerEvent:
             external_id=str(correction.id),
         ),
         ingestion=LEDGER_CORRECTION_INGESTION,
+        note=correction.note,
         legs=list(correction.legs),
     )
 

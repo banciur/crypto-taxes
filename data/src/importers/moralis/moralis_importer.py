@@ -102,6 +102,14 @@ def _obtain_value(transfer: dict[str, Any]) -> Decimal:
         raise Exception("I was to lazy to implement proper handling of token decimals and value")
 
 
+def _event_note(tx: Mapping[str, Any]) -> str | None:
+    method_label = tx.get("method_label")
+    if method_label is None:
+        return None
+    trimmed = str(method_label).strip()
+    return trimmed or None
+
+
 class MoralisImporter:
     def __init__(
         self,
@@ -227,5 +235,6 @@ class MoralisImporter:
             timestamp=ensure_utc_datetime(datetime.fromisoformat(tx["block_timestamp"].replace("Z", "+00:00"))),
             event_origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
+            note=_event_note(tx),
             legs=legs,
         )
