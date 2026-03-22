@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent } from "react";
+import type { CSSProperties } from "react";
 
 import {
   Card,
@@ -11,45 +11,79 @@ import {
 } from "react-bootstrap";
 
 import { clsx } from "clsx";
-import styles from "./EventCard.module.css";
+import styles from "./LedgerEventCard.module.css";
+import { isSelectableEventItem } from "@/components/Events/selectableEvents";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNames } from "@/contexts/AccountNamesContext";
+import { useCorrectionHighlight } from "@/contexts/CorrectionHighlightContext";
+import { eventOriginKey } from "@/lib/eventOrigin";
 import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
-import type { CorrectedEventCardData, RawEventCardData } from "@/types/events";
+import type {
+  CorrectedEventCardData,
+  EventOrigin,
+  RawEventCardData,
+} from "@/types/events";
 
-type EventCardProps = {
+type LedgerEventCardProps = {
   event: RawEventCardData | CorrectedEventCardData;
-  isSelected?: boolean;
-  onSelectionChange?: (isSelected: boolean) => void;
-  selectionDisabled?: boolean;
+  selectedEventOriginKeys?: ReadonlySet<string>;
+  isCorrectionChangePending?: boolean;
+  onToggleEventSelection?: (eventOrigin: EventOrigin) => void;
 };
 
-export function EventCard({
+export function LedgerEventCard({
   event,
-  isSelected = false,
-  onSelectionChange,
-  selectionDisabled = false,
-}: EventCardProps) {
+  selectedEventOriginKeys,
+  isCorrectionChangePending = false,
+  onToggleEventSelection,
+}: LedgerEventCardProps) {
   const { timestamp, eventOrigin, legs } = event;
   const { resolveAccountName } = useAccountNames();
+  const { getSourceHighlight } = useCorrectionHighlight();
   const place = eventOrigin.location.toLowerCase();
   const originId = eventOrigin.externalId;
+  const sourceHighlight = getSourceHighlight(eventOrigin);
+  const isSelectable = isSelectableEventItem(event);
+  const isSelected =
+    isSelectable &&
+    selectedEventOriginKeys?.has(eventOriginKey(eventOrigin)) === true;
+  const selectionDisabled = isSelectable && isCorrectionChangePending;
   const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
     timeZone: "UTC",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
   });
-  const hasSelectionControl = onSelectionChange !== undefined;
+  const hasSelectionControl =
+    isSelectable && onToggleEventSelection !== undefined;
 
-  const handleSelectionChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onSelectionChange?.(event.target.checked);
+  const handleSelectionChange = () => {
+    onToggleEventSelection?.(eventOrigin);
   };
 
+  const cardStyle = sourceHighlight
+    ? ({
+        "--source-highlight-accent": sourceHighlight.accentColor,
+        "--source-highlight-surface": sourceHighlight.surfaceColor,
+      } as CSSProperties)
+    : undefined;
+
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="d-flex flex-wrap align-items-center gap-2">
+    <Card
+      className={clsx(
+        "shadow-sm",
+        styles.card,
+        sourceHighlight && styles.highlightedCard,
+      )}
+      style={cardStyle}
+    >
+      <CardHeader
+        className={clsx(
+          "d-flex flex-wrap align-items-center gap-2",
+          sourceHighlight && styles.highlightedHeader,
+        )}
+      >
         {hasSelectionControl && (
           <input
             type="checkbox"
@@ -70,7 +104,7 @@ export function EventCard({
         <span className="text-muted small">{timestampLabel}</span>
         <OriginIcon place={place} className="ms-auto flex-shrink-0" />
       </CardHeader>
-      <CardBody>
+      <CardBody className={clsx(sourceHighlight && styles.highlightedSurface)}>
         <ListGroup variant="flush" className="border rounded">
           {legs.map((leg) => {
             const quantityPresentation = getLedgerLegQuantityPresentation(leg);
@@ -78,7 +112,11 @@ export function EventCard({
             return (
               <ListGroupItem
                 key={leg.id}
-                className={clsx("d-flex align-items-center gap-1", styles.leg)}
+                className={clsx(
+                  "d-flex align-items-center gap-1",
+                  styles.leg,
+                  sourceHighlight && styles.highlightedSurface,
+                )}
               >
                 <span>{leg.assetId}</span>
                 <span title={leg.accountChainId}>

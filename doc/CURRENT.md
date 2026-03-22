@@ -107,7 +107,13 @@ This document captures the currently implemented domain for modeling crypto ledg
 - CLI inventory summary aggregates quantities and EUR values per asset across owned accounts.
 - Tax calculations currently focus on disposal links.
 - CLI run persists ledger events plus corrected ledger events to SQLite, and the backend correction pipeline supports unified `LedgerCorrection` records only.
-- The UI renders raw, corrections, and corrected lanes. Raw-backed event cards in the raw/corrected lanes support selection keyed by `event_origin` for discard and replacement actions, the corrections lane displays unified persisted corrections, and the corrected lane shows corrected ledger events including synthetic `ledger_correction` events. After correction mutations the UI refreshes the server-rendered page so the corrections lane updates immediately; the corrected lane still requires a pipeline rerun.
+
+### User Interface
+
+- The UI supports reviewing raw events, unified persisted corrections, and corrected events.
+- The UI can author and remove unified corrections: discard, replacement, and opening-balance.
+- After correction mutations, the UI refreshes the server-rendered lane data immediately.
+- Corrected pipeline outputs still require a manual rerun after correction mutations.
 
 ---
 

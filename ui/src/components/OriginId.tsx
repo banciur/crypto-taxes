@@ -5,6 +5,7 @@ import {
   useId,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -17,6 +18,7 @@ export type OriginIdProps = {
   originId: string;
   place: string;
   className?: string;
+  style?: CSSProperties;
 };
 
 const formatOriginId = (originId: string): ReactNode => {
@@ -32,7 +34,7 @@ const formatOriginId = (originId: string): ReactNode => {
   );
 };
 
-export function OriginId({ originId, place, className }: OriginIdProps) {
+export function OriginId({ originId, place, className, style }: OriginIdProps) {
   const [show, setShow] = useState(false);
   const [copied, setCopied] = useState(false);
   const instanceId = useId();
@@ -128,6 +130,7 @@ export function OriginId({ originId, place, className }: OriginIdProps) {
   const labelElement = chainKey ? (
     <a
       className={className}
+      style={style}
       href={`${CHAIN_METADATA[chainKey].tracker}tx/${originId}`}
       target="_blank"
       rel="noreferrer"
@@ -135,7 +138,7 @@ export function OriginId({ originId, place, className }: OriginIdProps) {
       {label}
     </a>
   ) : (
-    <span className={className} role="button" tabIndex={0}>
+    <span className={className} style={style} role="button" tabIndex={0}>
       {label}
     </span>
   );

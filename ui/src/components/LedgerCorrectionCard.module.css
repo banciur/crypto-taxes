@@ -5,3 +5,7 @@
     font-size: 0.75rem;
   }
 }
+
+.highlightedSource {
+  color: var(--source-highlight-accent);
+}
