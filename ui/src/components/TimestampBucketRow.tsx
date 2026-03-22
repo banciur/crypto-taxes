@@ -6,15 +6,9 @@ import { Col } from "react-bootstrap";
 
 import { LedgerCorrectionCard } from "@/components/LedgerCorrectionCard";
 import { LedgerEventCard } from "@/components/LedgerEventCard";
-import { isSelectableEventItem } from "@/components/Events/selectableEvents";
 import { orderColumnKeys } from "@/consts";
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
-import { eventOriginKey } from "@/lib/eventOrigin";
-import type {
-  EventOrigin,
-  EventsByTimestamp,
-  LaneItemData,
-} from "@/types/events";
+import type { EventOrigin, EventsByTimestamp } from "@/types/events";
 
 type TimestampBucketRowProps = {
   itemsByColumn: EventsByTimestamp[string];
@@ -23,13 +17,6 @@ type TimestampBucketRowProps = {
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveCorrection: (correctionId: string) => void;
 };
-
-const isSelectedEvent = (
-  item: LaneItemData,
-  selectedEventOriginKeys: ReadonlySet<string>,
-) =>
-  isSelectableEventItem(item) &&
-  selectedEventOriginKeys.has(eventOriginKey(item.eventOrigin));
 
 export function TimestampBucketRow({
   itemsByColumn,
@@ -52,34 +39,24 @@ export function TimestampBucketRow({
           className="d-flex flex-column gap-2"
           key={`section-${columnKey}`}
         >
-          {itemsByColumn[columnKey]?.map((item) => {
-            if (item.kind === "correction") {
-              return (
-                <LedgerCorrectionCard
-                  key={item.id}
-                  item={item}
-                  actionDisabled={isCorrectionChangePending}
-                  onRemove={() => onRemoveCorrection(item.id)}
-                />
-              );
-            }
-
-            const isSelectable = isSelectableEventItem(item);
-
-            return (
+          {itemsByColumn[columnKey]?.map((item) =>
+            item.kind === "correction" ? (
+              <LedgerCorrectionCard
+                key={item.id}
+                item={item}
+                actionDisabled={isCorrectionChangePending}
+                onRemove={() => onRemoveCorrection(item.id)}
+              />
+            ) : (
               <LedgerEventCard
                 key={item.id}
                 event={item}
-                isSelected={isSelectedEvent(item, selectedEventOriginKeys)}
-                selectionDisabled={isSelectable && isCorrectionChangePending}
-                onSelectionChange={
-                  isSelectable
-                    ? () => onToggleEventSelection(item.eventOrigin)
-                    : undefined
-                }
+                selectedEventOriginKeys={selectedEventOriginKeys}
+                isCorrectionChangePending={isCorrectionChangePending}
+                onToggleEventSelection={onToggleEventSelection}
               />
-            );
-          })}
+            ),
+          )}
         </Col>
       ))}
     </>

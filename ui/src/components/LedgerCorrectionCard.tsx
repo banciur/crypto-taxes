@@ -60,9 +60,7 @@ export function LedgerCorrectionCard({
   const handleMouseEnter = hasSources
     ? () => setHighlightedSources(item.sources)
     : undefined;
-  const handleMouseLeave = hasSources
-    ? clearHighlightedSources
-    : undefined;
+  const handleMouseLeave = hasSources ? clearHighlightedSources : undefined;
 
   return (
     <Card

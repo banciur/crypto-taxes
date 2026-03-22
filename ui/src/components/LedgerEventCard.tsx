@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent, CSSProperties } from "react";
+import type { CSSProperties } from "react";
 
 import {
   Card,
@@ -12,25 +12,31 @@ import {
 
 import { clsx } from "clsx";
 import styles from "./LedgerEventCard.module.css";
+import { isSelectableEventItem } from "@/components/Events/selectableEvents";
 import { OriginIcon } from "@/components/OriginIcon";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNames } from "@/contexts/AccountNamesContext";
 import { useCorrectionHighlight } from "@/contexts/CorrectionHighlightContext";
+import { eventOriginKey } from "@/lib/eventOrigin";
 import { getLedgerLegQuantityPresentation } from "@/lib/ledgerLegQuantity";
-import type { CorrectedEventCardData, RawEventCardData } from "@/types/events";
+import type {
+  CorrectedEventCardData,
+  EventOrigin,
+  RawEventCardData,
+} from "@/types/events";
 
 type LedgerEventCardProps = {
   event: RawEventCardData | CorrectedEventCardData;
-  isSelected?: boolean;
-  onSelectionChange?: (isSelected: boolean) => void;
-  selectionDisabled?: boolean;
+  selectedEventOriginKeys?: ReadonlySet<string>;
+  isCorrectionChangePending?: boolean;
+  onToggleEventSelection?: (eventOrigin: EventOrigin) => void;
 };
 
 export function LedgerEventCard({
   event,
-  isSelected = false,
-  onSelectionChange,
-  selectionDisabled = false,
+  selectedEventOriginKeys,
+  isCorrectionChangePending = false,
+  onToggleEventSelection,
 }: LedgerEventCardProps) {
   const { timestamp, eventOrigin, legs } = event;
   const { resolveAccountName } = useAccountNames();
@@ -38,16 +44,22 @@ export function LedgerEventCard({
   const place = eventOrigin.location.toLowerCase();
   const originId = eventOrigin.externalId;
   const sourceHighlight = getSourceHighlight(eventOrigin);
+  const isSelectable = isSelectableEventItem(event);
+  const isSelected =
+    isSelectable &&
+    selectedEventOriginKeys?.has(eventOriginKey(eventOrigin)) === true;
+  const selectionDisabled = isSelectable && isCorrectionChangePending;
   const timestampLabel = new Date(timestamp).toLocaleTimeString("en-GB", {
     timeZone: "UTC",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
   });
-  const hasSelectionControl = onSelectionChange !== undefined;
+  const hasSelectionControl =
+    isSelectable && onToggleEventSelection !== undefined;
 
-  const handleSelectionChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onSelectionChange?.(event.target.checked);
+  const handleSelectionChange = () => {
+    onToggleEventSelection?.(eventOrigin);
   };
 
   const cardStyle = sourceHighlight
