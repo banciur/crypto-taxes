@@ -110,12 +110,10 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 ### User Interface
 
-- The UI renders raw, corrections, and corrected lanes.
-- The raw lane displays all "initial" events.
-- The corrections lane displays unified persisted corrections, including discard, replacement, and opening-balance records.
-- The corrected lane shows corrected ledger events, including synthetic `ledger_correction` events.
-- After correction mutations, the UI refreshes the server-rendered page so the corrections lane updates immediately.
-- The corrected lane still requires a pipeline rerun after correction mutations.
+- The UI supports reviewing raw events, unified persisted corrections, and corrected events.
+- The UI can author and remove unified corrections: discard, replacement, and opening-balance.
+- After correction mutations, the UI refreshes the server-rendered lane data immediately.
+- Corrected pipeline outputs still require a manual rerun after correction mutations.
 
 ---
 
