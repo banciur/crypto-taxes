@@ -188,7 +188,7 @@ def test_post_returns_409_when_source_is_already_consumed_by_active_correction(
     }
 
 
-def test_delete_is_by_id_and_tombstone_blocks_recreate(
+def test_delete_is_by_id_and_allows_manual_recreate(
     client: TestClient,
     persist_raw_events: Callable[[list[LedgerEvent]], None],
 ) -> None:
@@ -208,8 +208,8 @@ def test_delete_is_by_id_and_tombstone_blocks_recreate(
     recreated = client.post("/corrections", json=payload)
 
     assert delete_response.status_code == 204
-    assert recreated.status_code == 409
-    assert recreated.json()["detail"] == "Correction source is already consumed by another active correction"
+    assert recreated.status_code == 201
+    assert recreated.json()["sources"] == payload["sources"]
 
 
 def test_get_lists_persisted_corrections_in_desc_order(
