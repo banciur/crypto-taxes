@@ -1,13 +1,12 @@
 First stage: compute German taxes
 
 TODO: Need icons for coinbase and kraken
-TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
 
 --- go back to processing of corrected events. Split current processing into two elements:
   - tracking of wallets. This will be a good check of completness
   - acquisitions and disposals creation
 TODO: Review and fix wallet tracking
-TODO: Have a summary of the wallets. No current value as this will be cimplicated
+TODO: Display a summary of the wallets. No current value as getting prices of farms tokens is not trivial.
 TODO: Import data from Lido
 TODO: Import data from Stakewise
 
@@ -77,6 +76,7 @@ TODO: Features from WEALTH_MODEL.md
  - income
  - realized P/L
  - unrealized P/L (by asset?)
+TODO: Search function in the UI, tx hash
 
 Codex commands
 ------------------
