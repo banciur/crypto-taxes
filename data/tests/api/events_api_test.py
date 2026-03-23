@@ -1,9 +1,8 @@
 from collections.abc import Callable
-from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 
-from domain.ledger import EventLocation, LedgerEvent
+from domain.ledger import LedgerEvent
 from tests.api.conftest import raw_event
 
 
@@ -15,9 +14,6 @@ def test_get_raw_events_includes_note(
     persist_raw_events(
         [
             raw_event(
-                location=EventLocation.BASE,
-                external_id="0xraw-note",
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
                 note=note,
             )
         ]
@@ -37,9 +33,6 @@ def test_get_corrected_events_includes_note(
     persist_corrected_events(
         [
             raw_event(
-                location=EventLocation.OPTIMISM,
-                external_id="0xcorrected-note",
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
                 note=note,
             )
         ]

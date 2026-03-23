@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Generator
 from datetime import datetime
 from decimal import Decimal
+from random import choice
 from typing import cast
 from uuid import uuid4
 
@@ -21,6 +22,7 @@ from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepositor
 from domain.correction import LedgerCorrection, LedgerCorrectionDraft
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
 from tests.constants import BTC, EUR
+from tests.helpers.time_utils import DEFAULT_TIME_GEN
 
 
 @pytest.fixture()
@@ -58,11 +60,18 @@ def client(db_engine_factory: Callable[[], Engine]) -> Generator[TestClient, Non
 
 def raw_event(
     *,
-    location: EventLocation,
-    external_id: str,
-    timestamp: datetime,
+    location: EventLocation | None = None,
+    external_id: str | None = None,
+    timestamp: datetime | None = None,
     note: str | None = None,
 ) -> LedgerEvent:
+    if location is None:
+        location = choice(tuple(EventLocation))
+    if external_id is None:
+        external_id = str(uuid4())
+    if timestamp is None:
+        timestamp = DEFAULT_TIME_GEN()
+
     return LedgerEvent(
         id=LedgerEventId(uuid4()),
         timestamp=timestamp,

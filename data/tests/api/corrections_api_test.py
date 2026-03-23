@@ -97,7 +97,6 @@ def test_post_creates_and_get_lists_discard(
             raw_event(
                 location=EventLocation.ARBITRUM,
                 external_id=payload["sources"][0]["external_id"],
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
             )
         ],
     )
@@ -140,7 +139,6 @@ def test_post_creates_replacement(
             raw_event(
                 location=EventLocation(source["location"]),
                 external_id=source["external_id"],
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
             )
         ],
     )
@@ -173,7 +171,6 @@ def test_post_returns_409_when_source_is_already_consumed_by_active_correction(
             raw_event(
                 location=EventLocation.ARBITRUM,
                 external_id="0xdup",
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
             )
         ],
     )
@@ -198,7 +195,6 @@ def test_delete_is_by_id_and_allows_manual_recreate(
             raw_event(
                 location=EventLocation.ARBITRUM,
                 external_id="0xrestore",
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
             )
         ],
     )
