@@ -1,8 +1,6 @@
 First stage: compute German taxes
 
-TODO: Need icons for coinbase and kraken
-
---- go back to processing of corrected events. Split current processing into two elements:
+TODO: Split current processing into two elements:
   - tracking of wallets. This will be a good check of completness
   - acquisitions and disposals creation
 TODO: Review and fix wallet tracking
@@ -111,8 +109,12 @@ Some loose ideas
     - borrowing USDC in xlend.extrafi.io
     - putting it into farm 40acres USDC Vault through vaults.fyi
     - occasionally get some money from the farm and repay part of the debt to decrease debt
+- Idea how to track and handle things like stakewise, but also uniswap. Introduce tracking of NFT as a thing I own and has its value. Just one single token that can be traded against its content.
+  - Question how to treat partial deposits and witdrawals.
+  - For stakewise it could be a "virtual" token but with the same mechanics
+- vfat scythe is "my" contract where I transfer tokens that buys those "entities" from point aboge
 
-- Polish bonds income
+- Polish bonds income!!!!
 
 Other projects
 ------------------
