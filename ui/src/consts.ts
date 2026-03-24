@@ -56,3 +56,5 @@ export const CHAIN_METADATA = {
 } as const satisfies Record<string, ChainMetadata>;
 
 export type ChainKey = keyof typeof CHAIN_METADATA;
+
+export const AVAILABLE_LOGOS = new Set(["coinbase", "kraken"]);

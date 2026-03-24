@@ -1,13 +1,10 @@
 First stage: compute German taxes
 
-TODO: Need icons for coinbase and kraken
-TODO: Moralis in private.txt there is an example of a transaction that is not correctly parsed
-
---- go back to processing of corrected events. Split current processing into two elements:
+TODO: Split current processing into two elements:
   - tracking of wallets. This will be a good check of completness
   - acquisitions and disposals creation
 TODO: Review and fix wallet tracking
-TODO: Have a summary of the wallets. No current value as this will be cimplicated
+TODO: Display a summary of the wallets. No current value as getting prices of farms tokens is not trivial.
 TODO: Import data from Lido
 TODO: Import data from Stakewise
 
@@ -31,6 +28,9 @@ TODO: Improvements around tokens maybe better structure etc. Broader topic to th
   - some tokens can have the same symbol on different chains, but in reality there are different tokens, and it's not a mistake. Example fGHO in fluid different price on different chains (to be confirmed)
 TODO: Another review of fee legs. Now without is_fee (or equivalent semantics), residual same-asset differences in transfer-like events (onchain with gas) require partial leg decomposition, and the current engine can only classify whole legs, causing misclassification of internal transfers as taxable disposals/acquisitions.
 
+TODO: Hide checkboxes for raw events that already have a correction.
+TODO: In tests there are two or three places where test instances LedgerEvents are generated. Those should be combined into one helper.
+TODO: Tests are using the same rng seed (0). Seed should be randomized during each test run and printed for duplication. Probably there is some pytest plugin for this.
 TODO: Maybe change how sources of replacement are rendered now it's the same as in other items
 TODO: Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok. Now I think I have partial composition. Still maybe this should be made more verbose
 TODO: Revaluate idea of replace selectedEventOriginKeys / getSelectedEvents with one map like it was before.
@@ -77,6 +77,7 @@ TODO: Features from WEALTH_MODEL.md
  - income
  - realized P/L
  - unrealized P/L (by asset?)
+TODO: Search function in the UI, tx hash
 
 Codex commands
 ------------------
@@ -111,8 +112,12 @@ Some loose ideas
     - borrowing USDC in xlend.extrafi.io
     - putting it into farm 40acres USDC Vault through vaults.fyi
     - occasionally get some money from the farm and repay part of the debt to decrease debt
+- Idea how to track and handle things like stakewise, but also uniswap. Introduce tracking of NFT as a thing I own and has its value. Just one single token that can be traded against its content.
+  - Question how to treat partial deposits and witdrawals.
+  - For stakewise it could be a "virtual" token but with the same mechanics
+- vfat scythe is "my" contract where I transfer tokens that buys those "entities" from point aboge
 
-- Polish bonds income
+- Polish bonds income!!!!
 
 Other projects
 ------------------
