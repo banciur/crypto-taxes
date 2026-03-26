@@ -116,29 +116,18 @@ Recommended shapes:
 ```python
 from __future__ import annotations
 
-from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 
 from pydantic_base import StrictBaseModel
 
-from domain.ledger import AccountChainId, AssetId, EventLocation, LedgerEvent
+from domain.ledger import AccountChainId, AssetId, EventOrigin, LedgerEvent
 
 
 class WalletTrackingStatus(StrEnum):
     NOT_RUN = "NOT_RUN"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
-
-
-class WalletTrackingIssueCode(StrEnum):
-    INSUFFICIENT_BALANCE = "INSUFFICIENT_BALANCE"
-
-
-class WalletTrackingEventRef(StrictBaseModel):
-    timestamp: datetime
-    origin_location: EventLocation
-    origin_external_id: str
 
 
 class WalletBalance(StrictBaseModel):
@@ -148,28 +137,24 @@ class WalletBalance(StrictBaseModel):
 
 
 class WalletTrackingIssue(StrictBaseModel):
-    code: WalletTrackingIssueCode
-    event: WalletTrackingEventRef
+    event: EventOrigin
     account_chain_id: AccountChainId
     asset_id: AssetId
     attempted_delta: Decimal
     available_balance: Decimal
     missing_balance: Decimal
-    message: str
 
 
 class WalletTrackingState(StrictBaseModel):
     status: WalletTrackingStatus
-    generated_at: datetime | None = None
     processed_event_count: int
-    last_applied_event: WalletTrackingEventRef | None = None
-    failed_event: WalletTrackingEventRef | None = None
+    last_applied_event: EventOrigin | None = None
+    failed_event: EventOrigin | None = None
     issues: list[WalletTrackingIssue]
     balances: list[WalletBalance]
 ```
 
 Notes:
-- `generated_at` is `None` only for the synthetic `NOT_RUN` API response.
 - `balances` should contain only non-zero balances.
 - `issues` should be empty for `COMPLETED` and `NOT_RUN`.
 - `failed_event` should equal the event referenced by every issue in a failed state.
@@ -223,15 +208,12 @@ Recommended tables:
 
 1. `wallet_tracking_state`
 - exactly one row when state exists; empty table means `NOT_RUN`
-- `generated_at: datetime`
 - `status: str`
 - `processed_event_count: int`
 - `last_applied_origin_location: str | None`
 - `last_applied_origin_external_id: str | None`
-- `last_applied_timestamp: datetime | None`
 - `failed_origin_location: str | None`
 - `failed_origin_external_id: str | None`
-- `failed_timestamp: datetime | None`
 
 2. `wallet_tracking_balances`
 - `account_chain_id: str`
@@ -241,16 +223,13 @@ Recommended tables:
 
 3. `wallet_tracking_issues`
 - `position: int`
-- `code: str`
 - `event_origin_location: str`
 - `event_origin_external_id: str`
-- `event_timestamp: datetime`
 - `account_chain_id: str`
 - `asset_id: str`
 - `attempted_delta: Decimal`
 - `available_balance: Decimal`
 - `missing_balance: Decimal`
-- `message: str`
 - primary key or unique constraint on `position`
 
 Repository interface:
@@ -328,17 +307,15 @@ Recommended response model:
 ```python
 class WalletTrackingState(StrictBaseModel):
     status: WalletTrackingStatus
-    generated_at: datetime | None
     processed_event_count: int
-    last_applied_event: WalletTrackingEventRef | None
-    failed_event: WalletTrackingEventRef | None
+    last_applied_event: EventOrigin | None
+    failed_event: EventOrigin | None
     issues: list[WalletTrackingIssue]
     balances: list[WalletBalance]
 ```
 
 Recommended response semantics:
 - `NOT_RUN`
-  - `generated_at = null`
   - `processed_event_count = 0`
   - `last_applied_event = null`
   - `failed_event = null`
@@ -418,7 +395,7 @@ Required doc changes:
 
 ## Steps
 
-- [ ] Add `data/src/domain/wallet_tracking.py` with `WalletTrackingStatus`, `WalletTrackingIssueCode`, `WalletTrackingEventRef`, `WalletBalance`, `WalletTrackingIssue`, `WalletTrackingState`, and `WalletProjector`.
+- [ ] Add `data/src/domain/wallet_tracking.py` with `WalletTrackingStatus`, `WalletBalance`, `WalletTrackingIssue`, `WalletTrackingState`, and `WalletProjector`.
 
 - [ ] Implement event-atomic wallet projection in `WalletProjector.project(events: Iterable[LedgerEvent]) -> WalletTrackingState`, including deterministic-order assertion, per-event delta netting, first-failure stop behavior, non-zero balance capture, and issue collection for the failed event.
 
