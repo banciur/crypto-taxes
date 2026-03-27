@@ -7,7 +7,7 @@ from uuid import uuid4
 from accounts import KRAKEN_ACCOUNT_ID
 from domain.inventory import InventoryEngine
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
-from tests.constants import BTC, ETH, EUR, OUTSIDE_WALLET
+from tests.constants import ALT_BASE_WALLET, BTC, ETH, EUR
 from utils.inventory_summary import compute_inventory_summary
 
 
@@ -95,8 +95,8 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
             event_origin=EventOrigin(location=EventLocation.INTERNAL, external_id="evt-2"),
             ingestion="test",
             legs=[
-                LedgerLeg(asset_id=ETH, quantity=Decimal("2.0"), account_chain_id=OUTSIDE_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=OUTSIDE_WALLET),
+                LedgerLeg(asset_id=ETH, quantity=Decimal("2.0"), account_chain_id=ALT_BASE_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-1.0"), account_chain_id=ALT_BASE_WALLET),
             ],
         ),
     ]

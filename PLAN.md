@@ -55,8 +55,7 @@ Confirmed decisions:
 - A rebuild with zero corrected events still persists a `COMPLETED` state with `processed_event_count = 0`; `NOT_RUN` is reserved for "no state has been persisted yet".
 
 Challenge to current assumption:
-- "Sorted by timestamp" is not a strong enough processing contract. For wallet validation, same-timestamp event order can change the result. The real contract should be "already in deterministic processing order".
-- Canonical order when events are loaded from persistence:
+- Same-timestamp event order can change wallet-tracking results, so persistence and service layers should still load corrected events in canonical deterministic order:
   - `timestamp`
   - `event_origin.location`
   - `event_origin.external_id`
@@ -170,7 +169,6 @@ class WalletProjector:
 ```
 
 Recommended behavior:
-- Treat processing-order violations as programmer/configuration errors, not business data errors.
 - Net each event into `dict[tuple[AccountChainId, AssetId], Decimal]`.
 - Ignore zero net deltas after event-level aggregation.
 - Validate all resulting balances for the event before mutating state.
@@ -184,7 +182,6 @@ Recommended internal helpers:
 ```python
 class WalletProjector:
     def project(self, events: Iterable[LedgerEvent]) -> WalletTrackingState: ...
-    def _assert_processing_order(self, previous: LedgerEvent | None, current: LedgerEvent) -> None: ...
     def _net_event_deltas(
         self, event: LedgerEvent
     ) -> dict[tuple[AccountChainId, AssetId], Decimal]: ...
@@ -358,7 +355,6 @@ Domain projector cases:
 - failed state includes last-applied marker and failed-event marker
 - failed state includes all blocking issues from the first failed event
 - balances exclude zero rows
-- processing-order violation raises immediately
 - fiat tracking behavior according to the confirmed asset-scope decision
 
 Repository cases:
@@ -395,15 +391,9 @@ Required doc changes:
 
 ## Steps
 
-- [ ] Add `data/src/domain/wallet_tracking.py` with `WalletTrackingStatus`, `WalletBalance`, `WalletTrackingIssue`, `WalletTrackingState`, and `WalletProjector`.
+- [x] Add `data/src/domain/wallet_tracking.py` with `WalletTrackingStatus`, `WalletBalance`, `WalletTrackingIssue`, `WalletTrackingState`, and `WalletProjector`; implement event-atomic wallet projection in `WalletProjector.project(events: Iterable[LedgerEvent]) -> WalletTrackingState`, including per-event delta netting, first-failure stop behavior, non-zero balance capture, and issue collection for the failed event; and add domain tests in `data/tests/domain/wallet_tracking_test.py` covering happy path, same-event netting, partial failure semantics, multi-issue failed event, and zero-balance exclusion.
 
-- [ ] Implement event-atomic wallet projection in `WalletProjector.project(events: Iterable[LedgerEvent]) -> WalletTrackingState`, including deterministic-order assertion, per-event delta netting, first-failure stop behavior, non-zero balance capture, and issue collection for the failed event.
-
-- [ ] Add persistence in `data/src/db/wallet_tracking.py` with ORM models for current state, balances, and issues plus `WalletTrackingRepository.get()` and `WalletTrackingRepository.replace()`.
-
-- [ ] Add repository tests in `data/tests/db/wallet_tracking_repository_test.py` covering empty state, state replacement, deterministic ordering, and failed-state issue persistence.
-
-- [ ] Add domain tests in `data/tests/domain/wallet_tracking_test.py` covering happy path, same-event netting, partial failure semantics, multi-issue failed event, zero-balance exclusion, and ordering validation.
+- [ ] Add persistence in `data/src/db/wallet_tracking.py` with ORM models for current state, balances, and issues plus `WalletTrackingRepository.get()` and `WalletTrackingRepository.replace()`, and add repository tests in `data/tests/db/wallet_tracking_repository_test.py` covering empty state, state replacement, deterministic ordering, and failed-state issue persistence.
 
 - [ ] Add `data/src/services/wallet_tracking_service.py` with `WalletTrackingService.rebuild()` and `WalletTrackingService.get()` and wire it to `CorrectedLedgerEventRepository`, `WalletTrackingRepository`, and `WalletProjector`.
 
