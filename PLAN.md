@@ -191,9 +191,6 @@ class WalletProjector:
         deltas: dict[tuple[AccountChainId, AssetId], Decimal],
         balances: dict[tuple[AccountChainId, AssetId], Decimal],
     ) -> list[WalletTrackingIssue]: ...
-    def _state_balances(
-        self, balances: dict[tuple[AccountChainId, AssetId], Decimal]
-    ) -> list[WalletBalance]: ...
 ```
 
 ## Persistence Design
