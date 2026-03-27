@@ -390,7 +390,7 @@ Required doc changes:
 
 - [x] Add `data/src/domain/wallet_tracking.py` with `WalletTrackingStatus`, `WalletBalance`, `WalletTrackingIssue`, `WalletTrackingState`, and `WalletProjector`; implement event-atomic wallet projection in `WalletProjector.project(events: Iterable[LedgerEvent]) -> WalletTrackingState`, including per-event delta netting, first-failure stop behavior, non-zero balance capture, and issue collection for the failed event; and add domain tests in `data/tests/domain/wallet_tracking_test.py` covering happy path, same-event netting, partial failure semantics, multi-issue failed event, and zero-balance exclusion.
 
-- [ ] Add persistence in `data/src/db/wallet_tracking.py` with ORM models for current state, balances, and issues plus `WalletTrackingRepository.get()` and `WalletTrackingRepository.replace()`, and add repository tests in `data/tests/db/wallet_tracking_repository_test.py` covering empty state, state replacement, deterministic ordering, and failed-state issue persistence.
+- [x] Add persistence in `data/src/db/wallet_tracking.py` with ORM models for current state, balances, and issues plus `WalletTrackingRepository.get()` and `WalletTrackingRepository.replace()`, and add repository tests in `data/tests/db/wallet_tracking_repository_test.py` covering empty state, state replacement, deterministic ordering, and failed-state issue persistence.
 
 - [ ] Add `data/src/services/wallet_tracking_service.py` with `WalletTrackingService.rebuild()` and `WalletTrackingService.get()` and wire it to `CorrectedLedgerEventRepository`, `WalletTrackingRepository`, and `WalletProjector`.
 
