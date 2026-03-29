@@ -22,361 +22,189 @@ This file has two phases:
 
 ## Current Task
 
-Design and later implement backend-only wallet tracking for corrected ledger data.
+Design and later implement the first UI surface for backend wallet tracking.
 
 Intended outcome:
-- Consume corrected `LedgerEvent` objects in processing order.
-- Build the current wallet-balance state only; no historical run retention.
-- Stop before the first blocking wallet-balance failure and persist the partial result plus error details.
-- Expose the current state through FastAPI so the UI can display processing status, last processed marker, final balances, and any blocking error.
-- Keep UI implementation out of scope.
+- Load the existing `GET /wallet-tracking` backend state into the Next.js app.
+- Present wallet-tracking status, progress markers, balances, and blocking issues in the UI.
+- Keep the implementation read-only; no rebuild or mutation controls in this task.
+- Integrate the wallet-tracking view into the current layout without forcing the snapshot data into the timeline lane model.
 
 Current planning status:
 - Draft plan prepared.
-- Planning questions resolved by the operator on 2026-03-26.
-- Ready for operator sign-off before execution starts.
+- Awaiting operator feedback on the remaining UI shape decisions before execution starts.
 
-Confirmed decisions:
-- Processing input starts as `Iterable[LedgerEvent]`.
-- The caller is responsible for providing corrected events, not raw events.
-- Wallet tracking is a separate projection from lot generation and tax computation.
-- Track all assets, including fiat like `EUR`.
-- Store all blocking balance issues from the first failed event.
-- `GET /wallet-tracking` returns `NOT_RUN` instead of `404` when no state exists yet.
-- Only the current wallet-tracking state is stored in SQLite.
-- Per-event deltas are not persisted.
-- Snapshot recomputation remains part of backend processing; no API-triggered rebuild is included in this task.
-- Repository and service names should not imply historical versions.
-- Remove `data/src/domain/wallet_balance_tracker.py` as part of the implementation and move all remaining callers to the new wallet-tracking projection design.
-- When corrected events are loaded from persistence for wallet tracking, use canonical deterministic order: `timestamp`, `event_origin.location`, `event_origin.external_id`.
-- For this task, integrate wallet-tracking rebuild immediately before the current `return  # just for now` in `data/src/main.py` and do not execute any later inventory/tax work.
-- `processed_event_count` counts only fully applied events.
-- `failed_event` is the first event whose wallet-tracking processing fails.
-- A rebuild with zero corrected events still persists a `COMPLETED` state with `processed_event_count = 0`; `NOT_RUN` is reserved for "no state has been persisted yet".
-
-Challenge to current assumption:
-- Same-timestamp event order can change wallet-tracking results, so persistence and service layers should still load corrected events in canonical deterministic order:
-  - `timestamp`
-  - `event_origin.location`
-  - `event_origin.external_id`
+Working assumptions for the draft:
+- Wallet tracking should be shown as a dedicated summary panel, not as another timeline lane.
+- The panel should be rendered in the main content area above the existing timeline/action-bar stack.
+- The first version should always be visible when the page loads; no separate toggle or route is required.
+- The first version should remain read-only and should only consume the current API response.
 
 ## Open Questions
 
-None currently.
+- Should the wallet-tracking panel always be visible above the timeline, or do you want it hidden behind an explicit toggle/accordion?
+- For balances, is a flat table (`account`, `asset`, `balance`) enough for the first version, or do you want account-grouped sections immediately?
+- On `FAILED`, should balances remain fully expanded by default, or should the issues section be expanded first with balances collapsed?
 
-Planning-phase decisions already confirmed:
-- track all assets
-- store all blocking issues from the first failed event
-- return `NOT_RUN` from the API when no state exists yet
+Recommended defaults if not overridden:
+- Always visible panel above the timeline.
+- Flat balances table for the first version.
+- On `FAILED`, show both summary and issues first, with balances still visible below.
 
 ## Scope
 
 In scope:
-- Domain models and projector for wallet tracking.
-- SQLite persistence for the current wallet-tracking state.
-- Pipeline/service integration that rebuilds the state from corrected events.
-- Read-only API endpoint for the current state.
-- Tests and documentation updates for the backend/API contract.
+- Shared UI API module and TypeScript types for wallet tracking.
+- Server-side page loading of wallet-tracking data.
+- Read-only wallet-tracking panel/components.
+- Rendering of `NOT_RUN`, `COMPLETED`, and `FAILED` states.
+- UI tests if the repo already has a suitable pattern, otherwise rely on type/lint coverage for this first pass.
+- Documentation updates only if the UI contract/behavior meaningfully changes during implementation.
 
 Out of scope:
-- Lot generation or tax computation changes.
-- Automatic transfer inference.
-- Wallet-tracking history across multiple runs.
-- UI React components or pages.
-- API-triggered recomputation.
+- Triggering rebuilds from the UI.
+- Polling or live refresh.
+- Timeline-lane integration for wallet tracking.
+- Advanced filtering, sorting, pagination, CSV export, or per-wallet drill-down flows.
+- Any backend changes unless implementation exposes a concrete contract gap.
 
-## Target Design
+## Proposed UI Design
 
-The wallet tracker becomes a dedicated projection with three layers:
+Recommended placement:
+- Render a `WalletTrackingPanel` in the right/main column above `Events`.
+- Keep the left toolbar focused on column/date controls; wallet tracking is a global snapshot, not a lane/date filter.
 
-1. Pure projection layer
-- Accept corrected `LedgerEvent` objects in deterministic order.
-- Aggregate each event into net per-wallet deltas.
-- Validate the whole event atomically.
-- Return a completed or failed state object instead of raising a business exception for insufficient balances.
+Reasoning:
+- The current UI’s lane model is timestamp-bucket based.
+- Wallet tracking is a single snapshot over corrected events, not a feed of timestamped items.
+- Forcing it into `COLUMN_DEFINITIONS`, `EventsByTimestamp`, and `TimestampBucketRow` would distort the current model and add avoidable complexity.
 
-2. Persistence layer
-- Store only the current state in the main SQLite DB.
-- Replace the current state transactionally on each rebuild.
-- Store final balances and blocking issues for the first failed event.
+Recommended panel structure:
 
-3. API layer
-- Expose a single read endpoint returning the current state or a `NOT_RUN` placeholder.
-- Keep decimal values string-backed at the API boundary.
+1. Summary header
+- Title: `Wallet tracking`
+- Status badge: `Not run`, `Completed`, or `Failed`
+- Small explanatory copy tied to the status
+- On all states, show `processed_event_count`
 
-## Domain Objects
+2. Marker section
+- `last_applied_event` if present
+- `failed_event` if present
+- Render each marker as `location / external_id`
 
-Recommended new module:
-- `data/src/domain/wallet_tracking.py`
+3. Blocking issues section
+- Only render for `FAILED`
+- One row/card per issue
+- Show:
+  - account name (via `AccountNamesContext`)
+  - asset id
+  - attempted delta
+  - available balance
+  - missing balance
+  - event origin reference
+
+4. Final balances section
+- Render for `COMPLETED` and `FAILED`
+- Flat table with columns:
+  - account
+  - asset
+  - balance
+- Reuse account-name resolution from `AccountNamesContext`
+- Keep decimal values string-backed and format with shared decimal helpers
+
+5. Empty-state messaging
+- `NOT_RUN`: explain that no wallet-tracking snapshot has been persisted yet
+- Mention that correction changes still require the backend pipeline rerun before corrected outputs and wallet tracking refresh
+
+## Technical Design
+
+Recommended new UI API module:
+- `ui/src/api/walletTracking.ts`
+
+Recommended new UI types:
+- `ui/src/types/walletTracking.ts`
 
 Recommended shapes:
 
-```python
-from __future__ import annotations
+```ts
+type WalletTrackingStatus = "NOT_RUN" | "COMPLETED" | "FAILED";
 
-from decimal import Decimal
-from enum import StrEnum
+type WalletTrackingBalance = {
+  accountChainId: string;
+  assetId: string;
+  balance: DecimalString;
+};
 
-from pydantic_base import StrictBaseModel
+type WalletTrackingIssue = {
+  event: EventOrigin;
+  accountChainId: string;
+  assetId: string;
+  attemptedDelta: DecimalString;
+  availableBalance: DecimalString;
+  missingBalance: DecimalString;
+};
 
-from domain.ledger import AccountChainId, AssetId, EventOrigin, LedgerEvent
-
-
-class WalletTrackingStatus(StrEnum):
-    NOT_RUN = "NOT_RUN"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-
-
-class WalletBalance(StrictBaseModel):
-    account_chain_id: AccountChainId
-    asset_id: AssetId
-    balance: Decimal
-
-
-class WalletTrackingIssue(StrictBaseModel):
-    event: EventOrigin
-    account_chain_id: AccountChainId
-    asset_id: AssetId
-    attempted_delta: Decimal
-    available_balance: Decimal
-    missing_balance: Decimal
-
-
-class WalletTrackingState(StrictBaseModel):
-    status: WalletTrackingStatus
-    processed_event_count: int
-    last_applied_event: EventOrigin | None = None
-    failed_event: EventOrigin | None = None
-    issues: list[WalletTrackingIssue]
-    balances: list[WalletBalance]
+type WalletTrackingState = {
+  status: WalletTrackingStatus;
+  processedEventCount: number;
+  lastAppliedEvent?: EventOrigin | null;
+  failedEvent?: EventOrigin | null;
+  issues: WalletTrackingIssue[];
+  balances: WalletTrackingBalance[];
+};
 ```
 
-Notes:
-- `balances` should contain only non-zero balances.
-- `issues` should be empty for `COMPLETED` and `NOT_RUN`.
-- `failed_event` should equal the event referenced by every issue in a failed state.
+Recommended component modules:
+- `ui/src/components/WalletTracking/WalletTrackingPanel.tsx`
+- `ui/src/components/WalletTracking/WalletTrackingIssueList.tsx`
+- `ui/src/components/WalletTracking/WalletTrackingBalancesTable.tsx`
 
-## Projector Interface
+Component responsibilities:
+- `WalletTrackingPanel`
+  - top-level status/layout component
+  - chooses which sections render for each status
+- `WalletTrackingIssueList`
+  - formats the failed-event issue rows
+- `WalletTrackingBalancesTable`
+  - renders the balances list with account name resolution
 
-Recommended class:
+Integration point:
+- `ui/src/app/page.tsx`
 
-```python
-class WalletProjector:
-    def project(self, events: Iterable[LedgerEvent]) -> WalletTrackingState:
-        ...
-```
+Recommended loading flow:
+- fetch `accounts`
+- fetch `walletTracking`
+- fetch selected timeline columns
+- pass `walletTracking` into the main content tree alongside `eventsByTimestamp`
 
-Recommended behavior:
-- Net each event into `dict[tuple[AccountChainId, AssetId], Decimal]`.
-- Ignore zero net deltas after event-level aggregation.
-- Validate all resulting balances for the event before mutating state.
-- If validation succeeds, apply all deltas and advance `last_applied_event`.
-- If validation fails, do not apply any delta from the failed event.
-- Return a `FAILED` state with balances from the last fully applied event and the blocking issue list for the failed event.
-- Do not depend on `PriceProvider`, lot state, or tax logic.
+Recommended rendering flow:
+- keep `Events` responsible for correction actions and timeline rendering
+- wrap `Events` with a small page-level stack:
+  - `WalletTrackingPanel`
+  - `Events`
 
-Recommended internal helpers:
+## Testing / Validation Plan
 
-```python
-class WalletProjector:
-    def project(self, events: Iterable[LedgerEvent]) -> WalletTrackingState: ...
-    def _net_event_deltas(
-        self, event: LedgerEvent
-    ) -> dict[tuple[AccountChainId, AssetId], Decimal]: ...
-    def _validate_event(
-        self,
-        event: LedgerEvent,
-        deltas: dict[tuple[AccountChainId, AssetId], Decimal],
-        balances: dict[tuple[AccountChainId, AssetId], Decimal],
-    ) -> list[WalletTrackingIssue]: ...
-```
+If implementation proceeds as proposed, validate with:
+- `pnpm prettier`
+- `pnpm lint`
+- `pnpm types`
 
-## Persistence Design
-
-Recommended new module:
-- `data/src/db/wallet_tracking.py`
-
-Recommended tables:
-
-1. `wallet_tracking_state`
-- exactly one row when state exists; empty table means `NOT_RUN`
-- `status: str`
-- `processed_event_count: int`
-- `last_applied_origin_location: str | None`
-- `last_applied_origin_external_id: str | None`
-- `failed_origin_location: str | None`
-- `failed_origin_external_id: str | None`
-
-2. `wallet_tracking_balances`
-- `account_chain_id: str`
-- `asset_id: str`
-- `balance: Decimal`
-- primary key or unique constraint on `(account_chain_id, asset_id)`
-
-3. `wallet_tracking_issues`
-- `position: int`
-- `event_origin_location: str`
-- `event_origin_external_id: str`
-- `account_chain_id: str`
-- `asset_id: str`
-- `attempted_delta: Decimal`
-- `available_balance: Decimal`
-- `missing_balance: Decimal`
-- primary key or unique constraint on `position`
-
-Repository interface:
-
-```python
-class WalletTrackingRepository:
-    def get(self) -> WalletTrackingState | None: ...
-    def replace(self, state: WalletTrackingState) -> WalletTrackingState: ...
-```
-
-Repository behavior:
-- `replace` must delete all existing wallet-tracking rows and insert the new state in one transaction.
-- `get` returns the only stored state or `None`.
-- Balances are returned sorted deterministically by `account_chain_id`, `asset_id`.
-- Any persistence-layer read path that supplies corrected events for projection must preserve canonical deterministic order:
-  - `timestamp`
-  - `origin_location`
-  - `origin_external_id`
-
-Reason for no foreign-key state id on child tables:
-- The design stores only one current state, never multiple versions.
-- `wallet_tracking_balances` and `wallet_tracking_issues` are current-state tables, not versioned child rows.
-- The repository replaces all three tables in one transaction, so referential versioning is not needed.
-
-## Pipeline Integration
-
-Recommended rebuild flow:
-- Load corrected events from persistence.
-- Sort them in canonical deterministic order: `timestamp`, `event_origin.location`, `event_origin.external_id`.
-- Project the state with `WalletProjector`.
-- Save it with `WalletTrackingRepository.replace()`.
-- Any read path that needs API-facing `NOT_RUN` semantics should synthesize that in-memory when `WalletTrackingRepository.get()` returns `None`.
-
-Pipeline integration point:
-- After corrected events are persisted in `data/src/main.py`, rebuild the wallet-tracking state from corrected events immediately before the current `return  # just for now`.
-- Do not process raw events.
-- Do not couple wallet tracking to `InventoryEngine`.
-- Do not execute any inventory, disposal, tax, or summary work after the wallet-tracking rebuild in this task.
-
-Required cleanup as part of this task:
-- Remove `data/src/domain/wallet_balance_tracker.py`.
-- Remove wallet-balance concerns from [inventory.py](/Users/banciur/projects/crypto-taxes/data/src/domain/inventory.py).
-- Update any remaining callers, tests, fixtures, or helpers that still import the old wallet-balance tracker.
-
-## API Contract
-
-Recommended new router:
-- `data/src/api/wallet_tracking.py`
-
-Recommended endpoint:
-- `GET /wallet-tracking`
-
-Recommended response model:
-
-```python
-class WalletTrackingState(StrictBaseModel):
-    status: WalletTrackingStatus
-    processed_event_count: int
-    last_applied_event: EventOrigin | None
-    failed_event: EventOrigin | None
-    issues: list[WalletTrackingIssue]
-    balances: list[WalletBalance]
-```
-
-Recommended response semantics:
-- `NOT_RUN`
-  - `processed_event_count = 0`
-  - `last_applied_event = null`
-  - `failed_event = null`
-  - `issues = []`
-  - `balances = []`
-- `COMPLETED`
-  - `failed_event = null`
-  - `issues = []`
-  - `processed_event_count` equals the number of fully applied events and may be `0`
-- `FAILED`
-  - `processed_event_count` equals the number of fully applied events before the failure
-  - `last_applied_event` points to the last fully committed event
-  - `failed_event` points to the first blocking event
-  - `issues` contains all blocking balance issues for that event
-  - `balances` reflect state as of `last_applied_event`
-
-FastAPI integration:
-- Add dependency provider in `data/src/api/dependencies/__init__.py`
-- Include the router from `data/src/api/api.py`
-
-No write endpoints in this task:
-- No `POST /wallet-tracking/rebuild`
-- No mutation routes
-
-Reason:
-- The existing workflow already treats corrected pipeline outputs as manually rebuilt.
-- Read-only API is enough for the first UI integration.
-
-## Test Plan
-
-New test files:
-- `data/tests/domain/wallet_tracking_test.py`
-- `data/tests/db/wallet_tracking_repository_test.py`
-- `data/tests/api/wallet_tracking_api_test.py`
-
-Domain projector cases:
-- successful processing across multiple events and accounts
-- event-level same-key netting before validation
-- event-atomic failure leaves failed-event deltas unapplied
-- failed state includes last-applied marker and failed-event marker
-- failed state includes all blocking issues from the first failed event
-- balances exclude zero rows
-- fiat tracking behavior according to the confirmed asset-scope decision
-
-Repository cases:
-- `get` returns `None` when empty
-- `replace` persists completed state
-- `replace` replaces prior failed/completed state fully
-- `replace` persists multiple balances and multiple issues deterministically
-
-API cases:
-- empty storage returns `NOT_RUN`
-- persisted completed state is returned unchanged
-- persisted failed state returns balances, failed marker, and issues
-- decimal fields remain string-backed in the JSON response
-
-Integration case:
-- pipeline rebuild after corrected-event persistence stores the wallet-tracking state based on corrected events, not raw events
-- pipeline rebuild runs before the current early `return` in `data/src/main.py`, and no later inventory/tax work executes in this task
-
-## Documentation Updates Required During Execution
-
-Update these files in the same implementation change:
-- `data/README.md`
-- `data/src/api/README.md`
-- `doc/CURRENT.md`
-- `AGENTS.md`
-- `ui/README.md`
-
-Required doc changes:
-- describe wallet tracking as a separate corrected-ledger projection
-- document current-state persistence semantics
-- document stop-on-first-error partial-state behavior
-- document the `GET /wallet-tracking` API contract
-- note that UI rendering is still separate from backend/API delivery
+Recommended test coverage during execution:
+- API module returns the typed wallet-tracking payload.
+- `NOT_RUN` renders the empty-state copy.
+- `COMPLETED` renders balances and processed count.
+- `FAILED` renders issues, failed marker, and retained balances.
+- Account IDs resolve to display names in balances/issues where available.
 
 ## Steps
 
-- [x] Add `data/src/domain/wallet_tracking.py` with `WalletTrackingStatus`, `WalletBalance`, `WalletTrackingIssue`, `WalletTrackingState`, and `WalletProjector`; implement event-atomic wallet projection in `WalletProjector.project(events: Iterable[LedgerEvent]) -> WalletTrackingState`, including per-event delta netting, first-failure stop behavior, non-zero balance capture, and issue collection for the failed event; and add domain tests in `data/tests/domain/wallet_tracking_test.py` covering happy path, same-event netting, partial failure semantics, multi-issue failed event, and zero-balance exclusion.
+- [ ] Add `ui/src/types/walletTracking.ts` and `ui/src/api/walletTracking.ts` for the read-only `GET /wallet-tracking` contract, keeping decimal fields string-backed and camelCase at the TypeScript boundary.
 
-- [x] Add persistence in `data/src/db/wallet_tracking.py` with ORM models for current state, balances, and issues plus `WalletTrackingRepository.get()` and `WalletTrackingRepository.replace()`, and add repository tests in `data/tests/db/wallet_tracking_repository_test.py` covering empty state, state replacement, deterministic ordering, and failed-state issue persistence.
+- [ ] Load wallet-tracking state in `ui/src/app/page.tsx` alongside accounts and selected columns, and thread it into the main content tree without routing it through the timestamp-bucket lane model.
 
-- [x] Integrate wallet-tracking rebuild into the corrected-events processing flow in `data/src/main.py` by loading corrected events, sorting them canonically, projecting with `WalletProjector`, and persisting with `WalletTrackingRepository` immediately after corrected events are persisted and immediately before the current `return  # just for now`, without executing any later inventory/tax work.
+- [ ] Add wallet-tracking UI components under `ui/src/components/WalletTracking/` to render the summary header, event markers, failed issues, and balances table using shared account-name and decimal-format helpers.
 
-- [x] Add `data/src/api/wallet_tracking.py`, add the dependency factory in `data/src/api/dependencies/__init__.py`, include the router in `data/src/api/api.py`, and expose `GET /wallet-tracking` with the agreed `NOT_RUN`/`COMPLETED`/`FAILED` response semantics.
+- [ ] Integrate the `WalletTrackingPanel` above the existing timeline/action-bar stack so wallet tracking is visible as a global snapshot while corrections/events continue to use the current lane UI unchanged.
 
-- [x] Add API tests in `data/tests/api/wallet_tracking_api_test.py` covering empty-state, completed state, failed state, and decimal serialization behavior.
-
-- [x] Remove `data/src/domain/wallet_balance_tracker.py` and update or remove any remaining imports/usages in production code and tests so wallet tracking exists only in the new projection module.
-
-- [x] Update `data/README.md`, `data/src/api/README.md`, `doc/CURRENT.md`, `AGENTS.md`, and `ui/README.md` so the documented backend and API behavior matches the implemented wallet-tracking projection exactly.
+- [ ] Add or adjust UI tests if a lightweight pattern exists for these components; otherwise validate through `pnpm prettier`, `pnpm lint`, and `pnpm types`, and document any testing gap explicitly in the execution summary.
