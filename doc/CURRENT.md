@@ -110,6 +110,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Moralis possible-spam auto-generation creates discard corrections and respects active source claims plus source-level auto-suppressions so manually removed corrections are not recreated automatically.
 - The UI can author discard, replacement, and opening-balance corrections through the unified corrections API.
 - Wallet tracking is a separate projection over corrected events. It processes events in canonical deterministic order, tracks all assets including fiat, and validates event deltas atomically and store outcome in database.
+
 ---
 
 ## Fees

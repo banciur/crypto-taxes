@@ -49,6 +49,7 @@
 - `GET /wallet-tracking` returns the current wallet-tracking snapshot with status `NOT_RUN`, `COMPLETED`, or `FAILED`.
 - Ledger leg quantities remain string-backed decimal values at the API boundary.
 - `GET /corrections` returns feed for discard, replacement, and opening-balance items.
+- Source-backed corrections may be saved without legs; they consume the selected raw sources without emitting a corrected synthetic event.
 - Correction mutations refresh the server-rendered lane data after they are complete.
 - After manual correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.
 

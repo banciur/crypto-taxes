@@ -176,11 +176,6 @@ export function ReplacementEditorModal({
       return;
     }
 
-    if (draftLegs.length === 0) {
-      setValidationMessage("Replacement must contain at least one leg.");
-      return;
-    }
-
     const normalizedLegs: LedgerCorrectionDraftLeg[] = [];
     for (const leg of draftLegs) {
       const assetId = leg.assetId.trim();
