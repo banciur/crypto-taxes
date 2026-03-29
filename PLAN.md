@@ -48,7 +48,7 @@ Confirmed decisions:
 - Snapshot recomputation remains part of backend processing; no API-triggered rebuild is included in this task.
 - Repository and service names should not imply historical versions.
 - Remove `data/src/domain/wallet_balance_tracker.py` as part of the implementation and move all remaining callers to the new wallet-tracking projection design.
-- When corrected events are loaded from persistence for wallet tracking, use canonical deterministic order: `timestamp`, `event_origin.location`, `event_origin.external_id`, `ingestion`.
+- When corrected events are loaded from persistence for wallet tracking, use canonical deterministic order: `timestamp`, `event_origin.location`, `event_origin.external_id`.
 - For this task, integrate wallet-tracking rebuild immediately before the current `return  # just for now` in `data/src/main.py` and do not execute any later inventory/tax work.
 - `processed_event_count` counts only fully applied events.
 - `failed_event` is the first event whose wallet-tracking processing fails.
@@ -59,7 +59,6 @@ Challenge to current assumption:
   - `timestamp`
   - `event_origin.location`
   - `event_origin.external_id`
-  - `ingestion`
 
 ## Open Questions
 
@@ -237,45 +236,25 @@ class WalletTrackingRepository:
 Repository behavior:
 - `replace` must delete all existing wallet-tracking rows and insert the new state in one transaction.
 - `get` returns the only stored state or `None`.
-- Balances and issues are returned sorted deterministically:
-  - balances by `account_chain_id`, `asset_id`
-  - issues by `position`
+- Balances are returned sorted deterministically by `account_chain_id`, `asset_id`.
 - Any persistence-layer read path that supplies corrected events for projection must preserve canonical deterministic order:
   - `timestamp`
   - `origin_location`
   - `origin_external_id`
-  - `ingestion`
 
 Reason for no foreign-key state id on child tables:
 - The design stores only one current state, never multiple versions.
 - `wallet_tracking_balances` and `wallet_tracking_issues` are current-state tables, not versioned child rows.
 - The repository replaces all three tables in one transaction, so referential versioning is not needed.
 
-## Service and Pipeline Integration
+## Pipeline Integration
 
-Recommended service module:
-- `data/src/services/wallet_tracking_service.py`
-
-Recommended interface:
-
-```python
-class WalletTrackingService:
-    def __init__(
-        self,
-        *,
-        corrected_event_repository: CorrectedLedgerEventRepository,
-        repository: WalletTrackingRepository,
-        projector: WalletProjector,
-    ) -> None: ...
-
-    def rebuild(self) -> WalletTrackingState: ...
-    def get(self) -> WalletTrackingState: ...
-```
-
-Recommended behavior:
-- `rebuild` loads corrected events from persistence, projects the state, saves it with `replace`, and returns it.
-- `get` returns persisted state if present, otherwise returns an in-memory `NOT_RUN` state.
-- `rebuild` must use corrected events loaded in canonical deterministic order: `timestamp`, `event_origin.location`, `event_origin.external_id`, `ingestion`.
+Recommended rebuild flow:
+- Load corrected events from persistence.
+- Sort them in canonical deterministic order: `timestamp`, `event_origin.location`, `event_origin.external_id`.
+- Project the state with `WalletProjector`.
+- Save it with `WalletTrackingRepository.replace()`.
+- Any read path that needs API-facing `NOT_RUN` semantics should synthesize that in-memory when `WalletTrackingRepository.get()` returns `None`.
 
 Pipeline integration point:
 - After corrected events are persisted in `data/src/main.py`, rebuild the wallet-tracking state from corrected events immediately before the current `return  # just for now`.
@@ -392,9 +371,7 @@ Required doc changes:
 
 - [x] Add persistence in `data/src/db/wallet_tracking.py` with ORM models for current state, balances, and issues plus `WalletTrackingRepository.get()` and `WalletTrackingRepository.replace()`, and add repository tests in `data/tests/db/wallet_tracking_repository_test.py` covering empty state, state replacement, deterministic ordering, and failed-state issue persistence.
 
-- [ ] Add `data/src/services/wallet_tracking_service.py` with `WalletTrackingService.rebuild()` and `WalletTrackingService.get()` and wire it to `CorrectedLedgerEventRepository`, `WalletTrackingRepository`, and `WalletProjector`.
-
-- [ ] Integrate `WalletTrackingService.rebuild()` into the corrected-events processing flow in `data/src/main.py` so the current wallet-tracking state is rebuilt immediately after corrected events are persisted and immediately before the current `return  # just for now`, without executing any later inventory/tax work.
+- [x] Integrate wallet-tracking rebuild into the corrected-events processing flow in `data/src/main.py` by loading corrected events, sorting them canonically, projecting with `WalletProjector`, and persisting with `WalletTrackingRepository` immediately after corrected events are persisted and immediately before the current `return  # just for now`, without executing any later inventory/tax work.
 
 - [ ] Add `data/src/api/wallet_tracking.py`, add the dependency factory in `data/src/api/dependencies/__init__.py`, include the router in `data/src/api/api.py`, and expose `GET /wallet-tracking` with the agreed `NOT_RUN`/`COMPLETED`/`FAILED` response semantics.
 

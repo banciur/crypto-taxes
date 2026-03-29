@@ -241,3 +241,62 @@ def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRep
     assert reloaded.event_origin.external_id == external_id
     assert reloaded.note == note
     assert {leg.id for leg in reloaded.legs} == {leg.id for leg in event.legs}
+
+
+def test_list_corrected_ledger_events_uses_canonical_order(corrected_repo: CorrectedLedgerEventRepository) -> None:
+    timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    base_event = LedgerEvent(
+        id=LedgerEventId(uuid4()),
+        timestamp=timestamp,
+        event_origin=EventOrigin(location=EventLocation.BASE, external_id="b-ext"),
+        ingestion="z-ingestion",
+        note=None,
+        legs=[
+            LedgerLeg(
+                asset_id=BTC,
+                quantity=Decimal("0.1"),
+                account_chain_id=KRAKEN_ACCOUNT_ID,
+                is_fee=False,
+            )
+        ],
+    )
+    ethereum_event = LedgerEvent(
+        id=LedgerEventId(uuid4()),
+        timestamp=timestamp,
+        event_origin=EventOrigin(location=EventLocation.ETHEREUM, external_id="a-ext"),
+        ingestion="a-ingestion",
+        note=None,
+        legs=[
+            LedgerLeg(
+                asset_id=BTC,
+                quantity=Decimal("0.2"),
+                account_chain_id=KRAKEN_ACCOUNT_ID,
+                is_fee=False,
+            )
+        ],
+    )
+    kraken_event = LedgerEvent(
+        id=LedgerEventId(uuid4()),
+        timestamp=timestamp,
+        event_origin=EventOrigin(location=EventLocation.KRAKEN, external_id="a-ext"),
+        ingestion="m-ingestion",
+        note=None,
+        legs=[
+            LedgerLeg(
+                asset_id=BTC,
+                quantity=Decimal("0.3"),
+                account_chain_id=KRAKEN_ACCOUNT_ID,
+                is_fee=False,
+            )
+        ],
+    )
+
+    corrected_repo.create_many([kraken_event, base_event, ethereum_event])
+
+    stored = corrected_repo.list()
+
+    assert [(event.event_origin.location, event.event_origin.external_id) for event in stored] == [
+        (EventLocation.BASE, "b-ext"),
+        (EventLocation.ETHEREUM, "a-ext"),
+        (EventLocation.KRAKEN, "a-ext"),
+    ]

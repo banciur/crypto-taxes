@@ -47,7 +47,6 @@ def apply_ingestion_corrections(
             event.timestamp,
             event.event_origin.location.value,
             event.event_origin.external_id,
-            event.ingestion,
         )
     )
     return corrected_events

@@ -31,9 +31,11 @@ from db.session import init_db_session
 from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
+from db.wallet_tracking import WalletTrackingRepository
 from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import AccountChainId
 from domain.wallet_balance_tracker import WalletBalanceTracker
+from domain.wallet_tracking import WalletProjector
 from importers.coinbase import CoinbaseImporter
 from importers.kraken import KrakenImporter
 from importers.moralis import MoralisImporter
@@ -80,6 +82,7 @@ def run(
     )
     event_repository = LedgerEventRepository(events_session)
     corrected_event_repository = CorrectedLedgerEventRepository(events_session)
+    wallet_tracking_repository = WalletTrackingRepository(events_session)
     lot_repository = AcquisitionLotRepository(events_session)
     disposal_repository = DisposalLinkRepository(events_session)
     tax_event_repository = TaxEventRepository(events_session)
@@ -158,6 +161,16 @@ def run(
     corrected_started = perf_counter()
     corrected_event_repository.create_many(corrected_events)
     logger.info("Persisted corrected events in %.2fs", perf_counter() - corrected_started)
+
+    corrected_events = corrected_event_repository.list()
+    logger.info("Rebuilding wallet tracking from %d corrected events", len(corrected_events))
+    wallet_tracking_state = WalletProjector().project(corrected_events)
+    wallet_tracking_repository.replace(wallet_tracking_state)
+    logger.info(
+        "Persisted wallet tracking state with status=%s after %d applied events",
+        wallet_tracking_state.status.value,
+        wallet_tracking_state.processed_event_count,
+    )
     return  # just for now
     # Process stuff
     inventory = engine.process(events)  # type: ignore[unreachable]
