@@ -5,15 +5,13 @@ from decimal import Decimal
 from uuid import uuid4
 
 from accounts import KRAKEN_ACCOUNT_ID
-from domain.inventory import InventoryEngine
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from tests.constants import ALT_BASE_WALLET, BTC, ETH, EUR
+from tests.helpers.random_price_service import TestPriceService
 from utils.inventory_summary import compute_inventory_summary
 
 
-def test_compute_inventory_summary_calculates_totals(inventory_engine: InventoryEngine) -> None:
-    price_service = inventory_engine._price_provider
-
+def test_compute_inventory_summary_calculates_totals(price_service: TestPriceService) -> None:
     as_of = datetime(2025, 1, 10, tzinfo=timezone.utc)
     btc_lot_one_qty = Decimal("0.5")
     btc_lot_two_qty = Decimal("0.2")
@@ -56,11 +54,9 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
         ),
     ]
 
-    inventory_engine.process(events)
-
     summary = compute_inventory_summary(
         {KRAKEN_ACCOUNT_ID},
-        wallet_balance_tracker=inventory_engine._wallet_balances,
+        events=events,
         price_provider=price_service,
         as_of=as_of,
     )
@@ -77,8 +73,7 @@ def test_compute_inventory_summary_calculates_totals(inventory_engine: Inventory
     assert eth.value == eth_total_value
 
 
-def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngine) -> None:
-    price_service = inventory_engine._price_provider
+def test_inventory_summary_filters_owned_wallets(price_service: TestPriceService) -> None:
     as_of = datetime(2025, 1, 10, tzinfo=timezone.utc)
     events = [
         LedgerEvent(
@@ -101,11 +96,9 @@ def test_inventory_summary_filters_owned_wallets(inventory_engine: InventoryEngi
         ),
     ]
 
-    inventory_engine.process(events)
-
     summary = compute_inventory_summary(
         owned_account_chain_ids={KRAKEN_ACCOUNT_ID},
-        wallet_balance_tracker=inventory_engine._wallet_balances,
+        events=events,
         price_provider=price_service,
         as_of=as_of,
     )

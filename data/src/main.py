@@ -34,7 +34,6 @@ from db.tx_cache_moralis import MoralisCacheRepository
 from db.wallet_tracking import WalletTrackingRepository
 from domain.inventory import InventoryEngine, InventoryResult
 from domain.ledger import AccountChainId
-from domain.wallet_balance_tracker import WalletBalanceTracker
 from domain.wallet_tracking import WalletProjector
 from importers.coinbase import CoinbaseImporter
 from importers.kraken import KrakenImporter
@@ -88,9 +87,8 @@ def run(
     tax_event_repository = TaxEventRepository(events_session)
     correction_repository = LedgerCorrectionRepository(corrections_session)
 
-    wallet_balance_tracker = WalletBalanceTracker()
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
-    engine = InventoryEngine(price_provider=price_service, wallet_balance_tracker=wallet_balance_tracker)
+    engine = InventoryEngine(price_provider=price_service)
 
     kraken_importer = KrakenImporter(str(csv_path))
 
@@ -187,7 +185,7 @@ def run(
     print_base_inventory_summary(inventory)
     inventory_summary = compute_inventory_summary(
         owned_accounts,
-        wallet_balance_tracker=wallet_balance_tracker,
+        events=events,
         price_provider=price_service,
     )
     render_inventory_summary(inventory_summary)

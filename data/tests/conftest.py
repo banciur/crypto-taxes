@@ -7,7 +7,6 @@ from sqlalchemy.pool import StaticPool
 
 from db.models import Base
 from domain.inventory import InventoryEngine
-from domain.wallet_balance_tracker import WalletBalanceTracker
 from tests.helpers.random_price_service import TestPriceService
 from tests.helpers.time_utils import DEFAULT_TIME_GEN
 
@@ -43,4 +42,4 @@ def price_service() -> TestPriceService:
 
 @pytest.fixture(scope="function")
 def inventory_engine(price_service: TestPriceService) -> InventoryEngine:
-    return InventoryEngine(price_provider=price_service, wallet_balance_tracker=WalletBalanceTracker())
+    return InventoryEngine(price_provider=price_service)

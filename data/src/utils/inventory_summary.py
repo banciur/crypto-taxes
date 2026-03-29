@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Iterable
 
 from domain.inventory import InventoryEngine
-from domain.ledger import AccountChainId, AssetId
+from domain.ledger import AccountChainId, AssetId, LedgerEvent
 from domain.pricing import PriceProvider
-from domain.wallet_balance_tracker import WalletBalanceTracker
 
 from .formatting import format_currency, format_decimal
 
@@ -28,18 +28,24 @@ class InventorySummary:
 def compute_inventory_summary(
     owned_account_chain_ids: set[AccountChainId],
     *,
-    wallet_balance_tracker: WalletBalanceTracker,
+    events: Iterable[LedgerEvent],
     price_provider: PriceProvider,
     as_of: datetime | None = None,
 ) -> InventorySummary:
     now = as_of or datetime.now(timezone.utc)
 
     summaries: list[AssetInventorySummary] = []
+    asset_quantities: dict[AssetId, Decimal] = {}
 
-    for asset_id, quantity in sorted(
-        wallet_balance_tracker.asset_balances_for(owned_account_chain_ids).items(),
-        key=lambda item: item[0],
-    ):
+    for event in events:
+        for leg in event.legs:
+            if leg.asset_id == InventoryEngine.EUR_ASSET_ID:
+                continue
+            if leg.account_chain_id not in owned_account_chain_ids:
+                continue
+            asset_quantities[leg.asset_id] = asset_quantities.get(leg.asset_id, Decimal(0)) + leg.quantity
+
+    for asset_id, quantity in sorted(asset_quantities.items(), key=lambda item: item[0]):
         if quantity <= 0:
             continue
         rate = price_provider.rate(asset_id, InventoryEngine.EUR_ASSET_ID, now)
