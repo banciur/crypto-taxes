@@ -3,6 +3,7 @@ First stage: compute German taxes
 --- manual review of existing transactions is now possible \o/
 
 TODO: Need automation to rerun computation (src/main.py) through the UI see if https://fastapi.tiangolo.com/tutorial/background-tasks/ could be useful.
+TODO: Idea to review. Add the ability to quickly navigate to the first failing transaction. Maybe add date of it to summary?
 TODO: Import data from Lido
 TODO: Import data from StakeWise
 
@@ -12,6 +13,7 @@ TODO: Maybe need to redo opening balances and have a separate entity for that. I
 
 Review the order of todos
 -----------------
+TODO: Add value of printed balances
 TODO: Implement more sophisticated logic for tokens to handle this logic when a token with the same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
 TODO: Improvements around tokens maybe better structure etc. Broader topic to think through.
  - FE

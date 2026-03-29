@@ -128,7 +128,6 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
 - Wallet tracking rebuilds a current-state per-wallet/per-asset projection from corrected events and persists it in SQLite.
 - `GET /wallet-tracking` exposes the current wallet-tracking snapshot with `NOT_RUN`/`COMPLETED`/`FAILED` semantics.
-- CLI inventory summary aggregates quantities and EUR values per asset across owned accounts from the event stream.
 - Tax calculations currently focus on disposal links.
 - CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet-tracking snapshot, and then stops before later inventory/tax stages in the current implementation.
 

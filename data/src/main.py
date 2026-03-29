@@ -6,7 +6,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Sequence
 
-from accounts import COINBASE_ACCOUNT_ID, KRAKEN_ACCOUNT_ID, AccountRegistry, load_accounts
+from accounts import AccountRegistry, load_accounts
 from clients.coinbase import CoinbaseClient
 from clients.moralis import MoralisClient
 from config import (
@@ -32,8 +32,7 @@ from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
 from db.wallet_tracking import WalletTrackingRepository
-from domain.inventory import InventoryEngine, InventoryResult
-from domain.ledger import AccountChainId
+from domain.inventory import InventoryEngine
 from domain.wallet_tracking import WalletProjector
 from importers.coinbase import CoinbaseImporter
 from importers.kraken import KrakenImporter
@@ -45,7 +44,6 @@ from services.open_exchange_rates_source import OpenExchangeRatesSource
 from services.price_service import PriceService
 from services.price_sources import HybridPriceSource
 from services.price_store import JsonlPriceStore
-from utils.inventory_summary import compute_inventory_summary, render_inventory_summary
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
 logger = logging.getLogger(__name__)
@@ -113,8 +111,6 @@ def run(
         correction_repository=correction_repository,
     )
 
-    owned_accounts: set[AccountChainId] = {COINBASE_ACCOUNT_ID, KRAKEN_ACCOUNT_ID}
-
     # Get raw events
     logger.info("Importing Kraken events from %s", csv_path)
     kraken_started = perf_counter()
@@ -181,22 +177,8 @@ def run(
 
     # Print summary
     print(f"Imported {len(events)} events from {csv_path}")
-    print_base_inventory_summary(inventory)
-    inventory_summary = compute_inventory_summary(
-        owned_accounts,
-        events=events,
-        price_provider=price_service,
-    )
-    render_inventory_summary(inventory_summary)
     weekly_tax = compute_weekly_tax_summary(tax_events, inventory, events)
     render_weekly_tax_summary(weekly_tax)
-
-
-def print_base_inventory_summary(result: InventoryResult) -> None:
-    print("Inventory summary:")
-    print(f"  Acquisition lots: {len(result.acquisition_lots)}")
-    print(f"  Disposal links:   {len(result.disposal_links)}")
-    print(f"  Open inventory entries: {len(result.open_inventory)}")
 
 
 def main(argv: Sequence[str] | None = None) -> None:
