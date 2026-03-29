@@ -1,21 +1,18 @@
 First stage: compute German taxes
 
-TODO: Display a summary of the wallets. No current value as getting prices of farms tokens is not trivial.
-TODO: I just removed all opening balances for Outside wallet. See if this wallet exists somewhere more in the codebase - I think now it shouldn't be there.
+--- manual review of existing transactions is now possible \o/
+
+TODO: Need automation to rerun computation (src/main.py) through the UI see if https://fastapi.tiangolo.com/tutorial/background-tasks/ could be useful.
 TODO: Import data from Lido
-TODO: Import data from Stakewise
+TODO: Import data from StakeWise
 
---- here a manual review of existing transactions starts meanwhile
-
-TODO: Need automation to rerun computation (src/main.py)
-  - have an ability to rerun from the UI
-  - return and display errors of the pipeline
 TODO: Review disposal and acquisition creation.
-TODO: Probably need smarter price service as there a
+TODO: Probably need smarter price service
+TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 
 Review the order of todos
 -----------------
-TODO: Implement more sophisitcated logic for tokens to handle this logic when token with same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
+TODO: Implement more sophisticated logic for tokens to handle this logic when a token with the same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
 TODO: Improvements around tokens maybe better structure etc. Broader topic to think through.
  - FE
   - shortened address elispsis and popup with full address?
