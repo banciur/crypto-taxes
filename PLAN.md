@@ -375,8 +375,8 @@ Required doc changes:
 
 - [x] Add `data/src/api/wallet_tracking.py`, add the dependency factory in `data/src/api/dependencies/__init__.py`, include the router in `data/src/api/api.py`, and expose `GET /wallet-tracking` with the agreed `NOT_RUN`/`COMPLETED`/`FAILED` response semantics.
 
-- [ ] Add API tests in `data/tests/api/wallet_tracking_api_test.py` covering empty-state, completed state, failed state, and decimal serialization behavior.
+- [x] Add API tests in `data/tests/api/wallet_tracking_api_test.py` covering empty-state, completed state, failed state, and decimal serialization behavior.
 
-- [ ] Remove `data/src/domain/wallet_balance_tracker.py` and update or remove any remaining imports/usages in production code and tests so wallet tracking exists only in the new projection module.
+- [x] Remove `data/src/domain/wallet_balance_tracker.py` and update or remove any remaining imports/usages in production code and tests so wallet tracking exists only in the new projection module.
 
-- [ ] Update `data/README.md`, `data/src/api/README.md`, `doc/CURRENT.md`, `AGENTS.md`, and `ui/README.md` so the documented backend and API behavior matches the implemented wallet-tracking projection exactly.
+- [x] Update `data/README.md`, `data/src/api/README.md`, `doc/CURRENT.md`, `AGENTS.md`, and `ui/README.md` so the documented backend and API behavior matches the implemented wallet-tracking projection exactly.

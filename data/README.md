@@ -10,7 +10,7 @@
 
 ### API
 - The API is implemented with FastAPI under `src/api/`.
-- Its purpose is to expose ledger/corrections/accounts data to the UI through a stable HTTP interface.
+- Its purpose is to provide the UI with the backend data it needs and the allowed mutation capabilities for reviewing and modifying system state through a stable HTTP interface.
 
 ### Domain modules
 - Ledger and lots: `src/domain/ledger.py`
@@ -18,14 +18,24 @@
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
 - Unified correction model (`LedgerCorrection` for discard, replacement, and opening balance): `src/domain/correction.py`
 - Tax event projection types: `src/domain/tax_event.py`
-- Wallet balance tracking and insufficient-balance errors: `src/domain/wallet_balance_tracker.py`
+- Wallet tracking projection and statuses: `src/domain/wallet_tracking.py`
 
 ### Corrections persistence and application
 - Unified correction persistence lives in `src/db/ledger_corrections.py`.
 - One-off migration from legacy spam/replacement/seed tables lives in `scripts/migrate_ledger_corrections.py`; it backfills missing legacy rows into `ledger_corrections`, skips already-covered spam sources, and migrates legacy seed/opening-balance rows from the main DB.
 - Ingestion-layer correction application and validation live under `src/corrections/`.
 - Source-backed corrections occupy sources only while active. Deleting one hard-deletes the correction and records source-level auto-suppression so importer automation does not recreate it while manual recreation remains allowed.
-- Current ingestion correction flow is: validate unified source ownership, remove all claimed raw events, emit synthetic events for corrections with legs, then sort corrected events once before persistence.
+- Current ingestion correction flow is: validate unified source ownership, remove all claimed raw events, emit synthetic events for corrections with legs, then sort corrected events once before persistence by `timestamp`, `event_origin.location`, and `event_origin.external_id`.
+
+### Wallet tracking
+- Wallet tracking is rebuilt from persisted corrected events.
+- The rebuild stores only the current snapshot in database.
+- A successful rebuild persists `COMPLETED`, including the zero-event case.
+- A failed rebuild stops on the first blocking event and persists:
+  - the last fully applied event marker
+  - the failed event marker
+  - all blocking balance issues for that failed event
+  - balances as of the last fully applied event
 
 ### Price services
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
