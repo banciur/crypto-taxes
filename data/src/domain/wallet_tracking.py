@@ -38,8 +38,6 @@ class WalletTrackingIssue(StrictBaseModel):
 
 class WalletTrackingState(StrictBaseModel):
     status: WalletTrackingStatus
-    processed_event_count: int
-    last_applied_event: EventOrigin | None = None
     failed_event: EventOrigin | None = None
     issues: list[WalletTrackingIssue]
     balances: list[WalletBalance]
@@ -48,7 +46,6 @@ class WalletTrackingState(StrictBaseModel):
     def not_run(cls) -> Self:
         return cls(
             status=WalletTrackingStatus.NOT_RUN,
-            processed_event_count=0,
             issues=[],
             balances=[],
         )
@@ -57,9 +54,7 @@ class WalletTrackingState(StrictBaseModel):
 class WalletProjector:
     def project(self, events: Iterable[LedgerEvent]) -> WalletTrackingState:
         balances: MutableMapping[BalanceKey, Decimal] = {}
-        processed_event_count = 0
         status = WalletTrackingStatus.COMPLETED
-        last_applied_event: EventOrigin | None = None
         failed_event: EventOrigin | None = None
         issues: list[WalletTrackingIssue] = []
 
@@ -77,13 +72,8 @@ class WalletProjector:
                     continue
                 balances[key] = next_balance
 
-            processed_event_count += 1
-            last_applied_event = event.event_origin
-
         return WalletTrackingState(
             status=status,
-            processed_event_count=processed_event_count,
-            last_applied_event=last_applied_event,
             failed_event=failed_event,
             issues=issues,
             balances=[

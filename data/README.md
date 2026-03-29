@@ -32,10 +32,9 @@
 - The rebuild stores only the current snapshot in database.
 - A successful rebuild persists `COMPLETED`, including the zero-event case.
 - A failed rebuild stops on the first blocking event and persists:
-  - the last fully applied event marker
   - the failed event marker
   - all blocking balance issues for that failed event
-  - balances as of the last fully applied event
+  - balances as of the event immediately before the failed event
 
 ### Price services
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.

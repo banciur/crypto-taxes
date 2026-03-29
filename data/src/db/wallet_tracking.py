@@ -23,9 +23,6 @@ class WalletTrackingStateOrm(Base):
 
     singleton_id: Mapped[int] = mapped_column(Integer, primary_key=True, default=CURRENT_STATE_ID)
     status: Mapped[str] = mapped_column(String, nullable=False)
-    processed_event_count: Mapped[int] = mapped_column(Integer, nullable=False)
-    last_applied_origin_location: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
-    last_applied_origin_external_id: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     failed_origin_location: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     failed_origin_external_id: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 
@@ -70,11 +67,6 @@ class WalletTrackingRepository:
 
         return WalletTrackingState(
             status=WalletTrackingStatus(state_row.status),
-            processed_event_count=state_row.processed_event_count,
-            last_applied_event=self._to_event_origin(
-                location=state_row.last_applied_origin_location,
-                external_id=state_row.last_applied_origin_external_id,
-            ),
             failed_event=self._to_event_origin(
                 location=state_row.failed_origin_location,
                 external_id=state_row.failed_origin_external_id,
@@ -104,7 +96,6 @@ class WalletTrackingRepository:
         )
 
     def replace(self, state: WalletTrackingState) -> WalletTrackingState:
-        last_applied_location, last_applied_external_id = self._event_origin_parts(state.last_applied_event)
         failed_location, failed_external_id = self._event_origin_parts(state.failed_event)
 
         self._session.execute(delete(WalletTrackingIssueOrm))
@@ -116,9 +107,6 @@ class WalletTrackingRepository:
             WalletTrackingStateOrm(
                 singleton_id=CURRENT_STATE_ID,
                 status=state.status.value,
-                processed_event_count=state.processed_event_count,
-                last_applied_origin_location=last_applied_location,
-                last_applied_origin_external_id=last_applied_external_id,
                 failed_origin_location=failed_location,
                 failed_origin_external_id=failed_external_id,
             )

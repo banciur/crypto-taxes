@@ -165,9 +165,8 @@ def run(
     wallet_tracking_state = WalletProjector().project(corrected_events)
     wallet_tracking_repository.replace(wallet_tracking_state)
     logger.info(
-        "Persisted wallet tracking state with status=%s after %d applied events",
+        "Persisted wallet tracking state with status=%s",
         wallet_tracking_state.status.value,
-        wallet_tracking_state.processed_event_count,
     )
     return  # just for now
     # Process stuff

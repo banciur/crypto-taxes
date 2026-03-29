@@ -51,8 +51,6 @@ def test_wallet_projector_processes_events_across_multiple_accounts() -> None:
     expected_kraken_eur = starting_eur - spent_eur
 
     assert result.status == WalletTrackingStatus.COMPLETED
-    assert result.processed_event_count == len(events)
-    assert result.last_applied_event == events[-1].event_origin
     assert result.failed_event is None
     assert result.issues == []
     assert len(result.balances) == 4
@@ -85,7 +83,6 @@ def test_wallet_projector_nets_same_event_deltas_before_validation() -> None:
     result = projector.project(events)
 
     assert result.status == WalletTrackingStatus.COMPLETED
-    assert result.processed_event_count == len(events)
     assert result.issues == []
     assert len(result.balances) == 1
     balance = result.balances[0]
@@ -113,8 +110,6 @@ def test_wallet_projector_failure_is_event_atomic() -> None:
     result = projector.project(events)
 
     assert result.status == WalletTrackingStatus.FAILED
-    assert result.processed_event_count == 1
-    assert result.last_applied_event == events[0].event_origin
     assert result.failed_event == events[1].event_origin
     assert len(result.issues) == 1
     issue = result.issues[0]
@@ -154,7 +149,6 @@ def test_wallet_projector_collects_all_blocking_issues_from_failed_event() -> No
     result = projector.project(events)
 
     assert result.status == WalletTrackingStatus.FAILED
-    assert result.processed_event_count == 1
     assert result.failed_event == events[1].event_origin
     assert [(issue.account_chain_id, issue.asset_id, issue.missing_balance) for issue in result.issues] == [
         (BASE_WALLET, EUR, eur_attempted - eur_available),
@@ -175,5 +169,4 @@ def test_wallet_projector_excludes_zero_balances() -> None:
     result = projector.project(events)
 
     assert result.status == WalletTrackingStatus.COMPLETED
-    assert result.processed_event_count == len(events)
     assert result.balances == []

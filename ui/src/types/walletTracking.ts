@@ -24,8 +24,6 @@ export type WalletTrackingIssue = {
 
 export type WalletTrackingState = {
   status: WalletTrackingStatus;
-  processedEventCount: number;
-  lastAppliedEvent: EventOrigin | null;
   failedEvent: EventOrigin | null;
   issues: WalletTrackingIssue[];
   balances: WalletTrackingBalance[];

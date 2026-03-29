@@ -30,8 +30,6 @@ def _origin(location: EventLocation, external_id: str) -> EventOrigin:
 def _completed_state(*, balances: list[WalletBalance]) -> WalletTrackingState:
     return WalletTrackingState(
         status=WalletTrackingStatus.COMPLETED,
-        processed_event_count=2,
-        last_applied_event=_origin(EventLocation.KRAKEN, "evt-2"),
         failed_event=None,
         issues=[],
         balances=balances,
@@ -45,8 +43,6 @@ def _failed_state() -> WalletTrackingState:
     available_eur = Decimal("5.0")
     return WalletTrackingState(
         status=WalletTrackingStatus.FAILED,
-        processed_event_count=1,
-        last_applied_event=_origin(EventLocation.KRAKEN, "evt-1"),
         failed_event=_origin(EventLocation.BASE, "evt-2"),
         issues=[
             WalletTrackingIssue(
@@ -115,8 +111,6 @@ def test_replace_persists_completed_state_with_deterministic_balance_order(
     assert persisted == state
     assert reloaded == WalletTrackingState(
         status=WalletTrackingStatus.COMPLETED,
-        processed_event_count=state.processed_event_count,
-        last_applied_event=state.last_applied_event,
         failed_event=None,
         issues=[],
         balances=expected_balances,
@@ -132,8 +126,6 @@ def test_replace_fully_replaces_prior_state(
     final_balance = Decimal("2.0")
     replacement_state = WalletTrackingState(
         status=WalletTrackingStatus.COMPLETED,
-        processed_event_count=3,
-        last_applied_event=_origin(EventLocation.COINBASE, "evt-3"),
         failed_event=None,
         issues=[],
         balances=[
@@ -155,9 +147,6 @@ def test_replace_fully_replaces_prior_state(
     state_row = state_rows[0]
     assert state_row.singleton_id == 1
     assert state_row.status == WalletTrackingStatus.COMPLETED.value
-    assert state_row.processed_event_count == replacement_state.processed_event_count
-    assert state_row.last_applied_origin_location == EventLocation.COINBASE.value
-    assert state_row.last_applied_origin_external_id == "evt-3"
     assert state_row.failed_origin_location is None
     assert state_row.failed_origin_external_id is None
     assert [(row.account_chain_id, row.asset_id, row.balance) for row in balance_rows] == [
@@ -176,8 +165,6 @@ def test_replace_persists_failed_state_issues(repo: WalletTrackingRepository, te
     assert persisted == failed_state
     assert reloaded is not None
     assert reloaded.status == failed_state.status
-    assert reloaded.processed_event_count == failed_state.processed_event_count
-    assert reloaded.last_applied_event == failed_state.last_applied_event
     assert reloaded.failed_event == failed_state.failed_event
     assert {(issue.account_chain_id, issue.asset_id, issue.missing_balance) for issue in reloaded.issues} == {
         (BASE_WALLET, EUR, Decimal("0.5")),

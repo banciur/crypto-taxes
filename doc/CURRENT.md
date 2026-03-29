@@ -52,8 +52,6 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - WalletTrackingState
   - `status: WalletTrackingStatus` (`NOT_RUN`, `COMPLETED`, `FAILED`)
-  - `processed_event_count: int`
-  - `last_applied_event: EventOrigin | None`
   - `failed_event: EventOrigin | None`
   - `issues: list[WalletTrackingIssue]`
   - `balances: list[WalletBalance]`
