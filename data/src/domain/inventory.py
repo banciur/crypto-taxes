@@ -11,7 +11,6 @@ from pydantic_base import StrictBaseModel
 
 from .ledger import AcquisitionLot, AssetId, DisposalLink, LedgerEvent, LedgerLeg
 from .pricing import PriceProvider
-from .wallet_balance_tracker import WalletBalanceError, WalletBalanceTracker
 
 
 class InventoryError(Exception):
@@ -60,10 +59,8 @@ class InventoryEngine:
         self,
         *,
         price_provider: PriceProvider,
-        wallet_balance_tracker: WalletBalanceTracker,
     ) -> None:
         self._price_provider = price_provider
-        self._wallet_balances = wallet_balance_tracker
 
     def process(self, events: Iterable[LedgerEvent]) -> InventoryResult:
         """Caller must provide events in chronological order."""
@@ -73,7 +70,6 @@ class InventoryEngine:
         inventory: dict[str, deque[_OpenLotState]] = defaultdict(deque)
 
         for event in events:
-            self._apply_wallet_movements(event)
             internal_transfer_leg_ids = self._internal_transfer_leg_ids(event)
 
             acquisition_legs = [
@@ -254,28 +250,6 @@ class InventoryEngine:
             event=event,
             quantity_needed=quantity_needed,
         )
-
-    def _apply_wallet_movements(self, event: LedgerEvent) -> None:
-        for leg in event.legs:
-            if leg.asset_id == self.EUR_ASSET_ID:
-                continue
-            try:
-                self._wallet_balances.apply_movement(
-                    asset_id=leg.asset_id,
-                    account_chain_id=leg.account_chain_id,
-                    quantity=leg.quantity,
-                )
-            except WalletBalanceError as err:
-                quantity_needed = None
-                if leg.quantity < 0:
-                    missing = abs(leg.quantity) - err.available_balance
-                    quantity_needed = missing if missing > 0 else abs(leg.quantity)
-                raise self._inventory_error(
-                    "Insufficient account balance",
-                    leg=leg,
-                    event=event,
-                    quantity_needed=quantity_needed,
-                ) from err
 
     @staticmethod
     def _append_open_lot_state(

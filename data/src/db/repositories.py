@@ -63,7 +63,15 @@ class LedgerEventRepository:
         return self._to_domain(orm_event)
 
     def list(self) -> list[LedgerEvent]:
-        orm_events = self._session.query(models.LedgerEventOrm).order_by(models.LedgerEventOrm.timestamp.asc()).all()
+        orm_events = (
+            self._session.query(models.LedgerEventOrm)
+            .order_by(
+                models.LedgerEventOrm.timestamp.asc(),
+                models.LedgerEventOrm.origin_location.asc(),
+                models.LedgerEventOrm.origin_external_id.asc(),
+            )
+            .all()
+        )
         return [self._to_domain(event) for event in orm_events]
 
     def list_event_timestamps_for_origins(
@@ -155,7 +163,11 @@ class CorrectedLedgerEventRepository:
     def list(self) -> list[LedgerEvent]:
         orm_events = (
             self._session.query(models.CorrectedLedgerEventOrm)
-            .order_by(models.CorrectedLedgerEventOrm.timestamp.asc())
+            .order_by(
+                models.CorrectedLedgerEventOrm.timestamp.asc(),
+                models.CorrectedLedgerEventOrm.origin_location.asc(),
+                models.CorrectedLedgerEventOrm.origin_external_id.asc(),
+            )
             .all()
         )
         return [self._to_domain(event) for event in orm_events]

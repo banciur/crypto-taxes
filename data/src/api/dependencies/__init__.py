@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from db.ledger_corrections import LedgerCorrectionRepository
 from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.wallet_tracking import WalletTrackingRepository
 
 
 def get_session(request: Request) -> Generator[Session, None, None]:
@@ -31,3 +32,9 @@ def get_correction_repository(
     session: Annotated[Session, Depends(get_corrections_session)],
 ) -> LedgerCorrectionRepository:
     return LedgerCorrectionRepository(session)
+
+
+def get_wallet_tracking_repository(
+    session: Annotated[Session, Depends(get_session)],
+) -> WalletTrackingRepository:
+    return WalletTrackingRepository(session)

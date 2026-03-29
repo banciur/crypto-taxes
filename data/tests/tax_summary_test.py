@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from domain.inventory import InventoryEngine
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
-from tests.constants import BTC, EUR, SPOT_WALLET
+from tests.constants import BTC, EUR, LEDGER_WALLET
 from utils.tax_summary import TaxEventKind, compute_weekly_tax_summary, generate_tax_events
 
 TEST_ORIGIN = EventOrigin(location=EventLocation.INTERNAL, external_id="tax-fixture")
@@ -18,8 +18,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
             event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("0.6"), account_chain_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-6000"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("0.6"), account_chain_id=LEDGER_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-6000"), account_chain_id=LEDGER_WALLET),
             ],
         ),
         LedgerEvent(
@@ -27,8 +27,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
             event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("0.4"), account_chain_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("-12000"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("0.4"), account_chain_id=LEDGER_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("-12000"), account_chain_id=LEDGER_WALLET),
             ],
         ),
         LedgerEvent(
@@ -36,8 +36,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
             event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.3"), account_chain_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("9000"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.3"), account_chain_id=LEDGER_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("9000"), account_chain_id=LEDGER_WALLET),
             ],
         ),
         LedgerEvent(
@@ -45,8 +45,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
             event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.4"), account_chain_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("16000"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.4"), account_chain_id=LEDGER_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("16000"), account_chain_id=LEDGER_WALLET),
             ],
         ),
         LedgerEvent(
@@ -54,8 +54,8 @@ def test_weekly_tax_summary_skips_tax_free_disposals(inventory_engine: Inventory
             event_origin=TEST_ORIGIN,
             ingestion="manual_test",
             legs=[
-                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.2"), account_chain_id=SPOT_WALLET),
-                LedgerLeg(asset_id=EUR, quantity=Decimal("10000"), account_chain_id=SPOT_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal("-0.2"), account_chain_id=LEDGER_WALLET),
+                LedgerLeg(asset_id=EUR, quantity=Decimal("10000"), account_chain_id=LEDGER_WALLET),
             ],
         ),
     ]

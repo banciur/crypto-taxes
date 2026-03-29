@@ -3,6 +3,7 @@ import { performance } from "node:perf_hooks";
 import { Col, Container, Row } from "react-bootstrap";
 
 import { getAccounts } from "@/api/accounts";
+import { getWalletTracking } from "@/api/walletTracking";
 import { COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
 import {
@@ -19,6 +20,8 @@ import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext
 import { DateChooser } from "@/components/DateChooser";
 import { Events } from "@/components/Events";
 import { VisibleDayProvider } from "@/contexts/VisibleDayContext";
+import { WalletTrackingSection } from "@/components/WalletTracking/WalletTrackingSection";
+import { clsx } from "clsx";
 
 const formatDuration = (durationMs: number) => {
   if (durationMs < 1000) {
@@ -51,13 +54,16 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     resolveSelectedColumns(query[COLUMNS_PARAM_NAME]),
   );
 
-  const accountsLoadStart = performance.now();
-  const accounts = await getAccounts();
+  const initialLoadStart = performance.now();
+  const [accounts, walletTracking] = await Promise.all([
+    getAccounts(),
+    getWalletTracking(),
+  ]);
 
   const columnsLoadStart = performance.now();
   console.log(
-    `Accounts fetch took: ${formatDuration(
-      columnsLoadStart - accountsLoadStart,
+    `Accounts + wallet tracking fetch took: ${formatDuration(
+      columnsLoadStart - initialLoadStart,
     )}`,
   );
 
@@ -113,27 +119,32 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   }
 
   return (
-    <div className={styles.layoutContainer}>
-      <header className={styles.layoutHeader}>
-        <h1>Ledger events</h1>
-      </header>
-      <Container fluid className={styles.layoutContent}>
-        <AccountNamesProvider accounts={accounts}>
-          <UrlColumnSelectionProvider>
-            <VisibleDayProvider>
-              <Row className={styles.layoutRow}>
-                <Col xs={2} className={styles.layoutColumn}>
+    <AccountNamesProvider accounts={accounts}>
+      <UrlColumnSelectionProvider>
+        <VisibleDayProvider>
+          <Container fluid className={clsx(styles.layoutContainer, "gap-3")}>
+            <section className={styles.walletTrackingSection}>
+              <WalletTrackingSection state={walletTracking} />
+            </section>
+            <section className={clsx(styles.eventsSection, "gap-3")}>
+              <Row>
+                <Col>
+                  <h2 className="text-center">Ledger events</h2>
+                </Col>
+              </Row>
+              <Row className={styles.eventsColumnsRow}>
+                <Col xs={2} className={styles.eventsColumn}>
                   <ColumnChooser />
                   <DateChooser dates={eventCountsByDate} />
                 </Col>
-                <Col xs={10} className={styles.layoutColumn}>
+                <Col xs={10} className={styles.eventsColumn}>
                   <Events eventsByTimestamp={eventsByTimestamp} />
                 </Col>
               </Row>
-            </VisibleDayProvider>
-          </UrlColumnSelectionProvider>
-        </AccountNamesProvider>
-      </Container>
-    </div>
+            </section>
+          </Container>
+        </VisibleDayProvider>
+      </UrlColumnSelectionProvider>
+    </AccountNamesProvider>
   );
 }

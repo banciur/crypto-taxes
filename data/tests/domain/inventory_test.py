@@ -7,7 +7,7 @@ import pytest
 from accounts import KRAKEN_ACCOUNT_ID
 from domain.inventory import InventoryEngine, InventoryError
 from domain.ledger import AccountChainId, AssetId, LedgerLeg
-from tests.constants import ETH, EUR, LEDGER_WALLET
+from tests.constants import ETH, EUR
 from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
 
 WALLET_ID = AccountChainId("wallet")
@@ -199,49 +199,3 @@ def test_disposal_without_acquisition_raises(inventory_engine: InventoryEngine) 
 
     with pytest.raises(InventoryError):
         inventory_engine.process(events)
-
-
-def test_transfer_without_inventory_raises(inventory_engine: InventoryEngine) -> None:
-    events = [
-        make_event(
-            legs=[
-                LedgerLeg(asset_id=ETH, quantity=Decimal("1.0"), account_chain_id=LEDGER_WALLET),
-                LedgerLeg(asset_id=ETH, quantity=Decimal("-1.0"), account_chain_id=KRAKEN_ACCOUNT_ID),
-            ],
-        )
-    ]
-
-    with pytest.raises(InventoryError):
-        inventory_engine.process(events)
-
-
-def test_transfer_with_sufficient_balance_passes(inventory_engine: InventoryEngine) -> None:
-    asset_id = ETH
-    source_wallet = KRAKEN_ACCOUNT_ID
-    destination_wallet = LEDGER_WALLET
-    acquired_quantity = Decimal("1.0")
-    purchase_cost = Decimal("2000")
-    transfer_quantity = Decimal("0.4")
-
-    events = [
-        make_event(
-            legs=[
-                LedgerLeg(asset_id=asset_id, quantity=acquired_quantity, account_chain_id=source_wallet),
-                LedgerLeg(asset_id=EUR, quantity=-purchase_cost, account_chain_id=source_wallet),
-            ],
-        ),
-        make_event(
-            legs=[
-                LedgerLeg(asset_id=asset_id, quantity=transfer_quantity, account_chain_id=destination_wallet),
-                LedgerLeg(asset_id=asset_id, quantity=-transfer_quantity, account_chain_id=source_wallet),
-            ],
-        ),
-    ]
-
-    result = inventory_engine.process(events)
-
-    assert len(result.acquisition_lots) == 1
-    assert len(result.disposal_links) == 0
-    assert len(result.open_inventory) == 1
-    open_lot = result.open_inventory[0]
-    assert open_lot.quantity_remaining == acquired_quantity

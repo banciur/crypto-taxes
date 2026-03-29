@@ -1,9 +1,11 @@
 import type { ColumnKey } from "@/consts";
 
 export type DecimalString = string;
+export type AccountChainId = string;
+export type AssetId = string;
 
 export type Account = {
-  accountChainId: string;
+  accountChainId: AccountChainId;
   displayName: string;
   skipSync: boolean;
 };
@@ -15,8 +17,8 @@ export type EventOrigin = {
 
 export type LedgerLeg = {
   id: string;
-  assetId: string;
-  accountChainId: string;
+  assetId: AssetId;
+  accountChainId: AccountChainId;
   quantity: DecimalString;
   isFee: boolean;
 };

@@ -10,6 +10,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - Represent basic events with legs, without enforcing double-entry balancing.
 - Minimal inventory structures for lots and disposals.
+- Current-state wallet tracking from corrected ledger events.
 - Unified price snapshots for crypto and fiat pairs.
 - First take on tax calculation
 
@@ -49,6 +50,25 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `kind: TaxEventKind` (`DISPOSAL`, `REWARD`)
   - `taxable_gain: Decimal`
 
+- WalletTrackingState
+  - `status: WalletTrackingStatus` (`NOT_RUN`, `COMPLETED`, `FAILED`)
+  - `failed_event: EventOrigin | None`
+  - `issues: list[WalletTrackingIssue]`
+  - `balances: list[WalletBalance]`
+
+- WalletBalance
+  - `account_chain_id: str`
+  - `asset_id: str`
+  - `balance: Decimal`
+
+- WalletTrackingIssue
+  - `event: EventOrigin`
+  - `account_chain_id: str`
+  - `asset_id: str`
+  - `attempted_delta: Decimal`
+  - `available_balance: Decimal`
+  - `missing_balance: Decimal`
+
 - LedgerCorrection
   - `id: UUID`
   - `timestamp: datetime`
@@ -79,17 +99,17 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
 - Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine. Open lots are tracked per asset (not per account) and matched FIFO.
-- Internal account-to-account transfers are identified structurally (same-asset non-fee legs netting to zero inside one event) and only update balances. They do not create lots or disposal links.
-- Per-account balances are tracked for all non-EUR legs; any debit that would push an account negative raises an error. Fix missing history by adding prior movements into the source account or authoring an opening-balance correction.
+- Internal account-to-account transfers are identified structurally (same-asset non-fee legs netting to zero inside one event) and do not create lots or disposal links.
 - Each event captures `event_origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 - `LedgerEvent.note` is optional display metadata. Moralis populates it from a trimmed upstream `method_label` when that label is available.
 - Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
 - `AccountRegistry` is the canonical account catalog exposed to the UI. It merges configured wallet accounts from `accounts.json` with built-in system exchange accounts (currently Coinbase and Kraken). System accounts do not participate in address-based ownership resolution and use location-derived IDs such as `COINBASE:coinbase`.
-- Ingestion corrections are applied in this order: validate unified source ownership, remove claimed raw events, emit synthetic corrected events for corrections with legs, then sort once before persisting corrected events.
+- Ingestion corrections are applied in this order: validate unified source ownership, remove claimed raw events, emit synthetic corrected events for corrections with legs, then sort once before persisting corrected events by `timestamp`, `event_origin.location`, and `event_origin.external_id`.
 - Corrections are persisted in the corrections DB as active header rows plus source rows plus leg rows, with a separate source-level auto-suppression table. Deleting a source-backed correction hard-deletes the correction and frees the source for explicit manual reuse while preserving auto-suppression for future importer runs; deleting a source-less opening-balance correction is a plain hard delete.
 - Validation is strict: every claimed source must match exactly one raw event, and a raw event cannot be consumed by more than one active correction source.
 - Moralis possible-spam auto-generation creates discard corrections and respects active source claims plus source-level auto-suppressions so manually removed corrections are not recreated automatically.
 - The UI can author discard, replacement, and opening-balance corrections through the unified corrections API.
+- Wallet tracking is a separate projection over corrected events. It processes events in canonical deterministic order, tracks all assets including fiat, and validates event deltas atomically and store outcome in database.
 ---
 
 ## Fees
@@ -106,9 +126,10 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Model simple acquisitions/disposals with per-leg accounts and optional fee legs.
 - Automatically create lots for acquisitions and link disposals via `InventoryEngine.process` (FIFO only; other lot policies are future work).
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
-- CLI inventory summary aggregates quantities and EUR values per asset across owned accounts.
+- Wallet tracking rebuilds a current-state per-wallet/per-asset projection from corrected events and persists it in SQLite.
+- `GET /wallet-tracking` exposes the current wallet-tracking snapshot with `NOT_RUN`/`COMPLETED`/`FAILED` semantics.
 - Tax calculations currently focus on disposal links.
-- CLI run persists ledger events plus corrected ledger events to SQLite, and the backend correction pipeline supports unified `LedgerCorrection` records only.
+- CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet-tracking snapshot, and then stops before later inventory/tax stages in the current implementation.
 
 ### User Interface
 
@@ -116,6 +137,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - The UI can author and remove unified corrections: discard, replacement, and opening-balance.
 - After correction mutations, the UI refreshes the server-rendered lane data immediately.
 - Corrected pipeline outputs still require a manual rerun after correction mutations.
+- Wallet-tracking backend delivery exists through `GET /wallet-tracking`, but the UI does not render that state yet.
 
 ---
 
