@@ -373,7 +373,7 @@ Required doc changes:
 
 - [x] Integrate wallet-tracking rebuild into the corrected-events processing flow in `data/src/main.py` by loading corrected events, sorting them canonically, projecting with `WalletProjector`, and persisting with `WalletTrackingRepository` immediately after corrected events are persisted and immediately before the current `return  # just for now`, without executing any later inventory/tax work.
 
-- [ ] Add `data/src/api/wallet_tracking.py`, add the dependency factory in `data/src/api/dependencies/__init__.py`, include the router in `data/src/api/api.py`, and expose `GET /wallet-tracking` with the agreed `NOT_RUN`/`COMPLETED`/`FAILED` response semantics.
+- [x] Add `data/src/api/wallet_tracking.py`, add the dependency factory in `data/src/api/dependencies/__init__.py`, include the router in `data/src/api/api.py`, and expose `GET /wallet-tracking` with the agreed `NOT_RUN`/`COMPLETED`/`FAILED` response semantics.
 
 - [ ] Add API tests in `data/tests/api/wallet_tracking_api_test.py` covering empty-state, completed state, failed state, and decimal serialization behavior.
 

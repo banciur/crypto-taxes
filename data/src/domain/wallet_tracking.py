@@ -4,6 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping, MutableMapping
 from decimal import Decimal
 from enum import StrEnum
+from typing import Self
 
 from pydantic_base import StrictBaseModel
 
@@ -42,6 +43,15 @@ class WalletTrackingState(StrictBaseModel):
     failed_event: EventOrigin | None = None
     issues: list[WalletTrackingIssue]
     balances: list[WalletBalance]
+
+    @classmethod
+    def not_run(cls) -> Self:
+        return cls(
+            status=WalletTrackingStatus.NOT_RUN,
+            processed_event_count=0,
+            issues=[],
+            balances=[],
+        )
 
 
 class WalletProjector:

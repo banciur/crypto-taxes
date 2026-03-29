@@ -5,6 +5,7 @@ TODO: Split current processing into two elements:
   - acquisitions and disposals creation
 TODO: Review and fix wallet tracking
 TODO: Display a summary of the wallets. No current value as getting prices of farms tokens is not trivial.
+TODO: Add ability to run ingestion through API calls use FastAPI https://fastapi.tiangolo.com/tutorial/background-tasks?
 TODO: Import data from Lido
 TODO: Import data from Stakewise
 
