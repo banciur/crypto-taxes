@@ -2,11 +2,11 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-import type { Account } from "@/types/events";
+import type { Account, AccountChainId } from "@/types/events";
 
 type AccountCatalog = {
   accounts: readonly Account[];
-  resolveAccountName: (accountChainId: string) => string;
+  resolveAccountName: (accountChainId: AccountChainId) => string;
 };
 
 const AccountNamesContext = createContext<AccountCatalog | undefined>(
@@ -27,7 +27,7 @@ export function AccountNamesProvider({
 
     return {
       accounts,
-      resolveAccountName: (accountChainId: string) =>
+      resolveAccountName: (accountChainId: AccountChainId) =>
         accountNamesById[accountChainId] ?? accountChainId,
     };
   }, [accounts]);
