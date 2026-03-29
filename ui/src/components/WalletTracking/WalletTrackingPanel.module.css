@@ -1,0 +1,27 @@
+/* This file is completely vibed and I didn't read it. */
+.panelCard {
+  border-top: 1px solid rgba(24, 33, 56, 0.08);
+}
+
+.metricCard {
+  background: linear-gradient(180deg, #f9fafc 0%, #f1f4f8 100%);
+  border: 1px solid rgba(24, 33, 56, 0.08);
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.metricLabel {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+
+.metricValue {
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.markerCard {
+  border: 1px solid rgba(24, 33, 56, 0.08);
+  border-radius: 0.75rem;
+  background: #fbfcfd;
+}

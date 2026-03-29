@@ -4,21 +4,26 @@
   flex-direction: column;
 }
 
-.layoutHeader {
-  text-align: center;
+.walletTrackingSection {
   flex: 0 0 auto;
 }
 
-.layoutContent {
-  flex: 1;
+.eventsSection {
+  flex: 1 1 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.eventsColumnsRow {
+  flex: 1 1 0;
+  height: 100%;
   min-height: 0;
 }
 
-.layoutRow {
+.eventsColumn {
   height: 100%;
-}
-
-.layoutColumn {
-  height: 100%;
+  min-height: 0;
   overflow-y: auto;
 }

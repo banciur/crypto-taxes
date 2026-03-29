@@ -1,4 +1,4 @@
-# This file is completely vibed.
+# This file is completely vibed and I didn't read it.
 from __future__ import annotations
 
 import json
