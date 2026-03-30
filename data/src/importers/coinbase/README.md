@@ -28,6 +28,6 @@
 ## Normalization notes
 
 - Asset aliasing currently normalizes `ETH2 -> ETH`.
-- `send` rows are emitted one-for-one; outgoing sends add a separate fee leg when `network.transaction_fee` is non-zero.
+- `send` rows are emitted one-for-one; outgoing sends with non-zero `network.transaction_fee` split Coinbase's total-debited `amount` into a net transfer leg plus a separate fee leg.
 - Reward-like inflows (`staking_reward`, `earn_payout`, `interest`, `tx`) emit as single positive legs.
 - Unknown future Coinbase types should raise until an explicit handler is added.

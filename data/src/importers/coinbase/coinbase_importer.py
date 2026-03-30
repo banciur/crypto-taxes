@@ -397,8 +397,6 @@ class CoinbaseImporter:
         )
 
     def _build_single_row_event(self, transaction: CoinbaseTransaction) -> LedgerEvent | None:
-        legs = [self._amount_leg(transaction.amount)]
-
         if (
             transaction.type == "send"
             and transaction.amount.amount < 0
@@ -407,7 +405,15 @@ class CoinbaseImporter:
             and transaction.network.transaction_fee.amount != 0
         ):
             fee = transaction.network.transaction_fee
-            legs.append(self._amount_leg(fee, quantity=-fee.amount, is_fee=True))
+            legs = [
+                self._amount_leg(
+                    transaction.amount,
+                    quantity=transaction.amount.amount + fee.amount,
+                ),
+                self._amount_leg(fee, quantity=-fee.amount, is_fee=True),
+            ]
+        else:
+            legs = [self._amount_leg(transaction.amount)]
 
         return self._build_event(
             transactions=[transaction],

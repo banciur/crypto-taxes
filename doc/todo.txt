@@ -1,7 +1,8 @@
 First stage: compute German taxes
 
 --- manual review of existing transactions is now possible \o/
-TODO: Processing Coinbase. There is some issue with fees for old transactions. Sometimes I was missing some amount of sent tokens and I had to adjust sent amount by the fee amount.
+TODO: Why on 2021-12-02 CLV I'm missing some CLV tokens?
+TODO: Check rounding errors on Coinbase I had to introduce manual correction in a few places.
 TODO: I have rounding errors example is USDs here but there is more https://arbiscan.io/tx/0xc2143a1eb15a23f60cb916c739c25af9d0cec268fea33f8e9c1fefca6f79f435
 TODO: Add "added at" to corrections. Existing ones set for some early date.
 TODO: Need automation to rerun computation (src/main.py) through the UI see if https://fastapi.tiangolo.com/tutorial/background-tasks/ could be useful.

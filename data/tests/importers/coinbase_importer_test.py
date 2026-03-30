@@ -217,11 +217,42 @@ def test_outgoing_send_adds_fee_leg() -> None:
     non_fee_leg = next(leg for leg in event.legs if leg.is_fee is False)
     fee_leg = next(leg for leg in event.legs if leg.is_fee is True)
     assert non_fee_leg.asset_id == "ETH"
-    assert non_fee_leg.quantity == sent_amount
+    assert non_fee_leg.quantity == sent_amount + fee_amount
     assert non_fee_leg.account_chain_id == COINBASE_ACCOUNT_ID
     assert fee_leg.asset_id == "ETH"
     assert fee_leg.quantity == -fee_amount
     assert fee_leg.account_chain_id == COINBASE_ACCOUNT_ID
+
+
+def test_outgoing_send_with_zero_fee_keeps_raw_amount() -> None:
+    sent_amount = Decimal("-50.001020")
+    send_row = transaction(
+        tx_id="gasless-send-row",
+        tx_type="send",
+        account_id="usdc-wallet",
+        amount=sent_amount,
+        currency="USDC",
+        created_at="2025-07-01T20:45:22Z",
+        native_amount="-46.32",
+        network={
+            "hash": "d4dba5286a66141f1d0fe1b3858c01e62b3635fa7a1ec17fdc7c3fc85bcbdb8d",
+            "network_name": "base",
+            "status": "confirmed",
+            "transaction_fee": money("0", "USDC"),
+        },
+    )
+
+    service = _StubCoinbaseService(history(send_row))
+
+    events = CoinbaseImporter(service=service).load_events()
+
+    assert len(events) == 1
+    event = events[0]
+    assert len(event.legs) == 1
+    assert event.legs[0].asset_id == "USDC"
+    assert event.legs[0].quantity == sent_amount
+    assert event.legs[0].account_chain_id == COINBASE_ACCOUNT_ID
+    assert event.legs[0].is_fee is False
 
 
 def test_staking_transfer_pair_is_skipped_after_eth2_aliasing() -> None:
