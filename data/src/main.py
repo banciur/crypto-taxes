@@ -33,10 +33,12 @@ from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
 from db.wallet_tracking import WalletTrackingRepository
 from domain.inventory import InventoryEngine
+from domain.ledger import LedgerEvent
 from domain.wallet_tracking import WalletProjector
 from importers.coinbase import CoinbaseImporter
 from importers.kraken import KrakenImporter
 from importers.moralis import MoralisImporter
+from importers.stakewise import StakewiseImporter
 from services.coinbase import CoinbaseService
 from services.coindesk_source import CoinDeskSource
 from services.moralis import MoralisService
@@ -47,6 +49,7 @@ from services.price_store import JsonlPriceStore
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
 logger = logging.getLogger(__name__)
+STAKEWISE_CSV_GLOB = "Stakewise*.csv"
 
 
 def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int) -> PriceService:
@@ -62,6 +65,24 @@ def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int)
     return PriceService(source=source, store=store)
 
 
+def load_stakewise_events(*, wallet_address: str | None) -> list[LedgerEvent]:
+    if not wallet_address:
+        logger.info("Skipping Stakewise import because STAKEWISE_WALLET_ADDRESS is not configured")
+        return []
+
+    paths = sorted(ARTIFACTS_DIR.glob(STAKEWISE_CSV_GLOB))
+    if not paths:
+        logger.info("No Stakewise CSVs found under %s matching %s", ARTIFACTS_DIR, STAKEWISE_CSV_GLOB)
+        return []
+
+    logger.info("Importing Stakewise events from %d CSV file(s)", len(paths))
+    importer = StakewiseImporter(paths, wallet_address=wallet_address)
+    started = perf_counter()
+    events = importer.load_events()
+    logger.info("Imported %d Stakewise events in %.2fs", len(events), perf_counter() - started)
+    return events
+
+
 def run(
     csv_path: Path,
     cache_dir: Path,
@@ -71,6 +92,7 @@ def run(
 ) -> None:
     # Setup components
     logger.info("Initializing DB at %s", DB_PATH)
+    settings = config()
     events_session = init_db_session(db_path=DB_PATH, metadata=Base.metadata, reset=True)
     corrections_session = init_db_session(
         db_path=CORRECTIONS_DB_PATH,
@@ -93,8 +115,8 @@ def run(
     tx_cache_session = init_transactions_cache_db(db_path=TRANSACTIONS_CACHE_DB_PATH)
     coinbase_service = CoinbaseService(
         CoinbaseClient(
-            api_key=config().coinbase_key_name,
-            api_secret=config().coinbase_key_prv,
+            api_key=settings.coinbase_key_name,
+            api_secret=settings.coinbase_key_prv,
         ),
         CoinbaseCacheRepository(tx_cache_session),
     )
@@ -103,7 +125,7 @@ def run(
     accounts = load_accounts()
     moralis_importer = MoralisImporter(
         service=MoralisService(
-            MoralisClient(api_key=config().moralis_api_key),
+            MoralisClient(api_key=settings.moralis_api_key),
             MoralisCacheRepository(tx_cache_session),
             accounts=accounts,
         ),
@@ -117,6 +139,8 @@ def run(
     kraken_events = kraken_importer.load_events()
     logger.info("Imported %d Kraken events in %.2fs", len(kraken_events), perf_counter() - kraken_started)
 
+    stakewise_events = load_stakewise_events(wallet_address=settings.stakewise_wallet_address)
+
     logger.info("Importing Moralis events")
     moralis_started = perf_counter()
     moralis_events = moralis_importer.load_events()
@@ -127,7 +151,7 @@ def run(
     coinbase_events = coinbase_importer.load_events()
     logger.info("Imported %d Coinbase events in %.2fs", len(coinbase_events), perf_counter() - coinbase_started)
 
-    events = [*kraken_events, *moralis_events, *coinbase_events]
+    events = [*kraken_events, *stakewise_events, *moralis_events, *coinbase_events]
     events.sort(key=lambda e: e.timestamp)
     logger.info("Persisting %d raw events", len(events))
     persist_started = perf_counter()
@@ -182,7 +206,7 @@ def run(
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run Coinbase, Kraken, and Moralis importers.")
+    parser = argparse.ArgumentParser(description="Run Kraken, Stakewise, Coinbase, and Moralis importers.")
     parser.add_argument("--csv", type=Path, default=ARTIFACTS_DIR / "kraken-ledger.csv")
     parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "kraken_prices")
     parser.add_argument("--market", default="kraken")

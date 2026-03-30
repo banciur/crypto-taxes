@@ -104,6 +104,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - `LedgerEvent.note` is optional display metadata. Moralis populates it from a trimmed upstream `method_label` when that label is available.
 - Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
 - `AccountRegistry` is the canonical account catalog exposed to the UI. It merges configured wallet accounts from `accounts.json` with built-in system exchange accounts (currently Coinbase and Kraken). System accounts do not participate in address-based ownership resolution and use location-derived IDs such as `COINBASE:coinbase`.
+- Stakewise CSV rewards are imported onto the Ethereum wallet configured via `STAKEWISE_WALLET_ADDRESS`.
 - Ingestion corrections are applied in this order: validate unified source ownership, remove claimed raw events, emit synthetic corrected events for corrections with legs, then sort once before persisting corrected events by `timestamp`, `event_origin.location`, and `event_origin.external_id`.
 - Corrections are persisted in the corrections DB as active header rows plus source rows plus leg rows, with a separate source-level auto-suppression table. Deleting a source-backed correction hard-deletes the correction and frees the source for explicit manual reuse while preserving auto-suppression for future importer runs; deleting a source-less opening-balance correction is a plain hard delete.
 - Validation is strict: every claimed source must match exactly one raw event, and a raw event cannot be consumed by more than one active correction source.
@@ -130,7 +131,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Wallet tracking rebuilds a current-state per-wallet/per-asset projection from corrected events and persists it in SQLite.
 - `GET /wallet-tracking` exposes the current wallet-tracking snapshot with `NOT_RUN`/`COMPLETED`/`FAILED` semantics.
 - Tax calculations currently focus on disposal links.
-- CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet-tracking snapshot, and then stops before later inventory/tax stages in the current implementation.
+- CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet-tracking snapshot, and then stops before later inventory/tax stages in the current implementation. The raw-event import step currently combines Kraken and Stakewise CSVs, Coinbase Track history, Moralis on-chain history.
 
 ### User Interface
 
@@ -146,4 +147,5 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - Kraken ledger CSV
 - Coinbase Track account history
+- Stakewise reward CSV exports
 - On-chain transactions via Moralis

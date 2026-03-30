@@ -19,6 +19,7 @@ class AppSettings(BaseSettings):
     moralis_api_key: str
     coinbase_key_name: str
     coinbase_key_prv: str
+    stakewise_wallet_address: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
