@@ -66,6 +66,7 @@ export function LedgerCorrectionCard({
         >
           {label}
         </Badge>
+        <OriginId originId={item.id} className="text-muted small" />
         <span className="text-muted small">{timestampLabel}</span>
         <CorrectionRemoveButton
           label={`Remove correction ${item.id}`}

@@ -16,7 +16,7 @@ import styles from "./OriginId.module.css";
 
 export type OriginIdProps = {
   originId: string;
-  place: string;
+  place?: string;
   className?: string;
   style?: CSSProperties;
 };
@@ -40,9 +40,8 @@ export function OriginId({ originId, place, className, style }: OriginIdProps) {
   const instanceId = useId();
   const [targetElement, setTargetElement] = useState<HTMLElement | null>(null);
   const copyTimeoutRef = useRef<number | null>(null);
-  const chainKey = Object.hasOwn(CHAIN_METADATA, place)
-    ? (place as ChainKey)
-    : null;
+  const chainKey =
+    place && Object.hasOwn(CHAIN_METADATA, place) ? (place as ChainKey) : null;
   const label = formatOriginId(originId);
 
   useEffect(() => {
