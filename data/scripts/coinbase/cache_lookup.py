@@ -7,7 +7,6 @@ import json
 import sys
 from pathlib import Path
 from typing import Sequence
-from uuid import UUID
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -16,9 +15,7 @@ if str(SRC_DIR) not in sys.path:
 
 from sqlalchemy import select
 
-from config import CORRECTIONS_DB_PATH, TRANSACTIONS_CACHE_DB_PATH
-from db.ledger_corrections import CorrectionsBase, LedgerCorrectionOrm
-from db.session import init_db_session
+from config import TRANSACTIONS_CACHE_DB_PATH
 from db.tx_cache_coinbase import CoinbaseAccountOrm, CoinbaseTransactionOrm
 from db.tx_cache_common import init_transactions_cache_db
 from utils.misc import ensure_utc_datetime
@@ -27,29 +24,17 @@ _NESTED_ID_TYPES = frozenset({"buy", "sell", "trade"})
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Lookup Coinbase cache records by Coinbase event external id or correction id."
-    )
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
+    parser = argparse.ArgumentParser(description="Lookup Coinbase cache records by Coinbase event external id.")
+    parser.add_argument(
         "--external-id",
+        required=True,
         help="Coinbase event external id. Supports raw transaction ids, buy/sell/trade ids, and wrap_asset synthetic ids.",
-    )
-    group.add_argument(
-        "--correction-id",
-        help="Correction UUID from artifacts/corrections.db.",
     )
     parser.add_argument(
         "--cache-db",
         type=Path,
         default=TRANSACTIONS_CACHE_DB_PATH,
         help="Path to Coinbase cache DB (default: artifacts/transactions_cache.db).",
-    )
-    parser.add_argument(
-        "--corrections-db",
-        type=Path,
-        default=CORRECTIONS_DB_PATH,
-        help="Path to corrections DB (default: artifacts/corrections.db).",
     )
     return parser.parse_args(argv)
 
@@ -73,37 +58,6 @@ def _format_transaction(
         "type": row.type,
         "payload": json.loads(row.payload),
         "account": None if account is None else json.loads(account.payload),
-    }
-
-
-def _format_correction(row: LedgerCorrectionOrm) -> dict[str, object]:
-    sources = sorted(
-        row.sources,
-        key=lambda source: (source.origin_location, source.origin_external_id),
-    )
-    legs = sorted(row.legs, key=lambda leg: leg.id)
-    return {
-        "id": str(row.id),
-        "timestamp": _format_timestamp(row.timestamp),
-        "price_per_token": None if row.price_per_token is None else str(row.price_per_token),
-        "note": row.note,
-        "sources": [
-            {
-                "location": source.origin_location,
-                "external_id": source.origin_external_id,
-            }
-            for source in sources
-        ],
-        "legs": [
-            {
-                "id": str(leg.id),
-                "asset_id": leg.asset_id,
-                "quantity": str(leg.quantity),
-                "account_chain_id": leg.account_chain_id,
-                "is_fee": leg.is_fee,
-            }
-            for leg in legs
-        ],
     }
 
 
@@ -162,32 +116,6 @@ def _lookup_external_id(cache_session, external_id: str) -> dict[str, object]:
     }
 
 
-def _lookup_correction(cache_session, corrections_session, correction_id: str) -> dict[str, object]:
-    correction_uuid = UUID(correction_id)
-    correction = (
-        corrections_session.execute(select(LedgerCorrectionOrm).where(LedgerCorrectionOrm.id == correction_uuid))
-        .unique()
-        .scalar_one_or_none()
-    )
-    if correction is None:
-        return {
-            "correction_id": str(correction_uuid),
-            "found": False,
-            "message": f"No correction found for id={correction_uuid}.",
-        }
-
-    coinbase_sources = [
-        source.origin_external_id for source in correction.sources if source.origin_location == "COINBASE"
-    ]
-    looked_up_sources = [_lookup_external_id(cache_session, external_id) for external_id in sorted(coinbase_sources)]
-
-    return {
-        "correction": _format_correction(correction),
-        "coinbase_source_count": len(looked_up_sources),
-        "coinbase_sources": looked_up_sources,
-    }
-
-
 def _print_json(data: object) -> None:
     print(json.dumps(data, indent=2))
 
@@ -195,18 +123,10 @@ def _print_json(data: object) -> None:
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
     cache_session = init_transactions_cache_db(db_path=args.cache_db)
-    corrections_session = init_db_session(
-        db_path=args.corrections_db,
-        metadata=CorrectionsBase.metadata,
-    )
     try:
-        if args.external_id is not None:
-            _print_json(_lookup_external_id(cache_session, args.external_id))
-            return
-        _print_json(_lookup_correction(cache_session, corrections_session, args.correction_id))
+        _print_json(_lookup_external_id(cache_session, args.external_id))
     finally:
         cache_session.close()
-        corrections_session.close()
 
 
 if __name__ == "__main__":
