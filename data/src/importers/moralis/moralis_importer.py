@@ -99,7 +99,7 @@ def native_asset_id(transfer: Mapping[str, Any]) -> AssetId:
 
 
 def erc20_asset_id(transfer: Mapping[str, Any]) -> AssetId:
-    token_symbol = str(transfer["token_symbol"])
+    token_symbol = str(transfer.get("token_symbol") or "").strip()
     if token_symbol:
         return AssetId(token_symbol)
     return AssetId(str(transfer["address"]))
@@ -132,11 +132,18 @@ def _obtain_value(transfer: Mapping[str, Any]) -> Decimal:
     if token_decimals is not None:
         return _decimal_from_atomic_value(transfer["value"], token_decimals)
 
-    return _parse_decimal_string(
-        raw_value=transfer["value_formatted"],
-        field_name="value_formatted",
-        require_integral=False,
-    )
+    try:
+        return _parse_decimal_string(
+            raw_value=transfer["value_formatted"],
+            field_name="value_formatted",
+            require_integral=False,
+        )
+    except MoralisValueParseError:
+        return _parse_decimal_string(
+            raw_value=transfer["value"],
+            field_name="value",
+            require_integral=True,
+        )
 
 
 def _event_note(tx: Mapping[str, Any]) -> str | None:
