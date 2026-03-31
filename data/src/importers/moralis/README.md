@@ -5,6 +5,8 @@
 - Flow:
   - Fetch transactions through `MoralisService` which caches them using `MoralisCacheRepository`.
   - Build legs from `native_transfers` and `erc20_transfers` only for owned accounts, unknown counterparties are ignored.
+  - Parse ERC20 quantities from raw integer `value` plus `token_decimals` when decimals metadata is present.
+  - If Moralis omits ERC20 decimals metadata and `value_formatted` is unusable (for example `NaN`), fall back to raw integer `value`.
   - Collapse legs by (`asset_id`, `account_chain_id`, `is_fee`) inside each transaction so same-token round-trips net to one leg.
   - Add a fee leg from `transaction_fee` when tx sender resolves to an owned account (`ETH`, `is_fee=True`).
   - Set `LedgerEvent.note` from Moralis `method_label` after trimming whitespace; leave it empty when Moralis does not provide a method label.

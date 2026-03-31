@@ -18,7 +18,13 @@ from db.ledger_corrections import (
 )
 from domain.correction import LedgerCorrection
 from domain.ledger import AccountChainId, AssetId
-from importers.moralis.moralis_importer import NATIVE_ASSET_ID, MoralisImporter
+from importers.moralis.moralis_importer import (
+    NATIVE_ASSET_ID,
+    MoralisEventParseError,
+    MoralisImporter,
+    MoralisValueParseError,
+    _decimal_from_atomic_value,
+)
 from services.moralis import MoralisService
 from tests.constants import ETH_ADDRESS, ETH_TX_HASH, LOCATION
 
@@ -65,16 +71,26 @@ def _native_transfer(amount: Decimal) -> dict[str, object]:
 
 
 def _erc20_transfer(
-    *, from_address: str, to_address: str, amount: Decimal, symbol: str, token: str
+    *,
+    from_address: str,
+    to_address: str,
+    amount: Decimal,
+    symbol: str,
+    token: str,
+    value: str = "0",
+    token_decimals: str | None = None,
 ) -> dict[str, object]:
-    return {
+    transfer: dict[str, object] = {
         "from_address": from_address,
         "to_address": to_address,
-        "value": "0",
+        "value": value,
         "value_formatted": str(amount),
         "token_symbol": symbol,
         "address": token,
     }
+    if token_decimals is not None:
+        transfer["token_decimals"] = token_decimals
+    return transfer
 
 
 class _StubMoralisService:
@@ -231,6 +247,57 @@ def test_erc20_legs_net_per_asset_and_account(test_ctx: _ImporterTestContext) ->
     assert event.legs[0].is_fee is False
 
 
+def test_erc20_legs_sum_exact_atomic_values_before_collapsing(test_ctx: _ImporterTestContext) -> None:
+    symbol = "USDs"
+    token = "0x2ea0be86990e8dac0d09e4316bb92086f304622d"
+    token_decimals = "18"
+    tx = _build_tx(
+        native_transfers=[],
+        erc20_transfers=[
+            _erc20_transfer(
+                from_address=ETH_ADDRESS_2,
+                to_address=ETH_ADDRESS,
+                amount=Decimal("1423.5107704255972"),
+                symbol=symbol,
+                token=token,
+                value="1423510770425597170044",
+                token_decimals=token_decimals,
+            ),
+            _erc20_transfer(
+                from_address=ETH_ADDRESS_2,
+                to_address=ETH_ADDRESS,
+                amount=Decimal("1.5102293352788365"),
+                symbol=symbol,
+                token=token,
+                value="1510229335278836495",
+                token_decimals=token_decimals,
+            ),
+            _erc20_transfer(
+                from_address=ETH_ADDRESS_2,
+                to_address=ETH_ADDRESS,
+                amount=Decimal("175.36546888769627"),
+                symbol=symbol,
+                token=token,
+                value="175365468887696284727",
+                token_decimals=token_decimals,
+            ),
+        ],
+    )
+
+    event = test_ctx.importer._build_event(tx)
+
+    expected_quantity = (
+        Decimal("1423510770425597170044") + Decimal("1510229335278836495") + Decimal("175365468887696284727")
+    ) / (Decimal(10) ** Decimal(token_decimals))
+
+    assert event is not None
+    assert len(event.legs) == 1
+    assert event.legs[0].asset_id == AssetId(symbol)
+    assert event.legs[0].quantity == expected_quantity
+    assert event.legs[0].account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
+    assert event.legs[0].is_fee is False
+
+
 def test_collapse_keeps_fee_and_non_fee_legs_separate(test_ctx: _ImporterTestContext) -> None:
     amount = Decimal("0.5")
     fee = Decimal("0.0025")
@@ -259,6 +326,71 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate(test_ctx: _ImporterTestCon
     assert fee_leg.quantity == -fee
     assert non_fee_leg.asset_id == AssetId("ETH")
     assert fee_leg.asset_id == AssetId("ETH")
+
+
+def test_erc20_parse_failure_includes_transaction_context(test_ctx: _ImporterTestContext) -> None:
+    symbol = "USDs"
+    token = "0x2ea0be86990e8dac0d09e4316bb92086f304622d"
+    tx = _build_tx(
+        native_transfers=[],
+        erc20_transfers=[
+            {
+                "from_address": ETH_ADDRESS_2,
+                "to_address": ETH_ADDRESS,
+                "value": "0.5",
+                "value_formatted": "NaN",
+                "token_symbol": symbol,
+                "address": token,
+                "log_index": 7,
+            }
+        ],
+    )
+
+    with pytest.raises(MoralisEventParseError, match=ETH_TX_HASH):
+        test_ctx.importer._build_event(tx)
+
+
+def test_erc20_without_decimals_falls_back_to_raw_value(test_ctx: _ImporterTestContext) -> None:
+    token = "0x52903256dd18d85c2dc4a6c999907c9793ea61e3"
+    tx = _build_tx(
+        native_transfers=[],
+        erc20_transfers=[
+            {
+                "from_address": "0x0000000000000000000000000000000000000000",
+                "to_address": ETH_ADDRESS,
+                "value": "777",
+                "value_formatted": "NaN",
+                "token_symbol": None,
+                "address": token,
+                "token_decimals": None,
+            }
+        ],
+    )
+
+    event = test_ctx.importer._build_event(tx)
+
+    assert event is not None
+    assert len(event.legs) == 1
+    assert event.legs[0].asset_id == AssetId(token)
+    assert event.legs[0].quantity == Decimal("777")
+    assert event.legs[0].account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
+    assert event.legs[0].is_fee is False
+
+
+def test_fee_parse_failure_includes_transaction_context(test_ctx: _ImporterTestContext) -> None:
+    tx = _build_tx(
+        native_transfers=[],
+        from_address=ETH_ADDRESS,
+        transaction_fee="NaN",
+    )
+
+    with pytest.raises(MoralisEventParseError, match=ETH_TX_HASH):
+        test_ctx.importer._build_event(tx)
+
+
+def test_decimal_from_atomic_value_rejects_non_integral_base_value() -> None:
+    with pytest.raises(MoralisValueParseError, match="base_value"):
+        _decimal_from_atomic_value("1.5", "18")
 
 
 def test_load_events_marks_moralis_spam_transactions(test_ctx: _ImporterTestContext) -> None:
