@@ -20,7 +20,7 @@
 - Tax event projection types: `src/domain/tax_event.py`
 - Wallet tracking projection and statuses: `src/domain/wallet_tracking.py`
 
-### Corrections persistence and application
+### Correction persistence and application
 - Unified correction persistence lives in `src/db/ledger_corrections.py`.
 - One-off migration from legacy spam/replacement/seed tables lives in `scripts/migrate_ledger_corrections.py`; it backfills missing legacy rows into `ledger_corrections`, skips already-covered spam sources, and migrates legacy seed/opening-balance rows from the main DB.
 - Ingestion-layer correction application and validation live under `src/corrections/`.
@@ -81,6 +81,7 @@
 - Use `Decimal` for numeric quantities/rates; avoid floats.
 - Time fields use `datetime` named `timestamp` and are stored in UTC.
   - Convert inbound times to UTC at ingestion boundaries so internal models are always UTC.
+- Some ORM tables may include DB-only audit fields such as `created_at` and `updated_at`. Keep them out of domain and API models unless they are intentionally part of the exposed contract.
 - `EventOrigin` (`origin_location` + `origin_external_id`) is the stable unique identifier of a raw ledger event. Design event identity and cross-event references around it.
 - Do not design event relationships around transient event UUIDs or leg UUIDs. Those are internal identifiers that may change across re-imports or rebuilds.
 - IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`), but these UUIDs are internal object references, not stable upstream event identity.

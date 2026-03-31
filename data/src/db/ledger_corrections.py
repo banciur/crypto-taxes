@@ -8,6 +8,7 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Uuid, selec
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
+from db.mixins import TimestampAuditMixin
 from db.models import DecimalAsString
 from domain.correction import CorrectionId, LedgerCorrection, LedgerCorrectionDraft
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerLeg, LegId
@@ -18,7 +19,7 @@ class CorrectionsBase(DeclarativeBase):
     pass
 
 
-class LedgerCorrectionOrm(CorrectionsBase):
+class LedgerCorrectionOrm(TimestampAuditMixin, CorrectionsBase):
     __tablename__ = "ledger_corrections"
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
@@ -96,6 +97,7 @@ class LedgerCorrectionRepository:
             timestamp=correction.timestamp,
             price_per_token=correction.price_per_token,
             note=correction.note,
+            **LedgerCorrectionOrm.new_timestamp_audit_values(),
         )
         orm_correction.sources = [
             LedgerCorrectionSourceOrm(

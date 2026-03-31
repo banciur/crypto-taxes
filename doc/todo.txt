@@ -1,12 +1,9 @@
 First stage: compute German taxes
 
 --- manual review of existing transactions is now possible \o/
-TODO: Why on 2021-12-02 CLV I'm missing some CLV tokens?
-TODO: Check rounding errors on Coinbase I had to introduce manual correction in a few places.
-TODO: I have rounding errors example is USDs here but there is more https://arbiscan.io/tx/0xc2143a1eb15a23f60cb916c739c25af9d0cec268fea33f8e9c1fefca6f79f435
-TODO: Add "added at" to corrections. Existing ones set for some early date.
+TODO: I have rounding errors example is USDs in private.txt. but there is more
 TODO: Need automation to rerun computation (src/main.py) through the UI see if https://fastapi.tiangolo.com/tutorial/background-tasks/ could be useful.
-TODO: Potential problem Coinbase / Moralis / manual adjustment assed_id sometimes its cbETH sometimes its CBETH
+TODO: Potential problem Coinbase / Moralis / manual adjustment assed_id sometimes it's cbETH, sometimes it's CBETH
 
 TODO: Import data from Lido
 TODO: Review disposal and acquisition creation.
@@ -77,8 +74,10 @@ TODO: Features from WEALTH_MODEL.md
  - realized P/L
  - unrealized P/L (by asset?)
 TODO: Search function in the UI, tx hash
-TODO: Tracking of BTC through some tracker. This probably could be skipped as I'm doing enough transactions and it's to much work.
+TODO: Tracking of BTC through some tracker. This probably could be skipped as I'm doing enough transactions, and it's too much work.
 TODO: Wallet tracking loses Ethereum intra-block ordering. Moralis cache has the correct order for same-block transactions using block_number and transaction_index, but once transactions are converted into LedgerEvents that metadata is dropped. Later rebuild stages sort only by timestamp and then lexicographically by hash/origin, so same-block events can be replayed in the wrong order. In this case the ETH-T -> ETH swap is processed before the prior tx that credits 7 ETH-T, which creates a false insufficient-balance failure in wallet tracking. https://etherscan.io/tx/0x9795e90368cf6e4edacf33e06d455cb94cc4983f10ea0b09e050a899adf82488 and https://etherscan.io/tx/0x41b99a85b5b52e1ef62ab9de87a2a74fb5f779175a0e0eb0165b8dc6904b6156
+TODO: Solve the problem of rounding on Coinbase.
+TODO: In private.txt have ARB tx that does a lot of operations on vfat / pancake and liquidity
 
 Codex commands
 ------------------
