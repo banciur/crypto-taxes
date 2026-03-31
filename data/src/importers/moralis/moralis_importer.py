@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+from abc import ABC
 from collections.abc import Callable
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable, Mapping, cast
 
 from accounts import AccountRegistry
@@ -25,6 +26,18 @@ logger = logging.getLogger(__name__)
 
 INGESTION_SOURCE = "moralis"
 NATIVE_ASSET_ID = AssetId("ETH")
+
+
+class MoralisImporterError(Exception, ABC):
+    pass
+
+
+class MoralisValueParseError(MoralisImporterError):
+    pass
+
+
+class MoralisEventParseError(MoralisImporterError):
+    pass
 
 
 def _native_transfer_key(transfer: dict[str, str]) -> tuple[str, str, str, str]:
@@ -92,14 +105,38 @@ def erc20_asset_id(transfer: Mapping[str, Any]) -> AssetId:
     return AssetId(str(transfer["address"]))
 
 
-def _obtain_value(transfer: dict[str, Any]) -> Decimal:
-    value = Decimal(transfer["value_formatted"])
-    if value.is_finite():
-        return value
-    if transfer["token_decimals"] is None:
-        return Decimal(transfer["value"])
-    else:
-        raise Exception("I was to lazy to implement proper handling of token decimals and value")
+def _parse_decimal_string(*, raw_value: object, field_name: str, require_integral: bool) -> Decimal:
+    if not isinstance(raw_value, str):
+        raise MoralisValueParseError(f"Unexpected {field_name} type: {type(raw_value)}")
+
+    try:
+        value = Decimal(raw_value)
+    except InvalidOperation as exc:
+        raise MoralisValueParseError(f"Unexpected {field_name}: {raw_value}") from exc
+
+    if not value.is_finite() or (require_integral and value != value.to_integral_value()):
+        raise MoralisValueParseError(f"Unexpected {field_name}: {raw_value}")
+
+    return value
+
+
+def _decimal_from_atomic_value(base_value: str, decimals: str) -> Decimal:
+    base_dec = _parse_decimal_string(raw_value=base_value, field_name="base_value", require_integral=True)
+    decimals_dec = _parse_decimal_string(raw_value=decimals, field_name="decimals", require_integral=True)
+
+    return base_dec / (Decimal(10) ** decimals_dec)
+
+
+def _obtain_value(transfer: Mapping[str, Any]) -> Decimal:
+    token_decimals = transfer.get("token_decimals")
+    if token_decimals is not None:
+        return _decimal_from_atomic_value(transfer["value"], token_decimals)
+
+    return _parse_decimal_string(
+        raw_value=transfer["value_formatted"],
+        field_name="value_formatted",
+        require_integral=False,
+    )
 
 
 def _event_note(tx: Mapping[str, Any]) -> str | None:
@@ -158,7 +195,7 @@ class MoralisImporter:
         legs: list[LedgerLeg] = []
         for transfer in transfers:
             asset_id = asset_id_for_transfer(transfer)
-            quantity = _obtain_value(cast(dict[str, Any], transfer))
+            quantity = _obtain_value(transfer)
             if quantity == 0:
                 continue
 
@@ -193,38 +230,46 @@ class MoralisImporter:
 
     def _build_event(self, tx: Mapping[str, Any]) -> LedgerEvent | None:
         location = tx["location"]
+        tx_hash = str(tx["hash"])
 
-        legs = self._build_transfer_legs(
-            location=location,
-            transfers=_dedupe_native_transfers(cast(list, tx["native_transfers"])),
-            asset_id_for_transfer=native_asset_id,
-        )
-
-        legs.extend(
-            self._build_transfer_legs(
+        try:
+            legs = self._build_transfer_legs(
                 location=location,
-                transfers=cast(list, tx["erc20_transfers"]),
-                asset_id_for_transfer=erc20_asset_id,
+                transfers=_dedupe_native_transfers(cast(list, tx["native_transfers"])),
+                asset_id_for_transfer=native_asset_id,
             )
-        )
 
-        # If its comming from my account add fee leg
-        from_addr_tx = tx["from_address"].lower()
-        sender_account_chain_id = self.account_registry.resolve_owned_id(
-            location=location,
-            address=WalletAddress(from_addr_tx),
-        )
-        if sender_account_chain_id is not None:
-            fee = Decimal(str(tx["transaction_fee"]))
-            assert fee.is_normal(), f"Unexpected transaction_fee: {tx['transaction_fee']}"
-            legs.append(
-                LedgerLeg(
-                    asset_id=NATIVE_ASSET_ID,
-                    quantity=-fee,
-                    account_chain_id=sender_account_chain_id,
-                    is_fee=True,
+            legs.extend(
+                self._build_transfer_legs(
+                    location=location,
+                    transfers=cast(list, tx["erc20_transfers"]),
+                    asset_id_for_transfer=erc20_asset_id,
                 )
             )
+            # If its coming from my account add fee leg
+            from_addr_tx = tx["from_address"].lower()
+            sender_account_chain_id = self.account_registry.resolve_owned_id(
+                location=location,
+                address=WalletAddress(from_addr_tx),
+            )
+            if sender_account_chain_id is not None:
+                fee = _parse_decimal_string(
+                    raw_value=tx["transaction_fee"],
+                    field_name="transaction_fee",
+                    require_integral=False,
+                )
+                legs.append(
+                    LedgerLeg(
+                        asset_id=NATIVE_ASSET_ID,
+                        quantity=-fee,
+                        account_chain_id=sender_account_chain_id,
+                        is_fee=True,
+                    )
+                )
+        except MoralisValueParseError as exc:
+            raise MoralisEventParseError(
+                f"Failed to parse Moralis event numeric field for tx={tx_hash} location={location.value}: {exc}"
+            ) from exc
 
         legs = _collapse_legs(legs)
         if not legs:
