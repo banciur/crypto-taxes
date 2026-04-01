@@ -8,6 +8,7 @@
   - Parse ERC20 quantities from raw integer `value` plus `token_decimals` when decimals metadata is present.
   - If Moralis omits ERC20 decimals metadata and `value_formatted` is unusable (for example `NaN`), fall back to raw integer `value`.
   - Collapse legs by (`asset_id`, `account_chain_id`, `is_fee`) inside each transaction so same-token round-trips net to one leg.
+  - Ignore native transfers when Moralis uses them only to decompose gas into sink addresses and their total exactly matches `transaction_fee`; keep the explicit fee leg as the only gas spend in that case.
   - Add a fee leg from `transaction_fee` when tx sender resolves to an owned account (`ETH`, `is_fee=True`).
   - Set `LedgerEvent.note` from Moralis `method_label` after trimming whitespace; leave it empty when Moralis does not provide a method label.
   - Event emission: emit an event when there is at least one owned leg; otherwise skip tx.

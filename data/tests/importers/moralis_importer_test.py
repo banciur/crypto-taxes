@@ -30,8 +30,8 @@ from tests.constants import ETH_ADDRESS, ETH_TX_HASH, LOCATION
 
 BLOCK_TS = "2025-05-16T05:04:40.000Z"
 ETH_ADDRESS_2 = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
-
-# This file is missing test cases and supporting functions are poorly written. Next time you touch it, fix it.
+NULL_ADDRESS = "0x0000000000000000000000000000000000000000"
+SEQUENCER_FEE_VAULT = "0x4200000000000000000000000000000000000011"
 
 
 def _build_tx(
@@ -64,6 +64,22 @@ def _native_transfer(amount: Decimal) -> dict[str, object]:
         "from_address": ETH_ADDRESS_2,
         "to_address": ETH_ADDRESS,
         "value": "500000000000000000",
+        "value_formatted": str(amount),
+        "token_symbol": "ETH",
+        "internal_transaction": False,
+    }
+
+
+def _outgoing_native_transfer(
+    *,
+    amount: Decimal,
+    value: str,
+    to_address: str,
+) -> dict[str, object]:
+    return {
+        "from_address": ETH_ADDRESS,
+        "to_address": to_address,
+        "value": value,
         "value_formatted": str(amount),
         "token_symbol": "ETH",
         "internal_transaction": False,
@@ -326,6 +342,83 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate(test_ctx: _ImporterTestCon
     assert fee_leg.quantity == -fee
     assert non_fee_leg.asset_id == AssetId("ETH")
     assert fee_leg.asset_id == AssetId("ETH")
+
+
+def test_fee_native_transfers_are_not_double_counted(test_ctx: _ImporterTestContext) -> None:
+    fee_components = [
+        (Decimal("0.000000000256473696"), "256473696", NULL_ADDRESS),
+        (Decimal("0.000000000000781932"), "781932", SEQUENCER_FEE_VAULT),
+        (Decimal("0.000000014158945734"), "14158945734", NULL_ADDRESS),
+    ]
+    fee = sum((amount for amount, _, _ in fee_components), Decimal("0"))
+    tx = _build_tx(
+        native_transfers=[
+            _outgoing_native_transfer(amount=amount, value=value, to_address=to_address)
+            for amount, value, to_address in fee_components
+        ],
+        erc20_transfers=[
+            _erc20_transfer(
+                from_address=NULL_ADDRESS,
+                to_address=ETH_ADDRESS,
+                amount=Decimal("18.211177826219392142"),
+                symbol="gtusdcp",
+                token="0xc30ce6a5758786e0f640cc5f881dd96e9a1c5c59",
+                value="18211177826219392142",
+                token_decimals="18",
+            ),
+            _erc20_transfer(
+                from_address=ETH_ADDRESS,
+                to_address="0x79481c87f24a3c4332442a2e9faaf675e5f141f0",
+                amount=Decimal("18.3729"),
+                symbol="USDC",
+                token="0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+                value="18372900",
+                token_decimals="6",
+            ),
+        ],
+        from_address=ETH_ADDRESS,
+        transaction_fee=str(fee),
+    )
+
+    event = test_ctx.importer._build_event(tx)
+
+    expected_account_chain_id = AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
+
+    assert event is not None
+    assert len(event.legs) == 3
+    assert [leg for leg in event.legs if leg.asset_id == AssetId("ETH") and leg.is_fee is False] == []
+    assert {(leg.asset_id, leg.is_fee): leg.quantity for leg in event.legs} == {
+        (AssetId("gtusdcp"), False): Decimal("18.211177826219392142"),
+        (AssetId("USDC"), False): Decimal("-18.3729"),
+        (AssetId("ETH"), True): -fee,
+    }
+    assert {leg.account_chain_id for leg in event.legs} == {expected_account_chain_id}
+
+
+def test_non_fee_native_transfer_is_preserved_when_destination_is_not_fee_sink(
+    test_ctx: _ImporterTestContext,
+) -> None:
+    amount = Decimal("0.0025")
+    tx = _build_tx(
+        native_transfers=[
+            _outgoing_native_transfer(
+                amount=amount,
+                value="2500000000000000",
+                to_address=ETH_ADDRESS_2,
+            )
+        ],
+        from_address=ETH_ADDRESS,
+        transaction_fee=str(amount),
+    )
+
+    event = test_ctx.importer._build_event(tx)
+
+    assert event is not None
+    assert len(event.legs) == 2
+    assert {(leg.asset_id, leg.is_fee): leg.quantity for leg in event.legs} == {
+        (AssetId("ETH"), False): -amount,
+        (AssetId("ETH"), True): -amount,
+    }
 
 
 def test_erc20_parse_failure_includes_transaction_context(test_ctx: _ImporterTestContext) -> None:

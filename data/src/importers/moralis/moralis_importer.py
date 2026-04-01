@@ -26,6 +26,12 @@ logger = logging.getLogger(__name__)
 
 INGESTION_SOURCE = "moralis"
 NATIVE_ASSET_ID = AssetId("ETH")
+FEE_NATIVE_TRANSFER_DESTINATIONS = frozenset(
+    [
+        WalletAddress("0x0000000000000000000000000000000000000000"),
+        WalletAddress("0x4200000000000000000000000000000000000011"),
+    ]
+)
 
 
 class MoralisImporterError(Exception, ABC):
@@ -235,15 +241,73 @@ class MoralisImporter:
                 )
         return legs
 
+    def _native_transfers_only_describe_fee(
+        self,
+        *,
+        location: EventLocation,
+        tx: Mapping[str, Any],
+        native_transfers: Iterable[Mapping[str, Any]],
+        fee: Decimal,
+    ) -> bool:
+        if fee <= 0:
+            return False
+
+        sender_address = WalletAddress(str(tx["from_address"]).lower())
+        native_total = Decimal(0)
+        for transfer in native_transfers:
+            if WalletAddress(str(transfer["from_address"]).lower()) != sender_address:
+                return False
+
+            to_address = WalletAddress(str(transfer["to_address"]).lower())
+            if to_address not in FEE_NATIVE_TRANSFER_DESTINATIONS:
+                return False
+
+            if self.account_registry.resolve_owned_id(location=location, address=to_address) is not None:
+                return False
+
+            native_total += _obtain_value(transfer)
+
+        return native_total == fee
+
     def _build_event(self, tx: Mapping[str, Any]) -> LedgerEvent | None:
         location = tx["location"]
         tx_hash = str(tx["hash"])
+        sender_account_chain_id = self.account_registry.resolve_owned_id(
+            location=location,
+            address=WalletAddress(str(tx["from_address"]).lower()),
+        )
+        native_transfers = _dedupe_native_transfers(cast(list, tx["native_transfers"]))
 
         try:
-            legs = self._build_transfer_legs(
-                location=location,
-                transfers=_dedupe_native_transfers(cast(list, tx["native_transfers"])),
-                asset_id_for_transfer=native_asset_id,
+            legs: list[LedgerLeg] = []
+            if sender_account_chain_id is not None:
+                fee = _parse_decimal_string(
+                    raw_value=tx["transaction_fee"],
+                    field_name="transaction_fee",
+                    require_integral=False,
+                )
+                if self._native_transfers_only_describe_fee(
+                    location=location,
+                    tx=tx,
+                    native_transfers=native_transfers,
+                    fee=fee,
+                ):
+                    native_transfers = []
+                legs.append(
+                    LedgerLeg(
+                        asset_id=NATIVE_ASSET_ID,
+                        quantity=-fee,
+                        account_chain_id=sender_account_chain_id,
+                        is_fee=True,
+                    )
+                )
+
+            legs.extend(
+                self._build_transfer_legs(
+                    location=location,
+                    transfers=native_transfers,
+                    asset_id_for_transfer=native_asset_id,
+                )
             )
 
             legs.extend(
@@ -253,26 +317,6 @@ class MoralisImporter:
                     asset_id_for_transfer=erc20_asset_id,
                 )
             )
-            # If its coming from my account add fee leg
-            from_addr_tx = tx["from_address"].lower()
-            sender_account_chain_id = self.account_registry.resolve_owned_id(
-                location=location,
-                address=WalletAddress(from_addr_tx),
-            )
-            if sender_account_chain_id is not None:
-                fee = _parse_decimal_string(
-                    raw_value=tx["transaction_fee"],
-                    field_name="transaction_fee",
-                    require_integral=False,
-                )
-                legs.append(
-                    LedgerLeg(
-                        asset_id=NATIVE_ASSET_ID,
-                        quantity=-fee,
-                        account_chain_id=sender_account_chain_id,
-                        is_fee=True,
-                    )
-                )
         except MoralisValueParseError as exc:
             raise MoralisEventParseError(
                 f"Failed to parse Moralis event numeric field for tx={tx_hash} location={location.value}: {exc}"
