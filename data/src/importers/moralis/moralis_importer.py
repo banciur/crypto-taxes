@@ -46,10 +46,18 @@ class MoralisEventParseError(MoralisImporterError):
     pass
 
 
+def _normalize_address(raw_value: object) -> str:
+    return str(raw_value).strip().lower()
+
+
+def _wallet_address(raw_value: object) -> WalletAddress:
+    return WalletAddress(_normalize_address(raw_value))
+
+
 def _native_transfer_key(transfer: dict[str, str]) -> tuple[str, str, str, str]:
     return (
-        transfer["from_address"].lower(),
-        transfer["to_address"].lower(),
+        _normalize_address(transfer["from_address"]),
+        _normalize_address(transfer["to_address"]),
         transfer["value"],
         transfer["token_symbol"].upper(),
     )
@@ -108,7 +116,7 @@ def erc20_asset_id(transfer: Mapping[str, Any]) -> AssetId:
     token_symbol = str(transfer.get("token_symbol") or "").strip()
     if token_symbol:
         return AssetId(token_symbol)
-    return AssetId(str(transfer["address"]))
+    return AssetId(_normalize_address(transfer["address"]))
 
 
 def _parse_decimal_string(*, raw_value: object, field_name: str, require_integral: bool) -> Decimal:
@@ -150,14 +158,6 @@ def _obtain_value(transfer: Mapping[str, Any]) -> Decimal:
             field_name="value",
             require_integral=True,
         )
-
-
-def _event_note(tx: Mapping[str, Any]) -> str | None:
-    method_label = tx.get("method_label")
-    if method_label is None:
-        return None
-    trimmed = str(method_label).strip()
-    return trimmed or None
 
 
 class MoralisImporter:
@@ -252,13 +252,12 @@ class MoralisImporter:
         if fee <= 0:
             return False
 
-        sender_address = WalletAddress(str(tx["from_address"]).lower())
         native_total = Decimal(0)
         for transfer in native_transfers:
-            if WalletAddress(str(transfer["from_address"]).lower()) != sender_address:
+            if _wallet_address(transfer["from_address"]) != _wallet_address(tx["from_address"]):
                 return False
 
-            to_address = WalletAddress(str(transfer["to_address"]).lower())
+            to_address = _wallet_address(transfer["to_address"])
             if to_address not in FEE_NATIVE_TRANSFER_DESTINATIONS:
                 return False
 
@@ -274,7 +273,7 @@ class MoralisImporter:
         tx_hash = str(tx["hash"])
         sender_account_chain_id = self.account_registry.resolve_owned_id(
             location=location,
-            address=WalletAddress(str(tx["from_address"]).lower()),
+            address=_wallet_address(tx["from_address"]),
         )
         native_transfers = _dedupe_native_transfers(cast(list, tx["native_transfers"]))
 
@@ -331,6 +330,6 @@ class MoralisImporter:
             timestamp=ensure_utc_datetime(datetime.fromisoformat(tx["block_timestamp"].replace("Z", "+00:00"))),
             event_origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
-            note=_event_note(tx),
+            note=str(tx.get("method_label") or "").strip() or None,
             legs=legs,
         )
