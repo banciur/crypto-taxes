@@ -236,32 +236,34 @@ class MoralisImporter:
 
         return legs
 
-    def _native_transfers_only_describe_fee(
+    def _filter_fee_native_transfers(
         self,
         *,
         location: EventLocation,
         tx: Mapping[str, Any],
-        native_transfers: Iterable[Mapping[str, Any]],
+        native_transfers: list[dict[str, Any]],
         fee: Decimal,
-    ) -> bool:
-        if fee <= 0:
-            return False
+    ) -> list[dict[str, Any]]:
+        """Moralis can expose L2 gas breakdown as synthetic native transfers alongside
+        transaction_fee; drop only that fee subset so real native transfers from the same tx still import.
+        """
 
-        native_total = Decimal(0)
+        sender_address = _wallet_address(tx["from_address"])
+        fee_total = Decimal(0)
+        filtered_transfers: list[dict[str, Any]] = []
         for transfer in native_transfers:
-            if _wallet_address(transfer["from_address"]) != _wallet_address(tx["from_address"]):
-                return False
-
             to_address = _wallet_address(transfer["to_address"])
-            if to_address not in FEE_NATIVE_TRANSFER_DESTINATIONS:
-                return False
+            is_fee_transfer = (
+                _wallet_address(transfer["from_address"]) == sender_address
+                and to_address in FEE_NATIVE_TRANSFER_DESTINATIONS
+                and self.account_registry.resolve_owned_id(location=location, address=to_address) is None
+            )
+            if is_fee_transfer:
+                fee_total += _obtain_value(transfer)
+            else:
+                filtered_transfers.append(transfer)
 
-            if self.account_registry.resolve_owned_id(location=location, address=to_address) is not None:
-                return False
-
-            native_total += _obtain_value(transfer)
-
-        return native_total == fee
+        return filtered_transfers if fee_total == fee else native_transfers
 
     def _build_event(self, tx: Mapping[str, Any]) -> LedgerEvent | None:
         location = tx["location"]
@@ -279,6 +281,7 @@ class MoralisImporter:
                     field_name="transaction_fee",
                     require_integral=False,
                 )
+                assert fee >= 0, f"Unexpected negative transaction fee: {fee}"
                 legs.append(
                     LedgerLeg(
                         asset_id=NATIVE_ASSET_ID,
@@ -288,13 +291,12 @@ class MoralisImporter:
                     )
                 )
 
-                if self._native_transfers_only_describe_fee(
+                native_transfers = self._filter_fee_native_transfers(
                     location=location,
                     tx=tx,
                     native_transfers=native_transfers,
                     fee=fee,
-                ):
-                    native_transfers = []
+                )
 
             legs_for_transfer = partial(self._legs_for_transfer, location=location)
 

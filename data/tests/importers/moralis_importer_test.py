@@ -421,6 +421,43 @@ def test_non_fee_native_transfer_is_preserved_when_destination_is_not_fee_sink(
     }
 
 
+def test_fee_native_transfers_are_filtered_while_preserving_real_native_transfer(
+    test_ctx: _ImporterTestContext,
+) -> None:
+    fee_components = [
+        (Decimal("0.000000000256473696"), "256473696", NULL_ADDRESS),
+        (Decimal("0.000000000000781932"), "781932", SEQUENCER_FEE_VAULT),
+        (Decimal("0.000000014158945734"), "14158945734", NULL_ADDRESS),
+    ]
+    fee = sum((amount for amount, _, _ in fee_components), Decimal("0"))
+    transfer_amount = Decimal("0.0025")
+    tx = _build_tx(
+        native_transfers=[
+            _outgoing_native_transfer(
+                amount=fee_components[0][0], value=fee_components[0][1], to_address=fee_components[0][2]
+            ),
+            _outgoing_native_transfer(amount=transfer_amount, value="2500000000000000", to_address=ETH_ADDRESS_2),
+            _outgoing_native_transfer(
+                amount=fee_components[1][0], value=fee_components[1][1], to_address=fee_components[1][2]
+            ),
+            _outgoing_native_transfer(
+                amount=fee_components[2][0], value=fee_components[2][1], to_address=fee_components[2][2]
+            ),
+        ],
+        from_address=ETH_ADDRESS,
+        transaction_fee=str(fee),
+    )
+
+    event = test_ctx.importer._build_event(tx)
+
+    assert event is not None
+    assert len(event.legs) == 2
+    assert {(leg.asset_id, leg.is_fee): leg.quantity for leg in event.legs} == {
+        (AssetId("ETH"), False): -transfer_amount,
+        (AssetId("ETH"), True): -fee,
+    }
+
+
 def test_erc20_parse_failure_includes_transaction_context(test_ctx: _ImporterTestContext) -> None:
     symbol = "USDs"
     token = "0x2ea0be86990e8dac0d09e4316bb92086f304622d"
