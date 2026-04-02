@@ -5,6 +5,7 @@ from abc import ABC
 from collections.abc import Callable
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from functools import partial
 from typing import Any, Iterable, Mapping, cast
 
 from accounts import AccountRegistry
@@ -198,47 +199,41 @@ class MoralisImporter:
         events.sort(key=lambda evt: evt.timestamp)
         return events
 
-    def _build_transfer_legs(
+    def _legs_for_transfer(
         self,
+        transfer: Mapping[str, Any],
         *,
         location: EventLocation,
-        transfers: Iterable[Mapping[str, Any]],
         asset_id_for_transfer: Callable[[Mapping[str, Any]], AssetId],
-    ) -> list[LedgerLeg]:
-        legs: list[LedgerLeg] = []
-        for transfer in transfers:
-            asset_id = asset_id_for_transfer(transfer)
-            quantity = _obtain_value(transfer)
-            if quantity == 0:
-                continue
+    ) -> Iterable[LedgerLeg]:
+        quantity = _obtain_value(transfer)
+        if quantity == 0:
+            return ()
 
-            from_account_chain_id = self.account_registry.resolve_owned_id(
-                location=location,
-                address=WalletAddress(str(transfer["from_address"]).lower()),
-            )
-            if from_account_chain_id is not None:
-                legs.append(
-                    LedgerLeg(
-                        asset_id=asset_id,
-                        quantity=-quantity,
-                        account_chain_id=from_account_chain_id,
-                        is_fee=False,
-                    )
-                )
+        legs = []
+        asset_id = asset_id_for_transfer(transfer)
+        resolve_owned_id = partial(self.account_registry.resolve_owned_id, location=location)
 
-            to_account_chain_id = self.account_registry.resolve_owned_id(
-                location=location,
-                address=WalletAddress(str(transfer["to_address"]).lower()),
-            )
-            if to_account_chain_id is not None:
-                legs.append(
-                    LedgerLeg(
-                        asset_id=asset_id,
-                        quantity=quantity,
-                        account_chain_id=to_account_chain_id,
-                        is_fee=False,
-                    )
+        if from_address_chain_id := resolve_owned_id(address=_wallet_address(transfer["from_address"])):
+            legs.append(
+                LedgerLeg(
+                    asset_id=asset_id,
+                    quantity=-quantity,
+                    account_chain_id=from_address_chain_id,
+                    is_fee=False,
                 )
+            )
+
+        if to_address_chain_id := resolve_owned_id(address=_wallet_address(transfer["to_address"])):
+            legs.append(
+                LedgerLeg(
+                    asset_id=asset_id,
+                    quantity=quantity,
+                    account_chain_id=to_address_chain_id,
+                    is_fee=False,
+                )
+            )
+
         return legs
 
     def _native_transfers_only_describe_fee(
@@ -271,27 +266,19 @@ class MoralisImporter:
     def _build_event(self, tx: Mapping[str, Any]) -> LedgerEvent | None:
         location = tx["location"]
         tx_hash = str(tx["hash"])
-        sender_account_chain_id = self.account_registry.resolve_owned_id(
-            location=location,
-            address=_wallet_address(tx["from_address"]),
-        )
         native_transfers = _dedupe_native_transfers(cast(list, tx["native_transfers"]))
 
         try:
             legs: list[LedgerLeg] = []
-            if sender_account_chain_id is not None:
+            if sender_account_chain_id := self.account_registry.resolve_owned_id(
+                location=location,
+                address=_wallet_address(tx["from_address"]),
+            ):
                 fee = _parse_decimal_string(
                     raw_value=tx["transaction_fee"],
                     field_name="transaction_fee",
                     require_integral=False,
                 )
-                if self._native_transfers_only_describe_fee(
-                    location=location,
-                    tx=tx,
-                    native_transfers=native_transfers,
-                    fee=fee,
-                ):
-                    native_transfers = []
                 legs.append(
                     LedgerLeg(
                         asset_id=NATIVE_ASSET_ID,
@@ -301,21 +288,21 @@ class MoralisImporter:
                     )
                 )
 
-            legs.extend(
-                self._build_transfer_legs(
+                if self._native_transfers_only_describe_fee(
                     location=location,
-                    transfers=native_transfers,
-                    asset_id_for_transfer=native_asset_id,
-                )
-            )
+                    tx=tx,
+                    native_transfers=native_transfers,
+                    fee=fee,
+                ):
+                    native_transfers = []
 
-            legs.extend(
-                self._build_transfer_legs(
-                    location=location,
-                    transfers=cast(list, tx["erc20_transfers"]),
-                    asset_id_for_transfer=erc20_asset_id,
-                )
-            )
+            legs_for_transfer = partial(self._legs_for_transfer, location=location)
+
+            for transfer in native_transfers:
+                legs.extend(legs_for_transfer(transfer, asset_id_for_transfer=native_asset_id))
+
+            for transfer in cast(list, tx["erc20_transfers"]):
+                legs.extend(legs_for_transfer(transfer, asset_id_for_transfer=erc20_asset_id))
         except MoralisValueParseError as exc:
             raise MoralisEventParseError(
                 f"Failed to parse Moralis event numeric field for tx={tx_hash} location={location.value}: {exc}"
