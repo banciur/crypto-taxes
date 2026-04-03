@@ -1,6 +1,6 @@
 # Stakewise Rewards Importer
 
-`StakewiseImporter` translates one or more Stakewise reward CSV exports into single-leg `LedgerEvent`s. Each CSV row becomes one reward event on a configured Ethereum wallet, with `location=ETHEREUM` and ingestion source `stakewise_rewards_csv`.
+`StakewiseImporter` translates one or more Stakewise reward CSV exports into single-leg `LedgerEvent`s. Each CSV row becomes one reward event on a configured Ethereum wallet, with `location=ETHEREUM`, ingestion source `stakewise_rewards_csv`, and note `staking - StakeWise`.
 
 ## Supported CSV shapes
 
@@ -9,7 +9,7 @@
 
 The importer ignores the USD column for now. It keeps reward quantities exactly as exported, including negative values and dust-sized amounts.
 
-The target wallet address is supplied by the caller. In the main pipeline it comes from `STAKEWISE_WALLET_ADDRESS` in `data/.env`.
+The target wallet address is supplied by the caller. In the main pipeline it comes from `STAKING_REWARDS_WALLET_ADDRESS` in `data/.env`.
 
 ## Merge behavior
 

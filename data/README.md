@@ -45,6 +45,7 @@
   - Coinbase Track account history: `src/importers/coinbase/coinbase_importer.py`
   - Kraken CSV ledger: `src/importers/kraken/kraken_importer.py`
   - Stakewise reward CSV exports: `src/importers/stakewise/stakewise_importer.py`
+  - Lido reward CSV exports: `src/importers/lido/lido_importer.py`
   - on-chain transactions through Moralis importer: `src/importers/moralis/moralis_importer.py`
 - Moralis and Coinbase persist raw upstream data in the SQLite cache DB at `artifacts/transactions_cache.db` to reduce API calls during syncs.
 

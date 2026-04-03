@@ -1,4 +1,3 @@
-# This file is completely vibed and I didn't read it.
 from __future__ import annotations
 
 from csv import DictReader
@@ -12,6 +11,7 @@ from accounts import account_chain_id_for
 from domain.ledger import AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg, WalletAddress
 
 STAKEWISE_INGESTION_SOURCE = "stakewise_rewards_csv"
+STAKEWISE_EVENT_NOTE = "staking - StakeWise"
 
 
 @dataclass(frozen=True)
@@ -82,6 +82,7 @@ class StakewiseImporter:
                 timestamp=row.timestamp,
                 event_origin=EventOrigin(location=EventLocation.ETHEREUM, external_id=row.external_id),
                 ingestion=STAKEWISE_INGESTION_SOURCE,
+                note=STAKEWISE_EVENT_NOTE,
                 legs=[
                     LedgerLeg(
                         asset_id=row.asset_id,
