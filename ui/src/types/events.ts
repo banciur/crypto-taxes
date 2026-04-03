@@ -29,7 +29,6 @@ export type CreateLedgerCorrectionPayload = {
   timestamp: string;
   sources: EventOrigin[];
   legs: LedgerCorrectionDraftLeg[];
-  pricePerToken?: DecimalString;
   note?: string;
 };
 
@@ -41,7 +40,6 @@ type ItemBase = {
 export type LedgerCorrection = ItemBase & {
   sources: EventOrigin[];
   legs: LedgerLeg[];
-  pricePerToken?: DecimalString;
   note?: string;
 };
 

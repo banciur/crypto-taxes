@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from decimal import Decimal
 from typing import Any, NewType
 from uuid import UUID, uuid4
 
@@ -17,7 +16,6 @@ class LedgerCorrectionDraft(StrictBaseModel):
     timestamp: datetime
     sources: frozenset[EventOrigin] = Field(default_factory=frozenset)
     legs: frozenset[LedgerLeg] = Field(default_factory=frozenset)
-    price_per_token: Decimal | None = None
     note: str | None = None
 
     @field_validator("sources", "legs", mode="before")
@@ -52,14 +50,10 @@ class LedgerCorrectionDraft(StrictBaseModel):
                 raise ValueError("Source-less LedgerCorrection leg must be positive")
             if leg.is_fee:
                 raise ValueError("Source-less LedgerCorrection leg must not be a fee")
-            if self.price_per_token is not None and self.price_per_token < 0:
-                raise ValueError("Source-less LedgerCorrection.price_per_token must be >= 0")
             return self
 
         if any(source.location == EventLocation.INTERNAL for source in self.sources):
             raise ValueError("LedgerCorrection.sources must not contain INTERNAL origins")
-        if self.price_per_token is not None:
-            raise ValueError("Source-backed LedgerCorrection must not set price_per_token")
         return self
 
 

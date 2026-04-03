@@ -1,46 +1,35 @@
 First stage: compute German taxes
 
---- manual review of existing transactions is now possible \o/
-TODO: Need automation to rerun computation (src/main.py) through the UI see if https://fastapi.tiangolo.com/tutorial/background-tasks/ could be useful.
-TODO: Potential problem Coinbase / Moralis on Coinbase it's CBETH, on Moralis it's cbETH.
-TODO: There is a pattern where Coinbase is incorrectly parsed when I buy crypto paying with card? I see only -x EUR example in priv.txt
-
 TODO: Review disposal and acquisition creation.
 TODO: Probably need smarter price service
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 
 Review the order of todos
 -----------------
-TODO: In few places there are functions like _decimal_from_atomic_value unify them into one place. There is decimal_from_atomic_value in data/src/utils/misc.py
-TODO: Idea to review. Add the ability to quickly navigate to the first failing transaction. Maybe add date of it to summary?
-TODO: Add value of printed balances
+TODO: Potential problem Coinbase / Moralis on Coinbase it's CBETH, on Moralis it's cbETH. Proper solution would be this token registry, but for now maybe we can live with lowercasing all token names.
+TODO: Need automation to rerun computation (src/main.py) through the UI see if https://fastapi.tiangolo.com/tutorial/background-tasks/ could be useful. This could get a bit more complicated. I would like to have a reporting of problems with clear information and error types. Then I could handle such problems in the UI. For example, report there is a missing amount, then I could click and open a window with token history and tx that failed. For missing price I could open different window with price manipulations. etc
+TODO: Find a way to remove spam transactions by looking at them from a token perspective. The first idea is to create a page with all events for a token then those could be removed.
+TODO: Identify places where I went out and came back from other blockchains. Polygon, Fantom/Sonic, Uni. The first idea is to introduce "fake" wallet for such cases. Then I can model blockchain operations correctly, now they will become acquisitions / disposals.
+TODO: Think about a cache for old transactions in case Moralis would die and I wouldn't have data. Or Coinbase would start limiting history
+TODO: In a few places there are functions like _decimal_from_atomic_value unify them into one place. There is decimal_from_atomic_value in data/src/utils/misc.py
+TODO: Idea to review. Add the ability to quickly navigate to the first failing transaction.
+TODO: Add value of current wallet balances
 TODO: Implement more sophisticated logic for tokens to handle this logic when a token with the same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
-TODO: Improvements around tokens maybe better structure etc. Broader topic to think through.
- - FE
-  - shortened address elispsis and popup with full address?
-  - tokens names?
- - BE
-  - do we need a token registry and mapping symbol to address and multichain address?
-  - some tokens can have the same symbol on different chains, but in reality there are different tokens, and it's not a mistake. Example fGHO in fluid different price on different chains (to be confirmed)
 TODO: Another review of fee legs. Now without is_fee (or equivalent semantics), residual same-asset differences in transfer-like events (onchain with gas) require partial leg decomposition, and the current engine can only classify whole legs, causing misclassification of internal transfers as taxable disposals/acquisitions.
-
 TODO: Hide checkboxes for raw events that already have a correction.
 TODO: In tests there are two or three places where test instances LedgerEvents are generated. Those should be combined into one helper.
 TODO: Tests are using the same rng seed (0). Seed should be randomized during each test run and printed for duplication. Probably there is some pytest plugin for this.
-TODO: Maybe change how sources of replacement are rendered now it's the same as in other items
-TODO: Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok. Now I think I have partial composition. Still maybe this should be made more verbose
+TODO: Maybe split TS types - different one for LaneItem different one for rendered items. Inheritance vs. composition. Still, due to structure, inheritance seems ok. Now I think I have partial composition. Still, maybe this should be made more verbose
 TODO: Revaluate idea of replace selectedEventOriginKeys / getSelectedEvents with one map like it was before.
 TODO: Thing to think about: Should page.tsx transform data to for format that is used by the Events component? It is transformed further there.
-TODO: A lot of duplication in handler of API communication in Event, also not sure about error handling in ui/src/api/core.ts
-TODO: Backups of databases they are starting to contain manual work
+TODO: A lot of duplication in handler of API communication in the Event component, also not sure about error handling in ui/src/api/core.ts
+TODO: Backups of databases they are starting to contain manual work.
 TODO: Should I collapse ETH fee when there is an operation that is sending / receiving ETH?
 TODO: Review Kraken importer after event type removal and wallets structure changes
 TODO: When turning corrections lane on and off virtualized list gets a bit broken. Something about height computation.
-TODO: db init code for multiple dbs is in many places of the code. Also there is different one for main and for api.
-TODO: Review setup of databases in tests. Especially now we have one setup for api tests and one for other. Looks bad.
+TODO: Review the setup of databases in tests. Especially now we have one setup for api tests and one for other. Looks bad.
 TODO: Generally tests suck, think about how to improve it.
 TODO: I think some accounts I flagged as mine are actually not mine, but Coinbase
-TODO: tooltip on OrginIcon doesn't work for corrections - probably doesn't have to? Or maybe it should. Actually, does the correction have a place where they are added? Don't know what I meant here
 TODO: code that creates legs for native and erc20 is similar to one for native transfers we could improve
 TODO: Is there a possibility to have a whitelist of commands for codex?
 TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
@@ -77,8 +66,13 @@ TODO: Features from WEALTH_MODEL.md
 TODO: Search function in the UI, tx hash
 TODO: Tracking of BTC through some tracker. This probably could be skipped as I'm doing enough transactions, and it's too much work.
 TODO: Wallet tracking loses Ethereum intra-block ordering. Moralis cache has the correct order for same-block transactions using block_number and transaction_index, but once transactions are converted into LedgerEvents that metadata is dropped. Later rebuild stages sort only by timestamp and then lexicographically by hash/origin, so same-block events can be replayed in the wrong order. In this case the ETH-T -> ETH swap is processed before the prior tx that credits 7 ETH-T, which creates a false insufficient-balance failure in wallet tracking. https://etherscan.io/tx/0x9795e90368cf6e4edacf33e06d455cb94cc4983f10ea0b09e050a899adf82488 and https://etherscan.io/tx/0x41b99a85b5b52e1ef62ab9de87a2a74fb5f779175a0e0eb0165b8dc6904b6156
-TODO: Solve the problem of rounding on Coinbase.
 TODO: In private.txt have ARB tx that does a lot of operations on vfat / pancake and liquidity
+TODO: Coindesk code is pretty bad, vibed, and I was doing some experiments with functional programming.
+TODO: Coinbase rounding problem. Probably nothing to fix. Question it should be fixed with replacing tx or with extra correction tx. The second one more visible?
+TODO: Coinbase handling should be improved. For now, it's plumbed with extra corrections and fixing can wait.
+  - Buying currency paying with CC. Then there is one negative for EUR and a positive for crypto. This breaks wallet tracking.
+  - There are few to / from the pro-account, and this also seems to be a problem. Dates to review 2022-02-16 and 2022-08-04. I think I bought 10.087326USDT with EUR moved a bit, then a few months later converted it to ETH
+  - There is also a mysterious 0.18 EUR missing on 2023-01-12.
 
 Codex commands
 ------------------

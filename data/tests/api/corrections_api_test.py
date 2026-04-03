@@ -32,7 +32,6 @@ class CorrectionPayload(TypedDict, total=False):
     timestamp: str
     sources: list[CorrectionSourcePayload]
     legs: list[CorrectionLegPayload]
-    price_per_token: str | None
     note: str | None
 
 
@@ -82,7 +81,6 @@ def _opening_balance_payload() -> CorrectionPayload:
                 "is_fee": False,
             }
         ],
-        "price_per_token": "123.45",
         "note": "opening balance",
     }
 
@@ -125,8 +123,23 @@ def test_post_creates_opening_balance(
     assert response.status_code == 201
     created = response.json()
     assert created["sources"] == []
-    assert created["price_per_token"] == "123.45"
     assert created["note"] == "opening balance"
+
+
+def test_post_rejects_legacy_price_per_token_field(client: TestClient) -> None:
+    response = client.post(
+        "/corrections",
+        json={
+            **_opening_balance_payload(),
+            "price_per_token": "123.45",
+        },
+    )
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert len(detail) == 1
+    assert detail[0]["loc"][-1] == "price_per_token"
+    assert detail[0]["type"] == "extra_forbidden"
 
 
 def test_post_creates_replacement(
@@ -152,7 +165,6 @@ def test_post_creates_replacement(
     assert created["timestamp"] == payload["timestamp"]
     assert created["sources"] == payload["sources"]
     assert len(created["legs"]) == 3
-    assert "price_per_token" not in created
     assert created["note"] == "replacement note"
 
 

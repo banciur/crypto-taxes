@@ -66,7 +66,6 @@ export function OpeningBalanceEditorModal({
   const [assetId, setAssetId] = useState("");
   const [accountChainId, setAccountChainId] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [pricePerToken, setPricePerToken] = useState("");
   const [note, setNote] = useState("");
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
@@ -104,20 +103,6 @@ export function OpeningBalanceEditorModal({
       return;
     }
 
-    const normalizedPricePerToken =
-      pricePerToken.trim() === "" ? null : normalizeDecimalInput(pricePerToken);
-    if (normalizedPricePerToken === null && pricePerToken.trim() !== "") {
-      setValidationMessage("Price per token must be a valid decimal.");
-      return;
-    }
-    if (
-      normalizedPricePerToken !== null &&
-      getDecimalStringSign(normalizedPricePerToken) < 0
-    ) {
-      setValidationMessage("Price per token must be zero or positive.");
-      return;
-    }
-
     const legs: LedgerCorrectionDraftLeg[] = [
       {
         assetId: assetId.trim(),
@@ -133,9 +118,6 @@ export function OpeningBalanceEditorModal({
       sources: [],
       legs,
     };
-    if (normalizedPricePerToken !== null) {
-      payload.pricePerToken = normalizedPricePerToken;
-    }
     const trimmedNote = note.trim();
     if (trimmedNote) {
       payload.note = trimmedNote;
@@ -212,17 +194,6 @@ export function OpeningBalanceEditorModal({
             value={quantity}
             disabled={isSaving}
             onChange={(event) => setQuantity(event.target.value)}
-          />
-        </Form.Group>
-
-        <Form.Group controlId="opening-balance-price">
-          <Form.Label>Price Per Token</Form.Label>
-          <Form.Control
-            type="text"
-            value={pricePerToken}
-            disabled={isSaving}
-            onChange={(event) => setPricePerToken(event.target.value)}
-            placeholder="Optional"
           />
         </Form.Group>
 

@@ -74,7 +74,6 @@ This document captures the currently implemented domain for modeling crypto ledg
   - `timestamp: datetime`
   - `sources: list[EventOrigin]`
   - `legs: list[LedgerLeg]`
-  - `price_per_token: Decimal | None`
   - `note: str | None`
   - Shape semantics:
     - `sources != []` and `legs == []` => discard correction
@@ -107,7 +106,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Stakewise CSV rewards are imported onto the Ethereum wallet configured via `STAKING_REWARDS_WALLET_ADDRESS`
 - Lido CSV rewards are imported from `artifacts/lido.csv` onto the same Ethereum wallet configured via `STAKING_REWARDS_WALLET_ADDRESS`
 - Ingestion corrections are applied in this order: validate unified source ownership, remove claimed raw events, emit synthetic corrected events for corrections with legs, then sort once before persisting corrected events by `timestamp`, `event_origin.location`, and `event_origin.external_id`.
-- Corrections are persisted in the corrections DB as active header rows plus source rows plus leg rows, with a separate source-level auto-suppression table. Deleting a source-backed correction hard-deletes the correction and frees the source for explicit manual reuse while preserving auto-suppression for future importer runs; deleting a source-less opening-balance correction is a plain hard delete.
+- Corrections are persisted in the corrections DB as active header rows plus source rows plus leg rows, with a separate source-level auto-suppression table. Deleting a source-backed correction hard-deletes the correction and frees the source for explicit manual reuse while preserving auto-suppression for future importer runs; deleting a source-less opening-balance correction is a plain hard deletion.
 - Validation is strict: every claimed source must match exactly one raw event, and a raw event cannot be consumed by more than one active correction source.
 - Moralis possible-spam auto-generation creates discard corrections and respects active source claims plus source-level auto-suppressions so manually removed corrections are not recreated automatically.
 - The UI can author discard, replacement, and opening-balance corrections through the unified corrections API.

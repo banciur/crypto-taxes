@@ -24,7 +24,6 @@ class LedgerCorrectionOrm(TimestampAuditMixin, CorrectionsBase):
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    price_per_token: Mapped[Decimal | None] = mapped_column(DecimalAsString, nullable=True)
     note: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 
     sources: Mapped[list["LedgerCorrectionSourceOrm"]] = relationship(
@@ -95,7 +94,6 @@ class LedgerCorrectionRepository:
     def create(self, correction: LedgerCorrectionDraft) -> LedgerCorrection:
         orm_correction = LedgerCorrectionOrm(
             timestamp=correction.timestamp,
-            price_per_token=correction.price_per_token,
             note=correction.note,
             **LedgerCorrectionOrm.new_timestamp_audit_values(),
         )
@@ -191,6 +189,5 @@ class LedgerCorrectionRepository:
             timestamp=ensure_utc_datetime(row.timestamp),
             sources=frozenset(sources),
             legs=frozenset(legs),
-            price_per_token=row.price_per_token,
             note=row.note,
         )

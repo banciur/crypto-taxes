@@ -106,12 +106,6 @@ export function LedgerCorrectionCard({
 
         {item.legs.length > 0 && <LedgerLegList legs={item.legs} />}
 
-        {item.sources.length === 0 && item.pricePerToken !== undefined && (
-          <div className="mt-3 small text-muted">
-            Price per token: {item.pricePerToken}
-          </div>
-        )}
-
         {item.note?.trim() && (
           <div className="mt-3 small text-muted">{item.note}</div>
         )}

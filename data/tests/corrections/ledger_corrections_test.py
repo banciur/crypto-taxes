@@ -68,7 +68,6 @@ def test_apply_ingestion_corrections_handles_discard_replacement_and_opening_bal
     opening_balance = LedgerCorrection(
         timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc),
         legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("0.5"), account_chain_id=LEDGER_WALLET)]),
-        price_per_token=Decimal("0"),
         note="opening balance note",
     )
     discard = LedgerCorrection(

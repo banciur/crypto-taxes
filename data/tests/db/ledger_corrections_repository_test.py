@@ -45,7 +45,6 @@ def _opening_balance(timestamp: datetime) -> LedgerCorrectionDraft:
     return LedgerCorrectionDraft(
         timestamp=timestamp,
         legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("0.5"), account_chain_id=LEDGER_WALLET)]),
-        price_per_token=Decimal("1.23"),
     )
 
 
