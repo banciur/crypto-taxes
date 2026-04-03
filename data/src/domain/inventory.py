@@ -7,13 +7,15 @@ from decimal import Decimal
 from typing import Iterable
 from uuid import UUID
 
+from errors import CryptoTaxesError
 from pydantic_base import StrictBaseModel
 
-from .ledger import AcquisitionLot, AssetId, DisposalLink, LedgerEvent, LedgerLeg
+from .acquisition_disposal import AcquisitionLot, DisposalLink
+from .ledger import AssetId, LedgerEvent, LedgerLeg
 from .pricing import PriceProvider
 
 
-class InventoryError(Exception):
+class InventoryError(CryptoTaxesError):
     def __init__(
         self,
         message: str,

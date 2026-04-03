@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 
 from pydantic import Field, StringConstraints, field_validator
 
+from errors import CryptoTaxesError
 from pydantic_base import StrictBaseModel
 
 AssetId = NewType("AssetId", str)
@@ -58,9 +59,40 @@ class LedgerLeg(StrictBaseModel):
         return value
 
 
+LegIdentity = tuple[AccountChainId, AssetId, bool]
+
+
+class DuplicateLegIdentityError(CryptoTaxesError, ValueError):
+    def __init__(self, duplicates: tuple[LegIdentity, ...]) -> None:
+        self.duplicates = duplicates
+        duplicates_summary = ", ".join(
+            f"account={account_chain_id} asset={asset_id} is_fee={is_fee}"
+            for account_chain_id, asset_id, is_fee in duplicates
+        )
+        super().__init__(f"AbstractEvent.legs contains duplicate leg identities: {duplicates_summary}")
+
+
 class AbstractEvent(StrictBaseModel, ABC):
     timestamp: datetime
     legs: list[LedgerLeg] = Field(min_length=1)
+
+    @field_validator("legs")
+    @classmethod
+    def _validate_unique_leg_identity(cls, legs: list[LedgerLeg]) -> list[LedgerLeg]:
+        seen_leg_keys: set[LegIdentity] = set()
+        duplicate_leg_keys: set[LegIdentity] = set()
+
+        for leg in legs:
+            leg_key = (leg.account_chain_id, leg.asset_id, leg.is_fee)
+            if leg_key in seen_leg_keys:
+                duplicate_leg_keys.add(leg_key)
+                continue
+            seen_leg_keys.add(leg_key)
+
+        if duplicate_leg_keys:
+            raise DuplicateLegIdentityError(tuple(sorted(duplicate_leg_keys)))
+
+        return legs
 
 
 class LedgerEvent(AbstractEvent):
@@ -69,17 +101,3 @@ class LedgerEvent(AbstractEvent):
     event_origin: EventOrigin
     ingestion: Annotated[str, Field(min_length=1)]
     note: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)] | None = None
-
-
-class AcquisitionLot(StrictBaseModel):
-    id: LotId = LotId(Field(default_factory=uuid4))
-    acquired_leg_id: LegId
-    cost_per_unit: Annotated[Decimal, Field(ge=0)]
-
-
-class DisposalLink(StrictBaseModel):
-    id: DisposalId = DisposalId(Field(default_factory=uuid4))
-    disposal_leg_id: LegId
-    lot_id: LotId
-    quantity_used: Annotated[Decimal, Field(gt=0)]
-    proceeds_total: Annotated[Decimal, Field(ge=0)]

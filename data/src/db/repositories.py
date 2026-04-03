@@ -7,12 +7,11 @@ from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from db import models
+from domain.acquisition_disposal import AcquisitionLot, DisposalLink
 from domain.ledger import (
     AccountChainId,
-    AcquisitionLot,
     AssetId,
     DisposalId,
-    DisposalLink,
     EventLocation,
     EventOrigin,
     LedgerEvent,

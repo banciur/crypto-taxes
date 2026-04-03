@@ -85,5 +85,6 @@
 - Some ORM tables may include DB-only audit fields such as `created_at` and `updated_at`. Keep them out of domain and API models unless they are intentionally part of the exposed contract.
 - `EventOrigin` (`origin_location` + `origin_external_id`) is the stable unique identifier of a raw ledger event. Design event identity and cross-event references around it.
 - Do not design event relationships around transient event UUIDs or leg UUIDs. Those are internal identifiers that may change across re-imports or rebuilds.
-- IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`), but these UUIDs are internal object references, not stable upstream event identity.
+- `AbstractEvent` enforces that event legs are unique by `(account_chain_id, asset_id, is_fee)`. Treat duplicates as invalid domain input rather than silently merging them.
+- IDs: entities expose `id: UUID`. Keep cross-layer references based on stable domain identity such as `EventOrigin` and canonical leg identity fields instead of transient event or leg UUIDs.
 - `AccountRegistry` is the canonical merged account catalog. Keep address-backed wallet resolution (`resolve_owned_id`) separate from built-in system exchange accounts, which are selectable in the UI but do not participate in wallet-address ownership lookup. System account IDs are location-derived (`COINBASE:coinbase`, `KRAKEN:kraken`), so location/address can be recovered from `account_chain_id`.

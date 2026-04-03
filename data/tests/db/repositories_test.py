@@ -14,10 +14,9 @@ from db.repositories import (
     LedgerEventRepository,
     TaxEventRepository,
 )
+from domain.acquisition_disposal import AcquisitionLot, DisposalLink
 from domain.ledger import (
-    AcquisitionLot,
     DisposalId,
-    DisposalLink,
     EventLocation,
     EventOrigin,
     LedgerEvent,

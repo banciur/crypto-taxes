@@ -6,7 +6,8 @@ from decimal import Decimal
 from typing import Iterable, cast
 
 from domain.inventory import InventoryResult
-from domain.ledger import AcquisitionLot, DisposalId, DisposalLink, LedgerEvent, LedgerLeg, LegId, LotId
+from domain.acquisition_disposal import AcquisitionLot, DisposalLink
+from domain.ledger import DisposalId, LedgerEvent, LedgerLeg, LegId, LotId
 from domain.tax_event import TaxEvent, TaxEventKind
 
 from .formatting import format_currency

@@ -35,13 +35,22 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 - AcquisitionLot
   - `id: UUID`
-  - `acquired_leg_id: UUID`
+  - `event_origin: EventOrigin`
+  - `account_chain_id: str`
+  - `asset_id: str`
+  - `is_fee: bool`
+  - `timestamp: datetime`
+  - `quantity_acquired: Decimal`
   - `cost_per_unit: Decimal`
 
 - DisposalLink
   - `id: UUID`
-  - `disposal_leg_id: UUID`
   - `lot_id: UUID`
+  - `event_origin: EventOrigin`
+  - `account_chain_id: str`
+  - `asset_id: str`
+  - `is_fee: bool`
+  - `timestamp: datetime`
   - `quantity_used: Decimal`
   - `proceeds_total: Decimal`
 
