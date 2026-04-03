@@ -21,7 +21,7 @@ from domain.ledger import (
     WalletAddress,
 )
 from services.moralis import MoralisService, SyncMode
-from utils.misc import ensure_utc_datetime
+from utils.misc import decimal_from_atomic_value, ensure_utc_datetime
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ def _decimal_from_atomic_value(base_value: str, decimals: str) -> Decimal:
     base_dec = _parse_decimal_string(raw_value=base_value, field_name="base_value", require_integral=True)
     decimals_dec = _parse_decimal_string(raw_value=decimals, field_name="decimals", require_integral=True)
 
-    return base_dec / (Decimal(10) ** decimals_dec)
+    return decimal_from_atomic_value(base_dec, decimals_dec)
 
 
 def _obtain_value(transfer: Mapping[str, Any]) -> Decimal:

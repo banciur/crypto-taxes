@@ -37,6 +37,7 @@ from domain.ledger import LedgerEvent
 from domain.wallet_tracking import WalletProjector
 from importers.coinbase import CoinbaseImporter
 from importers.kraken import KrakenImporter
+from importers.lido import LidoImporter
 from importers.moralis import MoralisImporter
 from importers.stakewise import StakewiseImporter
 from services.coinbase import CoinbaseService
@@ -50,6 +51,8 @@ from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, r
 
 logger = logging.getLogger(__name__)
 STAKEWISE_CSV_GLOB = "Stakewise*.csv"
+LIDO_CSV_PATH = ARTIFACTS_DIR / "lido.csv"
+STAKING_REWARDS_WALLET_ENV_VAR = "STAKING_REWARDS_WALLET_ADDRESS"
 
 
 def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int) -> PriceService:
@@ -67,7 +70,7 @@ def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int)
 
 def load_stakewise_events(*, wallet_address: str | None) -> list[LedgerEvent]:
     if not wallet_address:
-        logger.info("Skipping Stakewise import because STAKEWISE_WALLET_ADDRESS is not configured")
+        logger.info("Skipping Stakewise import because %s is not configured", STAKING_REWARDS_WALLET_ENV_VAR)
         return []
 
     paths = sorted(ARTIFACTS_DIR.glob(STAKEWISE_CSV_GLOB))
@@ -80,6 +83,23 @@ def load_stakewise_events(*, wallet_address: str | None) -> list[LedgerEvent]:
     started = perf_counter()
     events = importer.load_events()
     logger.info("Imported %d Stakewise events in %.2fs", len(events), perf_counter() - started)
+    return events
+
+
+def load_lido_events(*, wallet_address: str | None) -> list[LedgerEvent]:
+    if not wallet_address:
+        logger.info("Skipping Lido import because %s is not configured", STAKING_REWARDS_WALLET_ENV_VAR)
+        return []
+
+    if not LIDO_CSV_PATH.exists():
+        logger.info("No Lido CSV found at %s", LIDO_CSV_PATH)
+        return []
+
+    logger.info("Importing Lido events from %s", LIDO_CSV_PATH)
+    importer = LidoImporter(LIDO_CSV_PATH, wallet_address=wallet_address)
+    started = perf_counter()
+    events = importer.load_events()
+    logger.info("Imported %d Lido events in %.2fs", len(events), perf_counter() - started)
     return events
 
 
@@ -139,7 +159,8 @@ def run(
     kraken_events = kraken_importer.load_events()
     logger.info("Imported %d Kraken events in %.2fs", len(kraken_events), perf_counter() - kraken_started)
 
-    stakewise_events = load_stakewise_events(wallet_address=settings.stakewise_wallet_address)
+    stakewise_events = load_stakewise_events(wallet_address=settings.staking_rewards_wallet_address)
+    lido_events = load_lido_events(wallet_address=settings.staking_rewards_wallet_address)
 
     logger.info("Importing Moralis events")
     moralis_started = perf_counter()
@@ -151,7 +172,7 @@ def run(
     coinbase_events = coinbase_importer.load_events()
     logger.info("Imported %d Coinbase events in %.2fs", len(coinbase_events), perf_counter() - coinbase_started)
 
-    events = [*kraken_events, *stakewise_events, *moralis_events, *coinbase_events]
+    events = [*kraken_events, *stakewise_events, *lido_events, *moralis_events, *coinbase_events]
     events.sort(key=lambda e: e.timestamp)
     logger.info("Persisting %d raw events", len(events))
     persist_started = perf_counter()
@@ -206,7 +227,7 @@ def run(
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Run Kraken, Stakewise, Coinbase, and Moralis importers.")
+    parser = argparse.ArgumentParser(description="Run Kraken, Stakewise, Lido, Coinbase, and Moralis importers.")
     parser.add_argument("--csv", type=Path, default=ARTIFACTS_DIR / "kraken-ledger.csv")
     parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "kraken_prices")
     parser.add_argument("--market", default="kraken")

@@ -2,15 +2,16 @@ First stage: compute German taxes
 
 --- manual review of existing transactions is now possible \o/
 TODO: Need automation to rerun computation (src/main.py) through the UI see if https://fastapi.tiangolo.com/tutorial/background-tasks/ could be useful.
-TODO: Potential problem Coinbase / Moralis / manual adjustment assed_id sometimes it's cbETH, sometimes it's CBETH
+TODO: Potential problem Coinbase / Moralis on Coinbase it's CBETH, on Moralis it's cbETH.
+TODO: There is a pattern where Coinbase is incorrectly parsed when I buy crypto paying with card? I see only -x EUR example in priv.txt
 
-TODO: Import data from Lido
 TODO: Review disposal and acquisition creation.
 TODO: Probably need smarter price service
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 
 Review the order of todos
 -----------------
+TODO: In few places there are functions like _decimal_from_atomic_value unify them into one place. There is decimal_from_atomic_value in data/src/utils/misc.py
 TODO: Idea to review. Add the ability to quickly navigate to the first failing transaction. Maybe add date of it to summary?
 TODO: Add value of printed balances
 TODO: Implement more sophisticated logic for tokens to handle this logic when a token with the same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
