@@ -38,6 +38,7 @@ class EventOrigin(StrictBaseModel):
     external_id: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 
 
+# TODO: Idea maybe this should be just a deterministic hash and stored further downstream
 @dataclass(frozen=True, order=True)
 class LegKey:
     account_chain_id: AccountChainId

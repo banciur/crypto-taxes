@@ -9,7 +9,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 ## Scope
 
 - Represent basic events with legs, without enforcing double-entry balancing.
-- Minimal inventory structures for lots and disposals.
+- Minimal acquisition/disposal projection structures.
 - Current-state wallet tracking from corrected ledger events.
 - Unified price snapshots for crypto and fiat pairs.
 - First take on tax calculation
@@ -101,12 +101,12 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 ## Behavioral Notes
 
-- Inventory processing is automated: the `InventoryEngine` creates `AcquisitionLot`s and `DisposalLink`s from ordered events using FIFO matching.
+- Acquisition/disposal projection is automated: the `AcquisitionDisposalProjector` creates `AcquisitionLot`s and `DisposalLink`s from ordered events using FIFO matching.
 - EUR legs on an event take precedence for valuing acquisitions/disposals. Only when no unambiguous EUR leg exists do we fall back to the injected `PriceProvider` for EUR pricing.
 - Unbalanced events are allowed.
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
-- Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine. Open lots are tracked per asset (not per account) and matched FIFO.
+- Acquisition/disposal projection assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the projector. Open lots are tracked per asset (not per account) and matched FIFO.
 - Internal account-to-account transfers are identified structurally (same-asset non-fee legs netting to zero inside one event) and do not create lots or disposal links.
 - Each event captures `event_origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 - `LedgerEvent.note` is optional display metadata. Moralis populates it from a trimmed upstream `method_label` when that label is available.
@@ -135,12 +135,12 @@ This document captures the currently implemented domain for modeling crypto ledg
 ## Current Capabilities
 
 - Model simple acquisitions/disposals with per-leg accounts and optional fee legs.
-- Automatically create lots for acquisitions and link disposals via `InventoryEngine.process` (FIFO only; other lot policies are future work).
+- Automatically create lots for acquisitions and link disposals via `AcquisitionDisposalProjector.project` (FIFO only; other lot policies are future work).
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
 - Wallet tracking rebuilds a current-state per-wallet/per-asset projection from corrected events and persists it in SQLite.
-- `GET /wallet-tracking` exposes the current wallet-tracking snapshot with `NOT_RUN`/`COMPLETED`/`FAILED` semantics.
+- `GET /wallet-projection` exposes the current wallet projection snapshot with `NOT_RUN`/`COMPLETED`/`FAILED` semantics.
 - Tax calculations currently focus on disposal links.
-- CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet-tracking snapshot, and then stops before later inventory/tax stages in the current implementation. The raw-event import step currently combines Kraken, Stakewise, and Lido CSVs, Coinbase Track history, Moralis on-chain history.
+- CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet projection snapshot, and then stops before later inventory/tax stages in the current implementation. The raw-event import step currently combines Kraken, Stakewise, and Lido CSVs, Coinbase Track history, Moralis on-chain history.
 
 ### User Interface
 
@@ -148,7 +148,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 - The UI can author and remove unified corrections: discard, replacement, and opening-balance.
 - After correction mutations, the UI refreshes the server-rendered lane data immediately.
 - Corrected pipeline outputs still require a manual rerun after correction mutations.
-- Wallet-tracking backend delivery exists through `GET /wallet-tracking`, but the UI does not render that state yet.
+- Wallet projection backend delivery exists through `GET /wallet-projection`, and the UI renders that state in the page header section.
 
 ---
 

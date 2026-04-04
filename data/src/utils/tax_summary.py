@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Iterable, cast
 
 from domain.acquisition_disposal import AcquisitionLot, DisposalLink
-from domain.inventory import InventoryResult
+from domain.acquisition_disposal_projection import AcquisitionDisposalProjection
 from domain.ledger import DisposalId, LedgerEvent, LotId
 from domain.tax_event import TaxEvent, TaxEventKind
 
@@ -14,15 +14,15 @@ from .formatting import format_currency
 
 
 def generate_tax_events(
-    inventory_result: InventoryResult, events: Iterable[LedgerEvent], *, tax_free_days: int = 365
+    projection: AcquisitionDisposalProjection, events: Iterable[LedgerEvent], *, tax_free_days: int = 365
 ) -> list[TaxEvent]:
     """Create taxable events from disposals and reward acquisitions."""
-    lots_by_id: dict[LotId, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
+    lots_by_id: dict[LotId, AcquisitionLot] = {lot.id: lot for lot in projection.acquisition_lots}
     tax_free_threshold = timedelta(days=tax_free_days)
     tax_events: list[TaxEvent] = []
     _ = events
 
-    for link in inventory_result.disposal_links:
+    for link in projection.disposal_links:
         lot = lots_by_id[link.lot_id]
 
         if (link.timestamp - lot.timestamp) >= tax_free_threshold:
@@ -54,14 +54,14 @@ class WeeklyTaxSummary:
 
 def compute_weekly_tax_summary(
     tax_events: Iterable[TaxEvent],
-    inventory_result: InventoryResult,
+    projection: AcquisitionDisposalProjection,
     events: Iterable[LedgerEvent],
 ) -> list[WeeklyTaxSummary]:
-    """Aggregate taxable events per ISO week, recomputing valuations from inventory and events."""
+    """Aggregate taxable events per ISO week, recomputing valuations from the acquisition/disposal projection."""
     weekly_totals: dict[date, tuple[int, Decimal, Decimal, Decimal]] = {}
 
-    lots_by_id: dict[LotId, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
-    links_by_id: dict[DisposalId, DisposalLink] = {link.id: link for link in inventory_result.disposal_links}
+    lots_by_id: dict[LotId, AcquisitionLot] = {lot.id: lot for lot in projection.acquisition_lots}
+    links_by_id: dict[DisposalId, DisposalLink] = {link.id: link for link in projection.disposal_links}
     _ = events
 
     for tax_event in tax_events:

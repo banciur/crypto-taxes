@@ -6,17 +6,17 @@ import { useState } from "react";
 import { Badge, Button, Card, Collapse } from "react-bootstrap";
 
 import type {
-  WalletTrackingState,
-  WalletTrackingStatus,
-} from "@/types/walletTracking";
-import { WalletTrackingPanel } from "./WalletTrackingPanel";
+  WalletProjectionState,
+  WalletProjectionStatus,
+} from "@/types/walletProjection";
+import { WalletProjectionPanel } from "./WalletProjectionPanel";
 
-type WalletTrackingSectionProps = {
-  state: WalletTrackingState;
+type WalletProjectionSectionProps = {
+  state: WalletProjectionState;
 };
 
 const STATUS_META: Record<
-  WalletTrackingStatus,
+  WalletProjectionStatus,
   {
     label: string;
     badge: "secondary" | "success" | "danger";
@@ -36,7 +36,9 @@ const STATUS_META: Record<
   },
 };
 
-export function WalletTrackingSection({ state }: WalletTrackingSectionProps) {
+export function WalletProjectionSection({
+  state,
+}: WalletProjectionSectionProps) {
   const [open, setOpen] = useState(false);
   const statusMeta = STATUS_META[state.status];
 
@@ -50,7 +52,7 @@ export function WalletTrackingSection({ state }: WalletTrackingSectionProps) {
           aria-expanded={open}
           className="w-100 d-flex align-items-center gap-2 px-3 px-lg-4 py-2 text-decoration-none text-start text-body"
         >
-          <span className="fw-semibold">Wallet tracking</span>
+          <span className="fw-semibold">Wallet projection</span>
           <Badge bg={statusMeta.badge} className="ms-auto">
             {statusMeta.label}
           </Badge>
@@ -62,7 +64,7 @@ export function WalletTrackingSection({ state }: WalletTrackingSectionProps) {
       <Collapse in={open}>
         <div>
           <Card.Body className="px-3 pb-3 pt-0 px-lg-4 pb-lg-4">
-            <WalletTrackingPanel state={state} />
+            <WalletProjectionPanel state={state} />
           </Card.Body>
         </div>
       </Collapse>

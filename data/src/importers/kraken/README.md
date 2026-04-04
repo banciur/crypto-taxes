@@ -1,6 +1,6 @@
 # Kraken Ledger Importer
 
-`KrakenImporter` translates the raw CSV export from Kraken’s “Ledger” report into domain `LedgerEvent`s. The importer normalizes timestamps to UTC, converts numerics to `Decimal`, and collapses all Kraken sub-wallets into a single `account_chain_id="KRAKEN:kraken"` (spot, futures credit, staking, etc. are treated as one wallet in our tax model). Asset aliases such as `DOT28.S`, `USDC.M`, or `ETH2` are mapped to their canonical tickers up front so downstream systems see consistent asset IDs. While the importer will eventually sit alongside other data sources, you can already exercise it via `scripts/run_kraken_inventory.py` (`uv run scripts/run_kraken_inventory.py --csv path/to/ledger.csv`).
+`KrakenImporter` translates the raw CSV export from Kraken’s “Ledger” report into domain `LedgerEvent`s. The importer normalizes timestamps to UTC, converts numerics to `Decimal`, and collapses all Kraken sub-wallets into a single `account_chain_id="KRAKEN:kraken"` (spot, futures credit, staking, etc. are treated as one wallet in our tax model). Asset aliases such as `DOT28.S`, `USDC.M`, or `ETH2` are mapped to their canonical tickers up front so downstream systems see consistent asset IDs. Two helper scripts live under `data/scripts/kraken/`:
 
 We expect most refids to be handled by the cases below; unknown patterns still raise so we can add explicit handling later.
 
@@ -31,7 +31,7 @@ The input CSV comes from Kraken’s web UI (“Ledger” report export). Each ro
 #### Internal staking transfers → skip
 
 - Kraken spot↔staking moves show up as two separate refids (e.g., `spottostaking`, `stakingfromspot`, `stakingtospot`, `spotfromstaking`).
-- A preprocessing pass pairs rows by normalized asset/amount within a five-day window; matched pairs are dropped entirely so inventory sees a single consolidated Kraken wallet.
+- A preprocessing pass pairs rows by normalized asset/amount within a five-day window; matched pairs are dropped entirely so downstream projections see a single consolidated Kraken wallet.
 - Unmatched rows are logged so they can be inspected manually.
 
 ### Single-row groups

@@ -1,5 +1,5 @@
 # flake8: noqa: E402
-# uv run scripts/kraken_event_probe.py
+# uv run scripts/kraken/kraken_event_probe.py
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator, Sequence
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PROJECT_ROOT.parent
 ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 SRC_DIR = PROJECT_ROOT / "src"

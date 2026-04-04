@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from db.models import Base, DecimalAsString
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin
-from domain.wallet_tracking import (
+from domain.wallet_projection import (
     WalletBalance,
     WalletTrackingIssue,
     WalletTrackingState,
@@ -48,7 +48,7 @@ class WalletTrackingIssueOrm(Base):
     missing_balance: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
 
 
-class WalletTrackingRepository:
+class WalletProjectionRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 

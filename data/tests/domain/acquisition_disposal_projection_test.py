@@ -5,7 +5,10 @@ from decimal import Decimal
 import pytest
 
 from accounts import KRAKEN_ACCOUNT_ID
-from domain.inventory import InventoryEngine, InventoryError
+from domain.acquisition_disposal_projection import (
+    AcquisitionDisposalProjectionError,
+    AcquisitionDisposalProjector,
+)
 from domain.ledger import AccountChainId, AssetId, LedgerLeg
 from tests.constants import ETH, EUR
 from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
@@ -13,7 +16,7 @@ from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
 WALLET_ID = AccountChainId("wallet")
 
 
-def test_fifo(inventory_engine: InventoryEngine) -> None:
+def test_fifo(acquisition_disposal_projector: AcquisitionDisposalProjector) -> None:
     t1_amount_bought = Decimal("1.0")
     t1_amount_spent = Decimal("2000")
     events = [
@@ -58,7 +61,7 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
         )
     )
 
-    result = inventory_engine.process(events)
+    result = acquisition_disposal_projector.project(events)
 
     assert len(result.acquisition_lots) == 2
     assert len(result.disposal_links) == 3
@@ -112,7 +115,7 @@ def test_fifo(inventory_engine: InventoryEngine) -> None:
     assert dl_3.proceeds_total == d3_expected_quantity * (t4_amount_bought / t4_amount_spent)
 
 
-def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> None:
+def test_obtaining_price_from_provider(acquisition_disposal_projector: AcquisitionDisposalProjector) -> None:
     t1_amount_bought = Decimal("1.0")
     t1_amount_spent = Decimal("2000")
     events = [
@@ -137,7 +140,7 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
         )
     )
 
-    result = inventory_engine.process(events)
+    result = acquisition_disposal_projector.project(events)
 
     assert len(result.acquisition_lots) == 2
     assert len(result.disposal_links) == 1
@@ -149,7 +152,7 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
     assert lot_2.is_fee is False
     assert lot_2.timestamp == t2_time
     assert lot_2.quantity_acquired == t2_amount_dropped
-    assert lot_2.cost_per_unit == inventory_engine._price_provider.rate("SPK", "EUR", t2_time)
+    assert lot_2.cost_per_unit == acquisition_disposal_projector._price_provider.rate("SPK", "EUR", t2_time)
 
     disposal = result.disposal_links[0]
     assert disposal.event_origin == events[1].event_origin
@@ -158,11 +161,13 @@ def test_obtaining_price_from_provider(inventory_engine: InventoryEngine) -> Non
     assert disposal.is_fee is True
     assert disposal.timestamp == t2_time
     assert disposal.quantity_used == t2_amount_fee
-    fee_rate = inventory_engine._price_provider.rate("ETH", "EUR", t2_time)
+    fee_rate = acquisition_disposal_projector._price_provider.rate("ETH", "EUR", t2_time)
     assert disposal.proceeds_total == fee_rate * disposal.quantity_used
 
 
-def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) -> None:
+def test_transfers_dont_create_acquisition(
+    acquisition_disposal_projector: AcquisitionDisposalProjector,
+) -> None:
     hardware_wallet = AccountChainId("ledger")
     buy_amount = Decimal("1.5")
     transfer_amount = Decimal("0.5")
@@ -182,7 +187,7 @@ def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) ->
         ),
     ]
 
-    result = inventory_engine.process(events)
+    result = acquisition_disposal_projector.project(events)
 
     assert len(result.acquisition_lots) == 1
     acquisition_lot = result.acquisition_lots[0]
@@ -197,7 +202,7 @@ def test_transfers_dont_create_acquisition(inventory_engine: InventoryEngine) ->
     assert result.disposal_links == []
 
 
-def test_disposal_without_acquisition_raises(inventory_engine: InventoryEngine) -> None:
+def test_disposal_without_acquisition_raises(acquisition_disposal_projector: AcquisitionDisposalProjector) -> None:
     events = [
         make_event(
             legs=[
@@ -207,5 +212,5 @@ def test_disposal_without_acquisition_raises(inventory_engine: InventoryEngine) 
         )
     ]
 
-    with pytest.raises(InventoryError):
-        inventory_engine.process(events)
+    with pytest.raises(AcquisitionDisposalProjectionError):
+        acquisition_disposal_projector.project(events)

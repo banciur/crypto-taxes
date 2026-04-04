@@ -7,14 +7,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from accounts import KRAKEN_ACCOUNT_ID
-from db.wallet_tracking import (
+from db.wallet_projection import (
+    WalletProjectionRepository,
     WalletTrackingBalanceOrm,
     WalletTrackingIssueOrm,
-    WalletTrackingRepository,
     WalletTrackingStateOrm,
 )
 from domain.ledger import EventLocation, EventOrigin
-from domain.wallet_tracking import (
+from domain.wallet_projection import (
     WalletBalance,
     WalletTrackingIssue,
     WalletTrackingState,
@@ -78,16 +78,16 @@ def _failed_state() -> WalletTrackingState:
 
 
 @pytest.fixture()
-def repo(test_session: Session) -> WalletTrackingRepository:
-    return WalletTrackingRepository(test_session)
+def repo(test_session: Session) -> WalletProjectionRepository:
+    return WalletProjectionRepository(test_session)
 
 
-def test_get_returns_none_when_wallet_tracking_state_is_empty(repo: WalletTrackingRepository) -> None:
+def test_get_returns_none_when_wallet_tracking_state_is_empty(repo: WalletProjectionRepository) -> None:
     assert repo.get() is None
 
 
 def test_replace_persists_completed_state_with_deterministic_balance_order(
-    repo: WalletTrackingRepository,
+    repo: WalletProjectionRepository,
 ) -> None:
     kraken_eur = Decimal("1000")
     ledger_btc = Decimal("0.25")
@@ -118,7 +118,7 @@ def test_replace_persists_completed_state_with_deterministic_balance_order(
 
 
 def test_replace_fully_replaces_prior_state(
-    repo: WalletTrackingRepository,
+    repo: WalletProjectionRepository,
     test_session: Session,
 ) -> None:
     repo.replace(_failed_state())
@@ -155,7 +155,7 @@ def test_replace_fully_replaces_prior_state(
     assert test_session.execute(select(WalletTrackingIssueOrm)).scalars().all() == []
 
 
-def test_replace_persists_failed_state_issues(repo: WalletTrackingRepository, test_session: Session) -> None:
+def test_replace_persists_failed_state_issues(repo: WalletProjectionRepository, test_session: Session) -> None:
     failed_state = _failed_state()
 
     persisted = repo.replace(failed_state)

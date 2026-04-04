@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from accounts import AccountRecord, AccountRegistry
 from api.corrections import router as corrections_router
 from api.events import router as events_router
-from api.wallet_tracking import router as wallet_tracking_router
+from api.wallet_projection import router as wallet_projection_router
 from config import CORRECTIONS_DB_PATH, DB_PATH
 
 
@@ -54,7 +54,7 @@ def create_app(
 
     fastapi_app.include_router(events_router)
     fastapi_app.include_router(corrections_router)
-    fastapi_app.include_router(wallet_tracking_router)
+    fastapi_app.include_router(wallet_projection_router)
 
     @fastapi_app.get("/accounts")
     def get_accounts() -> list[AccountRecord]:

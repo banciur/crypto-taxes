@@ -1,6 +1,6 @@
 import pytest
 
-from domain.wallet_tracking import WalletProjector
+from domain.wallet_projection import WalletProjector
 
 
 @pytest.fixture(scope="function")

@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from accounts import KRAKEN_ACCOUNT_ID
 from domain.ledger import LedgerLeg
-from domain.wallet_tracking import WalletProjector, WalletTrackingStatus
+from domain.wallet_projection import WalletProjector, WalletTrackingStatus
 from tests.constants import BASE_WALLET, ETH, EUR, LEDGER_WALLET
 from tests.helpers.time_utils import make_event
 

@@ -6,15 +6,15 @@ import { Table } from "react-bootstrap";
 import { OriginId } from "@/components/OriginId";
 import { useAccountNames } from "@/contexts/AccountNamesContext";
 import { formatDecimalString } from "@/lib/decimalStrings";
-import type { WalletTrackingIssue } from "@/types/walletTracking";
+import type { WalletProjectionIssue } from "@/types/walletProjection";
 
-type WalletTrackingIssueListProps = {
-  issues: WalletTrackingIssue[];
+type WalletProjectionIssueListProps = {
+  issues: WalletProjectionIssue[];
 };
 
-export function WalletTrackingIssueList({
+export function WalletProjectionIssueList({
   issues,
-}: WalletTrackingIssueListProps) {
+}: WalletProjectionIssueListProps) {
   const { resolveAccountName } = useAccountNames();
 
   return (

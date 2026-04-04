@@ -13,7 +13,7 @@ from .ledger import AssetId, LedgerEvent, LedgerLeg, LegKey
 from .pricing import PriceProvider
 
 
-class InventoryError(CryptoTaxesError):
+class AcquisitionDisposalProjectionError(CryptoTaxesError):
     def __init__(
         self,
         message: str,
@@ -35,13 +35,13 @@ class _OpenLotState:
 
 
 @dataclass(frozen=True)
-class InventoryResult:
+class AcquisitionDisposalProjection:
     acquisition_lots: list[AcquisitionLot]
     disposal_links: list[DisposalLink]
 
 
-class InventoryEngine:
-    """Create acquisition lots and disposal links from ledger events."""
+class AcquisitionDisposalProjector:
+    """Project ledger events into acquisition lots and disposal links."""
 
     EUR_ASSET_ID = AssetId("EUR")
 
@@ -52,7 +52,7 @@ class InventoryEngine:
     ) -> None:
         self._price_provider = price_provider
 
-    def process(self, events: Iterable[LedgerEvent]) -> InventoryResult:
+    def project(self, events: Iterable[LedgerEvent]) -> AcquisitionDisposalProjection:
         """Caller must provide events in chronological order."""
         acquisitions: list[AcquisitionLot] = []
         disposals: list[DisposalLink] = []
@@ -84,7 +84,7 @@ class InventoryEngine:
                 qty_to_match = abs(leg.quantity)
                 proceeds_per_unit = self._resolve_proceeds_per_unit(event, leg)
 
-                for lot_state, take_quantity in self._match_inventory(
+                for lot_state, take_quantity in self._consume_open_lots(
                     leg=leg,
                     event=event,
                     quantity_needed=qty_to_match,
@@ -109,7 +109,7 @@ class InventoryEngine:
         acquisitions.sort(key=self._projection_sort_key)
         disposals.sort(key=self._projection_sort_key)
 
-        return InventoryResult(
+        return AcquisitionDisposalProjection(
             acquisition_lots=acquisitions,
             disposal_links=disposals,
         )
@@ -209,7 +209,7 @@ class InventoryEngine:
         ]
         return sorted(disposal_legs, key=lambda leg: leg.leg_key)
 
-    def _match_inventory(
+    def _consume_open_lots(
         self,
         *,
         leg: LedgerLeg,
@@ -219,12 +219,12 @@ class InventoryEngine:
     ) -> Iterable[tuple[_OpenLotState, Decimal]]:
         open_lots = open_lots_by_asset.get(leg.asset_id)
         if not open_lots:
-            raise self._inventory_error("No open lots", leg=leg, event=event, quantity_needed=quantity_needed)
+            raise self._matching_error("No open lots", leg=leg, event=event, quantity_needed=quantity_needed)
 
         remaining = quantity_needed
         while remaining > 0:
             if not open_lots:
-                raise self._inventory_error("Not enough inventory", leg=leg, event=event)
+                raise self._matching_error("Not enough open lots", leg=leg, event=event)
 
             lot_state = open_lots[0]
             take_quantity = min(remaining, lot_state.remaining_quantity)
@@ -235,15 +235,15 @@ class InventoryEngine:
             yield lot_state, take_quantity
 
     @staticmethod
-    def _inventory_error(
+    def _matching_error(
         reason: str,
         *,
         leg: LedgerLeg,
         event: LedgerEvent,
         quantity_needed: Decimal | None = None,
-    ) -> InventoryError:
+    ) -> AcquisitionDisposalProjectionError:
         legs_summary = "; ".join(f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}" for leg in event.legs)
-        return InventoryError(
+        return AcquisitionDisposalProjectionError(
             f"{reason} for asset={leg.asset_id} account={leg.account_chain_id} "
             f"event_origin={event.event_origin.location.value}/{event.event_origin.external_id} "
             f"@{event.timestamp.isoformat()} "
