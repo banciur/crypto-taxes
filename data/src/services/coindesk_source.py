@@ -12,6 +12,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from config import config
+from errors import CryptoTaxesError
 
 from .price_sources import PriceSnapshotSource
 from .price_types import PriceQuote
@@ -19,7 +20,7 @@ from .price_types import PriceQuote
 logger = logging.getLogger(__name__)
 
 
-class CoinDeskAPIError(Exception):
+class CoinDeskAPIError(CryptoTaxesError):
     def __init__(self, message: str, *, status_code: int | None = None, payload: Any | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code

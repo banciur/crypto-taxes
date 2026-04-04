@@ -5,15 +5,15 @@ import { Table } from "react-bootstrap";
 
 import { useAccountNames } from "@/contexts/AccountNamesContext";
 import { formatDecimalString } from "@/lib/decimalStrings";
-import type { WalletTrackingBalance } from "@/types/walletTracking";
+import type { WalletProjectionBalance } from "@/types/walletProjection";
 
-type WalletTrackingBalancesTableProps = {
-  balances: WalletTrackingBalance[];
+type WalletProjectionBalancesTableProps = {
+  balances: WalletProjectionBalance[];
 };
 
-export function WalletTrackingBalancesTable({
+export function WalletProjectionBalancesTable({
   balances,
-}: WalletTrackingBalancesTableProps) {
+}: WalletProjectionBalancesTableProps) {
   const { resolveAccountName } = useAccountNames();
 
   if (balances.length === 0) {

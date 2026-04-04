@@ -95,8 +95,8 @@ def _preprocess_entry(
         asset=asset,
         wallet="spot / main",
         amount=amount,
-        fee=Decimal("0"),
-        balance=Decimal("0"),
+        fee=Decimal(0),
+        balance=Decimal(0),
     )
 
 

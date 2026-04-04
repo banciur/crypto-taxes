@@ -1,5 +1,5 @@
 # flake8: noqa: E402
-# uv run scripts/kraken_row_range_import.py 10 25 --csv artifacts/kraken-ledger.csv
+# uv run scripts/kraken/kraken_row_range_import.py 10 25 --csv artifacts/kraken-ledger.csv
 from __future__ import annotations
 
 import argparse
@@ -8,7 +8,7 @@ from csv import DictReader
 from pathlib import Path
 from typing import Iterable
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PROJECT_ROOT.parent
 ARTIFACTS_DIR = REPO_ROOT / "artifacts"
 SRC_DIR = PROJECT_ROOT / "src"
@@ -37,13 +37,13 @@ def _format_event(event: LedgerEvent, refid: str, row_numbers: list[int]) -> str
     header = [
         f"refid={refid}",
         f"rows={rows}",
-        f"type={event.event_type}",
+        f"origin={event.event_origin.location.value}/{event.event_origin.external_id}",
         f"timestamp={event.timestamp.isoformat()}",
     ]
     lines = [" | ".join(header)]
     for leg in event.legs:
         lines.append(
-            f"    asset={leg.asset_id:<8} qty={leg.quantity} wallet={leg.wallet_id}",
+            f"    asset={leg.asset_id:<8} qty={leg.quantity} account={leg.account_chain_id}",
         )
     return "\n".join(lines)
 

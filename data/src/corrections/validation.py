@@ -4,9 +4,10 @@ from collections.abc import Iterable
 
 from domain.correction import LedgerCorrectionDraft
 from domain.ledger import LedgerEvent
+from errors import CryptoTaxesError
 
 
-class CorrectionValidationError(Exception):
+class CorrectionValidationError(CryptoTaxesError):
     pass
 
 

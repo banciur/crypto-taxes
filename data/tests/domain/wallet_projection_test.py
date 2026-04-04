@@ -4,14 +4,14 @@ from decimal import Decimal
 
 from accounts import KRAKEN_ACCOUNT_ID
 from domain.ledger import LedgerLeg
-from domain.wallet_tracking import WalletProjector, WalletTrackingStatus
+from domain.wallet_projection import WalletProjector, WalletTrackingStatus
 from tests.constants import BASE_WALLET, ETH, EUR, LEDGER_WALLET
 from tests.helpers.time_utils import make_event
 
 
-def test_wallet_projector_processes_events_across_multiple_accounts() -> None:
-    projector = WalletProjector()
-
+def test_wallet_projector_processes_events_across_multiple_accounts(
+    wallet_projector: WalletProjector,
+) -> None:
     starting_eur = Decimal("5000")
     acquired_eth = Decimal("1.5")
     spent_eur = Decimal("3000")
@@ -43,7 +43,7 @@ def test_wallet_projector_processes_events_across_multiple_accounts() -> None:
         ),
     ]
 
-    result = projector.project(events)
+    result = wallet_projector.project(events)
 
     expected_ledger_eth = transfer_eth - sold_eth
     expected_kraken_eth = acquired_eth - transfer_eth
@@ -62,9 +62,9 @@ def test_wallet_projector_processes_events_across_multiple_accounts() -> None:
     ]
 
 
-def test_wallet_projector_nets_same_event_deltas_before_validation() -> None:
-    projector = WalletProjector()
-
+def test_wallet_projector_nets_same_event_deltas_across_distinct_leg_identities(
+    wallet_projector: WalletProjector,
+) -> None:
     starting_quantity = Decimal("1.0")
     received_quantity = Decimal("0.3")
     spent_quantity = Decimal("1.2")
@@ -75,12 +75,17 @@ def test_wallet_projector_nets_same_event_deltas_before_validation() -> None:
         make_event(
             legs=[
                 LedgerLeg(asset_id=ETH, quantity=received_quantity, account_chain_id=KRAKEN_ACCOUNT_ID),
-                LedgerLeg(asset_id=ETH, quantity=-spent_quantity, account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(
+                    asset_id=ETH,
+                    quantity=-spent_quantity,
+                    account_chain_id=KRAKEN_ACCOUNT_ID,
+                    is_fee=True,
+                ),
             ]
         ),
     ]
 
-    result = projector.project(events)
+    result = wallet_projector.project(events)
 
     assert result.status == WalletTrackingStatus.COMPLETED
     assert result.issues == []
@@ -91,9 +96,7 @@ def test_wallet_projector_nets_same_event_deltas_before_validation() -> None:
     assert balance.balance == remaining_quantity
 
 
-def test_wallet_projector_failure_is_event_atomic() -> None:
-    projector = WalletProjector()
-
+def test_wallet_projector_failure_is_event_atomic(wallet_projector: WalletProjector) -> None:
     starting_quantity = Decimal("1.0")
     attempted_quantity = Decimal("1.5")
     missing_quantity = attempted_quantity - starting_quantity
@@ -107,7 +110,7 @@ def test_wallet_projector_failure_is_event_atomic() -> None:
         ),
     ]
 
-    result = projector.project(events)
+    result = wallet_projector.project(events)
 
     assert result.status == WalletTrackingStatus.FAILED
     assert result.failed_event == events[1].event_origin
@@ -124,9 +127,9 @@ def test_wallet_projector_failure_is_event_atomic() -> None:
     ]
 
 
-def test_wallet_projector_collects_all_blocking_issues_from_failed_event() -> None:
-    projector = WalletProjector()
-
+def test_wallet_projector_collects_all_blocking_issues_from_failed_event(
+    wallet_projector: WalletProjector,
+) -> None:
     eth_available = Decimal("1.0")
     eur_available = Decimal("5.0")
     eth_attempted = Decimal("1.2")
@@ -146,7 +149,7 @@ def test_wallet_projector_collects_all_blocking_issues_from_failed_event() -> No
         ),
     ]
 
-    result = projector.project(events)
+    result = wallet_projector.project(events)
 
     assert result.status == WalletTrackingStatus.FAILED
     assert result.failed_event == events[1].event_origin
@@ -156,9 +159,7 @@ def test_wallet_projector_collects_all_blocking_issues_from_failed_event() -> No
     ]
 
 
-def test_wallet_projector_excludes_zero_balances() -> None:
-    projector = WalletProjector()
-
+def test_wallet_projector_excludes_zero_balances(wallet_projector: WalletProjector) -> None:
     acquired_quantity = Decimal("2.0")
     disposed_quantity = acquired_quantity
     events = [
@@ -166,7 +167,7 @@ def test_wallet_projector_excludes_zero_balances() -> None:
         make_event(legs=[LedgerLeg(asset_id=ETH, quantity=-disposed_quantity, account_chain_id=KRAKEN_ACCOUNT_ID)]),
     ]
 
-    result = projector.project(events)
+    result = wallet_projector.project(events)
 
     assert result.status == WalletTrackingStatus.COMPLETED
     assert result.balances == []

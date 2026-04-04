@@ -5,15 +5,15 @@ import type {
   EventOrigin,
 } from "@/types/events";
 
-export type WalletTrackingStatus = "NOT_RUN" | "COMPLETED" | "FAILED";
+export type WalletProjectionStatus = "NOT_RUN" | "COMPLETED" | "FAILED";
 
-export type WalletTrackingBalance = {
+export type WalletProjectionBalance = {
   accountChainId: AccountChainId;
   assetId: AssetId;
   balance: DecimalString;
 };
 
-export type WalletTrackingIssue = {
+export type WalletProjectionIssue = {
   event: EventOrigin;
   accountChainId: AccountChainId;
   assetId: AssetId;
@@ -22,9 +22,9 @@ export type WalletTrackingIssue = {
   missingBalance: DecimalString;
 };
 
-export type WalletTrackingState = {
-  status: WalletTrackingStatus;
+export type WalletProjectionState = {
+  status: WalletProjectionStatus;
   failedEvent: EventOrigin | null;
-  issues: WalletTrackingIssue[];
-  balances: WalletTrackingBalance[];
+  issues: WalletProjectionIssue[];
+  balances: WalletProjectionBalance[];
 };

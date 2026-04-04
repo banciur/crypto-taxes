@@ -31,10 +31,10 @@ from db.session import init_db_session
 from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
-from db.wallet_tracking import WalletTrackingRepository
-from domain.inventory import InventoryEngine
+from db.wallet_projection import WalletProjectionRepository
+from domain.acquisition_disposal_projection import AcquisitionDisposalProjector
 from domain.ledger import LedgerEvent
-from domain.wallet_tracking import WalletProjector
+from domain.wallet_projection import WalletProjector
 from importers.coinbase import CoinbaseImporter
 from importers.kraken import KrakenImporter
 from importers.lido import LidoImporter
@@ -121,14 +121,14 @@ def run(
     )
     event_repository = LedgerEventRepository(events_session)
     corrected_event_repository = CorrectedLedgerEventRepository(events_session)
-    wallet_tracking_repository = WalletTrackingRepository(events_session)
+    wallet_projection_repository = WalletProjectionRepository(events_session)
     lot_repository = AcquisitionLotRepository(events_session)
     disposal_repository = DisposalLinkRepository(events_session)
     tax_event_repository = TaxEventRepository(events_session)
     correction_repository = LedgerCorrectionRepository(corrections_session)
 
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
-    engine = InventoryEngine(price_provider=price_service)
+    acquisition_disposal_projector = AcquisitionDisposalProjector(price_provider=price_service)
 
     kraken_importer = KrakenImporter(str(csv_path))
 
@@ -203,26 +203,24 @@ def run(
 
     corrected_events = corrected_event_repository.list()
     logger.info("Rebuilding wallet tracking from %d corrected events", len(corrected_events))
-    wallet_tracking_state = WalletProjector().project(corrected_events)
-    wallet_tracking_repository.replace(wallet_tracking_state)
+    wallet_projection_state = WalletProjector().project(corrected_events)
+    wallet_projection_repository.replace(wallet_projection_state)
     logger.info(
-        "Persisted wallet tracking state with status=%s",
-        wallet_tracking_state.status.value,
+        "Persisted wallet projection state with status=%s",
+        wallet_projection_state.status.value,
     )
     return  # just for now
     # Process stuff
-    inventory = engine.process(events)  # type: ignore[unreachable]
-    lot_repository.create_many(inventory.acquisition_lots)
-    disposal_repository.create_many(inventory.disposal_links)
-    # dump_inventory_debug(events, inventory)
-
-    tax_events = generate_tax_events(inventory, events)
+    acquisition_disposal_projection = acquisition_disposal_projector.project(events)  # type: ignore[unreachable]
+    lot_repository.create_many(acquisition_disposal_projection.acquisition_lots)
+    disposal_repository.create_many(acquisition_disposal_projection.disposal_links)
+    tax_events = generate_tax_events(acquisition_disposal_projection, events)
     tax_event_repository.create_many(tax_events)
     tax_events = tax_event_repository.list()
 
     # Print summary
     print(f"Imported {len(events)} events from {csv_path}")
-    weekly_tax = compute_weekly_tax_summary(tax_events, inventory, events)
+    weekly_tax = compute_weekly_tax_summary(tax_events, acquisition_disposal_projection, events)
     render_weekly_tax_summary(weekly_tax)
 
 
