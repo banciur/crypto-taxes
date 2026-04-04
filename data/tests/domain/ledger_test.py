@@ -12,6 +12,7 @@ from domain.ledger import (
     EventOrigin,
     LedgerEvent,
     LedgerLeg,
+    LegKey,
 )
 from tests.constants import ETH, LEDGER_WALLET
 
@@ -41,7 +42,7 @@ def test_ledger_event_rejects_duplicate_leg_identity() -> None:
 
     error = exc_info.value.errors()[0]["ctx"]["error"]
     assert isinstance(error, DuplicateLegIdentityError)
-    assert error.duplicates == ((LEDGER_WALLET, ETH, False),)
+    assert error.duplicates == (LegKey(account_chain_id=LEDGER_WALLET, asset_id=ETH, is_fee=False),)
 
 
 def test_ledger_event_allows_same_account_and_asset_when_fee_flag_differs() -> None:

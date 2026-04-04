@@ -24,44 +24,48 @@ This file has two phases:
 
 Redesign inventory processing so it produces a deterministic, ordered projection from corrected ledger events into `AcquisitionLot` and `DisposalLink` records without relying on transient leg UUIDs.
 
-The new processing contract is:
+Current processing contract:
 
 - `AbstractEvent` enforces per-event leg identity uniqueness.
-- Leg identity is `(account_chain_id, asset_id, is_fee)`.
+- Per-event leg identity is represented as `LegKey(account_chain_id, asset_id, is_fee)`.
+- Full trace-back to a source leg is represented as `EventLegRef(event_origin, leg_key)`.
 - Duplicate leg identities are invalid system state and must raise during event model validation.
 - Inventory processing assumes its input events are already sorted chronologically; it must not validate sort order.
 - Processing output is limited to:
   - an ordered list of `AcquisitionLot`
   - an ordered list of `DisposalLink`
-- The redesigned lot/disposal models must be self-sufficient for downstream tax/presentation work while still preserving enough information to connect back to the source corrected event and source leg identity when needed.
-- Database persistence, API delivery, and UI rendering are out of scope for this task. This phase covers only domain model and processing.
+- `AcquisitionLot` and `DisposalLink` live in `src/domain/acquisition_disposal.py` as a separate projection layer, not in `ledger.py`.
+- `AcquisitionLot` and `DisposalLink` are self-sufficient for downstream tax/presentation work and expose derived `leg_key` and `source_leg_ref` properties through a shared abstract base.
+- `InventoryResult` exposes only ordered `acquisition_lots` and `disposal_links`. `open_inventory` has been removed from the public result.
+- FIFO matching is maintained per asset, with one `DisposalLink` emitted per consumed lot slice.
+- Internal transfer handling remains structural: same-asset, non-fee, non-EUR incoming/outgoing legs with equal totals are ignored by inventory matching.
+- Compatibility fallout from the projection redesign has been carried through immediate downstream persistence/debug/tax helper code so the current test suite remains green.
 
 Open decisions to resolve before execution:
 
 - Whether lot/disposal IDs should remain random `uuid4` values or become deterministic IDs derived from their source identity.
-- Whether `InventoryResult` should keep `open_inventory` as an internal/debug-only field or remove it entirely from the public processing result.
 
 ## Steps
 
-- [ ] Finalize the new processing model shape for `AcquisitionLot` and `DisposalLink` in [ledger.py](/Users/banciur/projects/crypto-taxes/data/src/domain/ledger.py), replacing `*_leg_id` references with source event identity plus explicit leg identity fields and the quantities/timestamps needed so downstream code does not need to rejoin into ledger events.
+- [x] Finalize the new processing model shape for `AcquisitionLot` and `DisposalLink` in [acquisition_disposal.py](/Users/banciur/projects/crypto-taxes/data/src/domain/acquisition_disposal.py), replacing `*_leg_id` references with source event identity plus explicit leg identity fields and the quantities/timestamps needed so downstream code does not need to rejoin into ledger events.
 
-- [ ] Move leg identity validation into `AbstractEvent` in [ledger.py](/Users/banciur/projects/crypto-taxes/data/src/domain/ledger.py) so every event validates that no two legs share the same `(account_chain_id, asset_id, is_fee)` tuple, and define a clear validation error message because duplicate legs are invalid domain state.
+- [x] Move leg identity validation into `AbstractEvent` in [ledger.py](/Users/banciur/projects/crypto-taxes/data/src/domain/ledger.py) so every event validates that no two legs share the same `(account_chain_id, asset_id, is_fee)` tuple, and define a clear validation error message because duplicate legs are invalid domain state.
 
-- [ ] Refactor the inventory engine in [inventory.py](/Users/banciur/projects/crypto-taxes/data/src/domain/inventory.py) to consume the new event invariant and emit the redesigned `AcquisitionLot` and `DisposalLink` models without any dependency on leg UUIDs.
+- [x] Refactor the inventory engine in [inventory.py](/Users/banciur/projects/crypto-taxes/data/src/domain/inventory.py) to consume the new event invariant and emit the redesigned `AcquisitionLot` and `DisposalLink` models without any dependency on leg UUIDs.
 
-- [ ] Preserve the existing matching behavior where one disposal can consume multiple prior lots FIFO, still creating one `DisposalLink` per `(disposal leg identity, matched lot)` slice.
+- [x] Preserve the existing matching behavior where one disposal can consume multiple prior lots FIFO, still creating one `DisposalLink` per `(disposal leg identity, matched lot)` slice.
 
-- [ ] Keep the current classification rules in the processor unless they directly conflict with the new invariant:
+- [x] Keep the current classification rules in the processor unless they directly conflict with the new invariant:
   - positive non-EUR non-transfer legs create acquisition lots
   - negative non-EUR non-transfer legs consume lots
   - internal transfer legs do not create lots or disposals
   - fee semantics remain represented through `is_fee`
 
-- [ ] Define and implement the output ordering contract in [inventory.py](/Users/banciur/projects/crypto-taxes/data/src/domain/inventory.py) so returned `AcquisitionLot` and `DisposalLink` lists are explicitly sorted by timestamp and then stable identity tie-breakers.
+- [x] Define and implement the output ordering contract in [inventory.py](/Users/banciur/projects/crypto-taxes/data/src/domain/inventory.py) so returned `AcquisitionLot` and `DisposalLink` lists are explicitly sorted by timestamp and then stable identity tie-breakers.
 
-- [ ] Redesign or remove `InventoryResult` in [inventory.py](/Users/banciur/projects/crypto-taxes/data/src/domain/inventory.py) so the public processing result matches the agreed scope for this phase.
+- [x] Redesign or remove `InventoryResult` in [inventory.py](/Users/banciur/projects/crypto-taxes/data/src/domain/inventory.py) so the public processing result matches the agreed scope for this phase.
 
-- [ ] Update processing tests in [inventory_test.py](/Users/banciur/projects/crypto-taxes/data/tests/domain/inventory_test.py) to cover:
+- [x] Update processing tests in [inventory_test.py](/Users/banciur/projects/crypto-taxes/data/tests/domain/inventory_test.py) to cover:
   - duplicate leg identity rejection at the event model level
   - acquisition creation with the new lot shape
   - disposal matching with the new disposal-link shape
@@ -70,4 +74,4 @@ Open decisions to resolve before execution:
   - fee handling
   - deterministic output ordering
 
-- [ ] Update any now-broken downstream tests or helper code that still depend on leg-UUID-based inventory outputs, but limit those changes to compatibility fallout from the new processing contract rather than expanding scope into persistence or UI work.
+- [x] Update any now-broken downstream tests or helper code that still depend on leg-UUID-based inventory outputs. This included immediate persistence/debug/tax-summary compatibility so the current backend suite remains consistent with the new projection model.

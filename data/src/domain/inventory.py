@@ -5,13 +5,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import Iterable
-from uuid import UUID
 
 from errors import CryptoTaxesError
-from pydantic_base import StrictBaseModel
 
-from .acquisition_disposal import AcquisitionLot, DisposalLink
-from .ledger import AssetId, LedgerEvent, LedgerLeg
+from .acquisition_disposal import AbstractAcquisitionDisposal, AcquisitionLot, DisposalLink
+from .ledger import AssetId, LedgerEvent, LedgerLeg, LegKey
 from .pricing import PriceProvider
 
 
@@ -33,23 +31,13 @@ class InventoryError(CryptoTaxesError):
 @dataclass
 class _OpenLotState:
     lot: AcquisitionLot
-    asset_id: AssetId
-    acquired_timestamp: datetime
     remaining_quantity: Decimal
 
 
-class OpenLotSnapshot(StrictBaseModel):
-    lot_id: UUID
-    asset_id: AssetId
-    acquired_timestamp: datetime
-    quantity_remaining: Decimal
-    cost_per_unit: Decimal
-
-
-class InventoryResult(StrictBaseModel):
+@dataclass(frozen=True)
+class InventoryResult:
     acquisition_lots: list[AcquisitionLot]
     disposal_links: list[DisposalLink]
-    open_inventory: list[OpenLotSnapshot]
 
 
 class InventoryEngine:
@@ -69,37 +57,30 @@ class InventoryEngine:
         acquisitions: list[AcquisitionLot] = []
         disposals: list[DisposalLink] = []
 
-        inventory: dict[str, deque[_OpenLotState]] = defaultdict(deque)
+        open_lots_by_asset: dict[AssetId, deque[_OpenLotState]] = defaultdict(deque)
 
         for event in events:
-            internal_transfer_leg_ids = self._internal_transfer_leg_ids(event)
+            internal_transfer_leg_keys = self._internal_transfer_leg_keys(event)
 
-            acquisition_legs = [
-                leg
-                for leg in event.legs
-                if leg.id not in internal_transfer_leg_ids and leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID
-            ]
-            for leg in acquisition_legs:
+            for leg in self._acquisition_legs(event, ignored_leg_keys=internal_transfer_leg_keys):
                 lot = AcquisitionLot(
-                    acquired_leg_id=leg.id,
+                    event_origin=event.event_origin,
+                    account_chain_id=leg.account_chain_id,
+                    asset_id=leg.asset_id,
+                    is_fee=leg.is_fee,
+                    timestamp=event.timestamp,
+                    quantity_acquired=leg.quantity,
                     cost_per_unit=self._resolve_cost_per_unit(event, leg),
                 )
                 acquisitions.append(lot)
 
                 state = _OpenLotState(
                     lot=lot,
-                    asset_id=leg.asset_id,
-                    acquired_timestamp=event.timestamp,
                     remaining_quantity=leg.quantity,
                 )
-                self._append_open_lot_state(inventory, state)
+                open_lots_by_asset[leg.asset_id].append(state)
 
-            disposal_legs = [
-                leg
-                for leg in event.legs
-                if leg.id not in internal_transfer_leg_ids and leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID
-            ]
-            for leg in disposal_legs:
+            for leg in self._disposal_legs(event, ignored_leg_keys=internal_transfer_leg_keys):
                 qty_to_match = abs(leg.quantity)
                 proceeds_per_unit = self._resolve_proceeds_per_unit(event, leg)
 
@@ -107,13 +88,17 @@ class InventoryEngine:
                     leg=leg,
                     event=event,
                     quantity_needed=qty_to_match,
-                    inventory=inventory,
+                    open_lots_by_asset=open_lots_by_asset,
                 ):
                     proceeds_total = proceeds_per_unit * take_quantity
                     disposals.append(
                         DisposalLink(
-                            disposal_leg_id=leg.id,
                             lot_id=lot_state.lot.id,
+                            event_origin=event.event_origin,
+                            account_chain_id=leg.account_chain_id,
+                            asset_id=leg.asset_id,
+                            is_fee=leg.is_fee,
+                            timestamp=event.timestamp,
                             quantity_used=take_quantity,
                             proceeds_total=proceeds_total,
                         )
@@ -121,31 +106,19 @@ class InventoryEngine:
 
                     qty_to_match -= take_quantity
 
-        open_inventory_snapshots = [
-            OpenLotSnapshot(
-                lot_id=state.lot.id,
-                asset_id=state.asset_id,
-                acquired_timestamp=state.acquired_timestamp,
-                quantity_remaining=state.remaining_quantity,
-                cost_per_unit=state.lot.cost_per_unit,
-            )
-            for states in inventory.values()
-            for state in states
-        ]
-
-        open_inventory_snapshots.sort(key=lambda snap: (snap.asset_id, snap.acquired_timestamp))
+        acquisitions.sort(key=self._projection_sort_key)
+        disposals.sort(key=self._projection_sort_key)
 
         return InventoryResult(
             acquisition_lots=acquisitions,
             disposal_links=disposals,
-            open_inventory=open_inventory_snapshots,
         )
 
     def _resolve_cost_per_unit(self, event: LedgerEvent, leg: LedgerLeg) -> Decimal:
         eur_leg = self._find_unique_eur_leg(
             event,
             expected_sign=-1,
-            exclude_leg_ids={leg.id},
+            exclude_leg_keys={leg.leg_key},
         )
         if eur_leg is not None:
             return abs(eur_leg.quantity) / leg.quantity
@@ -157,7 +130,7 @@ class InventoryEngine:
         eur_leg = self._find_unique_eur_leg(
             event,
             expected_sign=1,
-            exclude_leg_ids={leg.id},
+            exclude_leg_keys={leg.leg_key},
         )
         if eur_leg is not None:
             return abs(eur_leg.quantity) / abs(leg.quantity)
@@ -170,7 +143,7 @@ class InventoryEngine:
         event: LedgerEvent,
         *,
         expected_sign: int,
-        exclude_leg_ids: set[UUID],
+        exclude_leg_keys: set[LegKey],
     ) -> LedgerLeg | None:
         """Locate a single EUR leg matching the expected sign (+/-).
 
@@ -179,7 +152,7 @@ class InventoryEngine:
         matches = [
             leg
             for leg in event.legs
-            if leg.id not in exclude_leg_ids
+            if leg.leg_key not in exclude_leg_keys
             and not leg.is_fee
             and leg.asset_id == self.EUR_ASSET_ID
             and (leg.quantity > 0 if expected_sign > 0 else leg.quantity < 0)
@@ -189,14 +162,14 @@ class InventoryEngine:
             return matches[0]
         return None
 
-    def _internal_transfer_leg_ids(self, event: LedgerEvent) -> set[UUID]:
+    def _internal_transfer_leg_keys(self, event: LedgerEvent) -> set[LegKey]:
         by_asset: dict[AssetId, list[LedgerLeg]] = defaultdict(list)
         for leg in event.legs:
             if leg.asset_id == self.EUR_ASSET_ID or leg.is_fee:
                 continue
             by_asset[leg.asset_id].append(leg)
 
-        transfer_leg_ids: set[UUID] = set()
+        transfer_leg_keys: set[LegKey] = set()
         for legs in by_asset.values():
             incoming = [leg for leg in legs if leg.quantity > 0]
             outgoing = [leg for leg in legs if leg.quantity < 0]
@@ -206,9 +179,35 @@ class InventoryEngine:
             outgoing_total = sum((abs(leg.quantity) for leg in outgoing), start=Decimal("0"))
             if incoming_total != outgoing_total:
                 continue
-            transfer_leg_ids.update(leg.id for leg in incoming)
-            transfer_leg_ids.update(leg.id for leg in outgoing)
-        return transfer_leg_ids
+            transfer_leg_keys.update(leg.leg_key for leg in incoming)
+            transfer_leg_keys.update(leg.leg_key for leg in outgoing)
+        return transfer_leg_keys
+
+    def _acquisition_legs(
+        self,
+        event: LedgerEvent,
+        *,
+        ignored_leg_keys: set[LegKey],
+    ) -> list[LedgerLeg]:
+        acquisition_legs = [
+            leg
+            for leg in event.legs
+            if leg.leg_key not in ignored_leg_keys and leg.quantity > 0 and leg.asset_id != self.EUR_ASSET_ID
+        ]
+        return sorted(acquisition_legs, key=lambda leg: leg.leg_key)
+
+    def _disposal_legs(
+        self,
+        event: LedgerEvent,
+        *,
+        ignored_leg_keys: set[LegKey],
+    ) -> list[LedgerLeg]:
+        disposal_legs = [
+            leg
+            for leg in event.legs
+            if leg.leg_key not in ignored_leg_keys and leg.quantity < 0 and leg.asset_id != self.EUR_ASSET_ID
+        ]
+        return sorted(disposal_legs, key=lambda leg: leg.leg_key)
 
     def _match_inventory(
         self,
@@ -216,9 +215,9 @@ class InventoryEngine:
         leg: LedgerLeg,
         event: LedgerEvent,
         quantity_needed: Decimal,
-        inventory: dict[str, deque[_OpenLotState]],
+        open_lots_by_asset: dict[AssetId, deque[_OpenLotState]],
     ) -> Iterable[tuple[_OpenLotState, Decimal]]:
-        open_lots = inventory.get(leg.asset_id)
+        open_lots = open_lots_by_asset.get(leg.asset_id)
         if not open_lots:
             raise self._inventory_error("No open lots", leg=leg, event=event, quantity_needed=quantity_needed)
 
@@ -245,7 +244,8 @@ class InventoryEngine:
     ) -> InventoryError:
         legs_summary = "; ".join(f"{leg.asset_id}:{leg.quantity}{' fee' if leg.is_fee else ''}" for leg in event.legs)
         return InventoryError(
-            f"{reason} for asset={leg.asset_id} account={leg.account_chain_id} leg={leg.id} event={event.id} "
+            f"{reason} for asset={leg.asset_id} account={leg.account_chain_id} "
+            f"event_origin={event.event_origin.location.value}/{event.event_origin.external_id} "
             f"@{event.timestamp.isoformat()} "
             f"legs={legs_summary}",
             leg=leg,
@@ -254,18 +254,12 @@ class InventoryEngine:
         )
 
     @staticmethod
-    def _append_open_lot_state(
-        inventory: dict[str, deque[_OpenLotState]],
-        state: _OpenLotState,
-    ) -> None:
-        open_lots = inventory[state.asset_id]
-        insert_at = None
-        for idx, existing in enumerate(open_lots):
-            if existing.acquired_timestamp > state.acquired_timestamp:
-                insert_at = idx
-                break
-
-        if insert_at is None:
-            open_lots.append(state)
-        else:
-            open_lots.insert(insert_at, state)
+    def _projection_sort_key(item: AbstractAcquisitionDisposal) -> tuple[datetime, str, str, str, str, bool]:
+        return (
+            item.timestamp,
+            item.event_origin.location.value,
+            item.event_origin.external_id,
+            item.account_chain_id,
+            item.asset_id,
+            item.is_fee,
+        )

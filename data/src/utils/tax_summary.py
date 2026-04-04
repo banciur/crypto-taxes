@@ -5,9 +5,9 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Iterable, cast
 
-from domain.inventory import InventoryResult
 from domain.acquisition_disposal import AcquisitionLot, DisposalLink
-from domain.ledger import DisposalId, LedgerEvent, LedgerLeg, LegId, LotId
+from domain.inventory import InventoryResult
+from domain.ledger import DisposalId, LedgerEvent, LotId
 from domain.tax_event import TaxEvent, TaxEventKind
 
 from .formatting import format_currency
@@ -17,23 +17,15 @@ def generate_tax_events(
     inventory_result: InventoryResult, events: Iterable[LedgerEvent], *, tax_free_days: int = 365
 ) -> list[TaxEvent]:
     """Create taxable events from disposals and reward acquisitions."""
-    legs_by_id: dict[LegId, LedgerLeg] = {}
-    legs_to_event: dict[LegId, LedgerEvent] = {}
-    for event in events:
-        for leg in event.legs:
-            legs_to_event[leg.id] = event
-            legs_by_id[leg.id] = leg
-
     lots_by_id: dict[LotId, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
     tax_free_threshold = timedelta(days=tax_free_days)
     tax_events: list[TaxEvent] = []
+    _ = events
 
     for link in inventory_result.disposal_links:
-        disposal = legs_to_event[link.disposal_leg_id]
         lot = lots_by_id[link.lot_id]
-        acquisition_event = legs_to_event[lot.acquired_leg_id]
 
-        if (disposal.timestamp - acquisition_event.timestamp) >= tax_free_threshold:
+        if (link.timestamp - lot.timestamp) >= tax_free_threshold:
             continue
 
         cost_basis = link.quantity_used * lot.cost_per_unit
@@ -70,12 +62,7 @@ def compute_weekly_tax_summary(
 
     lots_by_id: dict[LotId, AcquisitionLot] = {lot.id: lot for lot in inventory_result.acquisition_lots}
     links_by_id: dict[DisposalId, DisposalLink] = {link.id: link for link in inventory_result.disposal_links}
-    legs_by_id: dict[LegId, LedgerLeg] = {}
-    leg_to_event: dict[LegId, LedgerEvent] = {}
-    for event in events:
-        for leg in event.legs:
-            legs_by_id[leg.id] = leg
-            leg_to_event[leg.id] = event
+    _ = events
 
     for tax_event in tax_events:
         proceeds: Decimal
@@ -87,22 +74,19 @@ def compute_weekly_tax_summary(
             link_id = cast(DisposalId, tax_event.source_id)
             link = links_by_id[link_id]
             lot = lots_by_id[link.lot_id]
-            disposal_event = leg_to_event[link.disposal_leg_id]
 
             proceeds = link.proceeds_total
             cost_basis = link.quantity_used * lot.cost_per_unit
             gain = proceeds - cost_basis
-            timestamp = disposal_event.timestamp
+            timestamp = link.timestamp
         elif tax_event.kind == TaxEventKind.REWARD:
             lot_id = cast(LotId, tax_event.source_id)
             lot = lots_by_id[lot_id]
-            acquisition_leg = legs_by_id[lot.acquired_leg_id]
-            acquisition_event = leg_to_event[lot.acquired_leg_id]
 
-            proceeds = acquisition_leg.quantity * lot.cost_per_unit
+            proceeds = lot.quantity_acquired * lot.cost_per_unit
             cost_basis = Decimal(0)
             gain = proceeds
-            timestamp = acquisition_event.timestamp
+            timestamp = lot.timestamp
         else:
             raise ValueError(f"Unexpected tax event kind: {tax_event.kind}")
 

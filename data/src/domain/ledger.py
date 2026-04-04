@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -37,6 +38,19 @@ class EventOrigin(StrictBaseModel):
     external_id: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 
 
+@dataclass(frozen=True, order=True)
+class LegKey:
+    account_chain_id: AccountChainId
+    asset_id: AssetId
+    is_fee: bool
+
+
+@dataclass(frozen=True, order=True)
+class EventLegRef:
+    event_origin: EventOrigin
+    leg_key: LegKey
+
+
 class LedgerLeg(StrictBaseModel):
     """A single leg within an event.
 
@@ -58,16 +72,22 @@ class LedgerLeg(StrictBaseModel):
             raise ValueError("LedgerLeg.quantity must be non-zero")
         return value
 
+    @property
+    def leg_key(self) -> LegKey:
+        return LegKey(
+            account_chain_id=self.account_chain_id,
+            asset_id=self.asset_id,
+            is_fee=self.is_fee,
+        )
 
-LegIdentity = tuple[AccountChainId, AssetId, bool]
 
-
+# TODO: This here seems to complicated
 class DuplicateLegIdentityError(CryptoTaxesError, ValueError):
-    def __init__(self, duplicates: tuple[LegIdentity, ...]) -> None:
+    def __init__(self, duplicates: tuple[LegKey, ...]) -> None:
         self.duplicates = duplicates
         duplicates_summary = ", ".join(
-            f"account={account_chain_id} asset={asset_id} is_fee={is_fee}"
-            for account_chain_id, asset_id, is_fee in duplicates
+            f"account={duplicate.account_chain_id} asset={duplicate.asset_id} is_fee={duplicate.is_fee}"
+            for duplicate in duplicates
         )
         super().__init__(f"AbstractEvent.legs contains duplicate leg identities: {duplicates_summary}")
 
@@ -79,11 +99,11 @@ class AbstractEvent(StrictBaseModel, ABC):
     @field_validator("legs")
     @classmethod
     def _validate_unique_leg_identity(cls, legs: list[LedgerLeg]) -> list[LedgerLeg]:
-        seen_leg_keys: set[LegIdentity] = set()
-        duplicate_leg_keys: set[LegIdentity] = set()
+        seen_leg_keys: set[LegKey] = set()
+        duplicate_leg_keys: set[LegKey] = set()
 
         for leg in legs:
-            leg_key = (leg.account_chain_id, leg.asset_id, leg.is_fee)
+            leg_key = leg.leg_key
             if leg_key in seen_leg_keys:
                 duplicate_leg_keys.add(leg_key)
                 continue

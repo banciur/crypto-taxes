@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from accounts import KRAKEN_ACCOUNT_ID
 from domain.acquisition_disposal import AcquisitionLot, DisposalLink
-from domain.ledger import EventLocation, EventOrigin
+from domain.ledger import EventLegRef, EventLocation, EventOrigin, LegKey
 from tests.constants import BASE_WALLET, BTC, ETH
 
 TIMESTAMP = datetime(2024, 1, 1, 12, tzinfo=timezone.utc)
@@ -32,6 +32,8 @@ def test_acquisition_lot_keeps_event_and_leg_identity_fields() -> None:
     assert lot.timestamp == TIMESTAMP
     assert lot.quantity_acquired == quantity_acquired
     assert lot.cost_per_unit == cost_per_unit
+    assert lot.leg_key == LegKey(account_chain_id=KRAKEN_ACCOUNT_ID, asset_id=BTC, is_fee=False)
+    assert lot.source_leg_ref == EventLegRef(event_origin=event_origin, leg_key=lot.leg_key)
 
 
 def test_disposal_link_keeps_event_and_leg_identity_fields() -> None:
@@ -67,3 +69,5 @@ def test_disposal_link_keeps_event_and_leg_identity_fields() -> None:
     assert link.timestamp == next_timestamp
     assert link.quantity_used == quantity_used
     assert link.proceeds_total == proceeds_total
+    assert link.leg_key == LegKey(account_chain_id=BASE_WALLET, asset_id=ETH, is_fee=False)
+    assert link.source_leg_ref == EventLegRef(event_origin=event_origin, leg_key=link.leg_key)

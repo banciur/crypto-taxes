@@ -13,7 +13,8 @@
 - Its purpose is to provide the UI with the backend data it needs and the allowed mutation capabilities for reviewing and modifying system state through a stable HTTP interface.
 
 ### Domain modules
-- Ledger and lots: `src/domain/ledger.py`
+- Ledger events: `src/domain/ledger.py`
+- Acquisition/disposal projection models: `src/domain/acquisition_disposal.py`
 - Inventory engine and lot matching: `src/domain/inventory.py`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
 - Unified correction model (`LedgerCorrection` for discard, replacement, and opening balance): `src/domain/correction.py`

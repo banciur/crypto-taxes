@@ -42,6 +42,41 @@ def _sample_event(external_id: str, timestamp: datetime, *, note: str | None = N
     )
 
 
+def _acquisition_lot_from_event(event: LedgerEvent, *, leg_index: int, cost_per_unit: Decimal) -> AcquisitionLot:
+    leg = event.legs[leg_index]
+    quantity_acquired = leg.quantity if leg.quantity > 0 else abs(leg.quantity)
+    return AcquisitionLot(
+        event_origin=event.event_origin,
+        account_chain_id=leg.account_chain_id,
+        asset_id=leg.asset_id,
+        is_fee=leg.is_fee,
+        timestamp=event.timestamp,
+        quantity_acquired=quantity_acquired,
+        cost_per_unit=cost_per_unit,
+    )
+
+
+def _disposal_link_from_event(
+    event: LedgerEvent,
+    *,
+    leg_index: int,
+    lot_id: LotId,
+    quantity_used: Decimal,
+    proceeds_total: Decimal,
+) -> DisposalLink:
+    leg = event.legs[leg_index]
+    return DisposalLink(
+        event_origin=event.event_origin,
+        account_chain_id=leg.account_chain_id,
+        asset_id=leg.asset_id,
+        is_fee=leg.is_fee,
+        timestamp=event.timestamp,
+        lot_id=lot_id,
+        quantity_used=quantity_used,
+        proceeds_total=proceeds_total,
+    )
+
+
 @pytest.fixture()
 def repo(test_session: Session) -> LedgerEventRepository:
     return LedgerEventRepository(test_session)
@@ -125,14 +160,8 @@ def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: Ledg
     assert stored_acquisition_event is not None
 
     lots = [
-        AcquisitionLot(
-            acquired_leg_id=stored_acquisition_event.legs[0].id,
-            cost_per_unit=Decimal("1.23"),
-        ),
-        AcquisitionLot(
-            acquired_leg_id=stored_acquisition_event.legs[1].id,
-            cost_per_unit=Decimal("2.34"),
-        ),
+        _acquisition_lot_from_event(stored_acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23")),
+        _acquisition_lot_from_event(stored_acquisition_event, leg_index=1, cost_per_unit=Decimal("2.34")),
     ]
 
     saved = lot_repo.create_many(lots)
@@ -142,7 +171,12 @@ def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: Ledg
     stored_by_id = {lot.id: lot for lot in stored}
     for original in lots:
         reloaded = stored_by_id[original.id]
-        assert reloaded.acquired_leg_id == original.acquired_leg_id
+        assert reloaded.event_origin == original.event_origin
+        assert reloaded.account_chain_id == original.account_chain_id
+        assert reloaded.asset_id == original.asset_id
+        assert reloaded.is_fee == original.is_fee
+        assert reloaded.timestamp == original.timestamp
+        assert reloaded.quantity_acquired == original.quantity_acquired
         assert reloaded.cost_per_unit == original.cost_per_unit
 
 
@@ -155,14 +189,8 @@ def test_persist_disposal_links(
     assert stored_acquisition_event is not None
 
     lots = [
-        AcquisitionLot(
-            acquired_leg_id=stored_acquisition_event.legs[0].id,
-            cost_per_unit=Decimal("1.23"),
-        ),
-        AcquisitionLot(
-            acquired_leg_id=stored_acquisition_event.legs[1].id,
-            cost_per_unit=Decimal("2.34"),
-        ),
+        _acquisition_lot_from_event(stored_acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23")),
+        _acquisition_lot_from_event(stored_acquisition_event, leg_index=1, cost_per_unit=Decimal("2.34")),
     ]
     lot_repo.create_many(lots)
 
@@ -171,17 +199,17 @@ def test_persist_disposal_links(
     stored_disposal_event = repo.get(disposal_event.id)
     assert stored_disposal_event is not None
 
-    disposal_leg_id = stored_disposal_event.legs[0].id
-
     links = [
-        DisposalLink(
-            disposal_leg_id=disposal_leg_id,
+        _disposal_link_from_event(
+            stored_disposal_event,
+            leg_index=0,
             lot_id=lots[0].id,
             quantity_used=Decimal("0.5"),
             proceeds_total=Decimal("100"),
         ),
-        DisposalLink(
-            disposal_leg_id=disposal_leg_id,
+        _disposal_link_from_event(
+            stored_disposal_event,
+            leg_index=0,
             lot_id=lots[1].id,
             quantity_used=Decimal("1.25"),
             proceeds_total=Decimal("250.75"),
@@ -195,6 +223,11 @@ def test_persist_disposal_links(
     stored_by_id = {link.id: link for link in stored}
     for original in links:
         reloaded = stored_by_id[original.id]
+        assert reloaded.event_origin == original.event_origin
+        assert reloaded.account_chain_id == original.account_chain_id
+        assert reloaded.asset_id == original.asset_id
+        assert reloaded.is_fee == original.is_fee
+        assert reloaded.timestamp == original.timestamp
         assert reloaded.quantity_used == original.quantity_used
         assert reloaded.proceeds_total == original.proceeds_total
 
