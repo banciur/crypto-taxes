@@ -37,7 +37,7 @@ def test_deterministic_source_varies_with_timestamp() -> None:
 
 def test_deterministic_source_validates_price_bounds() -> None:
     with pytest.raises(ValueError):
-        DeterministicRandomPriceSource(min_price=Decimal("0"), max_price=Decimal("10"))
+        DeterministicRandomPriceSource(min_price=Decimal(0), max_price=Decimal("10"))
 
 
 class _StubPriceSnapshotSource:

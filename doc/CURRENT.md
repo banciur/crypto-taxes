@@ -101,13 +101,10 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 ## Behavioral Notes
 
-- Acquisition/disposal projection is automated: the `AcquisitionDisposalProjector` creates `AcquisitionLot`s and `DisposalLink`s from ordered events using FIFO matching.
-- EUR legs on an event take precedence for valuing acquisitions/disposals. Only when no unambiguous EUR leg exists do we fall back to the injected `PriceProvider` for EUR pricing.
+- Acquisition/disposal projection is automated: the `AcquisitionDisposalProjector` creates `AcquisitionLot`s and `DisposalLink`s from ordered events. Details of the lot matching algorithm are documented in [LOT_MATCHING.md](LOT_MATCHING.md).
 - Unbalanced events are allowed.
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
-- Acquisition/disposal projection assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the projector. Open lots are tracked per asset (not per account) and matched FIFO.
-- Internal account-to-account transfers are identified structurally (same-asset non-fee legs netting to zero inside one event) and do not create lots or disposal links.
 - Each event captures `event_origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
 - `LedgerEvent.note` is optional display metadata. Moralis populates it from a trimmed upstream `method_label` when that label is available.
 - Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).

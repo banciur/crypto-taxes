@@ -350,7 +350,7 @@ def test_fee_native_transfers_are_not_double_counted(test_ctx: _ImporterTestCont
         (Decimal("0.000000000000781932"), "781932", SEQUENCER_FEE_VAULT),
         (Decimal("0.000000014158945734"), "14158945734", NULL_ADDRESS),
     ]
-    fee = sum((amount for amount, _, _ in fee_components), Decimal("0"))
+    fee = sum((amount for amount, _, _ in fee_components), Decimal(0))
     tx = _build_tx(
         native_transfers=[
             _outgoing_native_transfer(amount=amount, value=value, to_address=to_address)
@@ -429,7 +429,7 @@ def test_fee_native_transfers_are_filtered_while_preserving_real_native_transfer
         (Decimal("0.000000000000781932"), "781932", SEQUENCER_FEE_VAULT),
         (Decimal("0.000000014158945734"), "14158945734", NULL_ADDRESS),
     ]
-    fee = sum((amount for amount, _, _ in fee_components), Decimal("0"))
+    fee = sum((amount for amount, _, _ in fee_components), Decimal(0))
     transfer_amount = Decimal("0.0025")
     tx = _build_tx(
         native_transfers=[

@@ -10,7 +10,7 @@ from domain.acquisition_disposal_projection import (
     AcquisitionDisposalProjector,
 )
 from domain.ledger import AccountChainId, AssetId, LedgerLeg
-from tests.constants import ETH, EUR
+from tests.constants import BTC, ETH, EUR
 from tests.helpers.time_utils import DEFAULT_TIME_GEN, make_event
 
 WALLET_ID = AccountChainId("wallet")
@@ -200,6 +200,256 @@ def test_transfers_dont_create_acquisition(
     assert acquisition_lot.cost_per_unit == buy_spent_eur / buy_amount
 
     assert result.disposal_links == []
+
+
+def test_transfer_with_explicit_fee_creates_only_fee_disposal(
+    acquisition_disposal_projector: AcquisitionDisposalProjector,
+) -> None:
+    receiving_wallet = AccountChainId("ledger")
+    acquired_btc = Decimal("1")
+    spent_eur = Decimal("30000")
+    transferred_btc = Decimal("0.99")
+    fee_btc = Decimal("0.01")
+    events = [
+        make_event(
+            legs=[
+                LedgerLeg(asset_id=BTC, quantity=acquired_btc, account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(asset_id=EUR, quantity=-spent_eur, account_chain_id=KRAKEN_ACCOUNT_ID),
+            ],
+        ),
+        make_event(
+            legs=[
+                LedgerLeg(asset_id=BTC, quantity=-transferred_btc, account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(asset_id=BTC, quantity=-fee_btc, account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=True),
+                LedgerLeg(asset_id=BTC, quantity=transferred_btc, account_chain_id=receiving_wallet),
+            ],
+        ),
+    ]
+
+    result = acquisition_disposal_projector.project(events)
+
+    assert len(result.acquisition_lots) == 1
+    assert len(result.disposal_links) == 1
+
+    disposal = result.disposal_links[0]
+    assert disposal.event_origin == events[1].event_origin
+    assert disposal.account_chain_id == KRAKEN_ACCOUNT_ID
+    assert disposal.asset_id == BTC
+    assert disposal.is_fee is True
+    assert disposal.quantity_used == fee_btc
+    fee_rate = acquisition_disposal_projector._price_provider.rate(BTC, EUR, events[1].timestamp)
+    assert disposal.proceeds_total == fee_rate * fee_btc
+
+
+def test_transfer_without_explicit_fee_leg_projects_only_residual_disposal(
+    acquisition_disposal_projector: AcquisitionDisposalProjector,
+) -> None:
+    receiving_wallet = AccountChainId("ledger")
+    acquired_btc = Decimal("1")
+    spent_eur = Decimal("30000")
+    sent_btc = Decimal("1")
+    received_btc = Decimal("0.99")
+    residual_disposal = sent_btc - received_btc
+    events = [
+        make_event(
+            legs=[
+                LedgerLeg(asset_id=BTC, quantity=acquired_btc, account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(asset_id=EUR, quantity=-spent_eur, account_chain_id=KRAKEN_ACCOUNT_ID),
+            ],
+        ),
+        make_event(
+            legs=[
+                LedgerLeg(asset_id=BTC, quantity=-sent_btc, account_chain_id=KRAKEN_ACCOUNT_ID),
+                LedgerLeg(asset_id=BTC, quantity=received_btc, account_chain_id=receiving_wallet),
+            ],
+        ),
+    ]
+
+    result = acquisition_disposal_projector.project(events)
+
+    assert len(result.acquisition_lots) == 1
+    assert len(result.disposal_links) == 1
+
+    disposal = result.disposal_links[0]
+    assert disposal.event_origin == events[1].event_origin
+    assert disposal.account_chain_id == KRAKEN_ACCOUNT_ID
+    assert disposal.asset_id == BTC
+    assert disposal.is_fee is False
+    assert disposal.quantity_used == residual_disposal
+    disposal_rate = acquisition_disposal_projector._price_provider.rate(BTC, EUR, events[1].timestamp)
+    assert disposal.proceeds_total == disposal_rate * residual_disposal
+
+
+def test_transfer_gain_creates_only_residual_acquisition(
+    acquisition_disposal_projector: AcquisitionDisposalProjector,
+) -> None:
+    sending_wallet = AccountChainId("kraken")
+    receiving_wallet = AccountChainId("ledger")
+    sent_eth = Decimal("1")
+    received_eth = Decimal("1.5")
+    residual_acquisition = received_eth - sent_eth
+    event = make_event(
+        legs=[
+            LedgerLeg(asset_id=ETH, quantity=-sent_eth, account_chain_id=sending_wallet),
+            LedgerLeg(asset_id=ETH, quantity=received_eth, account_chain_id=receiving_wallet),
+        ],
+    )
+
+    result = acquisition_disposal_projector.project([event])
+
+    assert result.disposal_links == []
+    assert len(result.acquisition_lots) == 1
+
+    lot = result.acquisition_lots[0]
+    assert lot.event_origin == event.event_origin
+    assert lot.account_chain_id == receiving_wallet
+    assert lot.asset_id == ETH
+    assert lot.is_fee is False
+    assert lot.quantity_acquired == residual_acquisition
+    lot_rate = acquisition_disposal_projector._price_provider.rate(ETH, EUR, event.timestamp)
+    assert lot.cost_per_unit == lot_rate
+
+
+def test_positive_residual_is_split_proportionally_across_incoming_legs(
+    acquisition_disposal_projector: AcquisitionDisposalProjector,
+) -> None:
+    sending_wallet = AccountChainId("kraken")
+    first_receiving_wallet = AccountChainId("ledger")
+    second_receiving_wallet = AccountChainId("trezor")
+    sent_eth = Decimal("1")
+    first_received_eth = Decimal("0.6")
+    second_received_eth = Decimal("0.5")
+    residual_acquisition = first_received_eth + second_received_eth - sent_eth
+    first_expected_acquisition = residual_acquisition * first_received_eth / (first_received_eth + second_received_eth)
+    second_expected_acquisition = residual_acquisition - first_expected_acquisition
+    event = make_event(
+        legs=[
+            LedgerLeg(asset_id=ETH, quantity=-sent_eth, account_chain_id=sending_wallet),
+            LedgerLeg(asset_id=ETH, quantity=first_received_eth, account_chain_id=first_receiving_wallet),
+            LedgerLeg(asset_id=ETH, quantity=second_received_eth, account_chain_id=second_receiving_wallet),
+        ],
+    )
+
+    result = acquisition_disposal_projector.project([event])
+
+    assert result.disposal_links == []
+    assert len(result.acquisition_lots) == 2
+
+    first_lot, second_lot = result.acquisition_lots
+    assert first_lot.account_chain_id == first_receiving_wallet
+    assert first_lot.quantity_acquired == first_expected_acquisition
+    assert second_lot.account_chain_id == second_receiving_wallet
+    assert second_lot.quantity_acquired == second_expected_acquisition
+    assert first_lot.quantity_acquired + second_lot.quantity_acquired == residual_acquisition
+
+
+def test_negative_residual_is_split_proportionally_across_outgoing_legs(
+    acquisition_disposal_projector: AcquisitionDisposalProjector,
+) -> None:
+    first_sending_wallet = AccountChainId("kraken")
+    second_sending_wallet = AccountChainId("ledger")
+    receiving_wallet = AccountChainId("trezor")
+    acquired_eth = Decimal("2")
+    spent_eur = Decimal("3000")
+    first_sent_eth = Decimal("0.6")
+    second_sent_eth = Decimal("0.5")
+    received_eth = Decimal("0.6")
+    residual_disposal = first_sent_eth + second_sent_eth - received_eth
+    first_expected_disposal = residual_disposal * first_sent_eth / (first_sent_eth + second_sent_eth)
+    second_expected_disposal = residual_disposal - first_expected_disposal
+    events = [
+        make_event(
+            legs=[
+                LedgerLeg(asset_id=ETH, quantity=acquired_eth, account_chain_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=-spent_eur, account_chain_id=WALLET_ID),
+            ],
+        ),
+        make_event(
+            legs=[
+                LedgerLeg(asset_id=ETH, quantity=-first_sent_eth, account_chain_id=first_sending_wallet),
+                LedgerLeg(asset_id=ETH, quantity=-second_sent_eth, account_chain_id=second_sending_wallet),
+                LedgerLeg(asset_id=ETH, quantity=received_eth, account_chain_id=receiving_wallet),
+            ],
+        ),
+    ]
+
+    result = acquisition_disposal_projector.project(events)
+
+    assert len(result.disposal_links) == 2
+
+    first_link, second_link = result.disposal_links
+    assert first_link.account_chain_id == first_sending_wallet
+    assert first_link.quantity_used == first_expected_disposal
+    assert second_link.account_chain_id == second_sending_wallet
+    assert second_link.quantity_used == second_expected_disposal
+    assert first_link.quantity_used + second_link.quantity_used == residual_disposal
+
+
+def test_sale_does_not_assign_trade_eur_proceeds_to_fee_disposal(
+    acquisition_disposal_projector: AcquisitionDisposalProjector,
+) -> None:
+    acquired_btc = Decimal("1")
+    spent_eur = Decimal("30000")
+    sold_btc = Decimal("0.4")
+    received_eur = Decimal("16000")
+    fee_eth = Decimal("0.01")
+    eth_bought = Decimal("1")
+    eth_spent_eur = Decimal("1500")
+    events = [
+        make_event(
+            legs=[
+                LedgerLeg(asset_id=BTC, quantity=acquired_btc, account_chain_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=-spent_eur, account_chain_id=WALLET_ID),
+            ],
+        ),
+        make_event(
+            legs=[
+                LedgerLeg(asset_id=ETH, quantity=eth_bought, account_chain_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=-eth_spent_eur, account_chain_id=WALLET_ID),
+            ],
+        ),
+        make_event(
+            legs=[
+                LedgerLeg(asset_id=BTC, quantity=-sold_btc, account_chain_id=WALLET_ID),
+                LedgerLeg(asset_id=EUR, quantity=received_eur, account_chain_id=WALLET_ID),
+                LedgerLeg(asset_id=ETH, quantity=-fee_eth, account_chain_id=WALLET_ID, is_fee=True),
+            ],
+        ),
+    ]
+
+    result = acquisition_disposal_projector.project(events)
+
+    assert len(result.disposal_links) == 2
+
+    sale_disposal, fee_disposal = result.disposal_links
+    assert sale_disposal.asset_id == BTC
+    assert sale_disposal.is_fee is False
+    assert sale_disposal.quantity_used == sold_btc
+    assert sale_disposal.proceeds_total == received_eur
+
+    assert fee_disposal.asset_id == ETH
+    assert fee_disposal.is_fee is True
+    assert fee_disposal.quantity_used == fee_eth
+    fee_rate = acquisition_disposal_projector._price_provider.rate(ETH, EUR, events[2].timestamp)
+    assert fee_disposal.proceeds_total == fee_rate * fee_eth
+
+
+def test_residual_disposal_without_prior_lot_raises(
+    acquisition_disposal_projector: AcquisitionDisposalProjector,
+) -> None:
+    sending_wallet = AccountChainId("kraken")
+    receiving_wallet = AccountChainId("ledger")
+    sent_btc = Decimal("1")
+    received_btc = Decimal("0.99")
+    event = make_event(
+        legs=[
+            LedgerLeg(asset_id=BTC, quantity=-sent_btc, account_chain_id=sending_wallet),
+            LedgerLeg(asset_id=BTC, quantity=received_btc, account_chain_id=receiving_wallet),
+        ],
+    )
+
+    with pytest.raises(AcquisitionDisposalProjectionError):
+        acquisition_disposal_projector.project([event])
 
 
 def test_disposal_without_acquisition_raises(acquisition_disposal_projector: AcquisitionDisposalProjector) -> None:

@@ -92,7 +92,7 @@ def compute_weekly_tax_summary(
 
         week_start = timestamp.date() - timedelta(days=timestamp.weekday())
 
-        totals = weekly_totals.get(week_start, (0, Decimal("0"), Decimal("0"), Decimal("0")))
+        totals = weekly_totals.get(week_start, (0, Decimal(0), Decimal(0), Decimal(0)))
         count, proceeds_total, costs_total, gains_total = totals
         weekly_totals[week_start] = (
             count + 1,
