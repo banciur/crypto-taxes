@@ -71,7 +71,6 @@ class AcquisitionDisposalProjector:
 
             for projected_leg in self._disposal_legs(projected_legs):
                 qty_to_match = abs(projected_leg.quantity)
-                proceeds_per_unit = self._resolve_proceeds_per_unit(event, projected_leg, projected_legs)
 
                 for lot_state, take_quantity in self._consume_open_lots(
                     leg=projected_leg.leg,
@@ -88,7 +87,7 @@ class AcquisitionDisposalProjector:
                             is_fee=projected_leg.leg.is_fee,
                             timestamp=event.timestamp,
                             quantity_used=take_quantity,
-                            proceeds_total=proceeds_per_unit * take_quantity,
+                            proceeds_total=Decimal(1) * take_quantity,
                         )
                     )
 
@@ -100,7 +99,7 @@ class AcquisitionDisposalProjector:
                     is_fee=projected_leg.leg.is_fee,
                     timestamp=event.timestamp,
                     quantity_acquired=projected_leg.quantity,
-                    cost_per_unit=self._resolve_cost_per_unit(event, projected_leg, projected_legs),
+                    cost_per_unit=Decimal(1),
                 )
                 acquisitions.append(lot)
 
@@ -110,79 +109,11 @@ class AcquisitionDisposalProjector:
                 )
                 open_lots_by_asset[projected_leg.leg.asset_id].append(state)
 
-        acquisitions.sort(key=self._projection_sort_key)
-        disposals.sort(key=self._projection_sort_key)
-
         return AcquisitionDisposalProjection(
             acquisition_lots=acquisitions,
             disposal_links=disposals,
         )
 
-    def _resolve_cost_per_unit(
-        self,
-        event: LedgerEvent,
-        projected_leg: _ProjectedLegQuantity,
-        projected_legs: list[_ProjectedLegQuantity],
-    ) -> Decimal:
-        eur_leg = self._find_unique_eur_leg(
-            event,
-            expected_sign=-1,
-            allow_eur_pricing=(
-                projected_leg.leg.is_fee is False
-                and self._has_single_non_fee_projected_leg(projected_legs, expected_sign=1)
-            ),
-        )
-        if eur_leg is not None:
-            return abs(eur_leg.quantity) / projected_leg.quantity
-
-        rate = self._price_provider.rate(projected_leg.leg.asset_id, self.EUR_ASSET_ID, event.timestamp)
-        return rate
-
-    def _resolve_proceeds_per_unit(
-        self,
-        event: LedgerEvent,
-        projected_leg: _ProjectedLegQuantity,
-        projected_legs: list[_ProjectedLegQuantity],
-    ) -> Decimal:
-        eur_leg = self._find_unique_eur_leg(
-            event,
-            expected_sign=1,
-            allow_eur_pricing=(
-                projected_leg.leg.is_fee is False
-                and self._has_single_non_fee_projected_leg(projected_legs, expected_sign=-1)
-            ),
-        )
-        if eur_leg is not None:
-            return abs(eur_leg.quantity) / abs(projected_leg.quantity)
-
-        rate = self._price_provider.rate(projected_leg.leg.asset_id, self.EUR_ASSET_ID, event.timestamp)
-        return rate
-
-    def _find_unique_eur_leg(
-        self,
-        event: LedgerEvent,
-        *,
-        expected_sign: int,
-        allow_eur_pricing: bool,
-    ) -> LedgerLeg | None:
-        """Locate a single EUR leg matching the expected sign (+/-).
-
-        Returns None if none (or multiple) is found to avoid ambiguous matching.
-        """
-        if not allow_eur_pricing:
-            return None
-
-        matches = [
-            leg
-            for leg in event.legs
-            if not leg.is_fee
-            and leg.asset_id == self.EUR_ASSET_ID
-            and (leg.quantity > 0 if expected_sign > 0 else leg.quantity < 0)
-        ]
-
-        if len(matches) == 1:
-            return matches[0]
-        return None
 
     def _projected_non_eur_legs(self, event: LedgerEvent) -> list[_ProjectedLegQuantity]:
         by_asset: dict[AssetId, list[LedgerLeg]] = defaultdict(list)
@@ -257,12 +188,10 @@ class AcquisitionDisposalProjector:
         return len(matches) == 1
 
     def _acquisition_legs(self, projected_legs: list[_ProjectedLegQuantity]) -> list[_ProjectedLegQuantity]:
-        acquisition_legs = [projected_leg for projected_leg in projected_legs if projected_leg.quantity > 0]
-        return sorted(acquisition_legs, key=lambda projected_leg: projected_leg.leg.leg_key)
+        return [projected_leg for projected_leg in projected_legs if projected_leg.quantity > 0]
 
     def _disposal_legs(self, projected_legs: list[_ProjectedLegQuantity]) -> list[_ProjectedLegQuantity]:
-        disposal_legs = [projected_leg for projected_leg in projected_legs if projected_leg.quantity < 0]
-        return sorted(disposal_legs, key=lambda projected_leg: projected_leg.leg.leg_key)
+        return [projected_leg for projected_leg in projected_legs if projected_leg.quantity < 0]
 
     def _consume_open_lots(
         self,
