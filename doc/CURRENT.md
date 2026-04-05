@@ -99,9 +99,37 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 ---
 
+## Current Capabilities
+
+- Represent imported and corrected operations as `LedgerEvent`s composed of signed `LedgerLeg`s that record the participating account and asset quantity.
+- Project those events into acquisitions/disposals with per-leg accounts and optional fee legs. Detailed algorithm rules live in `doc/LOT_MATCHING.md`.
+- Tax calculations currently focus on disposal links (currently doesn't work as being worked on)
+- Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
+- Wallet tracking rebuilds a current-state per-wallet/per-asset projection from corrected events and persists it in SQLite. It's exposed through `GET /wallet-projection`.
+- CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet projection snapshot, and then stops before later inventory/tax stages in the current implementation. The raw-event import step currently combines Kraken, Stakewise, and Lido CSVs, Coinbase Track history, Moralis on-chain history.
+
+---
+
+## Fees
+
+- Swaps and trades (custodial or on-chain) net their exchange fees into whichever leg uses the same asset: if the fee reduces the asset being spent, we decrease that outgoing quantity; if it comes out of what you acquired, we shrink the inbound leg. Only when the fee is taken in an asset that is not otherwise part of the event do we emit a separate disposal leg, allowing FIFO to consume that third asset and value it like any other disposal. Stablecoins follow the same rule as any crypto.
+- Execution costs such as gas are independent on-chain spends and always produce their own disposal legs, even if they happen in the same transaction as the swap. Paying ETH for gas when swapping WETH/WBTC still records an ETH disposal.
+- Explicit fee legs set `is_fee=True` on the leg. Downstream views should use that to exclude fees from income while still valuing them for tax deductibility.
+
+---
+
+### User Interface
+
+- The UI supports reviewing raw events, unified persisted corrections, and corrected events.
+- The UI can author and remove unified corrections: discard, replacement, and opening-balance.
+- After correction mutations, the UI refreshes the server-rendered lane data immediately.
+- Corrected pipeline outputs still require a manual rerun after correction mutations.
+- Wallet projection backend delivery exists through `GET /wallet-projection`, and the UI renders that state in the page header section.
+
+---
+
 ## Behavioral Notes
 
-- Acquisition/disposal projection is automated: the `AcquisitionDisposalProjector` creates `AcquisitionLot`s and `DisposalLink`s from ordered events. Details of the lot matching algorithm are documented in [LOT_MATCHING.md](LOT_MATCHING.md).
 - Unbalanced events are allowed.
 - Precision: use `Decimal` for all quantities/rates. No floats.
 - Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
@@ -120,39 +148,10 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 ---
 
-## Fees
-
-- Swaps and trades (custodial or on-chain) net their exchange fees into whichever leg uses the same asset: if the fee reduces the asset being spent, we decrease that outgoing quantity; if it comes out of what you acquired, we shrink the inbound leg. Only when the fee is taken in an asset that is not otherwise part of the event do we emit a separate disposal leg, allowing FIFO to consume that third asset and value it like any other disposal. Stablecoins follow the same rule as any crypto.
-- Execution costs such as gas are independent on-chain spends and always produce their own disposal legs, even if they happen in the same transaction as the swap. Paying ETH for gas when swapping WETH/WBTC still records an ETH disposal.
-- Deposits and withdrawals are modeled as single Kraken-side legs. Counterparty legs are not emitted.
-- Explicit fee legs set `is_fee=True` on the leg. Downstream views should use that to exclude fees from income while still valuing them for tax deductibility.
-
----
-
-## Current Capabilities
-
-- Model simple acquisitions/disposals with per-leg accounts and optional fee legs.
-- Automatically create lots for acquisitions and link disposals via `AcquisitionDisposalProjector.project` (FIFO only; other lot policies are future work).
-- Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
-- Wallet tracking rebuilds a current-state per-wallet/per-asset projection from corrected events and persists it in SQLite.
-- `GET /wallet-projection` exposes the current wallet projection snapshot with `NOT_RUN`/`COMPLETED`/`FAILED` semantics.
-- Tax calculations currently focus on disposal links.
-- CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet projection snapshot, and then stops before later inventory/tax stages in the current implementation. The raw-event import step currently combines Kraken, Stakewise, and Lido CSVs, Coinbase Track history, Moralis on-chain history.
-
-### User Interface
-
-- The UI supports reviewing raw events, unified persisted corrections, and corrected events.
-- The UI can author and remove unified corrections: discard, replacement, and opening-balance.
-- After correction mutations, the UI refreshes the server-rendered lane data immediately.
-- Corrected pipeline outputs still require a manual rerun after correction mutations.
-- Wallet projection backend delivery exists through `GET /wallet-projection`, and the UI renders that state in the page header section.
-
----
-
 ## Supported Sources
 
-- Kraken ledger CSV
-- Coinbase Track account history
-- Stakewise reward CSV exports
-- Lido reward CSV exports
+- Kraken - through CSV
+- Coinbase - through API 
+- Stakewise - through CSV 
+- Lido - through CSV
 - On-chain transactions via Moralis

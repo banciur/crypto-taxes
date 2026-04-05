@@ -1,6 +1,6 @@
 # Lot Matching Algorithm
 
-This document explains the current `AcquisitionDisposalProjector` algorithm at a lower level than [CURRENT.md](CURRENT.md).
+This document explains the current `AcquisitionDisposalProjector` algorithm.
 
 ## Scope
 
