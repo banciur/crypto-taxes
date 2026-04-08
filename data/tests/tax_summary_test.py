@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from domain.acquisition_disposal_projection import AcquisitionDisposalProjector
+from domain.acquisition_disposal import AcquisitionDisposalProjector
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 from tests.constants import BTC, EUR, LEDGER_WALLET
 from utils.tax_summary import TaxEventKind, compute_weekly_tax_summary, generate_tax_events

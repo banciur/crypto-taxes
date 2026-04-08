@@ -10,7 +10,7 @@ from pydantic import Field
 
 from pydantic_base import StrictBaseModel
 
-from .ledger import AccountChainId, AssetId, DisposalId, EventLegRef, EventOrigin, LegKey, LotId
+from ..ledger import AccountChainId, AssetId, DisposalId, EventLegRef, EventOrigin, LegKey, LotId
 
 
 class AbstractAcquisitionDisposal(StrictBaseModel, ABC):

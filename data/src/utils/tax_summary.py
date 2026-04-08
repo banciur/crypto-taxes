@@ -5,8 +5,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Iterable, cast
 
-from domain.acquisition_disposal import AcquisitionLot, DisposalLink
-from domain.acquisition_disposal_projection import AcquisitionDisposalProjection
+from domain.acquisition_disposal import AcquisitionDisposalProjection, AcquisitionLot, DisposalLink
 from domain.ledger import DisposalId, LedgerEvent, LotId
 from domain.tax_event import TaxEvent, TaxEventKind
 

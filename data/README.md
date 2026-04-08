@@ -14,8 +14,7 @@
 
 ### Domain modules
 - Ledger events: `src/domain/ledger.py`
-- Acquisition/disposal projection models: `src/domain/acquisition_disposal.py`
-- Acquisition/disposal projector and FIFO lot matching: `src/domain/acquisition_disposal_projection.py`
+- Acquisition/disposal projection models and projector package: `src/domain/acquisition_disposal/`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
 - Unified correction model (`LedgerCorrection` for discard, replacement, and opening balance): `src/domain/correction.py`
 - Tax event projection types: `src/domain/tax_event.py`
@@ -64,7 +63,7 @@
 - Add `--group dev` ex. `uv run --group dev <command or path to python file>` for operations that depend on dev packages (pytest, ruff, mypy, etc.);
 - Examples:
   - `uv run src/main.py` for running the main entrypoint;
-  - `uv run --group dev pytest -s tests/domain/acquisition_disposal_projection_test.py` for running the test file;
+  - `uv run --group dev pytest -s tests/domain/acquisition_disposal_test.py` for running a domain test file;
 
 ### Development commands
 - Run these commands from `data/`.
