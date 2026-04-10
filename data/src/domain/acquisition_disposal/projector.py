@@ -22,8 +22,6 @@ class AcquisitionDisposalProjection:
 class AcquisitionDisposalProjector:
     """Project ledger events into acquisition lots and disposal links."""
 
-    EUR_ASSET_ID = AssetId("EUR")
-
     def __init__(
         self,
         *,
@@ -38,14 +36,17 @@ class AcquisitionDisposalProjector:
         open_lots_by_asset: dict[AssetId, deque[_LotBalance]] = defaultdict(deque)
 
         for event in events:
-            projected_event = project_event_quantities(event, eur_asset_id=self.EUR_ASSET_ID)
-            valued_event = value_projected_event(
+            projected_event = project_event_quantities(event)
+            prices = value_projected_event(
                 projected_event,
-                eur_asset_id=self.EUR_ASSET_ID,
+                timestamp=event.timestamp,
                 price_provider=self._price_provider,
             )
             match_event_fifo(
-                valued_event,
+                projected_event,
+                prices=prices,
+                event_origin=event.event_origin,
+                timestamp=event.timestamp,
                 open_lots_by_asset=open_lots_by_asset,
                 acquisitions=acquisitions,
                 disposals=disposals,
