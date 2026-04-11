@@ -7,24 +7,24 @@ from operator import gt, lt
 from ..ledger import AssetId, LedgerEvent, LedgerLeg
 from .constants import BASE_CURRENCY_ASSET_ID
 from .pipeline_types import (
-    _ProjectedBucket,
+    _ProjectedAssetGroup,
     _ProjectedEvent,
-    _ProjectedLeg,
+    _ProjectedResidualLeg,
 )
 
 
 def project_event_quantities(event: LedgerEvent) -> _ProjectedEvent:
     base_currency_legs: list[LedgerLeg] = []
     non_fee_legs_by_asset: dict[AssetId, list[LedgerLeg]] = defaultdict(list)
-    fee_buckets: list[_ProjectedBucket] = []
+    fee_buckets: list[_ProjectedAssetGroup] = []
 
     for leg in event.legs:
         if leg.is_fee:
             fee_buckets.append(
-                _ProjectedBucket(
+                _ProjectedAssetGroup(
                     asset_id=leg.asset_id,
                     is_fee=True,
-                    legs=(_ProjectedLeg(account_chain_id=leg.account_chain_id, quantity=leg.quantity),),
+                    legs=(_ProjectedResidualLeg(account_chain_id=leg.account_chain_id, quantity=leg.quantity),),
                 )
             )
         elif leg.asset_id == BASE_CURRENCY_ASSET_ID:
@@ -47,7 +47,7 @@ def project_event_quantities(event: LedgerEvent) -> _ProjectedEvent:
     )
 
 
-def _project_asset_bucket(legs: list[LedgerLeg]) -> _ProjectedBucket | None:
+def _project_asset_bucket(legs: list[LedgerLeg]) -> _ProjectedAssetGroup | None:
     net_quantity = sum((leg.quantity for leg in legs), start=Decimal(0))
     if net_quantity == 0:
         return None
@@ -57,26 +57,26 @@ def _project_asset_bucket(legs: list[LedgerLeg]) -> _ProjectedBucket | None:
 
     total_raw_quantity = sum((leg.quantity for leg in relevant_legs), start=Decimal(0))
     remaining_quantity = net_quantity
-    projected_legs: list[_ProjectedLeg] = []
+    projected_legs: list[_ProjectedResidualLeg] = []
 
     for leg in relevant_legs[:-1]:
         allocated_quantity = net_quantity * leg.quantity / total_raw_quantity
         remaining_quantity -= allocated_quantity
         projected_legs.append(
-            _ProjectedLeg(
+            _ProjectedResidualLeg(
                 account_chain_id=leg.account_chain_id,
                 quantity=allocated_quantity,
             )
         )
 
     projected_legs.append(
-        _ProjectedLeg(
+        _ProjectedResidualLeg(
             account_chain_id=relevant_legs[-1].account_chain_id,
             quantity=remaining_quantity,
         )
     )
 
-    return _ProjectedBucket(
+    return _ProjectedAssetGroup(
         asset_id=legs[0].asset_id,
         is_fee=False,
         legs=tuple(projected_legs),
@@ -91,5 +91,5 @@ def _project_exact_base_currency(legs: list[LedgerLeg]) -> Decimal | None:
     return net_quantity
 
 
-def _bucket_quantity(bucket: _ProjectedBucket) -> Decimal:
+def _bucket_quantity(bucket: _ProjectedAssetGroup) -> Decimal:
     return sum((leg.quantity for leg in bucket.legs), start=Decimal(0))

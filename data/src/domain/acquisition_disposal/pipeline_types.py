@@ -8,26 +8,26 @@ from .models import AcquisitionLot
 
 
 @dataclass(frozen=True)
-class _ProjectedLeg:
+class _ProjectedResidualLeg:
     account_chain_id: AccountChainId
     quantity: Decimal
 
 
 @dataclass(frozen=True)
-class _ProjectedBucket:
+class _ProjectedAssetGroup:
     asset_id: AssetId
     is_fee: bool
-    legs: tuple[_ProjectedLeg, ...]
+    legs: tuple[_ProjectedResidualLeg, ...]
 
 
 @dataclass(frozen=True)
 class _ProjectedEvent:
-    non_fee_buckets: tuple[_ProjectedBucket, ...]
-    fee_buckets: tuple[_ProjectedBucket, ...]
+    non_fee_buckets: tuple[_ProjectedAssetGroup, ...]
+    fee_buckets: tuple[_ProjectedAssetGroup, ...]
     exact_base_currency: Decimal | None
 
     @property
-    def all_buckets(self) -> tuple[_ProjectedBucket, ...]:
+    def all_buckets(self) -> tuple[_ProjectedAssetGroup, ...]:
         return self.non_fee_buckets + self.fee_buckets
 
 
