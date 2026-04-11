@@ -102,7 +102,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 ## Current Capabilities
 
 - Represent imported and corrected operations as `LedgerEvent`s composed of signed `LedgerLeg`s that record the participating account and asset quantity.
-- Project those events into acquisitions/disposals with per-leg accounts and optional fee legs. Detailed algorithm rules live in `doc/LOT_MATCHING.md`.
+- Project those events into acquisitions/disposals with per-leg accounts and optional fee legs. The target model and rationale live in `doc/LOT_MATCHING.md`, and remaining implementation work is tracked in `data/PLAN.md`.
 - Tax calculations currently focus on disposal links (currently doesn't work as being worked on)
 - Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
 - Wallet tracking rebuilds a current-state per-wallet/per-asset projection from corrected events and persists it in SQLite. It's exposed through `GET /wallet-projection`.
