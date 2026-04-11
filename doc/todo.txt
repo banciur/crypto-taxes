@@ -1,7 +1,14 @@
 First stage: compute German taxes
 
 TODO: Review disposal and acquisition creation.
+  - projector logic with tests
+  - logic is there check test cases
+  - add to main
+  - api
+  - display it
+  - add a fallback mechanism for missing price with an API and UI
 TODO: Probably need smarter price service
+  - change interface of protocol so None can be returned this will simplify the code
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 
 Review the order of todos

@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 from accounts import KRAKEN_ACCOUNT_ID
 from domain.acquisition_disposal.models import AbstractAcquisitionDisposal
 from domain.ledger import EventLegRef, EventLocation, EventOrigin, LegKey
 from tests.constants import BTC
-
-TIMESTAMP = datetime(2024, 1, 1, 12, tzinfo=timezone.utc)
+from tests.domain.acquisition_disposal.helpers import BASE_TIMESTAMP
 
 
 class _TestAcquisitionDisposal(AbstractAcquisitionDisposal):
@@ -22,7 +19,7 @@ def test_abstract_acquisition_disposal_derives_leg_identity() -> None:
         account_chain_id=KRAKEN_ACCOUNT_ID,
         asset_id=BTC,
         is_fee=False,
-        timestamp=TIMESTAMP,
+        timestamp=BASE_TIMESTAMP,
     )
 
     assert projection.leg_key == LegKey(account_chain_id=KRAKEN_ACCOUNT_ID, asset_id=BTC, is_fee=False)

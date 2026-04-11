@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -17,18 +18,17 @@ class _ProjectedResidualLeg:
 class _ProjectedAssetGroup:
     asset_id: AssetId
     is_fee: bool
-    legs: tuple[_ProjectedResidualLeg, ...]
+    legs: Sequence[_ProjectedResidualLeg]
 
 
 @dataclass(frozen=True)
 class _ProjectedEvent:
-    non_fee_buckets: tuple[_ProjectedAssetGroup, ...]
-    fee_buckets: tuple[_ProjectedAssetGroup, ...]
-    exact_base_currency: Decimal | None
+    non_fee_groups: Sequence[_ProjectedAssetGroup]
+    fee_groups: Sequence[_ProjectedAssetGroup]
 
     @property
-    def all_buckets(self) -> tuple[_ProjectedAssetGroup, ...]:
-        return self.non_fee_buckets + self.fee_buckets
+    def all_groups(self) -> Sequence[_ProjectedAssetGroup]:
+        return [*self.non_fee_groups, *self.fee_groups]
 
 
 @dataclass

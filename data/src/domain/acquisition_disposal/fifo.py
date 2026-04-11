@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Iterable
 
 from ..ledger import AccountChainId, AssetId, EventOrigin
+from .constants import is_fifo_tracked_asset
 from .errors import AcquisitionDisposalProjectionError
 from .models import AcquisitionLot, DisposalLink
 from .pipeline_types import _LotBalance, _ProjectedEvent
@@ -21,13 +22,15 @@ def match_event_fifo(
     acquisitions: list[AcquisitionLot],
     disposals: list[DisposalLink],
 ) -> None:
-    for bucket in projected_event.all_buckets:
-        for projected_leg in bucket.legs:
+    for group in projected_event.all_groups:
+        if not is_fifo_tracked_asset(group.asset_id):
+            continue
+        for projected_leg in group.legs:
             if projected_leg.quantity >= 0:
                 continue
 
             for lot_state, take_quantity in _consume_open_lots(
-                asset_id=bucket.asset_id,
+                asset_id=group.asset_id,
                 account_chain_id=projected_leg.account_chain_id,
                 event_origin=event_origin,
                 timestamp=timestamp,
@@ -39,32 +42,34 @@ def match_event_fifo(
                         lot_id=lot_state.lot.id,
                         event_origin=event_origin,
                         account_chain_id=projected_leg.account_chain_id,
-                        asset_id=bucket.asset_id,
-                        is_fee=bucket.is_fee,
+                        asset_id=group.asset_id,
+                        is_fee=group.is_fee,
                         timestamp=timestamp,
                         quantity_used=take_quantity,
                         # TODO: Preserve the projected disposal total exactly by assigning
                         # the rounding remainder to the final FIFO fragment.
-                        proceeds_total=prices[bucket.asset_id] * take_quantity,
+                        proceeds_total=prices[group.asset_id] * take_quantity,
                     )
                 )
 
-    for bucket in projected_event.all_buckets:
-        for projected_leg in bucket.legs:
+    for group in projected_event.all_groups:
+        if not is_fifo_tracked_asset(group.asset_id):
+            continue
+        for projected_leg in group.legs:
             if projected_leg.quantity <= 0:
                 continue
 
             lot = AcquisitionLot(
                 event_origin=event_origin,
                 account_chain_id=projected_leg.account_chain_id,
-                asset_id=bucket.asset_id,
-                is_fee=bucket.is_fee,
+                asset_id=group.asset_id,
+                is_fee=group.is_fee,
                 timestamp=timestamp,
                 quantity_acquired=abs(projected_leg.quantity),
-                cost_per_unit=prices[bucket.asset_id],
+                cost_per_unit=prices[group.asset_id],
             )
             acquisitions.append(lot)
-            open_lots_by_asset[bucket.asset_id].append(
+            open_lots_by_asset[group.asset_id].append(
                 _LotBalance(
                     lot=lot,
                     remaining_quantity=abs(projected_leg.quantity),

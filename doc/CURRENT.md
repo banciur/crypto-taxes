@@ -104,7 +104,8 @@ This document captures the currently implemented domain for modeling crypto ledg
 - Represent imported and corrected operations as `LedgerEvent`s composed of signed `LedgerLeg`s that record the participating account and asset quantity.
 - Project those events into acquisitions/disposals with per-leg accounts and optional fee legs. The target model and rationale live in `doc/LOT_MATCHING.md`, and remaining implementation work is tracked in `data/PLAN.md`.
 - Tax calculations currently focus on disposal links (currently doesn't work as being worked on)
-- Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
+- Resolve EUR valuations through the injected `PriceProvider`; non-fee valuation now treats `EUR`, configured fiat currencies, and selected stable assets as anchors, rebalances only the remaining adjustable assets, and then values fee legs from the solved same-event rate or direct pricing.
+- Fiat assets can anchor valuation without opening or consuming FIFO lots. Selected stable assets remain FIFO-tracked.
 - Wallet tracking rebuilds a current-state per-wallet/per-asset projection from corrected events and persists it in SQLite. It's exposed through `GET /wallet-projection`.
 - CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet projection snapshot, and then stops before later inventory/tax stages in the current implementation. The raw-event import step currently combines Kraken, Stakewise, and Lido CSVs, Coinbase Track history, Moralis on-chain history.
 
@@ -112,7 +113,7 @@ This document captures the currently implemented domain for modeling crypto ledg
 
 ## Fees
 
-- Swaps and trades (custodial or on-chain) net their exchange fees into whichever leg uses the same asset: if the fee reduces the asset being spent, we decrease that outgoing quantity; if it comes out of what you acquired, we shrink the inbound leg. Only when the fee is taken in an asset that is not otherwise part of the event do we emit a separate disposal leg, allowing FIFO to consume that third asset and value it like any other disposal. Stablecoins follow the same rule as any crypto.
+- Swaps and trades (custodial or on-chain) net their exchange fees into whichever leg uses the same asset: if the fee reduces the asset being spent, we decrease that outgoing quantity; if it comes out of what you acquired, we shrink the inbound leg. Only when the fee is taken in an asset that is not otherwise part of the event do we emit a separate disposal leg, allowing FIFO to consume that third asset and value it like any other disposal. For this fee-netting step, stablecoins follow the same leg-projection rule as any other asset.
 - Execution costs such as gas are independent on-chain spends and always produce their own disposal legs, even if they happen in the same transaction as the swap. Paying ETH for gas when swapping WETH/WBTC still records an ETH disposal.
 - Explicit fee legs set `is_fee=True` on the leg. Downstream views should use that to exclude fees from income while still valuing them for tax deductibility.
 
