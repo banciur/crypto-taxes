@@ -16,7 +16,6 @@
 - Ledger events: `src/domain/ledger.py`
 - Acquisition/disposal projection models and projector package: `src/domain/acquisition_disposal/`
 - Target lot-matching model and rationale: `../doc/LOT_MATCHING.md`
-- Active implementation plan for acquisition/disposal projection: `PLAN.md`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
 - Unified correction model (`LedgerCorrection` for discard, replacement, and opening balance): `src/domain/correction.py`
 - Tax event projection types: `src/domain/tax_event.py`

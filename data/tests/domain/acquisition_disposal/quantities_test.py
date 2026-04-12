@@ -4,7 +4,8 @@ from decimal import Decimal
 
 from domain.acquisition_disposal.quantities import project_event_quantities
 from tests.constants import ALT_BASE_WALLET, BASE_WALLET, ETH, EUR, LEDGER_WALLET, USDC
-from tests.domain.acquisition_disposal.helpers import EXOTIC, make_event, make_leg
+from tests.domain.acquisition_disposal.helpers import EXOTIC, make_event
+from tests.helpers.ledger import make_leg
 
 
 def test_internal_transfer_projects_no_non_fee_asset_group() -> None:
@@ -30,8 +31,8 @@ def test_non_fee_eur_remains_in_non_fee_groups() -> None:
     projected_event = project_event_quantities(
         make_event(
             legs=[
-                make_leg(account_chain_id=BASE_WALLET, asset_id=ETH, quantity=acquisition_quantity),
-                make_leg(account_chain_id=BASE_WALLET, asset_id=EUR, quantity=eur_quantity),
+                make_leg(asset_id=ETH, quantity=acquisition_quantity),
+                make_leg(asset_id=EUR, quantity=eur_quantity),
             ],
         )
     )

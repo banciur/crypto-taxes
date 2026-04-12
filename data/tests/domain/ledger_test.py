@@ -11,21 +11,12 @@ from domain.ledger import (
     EventLocation,
     EventOrigin,
     LedgerEvent,
-    LedgerLeg,
     LegKey,
 )
 from tests.constants import ETH, LEDGER_WALLET
+from tests.helpers.ledger import make_leg
 
 TIMESTAMP = datetime(2024, 1, 1, 12, tzinfo=timezone.utc)
-
-
-def _ledger_leg(*, quantity: Decimal, is_fee: bool = False) -> LedgerLeg:
-    return LedgerLeg(
-        asset_id=ETH,
-        quantity=quantity,
-        account_chain_id=LEDGER_WALLET,
-        is_fee=is_fee,
-    )
 
 
 def test_ledger_event_rejects_duplicate_leg_identity() -> None:
@@ -35,8 +26,8 @@ def test_ledger_event_rejects_duplicate_leg_identity() -> None:
             event_origin=EventOrigin(location=EventLocation.INTERNAL, external_id="duplicate-legs"),
             ingestion="test",
             legs=[
-                _ledger_leg(quantity=Decimal("1")),
-                _ledger_leg(quantity=Decimal("2")),
+                make_leg(quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),
+                make_leg(quantity=Decimal("2"), account_chain_id=LEDGER_WALLET),
             ],
         )
 
@@ -51,8 +42,8 @@ def test_ledger_event_allows_same_account_and_asset_when_fee_flag_differs() -> N
         event_origin=EventOrigin(location=EventLocation.INTERNAL, external_id="fee-distinguishes-leg"),
         ingestion="test",
         legs=[
-            _ledger_leg(quantity=Decimal("1")),
-            _ledger_leg(quantity=Decimal("-0.01"), is_fee=True),
+            make_leg(quantity=Decimal("1")),
+            make_leg(quantity=Decimal("-0.01"), is_fee=True),
         ],
     )
 

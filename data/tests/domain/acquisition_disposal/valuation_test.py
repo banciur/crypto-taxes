@@ -9,8 +9,10 @@ from domain.acquisition_disposal import AcquisitionDisposalProjectionError
 from domain.acquisition_disposal.quantities import project_event_quantities
 from domain.acquisition_disposal.valuation import value_projected_event
 from domain.ledger import AssetId, LedgerEvent
+from domain.pricing import PriceProvider
 from tests.constants import ETH, EUR, USDC
-from tests.domain.acquisition_disposal.helpers import EXOTIC, make_event, make_leg
+from tests.domain.acquisition_disposal.helpers import EXOTIC, make_event
+from tests.helpers.ledger import make_leg
 
 LP = AssetId("LP")
 LP_A = AssetId("LP_A")
@@ -19,7 +21,7 @@ BONUS = AssetId("BONUS")
 FEE_ASSET = AssetId("FEE_ASSET")
 
 
-class FixedPriceProvider:
+class FixedPriceProvider(PriceProvider):
     def __init__(self, rates: dict[AssetId, Decimal]) -> None:
         self._rates = rates
 
