@@ -16,11 +16,10 @@ from domain.acquisition_disposal.pipeline_types import (
     _ProjectedResidualLeg,
 )
 from domain.ledger import AssetId, EventLocation, EventOrigin
-from tests.constants import BASE_WALLET, BTC, EUR
+from tests.constants import BASE_WALLET, BTC, EUR, USD
 from tests.domain.acquisition_disposal.helpers import BASE_TIMESTAMP, EXOTIC
 
 EVENT_ORIGIN = EventOrigin(location=EventLocation.INTERNAL, external_id=str(uuid4()))
-USD = AssetId("USD")
 
 
 def _open_lot(*, asset_id: AssetId, quantity: str, cost_per_unit: str) -> _LotBalance:

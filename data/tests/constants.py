@@ -3,7 +3,10 @@ from domain.ledger import AssetId, EventLocation, WalletAddress
 
 BTC = AssetId("BTC")
 ETH = AssetId("ETH")
+USDC = AssetId("USDC")
 EUR = AssetId("EUR")
+PLN = AssetId("PLN")
+USD = AssetId("USD")
 
 LOCATION = EventLocation.BASE
 ETH_ADDRESS = WalletAddress("0x4838b106fce9647bdf1e7877bf73ce8b0bad5f97")

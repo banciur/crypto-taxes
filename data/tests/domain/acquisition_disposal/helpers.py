@@ -8,7 +8,6 @@ from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, L
 from tests.constants import BASE_WALLET
 
 BASE_TIMESTAMP = datetime(2024, 1, 1, 12, tzinfo=timezone.utc)
-USDC = AssetId("USDC")
 EXOTIC = AssetId("EXOTIC")
 
 

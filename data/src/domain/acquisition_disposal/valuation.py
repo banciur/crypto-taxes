@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from ..ledger import AssetId
-from ..pricing import PriceProvider
+from ..pricing import PriceProvider, RequiredPriceUnavailableError
 from .constants import BASE_CURRENCY_ASSET_ID, is_valuation_anchor
 from .errors import AcquisitionDisposalProjectionError
 from .pipeline_types import _ProjectedAssetGroup, _ProjectedEvent
@@ -41,7 +41,7 @@ def _value_non_fee_groups(
         return {}
 
     direct_rates: dict[AssetId, Decimal] = {}
-    unknown_groups: list[_ProjectedAssetGroup] = []
+    unknown_group: _ProjectedAssetGroup | None = None
 
     for group in projected_event.non_fee_groups:
         direct_rate = _try_direct_rate(
@@ -50,21 +50,16 @@ def _value_non_fee_groups(
             price_provider=price_provider,
         )
         if direct_rate is None:
-            unknown_groups.append(group)
+            if unknown_group is not None:
+                raise AcquisitionDisposalProjectionError(
+                    "More than one distinct non-fee asset is unpriceable in the same event."
+                )
+            else:
+                unknown_group = group
         else:
             direct_rates[group.asset_id] = direct_rate
 
-    if len(unknown_groups) > 1:
-        raise AcquisitionDisposalProjectionError(
-            "More than one distinct non-fee asset is unpriceable in the same event."
-        )
-
-    if unknown_groups:
-        unknown_group = unknown_groups[0]
-        if is_valuation_anchor(unknown_group.asset_id):
-            raise AcquisitionDisposalProjectionError(
-                f"Valuation anchor asset cannot be priced directly in EUR: asset={unknown_group.asset_id}."
-            )
+    if unknown_group:
         solved_rate = _solve_unknown_rate(
             projected_event.non_fee_groups,
             direct_rates=direct_rates,
@@ -287,5 +282,7 @@ def _try_direct_rate(
         return Decimal(1)
     try:
         return price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
+    except RequiredPriceUnavailableError:
+        raise
     except Exception:
         return None

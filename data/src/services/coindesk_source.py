@@ -12,6 +12,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from config import config
+from domain.ledger import AssetId
 from errors import CryptoTaxesError
 
 from .price_sources import PriceSnapshotSource
@@ -278,7 +279,7 @@ class CoinDeskSource(PriceSnapshotSource):
             self._aggregate_units = aggregate_minutes // 60
             self._bucket_duration = timedelta(minutes=aggregate_minutes)
 
-    def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
         instrument = f"{base_id.upper()}-{quote_id.upper()}"
         entries, override_valid_from = self._fetch_histo_entries(instrument=instrument, timestamp=timestamp)
 
@@ -292,8 +293,8 @@ class CoinDeskSource(PriceSnapshotSource):
 
         return PriceQuote(
             timestamp=valid_from,
-            base_id=base_id.upper(),
-            quote_id=quote_id.upper(),
+            base_id=AssetId(base_id.upper()),
+            quote_id=AssetId(quote_id.upper()),
             rate=bucket.close,
             source=self.source_name,
             valid_from=valid_from,

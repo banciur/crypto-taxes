@@ -26,8 +26,9 @@ from importers.moralis.moralis_importer import (
     _decimal_from_atomic_value,
 )
 from services.moralis import MoralisService
-from tests.constants import ETH_ADDRESS, ETH_TX_HASH, LOCATION
+from tests.constants import ETH, ETH_ADDRESS, ETH_TX_HASH, LOCATION, USDC
 
+GTUSDCP = AssetId("gtusdcp")
 BLOCK_TS = "2025-05-16T05:04:40.000Z"
 ETH_ADDRESS_2 = "0xb4b8b6f88361f48403514059f1f16c8e78d61ffd"
 NULL_ADDRESS = "0x0000000000000000000000000000000000000000"
@@ -218,7 +219,7 @@ def test_fee_leg_added_for_outgoing_tx(test_ctx: _ImporterTestContext) -> None:
     assert event is not None
     assert len(event.legs) == 1
     leg = event.legs[0]
-    assert leg.asset_id == AssetId("ETH")
+    assert leg.asset_id == ETH
     assert leg.quantity == -fee
     assert leg.account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
     assert leg.is_fee is True
@@ -340,8 +341,8 @@ def test_collapse_keeps_fee_and_non_fee_legs_separate(test_ctx: _ImporterTestCon
     fee_leg = next(leg for leg in event.legs if leg.is_fee is True)
     assert non_fee_leg.quantity == -amount
     assert fee_leg.quantity == -fee
-    assert non_fee_leg.asset_id == AssetId("ETH")
-    assert fee_leg.asset_id == AssetId("ETH")
+    assert non_fee_leg.asset_id == ETH
+    assert fee_leg.asset_id == ETH
 
 
 def test_fee_native_transfers_are_not_double_counted(test_ctx: _ImporterTestContext) -> None:
@@ -386,11 +387,11 @@ def test_fee_native_transfers_are_not_double_counted(test_ctx: _ImporterTestCont
 
     assert event is not None
     assert len(event.legs) == 3
-    assert [leg for leg in event.legs if leg.asset_id == AssetId("ETH") and leg.is_fee is False] == []
+    assert [leg for leg in event.legs if leg.asset_id == ETH and leg.is_fee is False] == []
     assert {(leg.asset_id, leg.is_fee): leg.quantity for leg in event.legs} == {
-        (AssetId("gtusdcp"), False): Decimal("18.211177826219392142"),
-        (AssetId("USDC"), False): Decimal("-18.3729"),
-        (AssetId("ETH"), True): -fee,
+        (GTUSDCP, False): Decimal("18.211177826219392142"),
+        (USDC, False): Decimal("-18.3729"),
+        (ETH, True): -fee,
     }
     assert {leg.account_chain_id for leg in event.legs} == {expected_account_chain_id}
 
@@ -416,8 +417,8 @@ def test_non_fee_native_transfer_is_preserved_when_destination_is_not_fee_sink(
     assert event is not None
     assert len(event.legs) == 2
     assert {(leg.asset_id, leg.is_fee): leg.quantity for leg in event.legs} == {
-        (AssetId("ETH"), False): -amount,
-        (AssetId("ETH"), True): -amount,
+        (ETH, False): -amount,
+        (ETH, True): -amount,
     }
 
 
@@ -453,8 +454,8 @@ def test_fee_native_transfers_are_filtered_while_preserving_real_native_transfer
     assert event is not None
     assert len(event.legs) == 2
     assert {(leg.asset_id, leg.is_fee): leg.quantity for leg in event.legs} == {
-        (AssetId("ETH"), False): -transfer_amount,
-        (AssetId("ETH"), True): -fee,
+        (ETH, False): -transfer_amount,
+        (ETH, True): -fee,
     }
 
 

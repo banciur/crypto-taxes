@@ -9,29 +9,27 @@ from domain.acquisition_disposal import AcquisitionDisposalProjectionError
 from domain.acquisition_disposal.quantities import project_event_quantities
 from domain.acquisition_disposal.valuation import value_projected_event
 from domain.ledger import AssetId, LedgerEvent
-from tests.constants import ETH, EUR
-from tests.domain.acquisition_disposal.helpers import EXOTIC, USDC, make_event, make_leg
+from tests.constants import ETH, EUR, USDC
+from tests.domain.acquisition_disposal.helpers import EXOTIC, make_event, make_leg
 
 LP = AssetId("LP")
 LP_A = AssetId("LP_A")
 LP_B = AssetId("LP_B")
 BONUS = AssetId("BONUS")
 FEE_ASSET = AssetId("FEE_ASSET")
-USD = AssetId("USD")
 
 
 class FixedPriceProvider:
     def __init__(self, rates: dict[AssetId, Decimal]) -> None:
         self._rates = rates
 
-    def rate(self, base_id: str, quote_id: str, timestamp: datetime) -> Decimal:
+    def rate(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal:
         _ = timestamp
         if quote_id != EUR:
             raise LookupError(f"Unsupported quote asset: {quote_id}")
-        asset_id = AssetId(base_id)
-        if asset_id not in self._rates:
-            raise LookupError(f"Missing price for {asset_id}")
-        return self._rates[asset_id]
+        if base_id not in self._rates:
+            raise LookupError(f"Missing price for {base_id}")
+        return self._rates[base_id]
 
 
 def _rates_for(event: LedgerEvent, *, rates: dict[AssetId, Decimal]) -> dict[AssetId, Decimal]:
@@ -143,21 +141,6 @@ def test_one_sided_event_requires_direct_price() -> None:
 
     with pytest.raises(AcquisitionDisposalProjectionError, match="One-sided event"):
         _rates_for(event, rates={})
-
-
-def test_unknown_anchor_asset_fails() -> None:
-    usd_quantity = Decimal("100")
-    eth_quantity = Decimal("-1")
-
-    event = make_event(
-        legs=[
-            make_leg(asset_id=USD, quantity=usd_quantity),
-            make_leg(asset_id=ETH, quantity=eth_quantity),
-        ],
-    )
-
-    with pytest.raises(AcquisitionDisposalProjectionError, match="anchor asset"):
-        _rates_for(event, rates={ETH: Decimal("100")})
 
 
 def test_fully_anchored_mismatch_fails() -> None:

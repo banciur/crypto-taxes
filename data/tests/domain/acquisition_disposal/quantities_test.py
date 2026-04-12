@@ -3,8 +3,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from domain.acquisition_disposal.quantities import project_event_quantities
-from tests.constants import ALT_BASE_WALLET, BASE_WALLET, ETH, EUR, LEDGER_WALLET
-from tests.domain.acquisition_disposal.helpers import EXOTIC, USDC, make_event, make_leg
+from tests.constants import ALT_BASE_WALLET, BASE_WALLET, ETH, EUR, LEDGER_WALLET, USDC
+from tests.domain.acquisition_disposal.helpers import EXOTIC, make_event, make_leg
 
 
 def test_internal_transfer_projects_no_non_fee_asset_group() -> None:
