@@ -20,6 +20,7 @@ from domain.ledger import (
     LedgerLeg,
     WalletAddress,
 )
+from errors import CryptoTaxesError
 from services.moralis import MoralisService, SyncMode
 from utils.misc import decimal_from_atomic_value, ensure_utc_datetime
 
@@ -35,7 +36,7 @@ FEE_NATIVE_TRANSFER_DESTINATIONS = frozenset(
 )
 
 
-class MoralisImporterError(Exception, ABC):
+class MoralisImporterError(CryptoTaxesError, ABC):
     pass
 
 

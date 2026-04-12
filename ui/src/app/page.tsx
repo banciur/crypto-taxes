@@ -3,7 +3,7 @@ import { performance } from "node:perf_hooks";
 import { Col, Container, Row } from "react-bootstrap";
 
 import { getAccounts } from "@/api/accounts";
-import { getWalletTracking } from "@/api/walletTracking";
+import { getWalletProjection } from "@/api/walletProjection";
 import { COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
 import {
@@ -20,7 +20,7 @@ import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext
 import { DateChooser } from "@/components/DateChooser";
 import { Events } from "@/components/Events";
 import { VisibleDayProvider } from "@/contexts/VisibleDayContext";
-import { WalletTrackingSection } from "@/components/WalletTracking/WalletTrackingSection";
+import { WalletProjectionSection } from "@/components/WalletProjection/WalletProjectionSection";
 import { clsx } from "clsx";
 
 const formatDuration = (durationMs: number) => {
@@ -55,14 +55,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   const initialLoadStart = performance.now();
-  const [accounts, walletTracking] = await Promise.all([
+  const [accounts, walletProjection] = await Promise.all([
     getAccounts(),
-    getWalletTracking(),
+    getWalletProjection(),
   ]);
 
   const columnsLoadStart = performance.now();
   console.log(
-    `Accounts + wallet tracking fetch took: ${formatDuration(
+    `Accounts + wallet projection fetch took: ${formatDuration(
       columnsLoadStart - initialLoadStart,
     )}`,
   );
@@ -123,8 +123,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <UrlColumnSelectionProvider>
         <VisibleDayProvider>
           <Container fluid className={clsx(styles.layoutContainer, "gap-3")}>
-            <section className={styles.walletTrackingSection}>
-              <WalletTrackingSection state={walletTracking} />
+            <section className={styles.walletProjectionSection}>
+              <WalletProjectionSection state={walletProjection} />
             </section>
             <section className={clsx(styles.eventsSection, "gap-3")}>
               <Row>

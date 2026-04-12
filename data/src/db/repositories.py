@@ -7,12 +7,11 @@ from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from db import models
+from domain.acquisition_disposal import AcquisitionLot, DisposalLink
 from domain.ledger import (
     AccountChainId,
-    AcquisitionLot,
     AssetId,
     DisposalId,
-    DisposalLink,
     EventLocation,
     EventOrigin,
     LedgerEvent,
@@ -205,7 +204,13 @@ class AcquisitionLotRepository:
         orm_lots = [
             models.AcquisitionLotOrm(
                 id=lot.id,
-                acquired_leg_id=lot.acquired_leg_id,
+                origin_location=lot.event_origin.location.value,
+                origin_external_id=lot.event_origin.external_id,
+                account_chain_id=lot.account_chain_id,
+                asset_id=lot.asset_id,
+                is_fee=lot.is_fee,
+                timestamp=lot.timestamp,
+                quantity_acquired=lot.quantity_acquired,
                 cost_per_unit=lot.cost_per_unit,
             )
             for lot in lots
@@ -219,7 +224,15 @@ class AcquisitionLotRepository:
         return [
             AcquisitionLot(
                 id=LotId(lot.id),
-                acquired_leg_id=LegId(lot.acquired_leg_id),
+                event_origin=EventOrigin(
+                    location=EventLocation(lot.origin_location),
+                    external_id=lot.origin_external_id,
+                ),
+                account_chain_id=AccountChainId(lot.account_chain_id),
+                asset_id=AssetId(lot.asset_id),
+                is_fee=lot.is_fee,
+                timestamp=ensure_utc_datetime(lot.timestamp),
+                quantity_acquired=lot.quantity_acquired,
                 cost_per_unit=lot.cost_per_unit,
             )
             for lot in orm_lots
@@ -234,8 +247,13 @@ class DisposalLinkRepository:
         orm_links = [
             models.DisposalLinkOrm(
                 id=link.id,
-                disposal_leg_id=link.disposal_leg_id,
                 lot_id=link.lot_id,
+                origin_location=link.event_origin.location.value,
+                origin_external_id=link.event_origin.external_id,
+                account_chain_id=link.account_chain_id,
+                asset_id=link.asset_id,
+                is_fee=link.is_fee,
+                timestamp=link.timestamp,
                 quantity_used=link.quantity_used,
                 proceeds_total=link.proceeds_total,
             )
@@ -250,8 +268,15 @@ class DisposalLinkRepository:
         return [
             DisposalLink(
                 id=DisposalId(link.id),
-                disposal_leg_id=LegId(link.disposal_leg_id),
                 lot_id=LotId(link.lot_id),
+                event_origin=EventOrigin(
+                    location=EventLocation(link.origin_location),
+                    external_id=link.origin_external_id,
+                ),
+                account_chain_id=AccountChainId(link.account_chain_id),
+                asset_id=AssetId(link.asset_id),
+                is_fee=link.is_fee,
+                timestamp=ensure_utc_datetime(link.timestamp),
                 quantity_used=link.quantity_used,
                 proceeds_total=link.proceeds_total,
             )

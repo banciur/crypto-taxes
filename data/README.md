@@ -13,12 +13,13 @@
 - Its purpose is to provide the UI with the backend data it needs and the allowed mutation capabilities for reviewing and modifying system state through a stable HTTP interface.
 
 ### Domain modules
-- Ledger and lots: `src/domain/ledger.py`
-- Inventory engine and lot matching: `src/domain/inventory.py`
+- Ledger events: `src/domain/ledger.py`
+- Acquisition/disposal projection models and projector package: `src/domain/acquisition_disposal/`
+- Target lot-matching model and rationale: `../doc/LOT_MATCHING.md`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
 - Unified correction model (`LedgerCorrection` for discard, replacement, and opening balance): `src/domain/correction.py`
 - Tax event projection types: `src/domain/tax_event.py`
-- Wallet tracking projection and statuses: `src/domain/wallet_tracking.py`
+- Wallet tracking projection and statuses: `src/domain/wallet_projection.py`
 
 ### Correction persistence and application
 - Unified correction persistence lives in `src/db/ledger_corrections.py`.
@@ -63,7 +64,7 @@
 - Add `--group dev` ex. `uv run --group dev <command or path to python file>` for operations that depend on dev packages (pytest, ruff, mypy, etc.);
 - Examples:
   - `uv run src/main.py` for running the main entrypoint;
-  - `uv run --group dev pytest -s tests/domain/inventory_test.py` for running the test file;
+  - `uv run --group dev pytest -s tests/domain/acquisition_disposal_test.py` for running a domain test file;
 
 ### Development commands
 - Run these commands from `data/`.
@@ -85,5 +86,6 @@
 - Some ORM tables may include DB-only audit fields such as `created_at` and `updated_at`. Keep them out of domain and API models unless they are intentionally part of the exposed contract.
 - `EventOrigin` (`origin_location` + `origin_external_id`) is the stable unique identifier of a raw ledger event. Design event identity and cross-event references around it.
 - Do not design event relationships around transient event UUIDs or leg UUIDs. Those are internal identifiers that may change across re-imports or rebuilds.
-- IDs: entities expose `id: UUID`. References use `<entity>_id: UUID` (e.g., `acquired_leg_id`), but these UUIDs are internal object references, not stable upstream event identity.
+- `AbstractEvent` enforces that event legs are unique by `(account_chain_id, asset_id, is_fee)`. Treat duplicates as invalid domain input rather than silently merging them.
+- IDs: entities expose `id: UUID`. Keep cross-layer references based on stable domain identity such as `EventOrigin` and canonical leg identity fields instead of transient event or leg UUIDs.
 - `AccountRegistry` is the canonical merged account catalog. Keep address-backed wallet resolution (`resolve_owned_id`) separate from built-in system exchange accounts, which are selectable in the UI but do not participate in wallet-address ownership lookup. System account IDs are location-derived (`COINBASE:coinbase`, `KRAKEN:kraken`), so location/address can be recovered from `account_chain_id`.

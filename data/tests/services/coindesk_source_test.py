@@ -9,6 +9,8 @@ import pytest
 import requests
 
 from services.coindesk_source import CoinDeskAPIError, CoinDeskSource, SpotInstrumentOHLC, _CoinDeskClient
+from tests.constants import BTC, USD
+from tests.services.constants import BTC_LOWER, ETHW_LOWER, EUR_LOWER, USD_LOWER
 
 
 class _StubCoinDeskClient:
@@ -48,7 +50,7 @@ def test_coindesk_source_transforms_hour_bucket_into_quote() -> None:
     client = _StubCoinDeskClient([entry])
 
     source = CoinDeskSource(client=cast(_CoinDeskClient, client), market="coinbase")
-    quote = source.fetch_snapshot("btc", "usd", timestamp=bucket_start)
+    quote = source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
 
     assert quote.rate == Decimal("42050.12")
     assert quote.valid_from == bucket_start
@@ -78,7 +80,7 @@ def test_coindesk_source_supports_minute_buckets() -> None:
     client = _StubCoinDeskClient([entry])
 
     source = CoinDeskSource(client=cast(_CoinDeskClient, client), market="coinbase", aggregate_minutes=15)
-    quote = source.fetch_snapshot("btc", "usd", timestamp=bucket_start)
+    quote = source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
 
     assert quote.valid_to == bucket_start + timedelta(minutes=15)
     assert client.captured_minutes_params is not None
@@ -243,7 +245,7 @@ def test_coindesk_source_retries_with_first_trade_timestamp() -> None:
     fallback_client = _FallbackClient()
     source = CoinDeskSource(client=cast(_CoinDeskClient, fallback_client), market="kraken")
 
-    quote = source.fetch_snapshot("ethw", "eur", timestamp=earlier)
+    quote = source.fetch_snapshot(ETHW_LOWER, EUR_LOWER, timestamp=earlier)
 
     assert quote.rate == Decimal("10.5")
     assert quote.valid_from == earlier
@@ -258,8 +260,8 @@ def test_live_request() -> None:
     source = CoinDeskSource()
     ts = datetime.now(timezone.utc)
     quote = source.fetch_snapshot(
-        "BTC",
-        "USD",
+        BTC,
+        USD,
         timestamp=ts,
     )
     from pprint import pprint

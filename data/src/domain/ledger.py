@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -9,6 +10,7 @@ from uuid import UUID, uuid4
 
 from pydantic import Field, StringConstraints, field_validator
 
+from errors import CryptoTaxesError
 from pydantic_base import StrictBaseModel
 
 AssetId = NewType("AssetId", str)
@@ -36,6 +38,20 @@ class EventOrigin(StrictBaseModel):
     external_id: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 
 
+# TODO: Idea maybe this should be just a deterministic hash and stored further downstream
+@dataclass(frozen=True, order=True)
+class LegKey:
+    account_chain_id: AccountChainId
+    asset_id: AssetId
+    is_fee: bool
+
+
+@dataclass(frozen=True, order=True)
+class EventLegRef:
+    event_origin: EventOrigin
+    leg_key: LegKey
+
+
 class LedgerLeg(StrictBaseModel):
     """A single leg within an event.
 
@@ -57,10 +73,47 @@ class LedgerLeg(StrictBaseModel):
             raise ValueError("LedgerLeg.quantity must be non-zero")
         return value
 
+    @property
+    def leg_key(self) -> LegKey:
+        return LegKey(
+            account_chain_id=self.account_chain_id,
+            asset_id=self.asset_id,
+            is_fee=self.is_fee,
+        )
+
+
+# TODO: This here seems to complicated
+class DuplicateLegIdentityError(CryptoTaxesError, ValueError):
+    def __init__(self, duplicates: tuple[LegKey, ...]) -> None:
+        self.duplicates = duplicates
+        duplicates_summary = ", ".join(
+            f"account={duplicate.account_chain_id} asset={duplicate.asset_id} is_fee={duplicate.is_fee}"
+            for duplicate in duplicates
+        )
+        super().__init__(f"AbstractEvent.legs contains duplicate leg identities: {duplicates_summary}")
+
 
 class AbstractEvent(StrictBaseModel, ABC):
     timestamp: datetime
     legs: list[LedgerLeg] = Field(min_length=1)
+
+    @field_validator("legs")
+    @classmethod
+    def _validate_unique_leg_identity(cls, legs: list[LedgerLeg]) -> list[LedgerLeg]:
+        seen_leg_keys: set[LegKey] = set()
+        duplicate_leg_keys: set[LegKey] = set()
+
+        for leg in legs:
+            leg_key = leg.leg_key
+            if leg_key in seen_leg_keys:
+                duplicate_leg_keys.add(leg_key)
+                continue
+            seen_leg_keys.add(leg_key)
+
+        if duplicate_leg_keys:
+            raise DuplicateLegIdentityError(tuple(sorted(duplicate_leg_keys)))
+
+        return legs
 
 
 class LedgerEvent(AbstractEvent):
@@ -69,17 +122,3 @@ class LedgerEvent(AbstractEvent):
     event_origin: EventOrigin
     ingestion: Annotated[str, Field(min_length=1)]
     note: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)] | None = None
-
-
-class AcquisitionLot(StrictBaseModel):
-    id: LotId = LotId(Field(default_factory=uuid4))
-    acquired_leg_id: LegId
-    cost_per_unit: Annotated[Decimal, Field(ge=0)]
-
-
-class DisposalLink(StrictBaseModel):
-    id: DisposalId = DisposalId(Field(default_factory=uuid4))
-    disposal_leg_id: LegId
-    lot_id: LotId
-    quantity_used: Annotated[Decimal, Field(gt=0)]
-    proceeds_total: Annotated[Decimal, Field(ge=0)]

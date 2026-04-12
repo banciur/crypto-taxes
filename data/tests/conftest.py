@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from db.models import Base
-from domain.inventory import InventoryEngine
+from domain.acquisition_disposal import AcquisitionDisposalProjector
 from tests.helpers.random_price_service import TestPriceService
 from tests.helpers.time_utils import DEFAULT_TIME_GEN
 
@@ -41,5 +41,5 @@ def price_service() -> TestPriceService:
 
 
 @pytest.fixture(scope="function")
-def inventory_engine(price_service: TestPriceService) -> InventoryEngine:
-    return InventoryEngine(price_provider=price_service)
+def acquisition_disposal_projector(price_service: TestPriceService) -> AcquisitionDisposalProjector:
+    return AcquisitionDisposalProjector(price_provider=price_service)

@@ -1,11 +1,19 @@
 First stage: compute German taxes
 
 TODO: Review disposal and acquisition creation.
+  - projector logic with tests
+  - logic is there check test cases
+  - add to main
+  - api
+  - display it
+  - add a fallback mechanism for missing price with an API and UI
 TODO: Probably need smarter price service
+  - change interface of protocol so None can be returned this will simplify the code
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 
 Review the order of todos
 -----------------
+TODO: Possible name cleaning. There are accounts with its endpoint and there is a wallet projection with another endpoint. Those carry different semantics.
 TODO: Potential problem Coinbase / Moralis on Coinbase it's CBETH, on Moralis it's cbETH. Proper solution would be this token registry, but for now maybe we can live with lowercasing all token names.
 TODO: Need automation to rerun computation (src/main.py) through the UI see if https://fastapi.tiangolo.com/tutorial/background-tasks/ could be useful. This could get a bit more complicated. I would like to have a reporting of problems with clear information and error types. Then I could handle such problems in the UI. For example, report there is a missing amount, then I could click and open a window with token history and tx that failed. For missing price I could open different window with price manipulations. etc
 TODO: Find a way to remove spam transactions by looking at them from a token perspective. The first idea is to create a page with all events for a token then those could be removed.

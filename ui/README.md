@@ -46,7 +46,7 @@
 
 - Base URL comes from `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000`).
 - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
-- `GET /wallet-tracking` returns the current wallet-tracking snapshot with status `NOT_RUN`, `COMPLETED`, or `FAILED`.
+- `GET /wallet-projection` returns the current wallet projection snapshot with status `NOT_RUN`, `COMPLETED`, or `FAILED`.
 - Ledger leg quantities remain string-backed decimal values at the API boundary.
 - `GET /corrections` returns feed for discard, replacement, and opening-balance items.
 - Source-backed corrections may be saved without legs; they consume the selected raw sources without emitting a corrected synthetic event.
