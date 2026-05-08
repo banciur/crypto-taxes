@@ -4,6 +4,7 @@
 - Scope: ERC20 and native transfers; NFT transfers are ignored.
 - Flow:
   - Fetch transactions through `MoralisService` which caches them using `MoralisCacheRepository`.
+  - Resolve owned accounts by matching on-chain addresses against configured wallet accounts for the current chain. Built-in exchange accounts are not part of this address-based lookup.
   - Build legs from `native_transfers` and `erc20_transfers` only for owned accounts, unknown counterparties are ignored.
   - Parse ERC20 quantities from raw integer `value` plus `token_decimals` when decimals metadata is present.
   - If Moralis omits ERC20 decimals metadata and `value_formatted` is unusable (for example `NaN`), fall back to raw integer `value`.

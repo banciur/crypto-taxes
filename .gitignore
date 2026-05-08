@@ -1,6 +1,8 @@
 *.db
 *.csv
-artifacts
+
+.cache
 .pycache
+artifacts
 
 private.txt

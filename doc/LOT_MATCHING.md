@@ -2,8 +2,6 @@
 
 This document describes the target lot-matching model and rationale for `AcquisitionDisposalProjector`.
 
-Implementation work needed to reach this target is tracked in `data/PLAN.md`.
-
 ## Purpose
 
 The projector sits between corrected ledger events and tax logic.
@@ -36,10 +34,10 @@ The projection is split into three steps:
 - Non-fee `EUR` is a valuation anchor. It already carries EUR value in the event and is not proportionally adjusted during balancing.
 - Other fiat currencies and selected stable assets are also treated as valuation anchors. They may need direct EUR pricing first, but once valued, they are not proportionally adjusted during balancing.
 - Fiat valuation anchors do not open or consume FIFO lots. Selected stable anchors still participate in FIFO.
-- Fees are not folded into swap or trade consideration. They are separate projected legs because downstream disposals attach to a single source leg.
 - Each projected acquisition or disposal maps to exactly one source event leg. If one residual quantity comes from multiple current-event legs, it must be split before downstream records are created.
+- Fees are not folded into swap or trade consideration. They are separate projected legs because downstream disposals attach to a single source leg.
 - Fee valuation is event-coupled. If a fee asset also appears as a non-fee projected asset in the same event, the fee inherits that event's EUR-per-unit rate for the asset.
-- `DisposalLink.proceeds_total` for a fee leg means implied fair market value in EUR at the event timestamp, not literal cash proceeds received by that fee leg.
+- `DisposalLink.proceeds_total` is the EUR disposal value assigned to the disposed quantity at the event timestamp. It is a valuation field, not a guarantee of literal cash proceeds.
 - Events can be unbalanced because the system sees only owned wallets and visible imported legs.
 - Same-event acquisitions must not fund same-event disposals.
 
@@ -62,6 +60,10 @@ Examples:
 ## Phase 2: Assign EUR Values
 
 Valuation is event-aware. Pure market pricing is not enough on its own because the event itself can carry stronger valuation evidence. Some assets should anchor the event instead of moving with crypto market noise, and some imported events are unbalanced because the system sees only owned wallets.
+
+Some projected assets may be unpriceable by the price service at the event timestamp. In that case, phase 2 may solve one missing non-fee asset as the remainder implied by the other valued non-fee legs in the same event. This only works when the visible non-fee legs contain enough opposing value to infer the missing EUR value. It does not apply to one-sided events where the counterparty side is outside the owned ledger.
+
+This is a narrower assumption than the ledger model uses elsewhere. The system generally accepts unbalanced events because unseen external legs may be outside the owned ledger, but phase 2 does not model that uncertainty when it remainder-solves a missing asset value. If economically relevant value is missing from the visible non-fee legs, the inferred EUR value may be wrong even though the event shape is accepted by the broader system.
 
 Phase 2 first resolves non-fee projected assets. The high-level algorithm is:
 
