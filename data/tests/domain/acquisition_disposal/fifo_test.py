@@ -11,7 +11,7 @@ from domain.acquisition_disposal import AcquisitionDisposalProjectionError, Acqu
 from domain.acquisition_disposal.fifo import match_event_fifo
 from domain.acquisition_disposal.pipeline_types import (
     _LotBalance,
-    _ProjectedAssetGroup,
+    _ProjectedAssetResidualGroup,
     _ProjectedEvent,
     _ProjectedResidualLeg,
 )
@@ -40,10 +40,9 @@ def test_fifo_splits_one_projected_disposal_leg_across_multiple_open_lots() -> N
     second_lot = _open_lot(asset_id=BTC, quantity="0.3", cost_per_unit="30000")
     projected_event = _ProjectedEvent(
         non_fee_groups=[
-            _ProjectedAssetGroup(
+            _ProjectedAssetResidualGroup(
                 asset_id=BTC,
-                is_fee=False,
-                legs=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-0.7"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-0.7"))],
             ),
         ],
         fee_groups=[],
@@ -73,17 +72,15 @@ def test_fifo_processes_disposals_before_same_event_acquisitions() -> None:
     existing_lot = _open_lot(asset_id=EXOTIC, quantity="5", cost_per_unit="10")
     projected_event = _ProjectedEvent(
         non_fee_groups=[
-            _ProjectedAssetGroup(
+            _ProjectedAssetResidualGroup(
                 asset_id=EXOTIC,
-                is_fee=False,
-                legs=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("100"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("100"))],
             ),
         ],
         fee_groups=[
-            _ProjectedAssetGroup(
+            _ProjectedAssetResidualGroup(
                 asset_id=EXOTIC,
-                is_fee=True,
-                legs=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-1"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-1"))],
             ),
         ],
     )
@@ -114,13 +111,42 @@ def test_fifo_processes_disposals_before_same_event_acquisitions() -> None:
     ]
 
 
+def test_fifo_does_not_allow_fee_disposal_to_consume_same_event_non_fee_acquisition() -> None:
+    projected_event = _ProjectedEvent(
+        non_fee_groups=[
+            _ProjectedAssetResidualGroup(
+                asset_id=EXOTIC,
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("100"))],
+            ),
+        ],
+        fee_groups=[
+            _ProjectedAssetResidualGroup(
+                asset_id=EXOTIC,
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-1"))],
+            ),
+        ],
+    )
+
+    with pytest.raises(AcquisitionDisposalProjectionError, match="Not enough open lots") as exc_info:
+        match_event_fifo(
+            projected_event,
+            prices={EXOTIC: Decimal("11")},
+            event_origin=EVENT_ORIGIN,
+            timestamp=BASE_TIMESTAMP,
+            open_lots_by_asset={},
+            acquisitions=[],
+            disposals=[],
+        )
+
+    assert exc_info.value.quantity_needed == Decimal("1")
+
+
 def test_fifo_raises_when_open_lots_are_insufficient() -> None:
     projected_event = _ProjectedEvent(
         non_fee_groups=[
-            _ProjectedAssetGroup(
+            _ProjectedAssetResidualGroup(
                 asset_id=BTC,
-                is_fee=False,
-                legs=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-1"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-1"))],
             ),
         ],
         fee_groups=[],
@@ -143,15 +169,13 @@ def test_fifo_raises_when_open_lots_are_insufficient() -> None:
 def test_fifo_skips_fiat_groups() -> None:
     projected_event = _ProjectedEvent(
         non_fee_groups=[
-            _ProjectedAssetGroup(
+            _ProjectedAssetResidualGroup(
                 asset_id=EUR,
-                is_fee=False,
-                legs=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("100"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("100"))],
             ),
-            _ProjectedAssetGroup(
+            _ProjectedAssetResidualGroup(
                 asset_id=USD,
-                is_fee=False,
-                legs=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-50"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-50"))],
             ),
         ],
         fee_groups=[],

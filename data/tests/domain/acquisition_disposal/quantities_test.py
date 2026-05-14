@@ -41,10 +41,10 @@ def test_non_fee_eur_remains_in_non_fee_groups() -> None:
     eur_group = next(group for group in projected_event.non_fee_groups if group.asset_id == EUR)
 
     assert {group.asset_id for group in projected_event.non_fee_groups} == {ETH, EUR}
-    assert len(eth_group.legs) == 1
-    assert eth_group.legs[0].quantity == acquisition_quantity
-    assert len(eur_group.legs) == 1
-    assert eur_group.legs[0].quantity == eur_quantity
+    assert len(eth_group.residuals) == 1
+    assert eth_group.residuals[0].quantity == acquisition_quantity
+    assert len(eur_group.residuals) == 1
+    assert eur_group.residuals[0].quantity == eur_quantity
 
 
 def test_fee_group_stays_separate_when_fee_asset_matches_non_fee_asset() -> None:
@@ -66,11 +66,10 @@ def test_fee_group_stays_separate_when_fee_asset_matches_non_fee_asset() -> None
     usdc_group = next(group for group in projected_event.non_fee_groups if group.asset_id == USDC)
     (fee_group,) = projected_event.fee_groups
 
-    assert exotic_group.legs[0].quantity == non_fee_quantity
-    assert usdc_group.legs[0].quantity == usdc_quantity
+    assert exotic_group.residuals[0].quantity == non_fee_quantity
+    assert usdc_group.residuals[0].quantity == usdc_quantity
     assert fee_group.asset_id == EXOTIC
-    assert fee_group.is_fee is True
-    assert fee_group.legs[0].quantity == fee_quantity
+    assert fee_group.residuals[0].quantity == fee_quantity
 
 
 def test_residual_quantity_is_split_across_multiple_same_sign_source_legs() -> None:
@@ -92,7 +91,7 @@ def test_residual_quantity_is_split_across_multiple_same_sign_source_legs() -> N
     (asset_group,) = projected_event.non_fee_groups
 
     assert asset_group.asset_id == ETH
-    assert len(asset_group.legs) == 2
-    assert {leg.account_chain_id for leg in asset_group.legs} == {BASE_WALLET, ALT_BASE_WALLET}
-    assert all(leg.quantity > 0 for leg in asset_group.legs)
-    assert sum((leg.quantity for leg in asset_group.legs), start=Decimal(0)) == projected_total
+    assert len(asset_group.residuals) == 2
+    assert {residual.account_chain_id for residual in asset_group.residuals} == {BASE_WALLET, ALT_BASE_WALLET}
+    assert all(residual.quantity > 0 for residual in asset_group.residuals)
+    assert sum((residual.quantity for residual in asset_group.residuals), start=Decimal(0)) == projected_total

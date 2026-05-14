@@ -15,20 +15,15 @@ class _ProjectedResidualLeg:
 
 
 @dataclass(frozen=True)
-class _ProjectedAssetGroup:
+class _ProjectedAssetResidualGroup:
     asset_id: AssetId
-    is_fee: bool
-    legs: Sequence[_ProjectedResidualLeg]
+    residuals: Sequence[_ProjectedResidualLeg]
 
 
 @dataclass(frozen=True)
 class _ProjectedEvent:
-    non_fee_groups: Sequence[_ProjectedAssetGroup]
-    fee_groups: Sequence[_ProjectedAssetGroup]
-
-    @property
-    def all_groups(self) -> Sequence[_ProjectedAssetGroup]:
-        return [*self.non_fee_groups, *self.fee_groups]
+    non_fee_groups: Sequence[_ProjectedAssetResidualGroup]
+    fee_groups: Sequence[_ProjectedAssetResidualGroup]
 
 
 @dataclass

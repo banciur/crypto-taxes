@@ -20,8 +20,6 @@ class AcquisitionDisposalProjection:
 
 
 class AcquisitionDisposalProjector:
-    """Project ledger events into acquisition lots and disposal links."""
-
     def __init__(
         self,
         *,
@@ -30,7 +28,7 @@ class AcquisitionDisposalProjector:
         self._price_provider = price_provider
 
     def project(self, events: Iterable[LedgerEvent]) -> AcquisitionDisposalProjection:
-        """Caller must provide events in chronological order."""
+        """Events must be provided in chronological order."""
         acquisitions: list[AcquisitionLot] = []
         disposals: list[DisposalLink] = []
         open_lots_by_asset: dict[AssetId, deque[_LotBalance]] = defaultdict(deque)

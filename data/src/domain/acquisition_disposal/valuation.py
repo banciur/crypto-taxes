@@ -8,7 +8,7 @@ from ..ledger import AssetId
 from ..pricing import PriceProvider, RequiredPriceUnavailableError
 from .constants import BASE_CURRENCY_ASSET_ID, is_valuation_anchor
 from .errors import AcquisitionDisposalProjectionError
-from .pipeline_types import _ProjectedAssetGroup, _ProjectedEvent
+from .pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
 
 
 def value_projected_event(
@@ -41,7 +41,7 @@ def _value_non_fee_groups(
         return {}
 
     direct_rates: dict[AssetId, Decimal] = {}
-    unknown_group: _ProjectedAssetGroup | None = None
+    unknown_group: _ProjectedAssetResidualGroup | None = None
 
     for group in projected_event.non_fee_groups:
         direct_rate = _try_direct_rate(
@@ -74,7 +74,7 @@ def _value_non_fee_groups(
 
 
 def _value_fee_groups(
-    fee_groups: Sequence[_ProjectedAssetGroup],
+    fee_groups: Sequence[_ProjectedAssetResidualGroup],
     *,
     non_fee_prices: dict[AssetId, Decimal],
     timestamp: datetime,
@@ -104,7 +104,7 @@ def _value_fee_groups(
 
 
 def _rebalance_known_rates(
-    groups: Sequence[_ProjectedAssetGroup],
+    groups: Sequence[_ProjectedAssetResidualGroup],
     *,
     direct_rates: dict[AssetId, Decimal],
 ) -> dict[AssetId, Decimal]:
@@ -168,10 +168,10 @@ def _rebalance_known_rates(
 
 
 def _solve_unknown_rate(
-    groups: Sequence[_ProjectedAssetGroup],
+    groups: Sequence[_ProjectedAssetResidualGroup],
     *,
     direct_rates: dict[AssetId, Decimal],
-    unknown_group: _ProjectedAssetGroup,
+    unknown_group: _ProjectedAssetResidualGroup,
 ) -> Decimal:
     known_acquisition_total = _side_total(groups, rates=direct_rates, side=1)
     known_disposal_total = _side_total(groups, rates=direct_rates, side=-1)
@@ -198,7 +198,7 @@ def _solve_unknown_rate(
 
 
 def _side_total(
-    groups: Sequence[_ProjectedAssetGroup],
+    groups: Sequence[_ProjectedAssetResidualGroup],
     *,
     rates: dict[AssetId, Decimal],
     side: int,
@@ -214,18 +214,18 @@ def _side_total(
 
 
 def _groups_for_side(
-    groups: Sequence[_ProjectedAssetGroup],
+    groups: Sequence[_ProjectedAssetResidualGroup],
     *,
     side: int,
     anchor_only: bool,
-) -> list[_ProjectedAssetGroup]:
+) -> list[_ProjectedAssetResidualGroup]:
     return [
         group for group in groups if _group_side(group) == side and is_valuation_anchor(group.asset_id) is anchor_only
     ]
 
 
 def _groups_total(
-    groups: Sequence[_ProjectedAssetGroup],
+    groups: Sequence[_ProjectedAssetResidualGroup],
     *,
     rates: dict[AssetId, Decimal],
 ) -> Decimal:
@@ -235,7 +235,7 @@ def _groups_total(
 def _apply_target_total(
     balanced_rates: dict[AssetId, Decimal],
     *,
-    groups: Sequence[_ProjectedAssetGroup],
+    groups: Sequence[_ProjectedAssetResidualGroup],
     direct_rates: dict[AssetId, Decimal],
     target_total: Decimal,
 ) -> None:
@@ -260,16 +260,16 @@ def _apply_target_total(
     balanced_rates[final_group.asset_id] = remaining_total / abs(_group_net_quantity(final_group))
 
 
-def _direct_total(group: _ProjectedAssetGroup, *, rate: Decimal) -> Decimal:
+def _direct_total(group: _ProjectedAssetResidualGroup, *, rate: Decimal) -> Decimal:
     return rate * abs(_group_net_quantity(group))
 
 
-def _group_side(group: _ProjectedAssetGroup) -> int:
+def _group_side(group: _ProjectedAssetResidualGroup) -> int:
     return 1 if _group_net_quantity(group) > 0 else -1
 
 
-def _group_net_quantity(group: _ProjectedAssetGroup) -> Decimal:
-    return sum((leg.quantity for leg in group.legs), start=Decimal(0))
+def _group_net_quantity(group: _ProjectedAssetResidualGroup) -> Decimal:
+    return sum((residual.quantity for residual in group.residuals), start=Decimal(0))
 
 
 def _try_direct_rate(

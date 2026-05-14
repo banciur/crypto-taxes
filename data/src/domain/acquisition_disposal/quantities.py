@@ -6,7 +6,7 @@ from operator import gt, lt
 
 from ..ledger import AssetId, LedgerEvent, LedgerLeg
 from .pipeline_types import (
-    _ProjectedAssetGroup,
+    _ProjectedAssetResidualGroup,
     _ProjectedEvent,
     _ProjectedResidualLeg,
 )
@@ -14,15 +14,14 @@ from .pipeline_types import (
 
 def project_event_quantities(event: LedgerEvent) -> _ProjectedEvent:
     non_fee_legs_by_asset: dict[AssetId, list[LedgerLeg]] = defaultdict(list)
-    fee_groups: list[_ProjectedAssetGroup] = []
+    fee_groups: list[_ProjectedAssetResidualGroup] = []
 
     for leg in event.legs:
         if leg.is_fee:
             fee_groups.append(
-                _ProjectedAssetGroup(
+                _ProjectedAssetResidualGroup(
                     asset_id=leg.asset_id,
-                    is_fee=True,
-                    legs=[_ProjectedResidualLeg(account_chain_id=leg.account_chain_id, quantity=leg.quantity)],
+                    residuals=[_ProjectedResidualLeg(account_chain_id=leg.account_chain_id, quantity=leg.quantity)],
                 )
             )
         else:
@@ -34,7 +33,7 @@ def project_event_quantities(event: LedgerEvent) -> _ProjectedEvent:
         if (group := _project_asset_group(asset_legs)) is not None
     ]
     non_fee_groups.sort(key=lambda group: group.asset_id)
-    fee_groups.sort(key=lambda group: (group.asset_id, group.legs[0].account_chain_id))
+    fee_groups.sort(key=lambda group: (group.asset_id, group.residuals[0].account_chain_id))
 
     return _ProjectedEvent(
         non_fee_groups=non_fee_groups,
@@ -42,7 +41,7 @@ def project_event_quantities(event: LedgerEvent) -> _ProjectedEvent:
     )
 
 
-def _project_asset_group(legs: list[LedgerLeg]) -> _ProjectedAssetGroup | None:
+def _project_asset_group(legs: list[LedgerLeg]) -> _ProjectedAssetResidualGroup | None:
     net_quantity = sum((leg.quantity for leg in legs), start=Decimal(0))
     if net_quantity == 0:
         return None
@@ -71,8 +70,7 @@ def _project_asset_group(legs: list[LedgerLeg]) -> _ProjectedAssetGroup | None:
         )
     )
 
-    return _ProjectedAssetGroup(
+    return _ProjectedAssetResidualGroup(
         asset_id=legs[0].asset_id,
-        is_fee=False,
-        legs=projected_legs,
+        residuals=projected_legs,
     )

@@ -7,6 +7,7 @@ from typing import Protocol
 from .ledger import AssetId
 
 
+# TODO: do we need it here. I think Exception is not correct one
 class RequiredPriceUnavailableError(Exception):
     """Raised when the system requires a direct price and the price service cannot provide it."""
 
