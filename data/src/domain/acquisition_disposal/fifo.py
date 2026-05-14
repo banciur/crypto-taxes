@@ -128,7 +128,7 @@ def _match_fifo_acquisitions(
             cost_per_unit=prices[residual.asset_id],
         )
         acquisitions.append(lot)
-        open_lots_by_asset[residual.asset_id].append(
+        open_lots_by_asset.setdefault(residual.asset_id, deque()).append(
             _LotBalance(
                 lot=lot,
                 remaining_quantity=abs(residual.quantity),
