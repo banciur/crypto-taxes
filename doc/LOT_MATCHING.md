@@ -43,9 +43,9 @@ The projection is split into three steps:
 
 ## Phase 1: Quantity Projection
 
-Non-fee legs are considered at the asset level. Visible movement of the same asset between owned accounts cancels out. The surviving residual quantity, if any, becomes the projected acquisition or disposal quantity for that asset. A zero residual means the event did not change owned inventory for that asset.
+For non-fee legs, phase 1 first nets quantities per asset across the whole event. This treats movement of the same asset between owned accounts as internal movement rather than acquisition or disposal. The surviving residual quantity, if any, becomes the projected acquisition or disposal quantity for that asset. A zero residual means the event did not change owned inventory for that asset.
 
-Explicit fee legs are different. They stay explicit and are projected directly even when the fee asset also appears as a non-fee asset in the same event.
+Explicit fee legs are different because their source-leg identity matters downstream. They stay explicit and are projected directly instead of being netted with non-fee movement, even when the fee asset also appears as a non-fee asset in the same event.
 
 Non-fee anchor assets such as `EUR`, other fiat currencies, and selected stable assets remain part of the non-fee projection. Their special treatment happens in valuation, not in quantity projection.
 
