@@ -227,7 +227,7 @@ def run(
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run Kraken, Stakewise, Lido, Coinbase, and Moralis importers.")
     parser.add_argument("--csv", type=Path, default=ARTIFACTS_DIR / "kraken-ledger.csv")
-    parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "kraken_prices")
+    parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "prices")
     parser.add_argument("--market", default="kraken")
     parser.add_argument("--aggregate", type=int, default=60)
     args = parser.parse_args(argv)
