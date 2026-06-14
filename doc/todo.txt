@@ -8,13 +8,14 @@ TODO: Review disposal and acquisition creation.
   - display it
   - add a fallback mechanism for missing price with an API and UI
 TODO: Probably need smarter price service
+  - review it, it is completly vibed and seems it work but no clue how. What is model behind it does it make sense?
   - change interface of protocol so None can be returned this will simplify the code
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 TODO: On 2006-02-09 there is an interesting case of moving money from base to eth through coinbase and I had to pay a fee on coinbase. See if the system can handle that correctly if I would collapse this to two fees and money lost on the transfer.
 
 Review the order of todos
 -----------------
-TODO: In valuation during acquisition / disposal matching I have a mid-point rule which might be not correct for Germany. Review it
+TODO: In valuation during acquisition / disposal matching I have a mid-point rule which might be not correct for Germany. Review it. Even if it is correct review the logic and tests again initial task was done a bit fast.
 TODO: Maybe it would make sense to add eur value to corrected events lane. Code that does price valuation exists in disposal. Maybe it should be stored in db to do it only once? Maybe this part of code should be executer earlier, not during acq / disposal matching
 TODO: Possible name cleaning. There are accounts with its endpoint and there is a wallet projection with another endpoint. Those carry different semantics.
 TODO: Potential problem Coinbase / Moralis on Coinbase it's CBETH, on Moralis it's cbETH. Proper solution would be this token registry, but for now maybe we can live with lowercasing all token names.
@@ -142,3 +143,8 @@ https://docs.moralis.com/
 https://thegraph.com/
 https://docs.etherscan.io/introduction
 https://docs.cloud.debank.com/en/
+
+german taxes writep
+
+https://www.bundesfinanzministerium.de/Content/DE/Downloads/BMF_Schreiben/Steuerarten/Einkommensteuer/2025-03-06-einzelfragen-kryptowerte.html
+https://www.bundesfinanzministerium.de/Content/DE/Downloads/BMF_Schreiben/Steuerarten/Einkommensteuer/2025-03-06-einzelfragen-kryptowerte-englisch.pdf?__blob=publicationFile&v=3

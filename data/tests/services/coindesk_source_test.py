@@ -8,7 +8,14 @@ from unittest.mock import Mock
 import pytest
 import requests
 
-from services.coindesk_source import CoinDeskAPIError, CoinDeskSource, SpotInstrumentOHLC, _CoinDeskClient
+from services.coindesk_source import (
+    CoinDeskAPIError,
+    CoinDeskSource,
+    SpotInstrumentOHLC,
+    _CoinDeskClient,
+    fetch_spot_candle,
+    fetch_spot_history,
+)
 from tests.constants import BTC, USD
 from tests.services.constants import BTC_LOWER, ETHW_LOWER, EUR_LOWER, USD_LOWER
 
@@ -92,6 +99,127 @@ def test_coindesk_source_rejects_unsupported_bucket_lengths() -> None:
     client = cast(_CoinDeskClient, _StubCoinDeskClient([]))
     with pytest.raises(ValueError):
         CoinDeskSource(client=client, market="coinbase", aggregate_minutes=45)
+
+
+def test_fetch_spot_history_pages_backwards_and_returns_ascending_range() -> None:
+    bucket_base = datetime(2025, 1, 1, 8, 0, tzinfo=timezone.utc)
+    entries_by_to_ts = {
+        int((bucket_base + timedelta(hours=4)).timestamp()): [
+            _entry(bucket_base + timedelta(hours=2)),
+            _entry(bucket_base + timedelta(hours=3)),
+        ],
+        int((bucket_base + timedelta(hours=1)).timestamp()): [
+            _entry(bucket_base),
+            _entry(bucket_base + timedelta(hours=1)),
+        ],
+    }
+
+    class _PagingClient(_StubCoinDeskClient):
+        def __init__(self) -> None:
+            super().__init__([])
+            self.captured_to_ts: list[int] = []
+
+        def get_spot_historical_hours(self, **params: object) -> list[SpotInstrumentOHLC]:
+            to_ts = cast(int, params["to_ts"])
+            self.captured_to_ts.append(to_ts)
+            return entries_by_to_ts.get(to_ts, [])
+
+    client = _PagingClient()
+    from_timestamp = bucket_base + timedelta(hours=1)
+    to_timestamp = bucket_base + timedelta(hours=4)
+
+    entries = fetch_spot_history(
+        client=cast(_CoinDeskClient, client),
+        market="coinbase",
+        instrument="ETH-EUR",
+        from_timestamp=from_timestamp,
+        to_timestamp=to_timestamp,
+        page_limit=2,
+    )
+
+    assert [entry.timestamp for entry in entries] == [
+        bucket_base + timedelta(hours=1),
+        bucket_base + timedelta(hours=2),
+        bucket_base + timedelta(hours=3),
+    ]
+    assert client.captured_to_ts == [
+        int(to_timestamp.timestamp()),
+        int(bucket_base.timestamp()) + 3600,
+    ]
+
+
+def test_fetch_spot_history_uses_minute_endpoint_for_sub_hour_buckets() -> None:
+    bucket_start = datetime(2025, 1, 1, 12, 15, tzinfo=timezone.utc)
+    entry = _entry(bucket_start)
+
+    class _MinuteClient(_StubCoinDeskClient):
+        def get_spot_historical_minutes(self, **params: object) -> list[SpotInstrumentOHLC]:
+            self.captured_minutes_params = params
+            return [entry]
+
+    client = _MinuteClient([])
+    entries = fetch_spot_history(
+        client=cast(_CoinDeskClient, client),
+        market="coinbase",
+        instrument="ETH-EUR",
+        from_timestamp=bucket_start,
+        to_timestamp=bucket_start + timedelta(minutes=15),
+        aggregate_minutes=15,
+        page_limit=10,
+    )
+
+    assert entries == [entry]
+    assert client.captured_minutes_params is not None
+    assert client.captured_minutes_params["aggregate"] == 15
+    assert client.captured_hours_params is None
+
+
+def test_fetch_spot_history_clamps_page_limit_to_api_max_for_aggregate() -> None:
+    bucket_start = datetime(2025, 1, 1, 0, 0, tzinfo=timezone.utc)
+    entry = _entry(bucket_start)
+
+    class _ClampedClient(_StubCoinDeskClient):
+        def get_spot_historical_hours(self, **params: object) -> list[SpotInstrumentOHLC]:
+            self.captured_hours_params = params
+            return [entry]
+
+    client = _ClampedClient([])
+    fetch_spot_history(
+        client=cast(_CoinDeskClient, client),
+        market="coinbase",
+        instrument="ETH-EUR",
+        from_timestamp=bucket_start,
+        to_timestamp=bucket_start + timedelta(days=1),
+        aggregate_minutes=1_440,
+        page_limit=2_000,
+    )
+
+    assert client.captured_hours_params is not None
+    assert client.captured_hours_params["aggregate"] == 24
+    assert client.captured_hours_params["limit"] == 83
+
+
+def test_fetch_spot_candle_returns_latest_bucket_for_timestamp() -> None:
+    requested_timestamp = datetime(2025, 1, 1, 12, 34, tzinfo=timezone.utc)
+    entry = _entry(datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc))
+
+    class _SingleBucketClient(_StubCoinDeskClient):
+        def get_spot_historical_hours(self, **params: object) -> list[SpotInstrumentOHLC]:
+            self.captured_hours_params = params
+            return [entry]
+
+    client = _SingleBucketClient([])
+    result = fetch_spot_candle(
+        client=cast(_CoinDeskClient, client),
+        market="coinbase",
+        instrument="ETH-EUR",
+        timestamp=requested_timestamp,
+    )
+
+    assert result == entry
+    assert client.captured_hours_params is not None
+    assert client.captured_hours_params["to_ts"] == int(requested_timestamp.timestamp())
+    assert client.captured_hours_params["limit"] == 1
 
 
 def _mock_response(payload: dict, status_code: int = 200) -> Mock:
@@ -253,6 +381,23 @@ def test_coindesk_source_retries_with_first_trade_timestamp() -> None:
     assert fallback_client.captured_hours_params is not None
     assert fallback_client.captured_hours_params["to_ts"] == int(bucket_start.timestamp())
     assert fallback_client.instrument_lookup == ("kraken", "ETHW-EUR")
+
+
+def _entry(timestamp: datetime) -> SpotInstrumentOHLC:
+    return SpotInstrumentOHLC(
+        timestamp=timestamp,
+        market="coinbase",
+        instrument="ETHEUR",
+        mapped_instrument="ETH-EUR",
+        base_asset="ETH",
+        quote_asset="EUR",
+        open=Decimal("2500"),
+        high=Decimal("2550"),
+        low=Decimal("2450"),
+        close=Decimal("2525"),
+        volume=Decimal("1"),
+        quote_volume=Decimal("2525"),
+    )
 
 
 @pytest.mark.skip(reason="This test requires real api key in .env")
