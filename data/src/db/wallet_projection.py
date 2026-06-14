@@ -8,11 +8,11 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from db.models import Base, DecimalAsString
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin
+from domain.projection import ProjectionStatus
 from domain.wallet_projection import (
     WalletBalance,
     WalletTrackingIssue,
     WalletTrackingState,
-    WalletTrackingStatus,
 )
 
 CURRENT_STATE_ID = 1
@@ -66,7 +66,7 @@ class WalletProjectionRepository:
         issue_rows = self._session.execute(select(WalletTrackingIssueOrm)).scalars()
 
         return WalletTrackingState(
-            status=WalletTrackingStatus(state_row.status),
+            status=ProjectionStatus(state_row.status),
             failed_event=self._to_event_origin(
                 location=state_row.failed_origin_location,
                 external_id=state_row.failed_origin_external_id,

@@ -14,11 +14,11 @@ from db.wallet_projection import (
     WalletTrackingStateOrm,
 )
 from domain.ledger import EventLocation, EventOrigin
+from domain.projection import ProjectionStatus
 from domain.wallet_projection import (
     WalletBalance,
     WalletTrackingIssue,
     WalletTrackingState,
-    WalletTrackingStatus,
 )
 from tests.constants import BASE_WALLET, BTC, ETH, EUR, LEDGER_WALLET
 
@@ -29,7 +29,7 @@ def _origin(location: EventLocation, external_id: str) -> EventOrigin:
 
 def _completed_state(*, balances: list[WalletBalance]) -> WalletTrackingState:
     return WalletTrackingState(
-        status=WalletTrackingStatus.COMPLETED,
+        status=ProjectionStatus.COMPLETED,
         failed_event=None,
         issues=[],
         balances=balances,
@@ -42,7 +42,7 @@ def _failed_state() -> WalletTrackingState:
     attempted_eur = Decimal("-5.5")
     available_eur = Decimal("5.0")
     return WalletTrackingState(
-        status=WalletTrackingStatus.FAILED,
+        status=ProjectionStatus.FAILED,
         failed_event=_origin(EventLocation.BASE, "evt-2"),
         issues=[
             WalletTrackingIssue(
@@ -110,7 +110,7 @@ def test_replace_persists_completed_state_with_deterministic_balance_order(
     ]
     assert persisted == state
     assert reloaded == WalletTrackingState(
-        status=WalletTrackingStatus.COMPLETED,
+        status=ProjectionStatus.COMPLETED,
         failed_event=None,
         issues=[],
         balances=expected_balances,
@@ -125,7 +125,7 @@ def test_replace_fully_replaces_prior_state(
 
     final_balance = Decimal("2.0")
     replacement_state = WalletTrackingState(
-        status=WalletTrackingStatus.COMPLETED,
+        status=ProjectionStatus.COMPLETED,
         failed_event=None,
         issues=[],
         balances=[
@@ -146,7 +146,7 @@ def test_replace_fully_replaces_prior_state(
     assert len(state_rows) == 1
     state_row = state_rows[0]
     assert state_row.singleton_id == 1
-    assert state_row.status == WalletTrackingStatus.COMPLETED.value
+    assert state_row.status == ProjectionStatus.COMPLETED.value
     assert state_row.failed_origin_location is None
     assert state_row.failed_origin_external_id is None
     assert [(row.account_chain_id, row.asset_id, row.balance) for row in balance_rows] == [

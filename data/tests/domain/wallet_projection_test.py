@@ -4,7 +4,8 @@ from decimal import Decimal
 
 from accounts import KRAKEN_ACCOUNT_ID
 from domain.ledger import LedgerLeg
-from domain.wallet_projection import WalletProjector, WalletTrackingStatus
+from domain.projection import ProjectionStatus
+from domain.wallet_projection import WalletProjector
 from tests.constants import BASE_WALLET, ETH, EUR, LEDGER_WALLET
 from tests.helpers.time_utils import make_event
 
@@ -50,7 +51,7 @@ def test_wallet_projector_processes_events_across_multiple_accounts(
     expected_ledger_eur = received_eur - fee_eur
     expected_kraken_eur = starting_eur - spent_eur
 
-    assert result.status == WalletTrackingStatus.COMPLETED
+    assert result.status == ProjectionStatus.COMPLETED
     assert result.failed_event is None
     assert result.issues == []
     assert len(result.balances) == 4
@@ -87,7 +88,7 @@ def test_wallet_projector_nets_same_event_deltas_across_distinct_leg_identities(
 
     result = wallet_projector.project(events)
 
-    assert result.status == WalletTrackingStatus.COMPLETED
+    assert result.status == ProjectionStatus.COMPLETED
     assert result.issues == []
     assert len(result.balances) == 1
     balance = result.balances[0]
@@ -112,7 +113,7 @@ def test_wallet_projector_failure_is_event_atomic(wallet_projector: WalletProjec
 
     result = wallet_projector.project(events)
 
-    assert result.status == WalletTrackingStatus.FAILED
+    assert result.status == ProjectionStatus.FAILED
     assert result.failed_event == events[1].event_origin
     assert len(result.issues) == 1
     issue = result.issues[0]
@@ -151,7 +152,7 @@ def test_wallet_projector_collects_all_blocking_issues_from_failed_event(
 
     result = wallet_projector.project(events)
 
-    assert result.status == WalletTrackingStatus.FAILED
+    assert result.status == ProjectionStatus.FAILED
     assert result.failed_event == events[1].event_origin
     assert [(issue.account_chain_id, issue.asset_id, issue.missing_balance) for issue in result.issues] == [
         (BASE_WALLET, EUR, eur_attempted - eur_available),
@@ -169,5 +170,5 @@ def test_wallet_projector_excludes_zero_balances(wallet_projector: WalletProject
 
     result = wallet_projector.project(events)
 
-    assert result.status == WalletTrackingStatus.COMPLETED
+    assert result.status == ProjectionStatus.COMPLETED
     assert result.balances == []

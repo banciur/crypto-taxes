@@ -3,22 +3,16 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, MutableMapping
 from decimal import Decimal
-from enum import StrEnum
 from typing import Self
 
 from pydantic_base import StrictBaseModel
 
 from .ledger import AccountChainId, AssetId, EventOrigin, LedgerEvent
+from .projection import ProjectionStatus
 
 BalanceKey = tuple[AccountChainId, AssetId]
 BalanceMap = Mapping[BalanceKey, Decimal]
 ZERO = Decimal(0)
-
-
-class WalletTrackingStatus(StrEnum):
-    NOT_RUN = "NOT_RUN"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
 
 
 class WalletBalance(StrictBaseModel):
@@ -37,7 +31,7 @@ class WalletTrackingIssue(StrictBaseModel):
 
 
 class WalletTrackingState(StrictBaseModel):
-    status: WalletTrackingStatus
+    status: ProjectionStatus
     failed_event: EventOrigin | None = None
     issues: list[WalletTrackingIssue]
     balances: list[WalletBalance]
@@ -45,7 +39,7 @@ class WalletTrackingState(StrictBaseModel):
     @classmethod
     def not_run(cls) -> Self:
         return cls(
-            status=WalletTrackingStatus.NOT_RUN,
+            status=ProjectionStatus.NOT_RUN,
             issues=[],
             balances=[],
         )
@@ -54,14 +48,14 @@ class WalletTrackingState(StrictBaseModel):
 class WalletProjector:
     def project(self, events: Iterable[LedgerEvent]) -> WalletTrackingState:
         balances: MutableMapping[BalanceKey, Decimal] = {}
-        status = WalletTrackingStatus.COMPLETED
+        status = ProjectionStatus.COMPLETED
         failed_event: EventOrigin | None = None
         issues: list[WalletTrackingIssue] = []
 
         for event in events:
             deltas = self._net_event_deltas(event)
             if issues := self._validate_event(event, deltas, balances):
-                status = WalletTrackingStatus.FAILED
+                status = ProjectionStatus.FAILED
                 failed_event = event.event_origin
                 break
 
