@@ -4,22 +4,22 @@ name = "crypto-taxes"
 requires-python = ">= 3.13"
 
 dependencies = [
-    "alembic==1.18.4",
+    "alembic==1.18.5",
     "coinbase-advanced-py==1.8.2",
-    "fastapi[standard]>=0.135.1",
+    "fastapi[standard]>=0.139.0",
     "moralis==0.1.49",
-    "pydantic==2.12.5",
+    "pydantic==2.13.4",
     "pydantic-settings==2.13.1",
-    "requests==2.32.5",
-    "SQLAlchemy==2.0.48",
+    "requests==2.33.0",
+    "SQLAlchemy==2.0.51",
 ]
 
 [dependency-groups]
 dev = [
     "types-requests>=2.32.4,<2.32.6",
-    "mypy==1.19.1",
-    "pytest==9.0.2",
-    "ruff==0.15.5",
+    "mypy==2.1.0",
+    "pytest==9.0.3",
+    "ruff==0.15.20",
 ]
 
 [tool.pytest.ini_options]
@@ -51,5 +51,5 @@ warn_unused_configs = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["coinbase", "coinbase.*", "moralis", "moralis.*", "openapi_evm_api.*"]
+module = ["coinbase.*", "moralis", "moralis.*", "openapi_evm_api.*"]
 ignore_missing_imports = true
