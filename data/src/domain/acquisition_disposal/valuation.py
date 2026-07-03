@@ -50,12 +50,15 @@ def _value_non_fee_groups(
             price_provider=price_provider,
         )
         if direct_rate is None:
+            if is_valuation_anchor(group.asset_id):
+                raise AcquisitionDisposalProjectionError(
+                    f"Valuation anchor asset cannot be priced directly in EUR: asset={group.asset_id}."
+                )
             if unknown_group is not None:
                 raise AcquisitionDisposalProjectionError(
                     "More than one distinct non-fee asset is unpriceable in the same event."
                 )
-            else:
-                unknown_group = group
+            unknown_group = group
         else:
             direct_rates[group.asset_id] = direct_rate
 

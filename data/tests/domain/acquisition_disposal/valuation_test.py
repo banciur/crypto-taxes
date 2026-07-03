@@ -135,6 +135,20 @@ def test_more_than_one_distinct_unpriceable_non_fee_asset_fails() -> None:
         _rates_for(event, rates={ETH: Decimal("200")})
 
 
+def test_unpriceable_anchor_asset_fails_instead_of_being_remainder_solved() -> None:
+    eth_quantity = Decimal("-1")
+    usdc_quantity = Decimal("200")
+    event = make_event(
+        legs=[
+            make_leg(asset_id=ETH, quantity=eth_quantity),
+            make_leg(asset_id=USDC, quantity=usdc_quantity),
+        ],
+    )
+
+    with pytest.raises(AcquisitionDisposalProjectionError, match="Valuation anchor asset"):
+        _rates_for(event, rates={ETH: Decimal("200")})
+
+
 def test_one_sided_event_requires_direct_price() -> None:
     lp_quantity = Decimal("1")
     event = make_event(
