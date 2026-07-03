@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import Integer, String, Uuid, delete, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from db.models import Base, DecimalAsString
+from db.base import Base, DecimalAsString
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin
 from domain.projection import ProjectionStatus
 from domain.wallet_projection import (

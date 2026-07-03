@@ -5,7 +5,7 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from db.models import Base
+from db.base import Base
 from domain.acquisition_disposal import AcquisitionDisposalProjector
 from tests.helpers.random_price_service import TestPriceService
 from tests.helpers.time_utils import DEFAULT_TIME_GEN

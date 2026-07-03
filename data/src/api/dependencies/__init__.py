@@ -4,7 +4,7 @@ from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from db.ledger_corrections import LedgerCorrectionRepository
-from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
 from db.wallet_projection import WalletProjectionRepository
 
 

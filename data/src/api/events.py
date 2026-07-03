@@ -6,7 +6,7 @@ from api.dependencies import (
     get_corrected_events_repository,
     get_raw_events_repository,
 )
-from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
 from domain.ledger import LedgerEvent
 
 router = APIRouter()

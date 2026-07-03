@@ -8,8 +8,8 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Uuid, selec
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
+from db.base import DecimalAsString
 from db.mixins import TimestampAuditMixin
-from db.models import DecimalAsString
 from domain.correction import CorrectionId, LedgerCorrection, LedgerCorrectionDraft
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerLeg, LegId
 from utils.misc import ensure_utc_datetime

@@ -18,16 +18,12 @@ from config import (
     config,
 )
 from corrections.ingestion import apply_ingestion_corrections
+from db.acquisition_disposal import AcquisitionLotRepository, DisposalLinkRepository
+from db.base import Base
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
-from db.models import Base
-from db.repositories import (
-    AcquisitionLotRepository,
-    CorrectedLedgerEventRepository,
-    DisposalLinkRepository,
-    LedgerEventRepository,
-    TaxEventRepository,
-)
+from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
 from db.session import init_db_session
+from db.tax_events import TaxEventRepository
 from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository

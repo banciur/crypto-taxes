@@ -7,14 +7,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from accounts import KRAKEN_ACCOUNT_ID
-from db.repositories import (
+from db.acquisition_disposal import (
+    AcquisitionDisposalProjectionRepository,
     AcquisitionLotRepository,
-    CorrectedLedgerEventRepository,
     DisposalLinkRepository,
-    LedgerEventRepository,
-    TaxEventRepository,
 )
-from domain.acquisition_disposal import AcquisitionLot, DisposalLink
+from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.tax_events import TaxEventRepository
+from domain.acquisition_disposal import AcquisitionDisposalProjection, AcquisitionLot, DisposalLink
 from domain.ledger import (
     DisposalId,
     EventLocation,
@@ -95,6 +95,11 @@ def disposal_repo(test_session: Session) -> DisposalLinkRepository:
 @pytest.fixture()
 def tax_repo(test_session: Session) -> TaxEventRepository:
     return TaxEventRepository(test_session)
+
+
+@pytest.fixture()
+def projection_repo(test_session: Session) -> AcquisitionDisposalProjectionRepository:
+    return AcquisitionDisposalProjectionRepository(test_session)
 
 
 @pytest.fixture()
@@ -230,6 +235,63 @@ def test_persist_disposal_links(
         assert reloaded.timestamp == original.timestamp
         assert reloaded.quantity_used == original.quantity_used
         assert reloaded.proceeds_total == original.proceeds_total
+
+
+def test_replace_acquisition_disposal_projection(projection_repo: AcquisitionDisposalProjectionRepository) -> None:
+    acquisition_event = _sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
+    disposal_event = _sample_event("disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=timezone.utc))
+    lots = [
+        _acquisition_lot_from_event(acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23")),
+        _acquisition_lot_from_event(acquisition_event, leg_index=1, cost_per_unit=Decimal("2.34")),
+    ]
+    links = [
+        _disposal_link_from_event(
+            disposal_event,
+            leg_index=0,
+            lot_id=lots[0].id,
+            quantity_used=Decimal("0.5"),
+            proceeds_total=Decimal("100"),
+        ),
+        _disposal_link_from_event(
+            disposal_event,
+            leg_index=0,
+            lot_id=lots[1].id,
+            quantity_used=Decimal("1.25"),
+            proceeds_total=Decimal("250.75"),
+        ),
+    ]
+    projection = AcquisitionDisposalProjection(acquisition_lots=lots, disposal_links=links)
+
+    saved = projection_repo.replace(projection)
+
+    assert saved == projection
+    stored = projection_repo.get()
+    assert {lot.id: lot for lot in stored.acquisition_lots} == {lot.id: lot for lot in lots}
+    assert {link.id: link for link in stored.disposal_links} == {link.id: link for link in links}
+
+
+def test_replace_acquisition_disposal_projection_clears_previous_rows(
+    projection_repo: AcquisitionDisposalProjectionRepository,
+) -> None:
+    first_acquisition_event = _sample_event("first-acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
+    first_disposal_event = _sample_event("first-disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=timezone.utc))
+    stale_lot = _acquisition_lot_from_event(first_acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23"))
+    stale_link = _disposal_link_from_event(
+        first_disposal_event,
+        leg_index=0,
+        lot_id=stale_lot.id,
+        quantity_used=Decimal("0.5"),
+        proceeds_total=Decimal("100"),
+    )
+    projection_repo.replace(AcquisitionDisposalProjection(acquisition_lots=[stale_lot], disposal_links=[stale_link]))
+
+    replacement_event = _sample_event("replacement-acq-ext", datetime(2024, 1, 6, 9, 0, 0, tzinfo=timezone.utc))
+    replacement_lot = _acquisition_lot_from_event(replacement_event, leg_index=0, cost_per_unit=Decimal("4.56"))
+    projection_repo.replace(AcquisitionDisposalProjection(acquisition_lots=[replacement_lot], disposal_links=[]))
+
+    stored = projection_repo.get()
+    assert stored.acquisition_lots == [replacement_lot]
+    assert stored.disposal_links == []
 
 
 def test_persist_tax_events(tax_repo: TaxEventRepository) -> None:

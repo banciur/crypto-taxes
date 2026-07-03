@@ -15,9 +15,9 @@ from sqlalchemy.pool import StaticPool
 
 import api.api as api
 from accounts import KRAKEN_ACCOUNT_ID
+from db.base import Base
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
-from db.models import Base
-from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
 from domain.correction import LedgerCorrection, LedgerCorrectionDraft
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
 from tests.constants import BTC, EUR
