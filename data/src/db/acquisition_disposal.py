@@ -6,7 +6,8 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, String, Uuid, delete
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from db.base import Base, DecimalAsString
-from domain.acquisition_disposal import AcquisitionDisposalProjection, AcquisitionLot, DisposalLink
+from domain.acquisition_disposal.models import AcquisitionLot, DisposalLink
+from domain.acquisition_disposal.projector import AcquisitionDisposalProjection
 from domain.ledger import AccountChainId, AssetId, DisposalId, EventLocation, EventOrigin, LotId
 from utils.misc import ensure_utc_datetime
 

@@ -80,6 +80,3 @@ class TestPriceService(PriceProvider):
     def rate(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal:
         snapshot = self._source.fetch_snapshot(base_id=base_id, quote_id=quote_id, timestamp=timestamp)
         return snapshot.rate
-
-
-__all__ = ["TestPriceService"]

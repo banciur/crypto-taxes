@@ -35,9 +35,3 @@ class HybridPriceSource(PriceSnapshotSource):
 
     def _is_fiat_pair(self, base: str, quote: str) -> bool:
         return base in self._fiat_codes and quote in self._fiat_codes
-
-
-__all__ = [
-    "HybridPriceSource",
-    "PriceSnapshotSource",
-]

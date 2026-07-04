@@ -5,8 +5,12 @@ from uuid import uuid4
 import pytest
 
 from accounts import KRAKEN_ACCOUNT_ID
-from domain.acquisition_disposal import AcquisitionDisposalProjectionError, AcquisitionLot, DisposalLink
+from domain.acquisition_disposal.errors import (
+    AcquisitionDisposalLotMatchingError,
+    AcquisitionDisposalProjectionError,
+)
 from domain.acquisition_disposal.fifo import QUANTITY_NEEDED_MESSAGE_SUFFIX, match_event_fifo
+from domain.acquisition_disposal.models import AcquisitionLot, DisposalLink
 from domain.acquisition_disposal.pipeline_types import (
     _LotBalance,
     _ProjectedAssetResidualGroup,
@@ -345,6 +349,7 @@ def test_raises_when_open_lots_are_insufficient() -> None:
         )
 
     assert exc_info.value.quantity_needed == Decimal("1")
+    assert isinstance(exc_info.value, AcquisitionDisposalLotMatchingError)
     assert QUANTITY_NEEDED_MESSAGE_SUFFIX.format(quantity_needed=exc_info.value.quantity_needed) in str(exc_info.value)
 
 

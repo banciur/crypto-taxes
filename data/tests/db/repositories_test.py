@@ -10,7 +10,8 @@ from accounts import KRAKEN_ACCOUNT_ID
 from db.acquisition_disposal import AcquisitionDisposalProjectionRepository
 from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
 from db.tax_events import TaxEventRepository
-from domain.acquisition_disposal import AcquisitionDisposalProjection, AcquisitionLot, DisposalLink
+from domain.acquisition_disposal.models import AcquisitionLot, DisposalLink
+from domain.acquisition_disposal.projector import AcquisitionDisposalProjection
 from domain.ledger import (
     DisposalId,
     EventLocation,

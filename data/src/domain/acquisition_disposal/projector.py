@@ -4,6 +4,7 @@ from typing import Iterable
 
 from ..ledger import AssetId, LedgerEvent
 from ..pricing import PriceProvider
+from .errors import AcquisitionDisposalProjectionError
 from .fifo import match_event_fifo
 from .models import AcquisitionLot, DisposalLink
 from .pipeline_types import _LotBalance
@@ -33,11 +34,15 @@ class AcquisitionDisposalProjector:
 
         for event in events:
             projected_event = project_event_quantities(event)
-            prices = value_projected_event(
-                projected_event,
-                timestamp=event.timestamp,
-                price_provider=self._price_provider,
-            )
+            try:
+                prices = value_projected_event(
+                    projected_event,
+                    timestamp=event.timestamp,
+                    price_provider=self._price_provider,
+                )
+            except AcquisitionDisposalProjectionError as error:
+                _add_event_context(error, event=event)
+                raise
             match_event_fifo(
                 projected_event,
                 prices=prices,
@@ -52,3 +57,13 @@ class AcquisitionDisposalProjector:
             acquisition_lots=acquisitions,
             disposal_links=disposals,
         )
+
+
+def _add_event_context(
+    error: AcquisitionDisposalProjectionError,
+    *,
+    event: LedgerEvent,
+) -> None:
+    origin = event.event_origin
+    error.args = (f"{error} event_origin={origin.location.value}/{origin.external_id} @{event.timestamp.isoformat()}",)
+    error.event = event

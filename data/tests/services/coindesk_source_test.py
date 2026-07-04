@@ -6,6 +6,7 @@ from unittest.mock import Mock
 import pytest
 import requests
 
+from domain.pricing import RequiredPriceUnavailableError
 from services.coindesk_source import (
     CoinDeskAPIError,
     CoinDeskSource,
@@ -97,6 +98,19 @@ def test_coindesk_source_rejects_unsupported_bucket_lengths() -> None:
     client = cast(_CoinDeskClient, _StubCoinDeskClient([]))
     with pytest.raises(ValueError):
         CoinDeskSource(client=client, market="coinbase", aggregate_minutes=45)
+
+
+def test_coindesk_source_raises_structured_error_when_price_data_is_unavailable() -> None:
+    requested_timestamp = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    client = cast(_CoinDeskClient, _StubCoinDeskClient([]))
+    source = CoinDeskSource(client=client, market="coinbase")
+
+    with pytest.raises(RequiredPriceUnavailableError, match="No price data returned") as exc_info:
+        source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=requested_timestamp)
+
+    assert exc_info.value.base_id == BTC
+    assert exc_info.value.quote_id == USD
+    assert exc_info.value.timestamp == requested_timestamp
 
 
 def test_fetch_spot_history_pages_backwards_and_returns_ascending_range() -> None:

@@ -5,7 +5,7 @@ from decimal import Decimal
 from ..ledger import AssetId
 from ..pricing import PriceProvider, RequiredPriceUnavailableError
 from .constants import BASE_CURRENCY_ASSET_ID, is_valuation_anchor
-from .errors import AcquisitionDisposalProjectionError
+from .errors import AcquisitionDisposalValuationError, RequiredValuationPriceUnavailableError
 from .pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
 
 
@@ -49,12 +49,13 @@ def _value_non_fee_groups(
         )
         if direct_rate is None:
             if is_valuation_anchor(group.asset_id):
-                raise AcquisitionDisposalProjectionError(
+                raise AcquisitionDisposalValuationError(
                     f"Valuation anchor asset cannot be priced directly in EUR: asset={group.asset_id}."
                 )
             if unknown_group is not None:
-                raise AcquisitionDisposalProjectionError(
-                    "More than one distinct non-fee asset is unpriceable in the same event."
+                raise AcquisitionDisposalValuationError(
+                    "More than one distinct non-fee asset is unpriceable in the same event: "
+                    f"assets={unknown_group.asset_id},{group.asset_id}."
                 )
             unknown_group = group
         else:
@@ -96,7 +97,7 @@ def _value_fee_groups(
             price_provider=price_provider,
         )
         if direct_rate is None:
-            raise AcquisitionDisposalProjectionError(
+            raise AcquisitionDisposalValuationError(
                 f"Fee asset appears only in fee legs and cannot be priced in EUR: asset={group.asset_id}."
             )
         fee_prices[group.asset_id] = direct_rate
@@ -162,7 +163,7 @@ def _rebalance_known_rates(
         return balanced_rates
 
     if acquisition_total != disposal_total:
-        raise AcquisitionDisposalProjectionError(
+        raise AcquisitionDisposalValuationError(
             "Non-fee event totals disagree and cannot be rebalanced because both sides are fully anchored."
         )
     return balanced_rates
@@ -185,13 +186,14 @@ def _solve_unknown_rate(
         same_side_total = known_disposal_total
 
     if opposite_total <= 0:
-        raise AcquisitionDisposalProjectionError(
-            "One-sided event relies on direct price service valuation and the price is unavailable."
+        raise AcquisitionDisposalValuationError(
+            "One-sided event relies on direct price service valuation and the price is unavailable: "
+            f"asset={unknown_group.asset_id}."
         )
 
     unknown_total = opposite_total - same_side_total
     if unknown_total < 0:
-        raise AcquisitionDisposalProjectionError(
+        raise AcquisitionDisposalValuationError(
             f"Remainder solving would produce a negative value for asset={unknown_group.asset_id}."
         )
 
@@ -241,14 +243,15 @@ def _apply_target_total(
     target_total: Decimal,
 ) -> None:
     if target_total <= 0:
-        raise AcquisitionDisposalProjectionError(
+        raise AcquisitionDisposalValuationError(
             "Balancing would require a non-positive EUR value for adjustable non-fee assets."
         )
 
     current_total = _groups_total(groups, rates=direct_rates)
     if current_total <= 0:
-        raise AcquisitionDisposalProjectionError(
-            "One-sided event relies on direct price service valuation and the price is unavailable."
+        raise AcquisitionDisposalValuationError(
+            "One-sided event relies on direct price service valuation and the price is unavailable: "
+            f"assets={_format_asset_ids(groups)}."
         )
 
     remaining_total = target_total
@@ -273,6 +276,10 @@ def _group_net_quantity(group: _ProjectedAssetResidualGroup) -> Decimal:
     return sum((residual.quantity for residual in group.residuals), start=Decimal(0))
 
 
+def _format_asset_ids(groups: Sequence[_ProjectedAssetResidualGroup]) -> str:
+    return ",".join(str(group.asset_id) for group in groups)
+
+
 def _try_direct_rate(
     *,
     asset_id: AssetId,
@@ -283,7 +290,7 @@ def _try_direct_rate(
         return Decimal(1)
     try:
         return price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
-    except RequiredPriceUnavailableError:
-        raise
+    except RequiredPriceUnavailableError as error:
+        raise RequiredValuationPriceUnavailableError(pricing_error=error) from error
     except Exception:
         return None

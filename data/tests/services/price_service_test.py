@@ -49,11 +49,15 @@ def test_get_price_reuses_cached_snapshot(tmp_path: Path) -> None:
 
 class _FailingPriceSnapshotSource:
     def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
-        _ = (base_id, quote_id, timestamp)
-        raise LookupError("missing price")
+        raise RequiredPriceUnavailableError(
+            base_id=base_id,
+            quote_id=quote_id,
+            timestamp=timestamp,
+            reason="missing price",
+        )
 
 
-def test_anchor_asset_requires_direct_eur_price(tmp_path: Path) -> None:
+def test_required_price_unavailable_error_bubbles_from_source(tmp_path: Path) -> None:
     store = JsonlPriceStore(root_dir=tmp_path)
     fixed_now = datetime(2025, 1, 1, 15, 30, tzinfo=timezone.utc)
     service = PriceService(
@@ -61,5 +65,9 @@ def test_anchor_asset_requires_direct_eur_price(tmp_path: Path) -> None:
         store=store,
     )
 
-    with pytest.raises(RequiredPriceUnavailableError, match="Valuation anchor must have a direct EUR price"):
+    with pytest.raises(RequiredPriceUnavailableError, match="missing price") as exc_info:
         service.rate(USD, EUR, timestamp=fixed_now)
+
+    assert exc_info.value.base_id == USD
+    assert exc_info.value.quote_id == EUR
+    assert exc_info.value.timestamp == fixed_now

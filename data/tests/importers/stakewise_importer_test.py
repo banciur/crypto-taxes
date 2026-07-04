@@ -5,7 +5,7 @@ from pathlib import Path
 
 from accounts import account_chain_id_for
 from domain.ledger import EventLocation, WalletAddress
-from importers.stakewise import StakewiseImporter
+from importers.stakewise.stakewise_importer import StakewiseImporter
 
 FIELDNAMES = [
     "Reward (ETH)",

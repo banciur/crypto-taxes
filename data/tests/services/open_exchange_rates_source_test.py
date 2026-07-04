@@ -7,6 +7,7 @@ import pytest
 import requests
 
 import services.open_exchange_rates_source as oxr_module
+from domain.pricing import RequiredPriceUnavailableError
 from services.open_exchange_rates_source import (
     HistoricalRates,
     OpenExchangeRatesSource,
@@ -114,8 +115,12 @@ def test_price_source_raises_for_missing_currency() -> None:
     source = OpenExchangeRatesSource(client=cast(_OpenExchangeRatesClient, _StubOXRClient(snapshot=historical)))
 
     ts = datetime(2024, 1, 1, 9, 0, tzinfo=timezone.utc)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RequiredPriceUnavailableError, match="Currency EUR not available") as exc_info:
         source.fetch_snapshot(EUR, USD, timestamp=ts)
+
+    assert exc_info.value.base_id == EUR
+    assert exc_info.value.quote_id == USD
+    assert exc_info.value.timestamp == ts
 
 
 @pytest.mark.skip(reason="This test requires real api key in .env")

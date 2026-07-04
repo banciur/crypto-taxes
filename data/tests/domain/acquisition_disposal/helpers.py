@@ -21,6 +21,3 @@ def make_event(
         ingestion="test",
         legs=legs,
     )
-
-
-__all__ = ["BASE_TIMESTAMP", "EXOTIC", "make_event"]

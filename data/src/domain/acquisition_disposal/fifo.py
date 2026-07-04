@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from ..ledger import AccountChainId, AssetId, EventOrigin, LotId
 from .constants import is_fifo_tracked_asset
-from .errors import AcquisitionDisposalProjectionError
+from .errors import AcquisitionDisposalLotMatchingError
 from .models import AcquisitionLot, DisposalLink
 from .pipeline_types import _LotBalance, _ProjectedEvent
 
@@ -176,7 +176,7 @@ def _matching_error(
     event_origin: EventOrigin,
     timestamp: datetime,
     quantity_needed: Decimal | None = None,
-) -> AcquisitionDisposalProjectionError:
+) -> AcquisitionDisposalLotMatchingError:
     message = (
         f"{reason} for asset={asset_id} account={account_chain_id} "
         f"event_origin={event_origin.location.value}/{event_origin.external_id} "
@@ -184,4 +184,4 @@ def _matching_error(
     )
     if quantity_needed is not None:
         message += QUANTITY_NEEDED_MESSAGE_SUFFIX.format(quantity_needed=quantity_needed)
-    return AcquisitionDisposalProjectionError(message, quantity_needed=quantity_needed)
+    return AcquisitionDisposalLotMatchingError(message, quantity_needed=quantity_needed)

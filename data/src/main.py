@@ -31,7 +31,7 @@ from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
 from db.wallet_projection import WalletProjectionRepository
-from domain.acquisition_disposal import AcquisitionDisposalProjection, AcquisitionDisposalProjector
+from domain.acquisition_disposal.projector import AcquisitionDisposalProjection, AcquisitionDisposalProjector
 from domain.ledger import LedgerEvent
 from domain.pricing import PriceProvider
 from domain.projection import ProjectionStatus
@@ -42,11 +42,11 @@ from domain.system_state import (
     SystemStateStatus,
 )
 from domain.wallet_projection import WalletProjector, WalletTrackingState
-from importers.coinbase import CoinbaseImporter
-from importers.kraken import KrakenImporter
-from importers.lido import LidoImporter
-from importers.moralis import MoralisImporter
-from importers.stakewise import StakewiseImporter
+from importers.coinbase.coinbase_importer import CoinbaseImporter
+from importers.kraken.kraken_importer import KrakenImporter
+from importers.lido.lido_importer import LidoImporter
+from importers.moralis.moralis_importer import MoralisImporter
+from importers.stakewise.stakewise_importer import StakewiseImporter
 from services.coinbase import CoinbaseService
 from services.coindesk_source import CoinDeskSource
 from services.moralis import MoralisService

@@ -10,6 +10,7 @@ from urllib3.util import Retry
 
 from config import config
 from domain.ledger import AssetId
+from domain.pricing import RequiredPriceUnavailableError
 from errors import CryptoTaxesError
 
 from .price_sources import PriceSnapshotSource
@@ -142,7 +143,7 @@ class OpenExchangeRatesSource(PriceSnapshotSource):
         base = AssetId(base_id.upper())
         quote = AssetId(quote_id.upper())
 
-        rate = self._compute_rate(snapshot=snapshot, base=base, quote=quote)
+        rate = self._compute_rate(snapshot=snapshot, base=base, quote=quote, timestamp=timestamp)
         valid_from = datetime.combine(snapshot.date, time.min, tzinfo=timezone.utc)
         valid_to = valid_from + timedelta(days=1)
 
@@ -156,23 +157,32 @@ class OpenExchangeRatesSource(PriceSnapshotSource):
             valid_to=valid_to,
         )
 
-    def _compute_rate(self, *, snapshot: HistoricalRates, base: AssetId, quote: AssetId) -> Decimal:
+    def _compute_rate(
+        self,
+        *,
+        snapshot: HistoricalRates,
+        base: AssetId,
+        quote: AssetId,
+        timestamp: datetime,
+    ) -> Decimal:
         if base == quote:
             return Decimal("1")
 
-        base_rate = self._resolve_rate(snapshot=snapshot, currency=base)
-        quote_rate = self._resolve_rate(snapshot=snapshot, currency=quote)
+        try:
+            base_rate = self._resolve_rate(snapshot=snapshot, currency=base)
+            quote_rate = self._resolve_rate(snapshot=snapshot, currency=quote)
+        except KeyError as exc:
+            missing_currency = AssetId(str(exc.args[0]))
+            raise RequiredPriceUnavailableError(
+                base_id=base,
+                quote_id=quote,
+                timestamp=timestamp,
+                reason=f"Currency {missing_currency} not available in Open Exchange Rates data",
+            ) from exc
         return quote_rate / base_rate
 
     @staticmethod
     def _resolve_rate(*, snapshot: HistoricalRates, currency: AssetId) -> Decimal:
         if currency == snapshot.base:
             return Decimal("1")
-        try:
-            return snapshot.rates[currency]
-        except KeyError as exc:
-            msg = f"Currency {currency} not available in Open Exchange Rates data"
-            raise RuntimeError(msg) from exc
-
-
-__all__ = ["OpenExchangeRatesSource"]
+        return snapshot.rates[currency]

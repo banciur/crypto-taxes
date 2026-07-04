@@ -3,7 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from domain.acquisition_disposal import AcquisitionDisposalProjectionError
+from domain.acquisition_disposal.errors import AcquisitionDisposalProjectionError, AcquisitionDisposalValuationError
 from domain.acquisition_disposal.quantities import project_event_quantities
 from domain.acquisition_disposal.valuation import value_projected_event
 from domain.ledger import AssetId, LedgerEvent
@@ -129,8 +129,10 @@ def test_more_than_one_distinct_unpriceable_non_fee_asset_fails() -> None:
         ],
     )
 
-    with pytest.raises(AcquisitionDisposalProjectionError, match="distinct non-fee asset"):
+    with pytest.raises(AcquisitionDisposalProjectionError, match="distinct non-fee asset") as exc_info:
         _rates_for(event, rates={ETH: Decimal("200")})
+
+    assert f"assets={LP_A},{LP_B}" in str(exc_info.value)
 
 
 def test_unpriceable_anchor_asset_fails_instead_of_being_remainder_solved() -> None:
@@ -149,12 +151,16 @@ def test_unpriceable_anchor_asset_fails_instead_of_being_remainder_solved() -> N
 
 def test_one_sided_event_requires_direct_price() -> None:
     lp_quantity = Decimal("1")
+    lp_asset = LP
     event = make_event(
-        legs=[make_leg(asset_id=LP, quantity=lp_quantity)],
+        legs=[make_leg(asset_id=lp_asset, quantity=lp_quantity)],
     )
 
-    with pytest.raises(AcquisitionDisposalProjectionError, match="One-sided event"):
+    with pytest.raises(AcquisitionDisposalProjectionError, match="One-sided event") as exc_info:
         _rates_for(event, rates={})
+
+    assert f"asset={lp_asset}" in str(exc_info.value)
+    assert isinstance(exc_info.value, AcquisitionDisposalValuationError)
 
 
 def test_fully_anchored_mismatch_fails() -> None:

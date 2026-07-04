@@ -79,6 +79,3 @@ class JsonlPriceStore(PriceStore):
         safe_base = base_id.upper()
         safe_quote = quote_id.upper()
         return self.root_dir / "prices" / f"{safe_base}-{safe_quote}.jsonl"
-
-
-__all__ = ["JsonlPriceStore", "PriceStore"]

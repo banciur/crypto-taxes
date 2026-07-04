@@ -1,7 +1,6 @@
 First stage: compute German taxes
 
 TODO: Review disposal and acquisition creation.
-  - add to main
   - api
   - display it
   - add a fallback mechanism for missing price with an API and UI
