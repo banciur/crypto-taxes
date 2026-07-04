@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from db.ledger_corrections import LedgerCorrectionRepository
 from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.system_state import SystemStateRepository
 from db.wallet_projection import WalletProjectionRepository
 
 
@@ -38,3 +39,9 @@ def get_wallet_projection_repository(
     session: Annotated[Session, Depends(get_session)],
 ) -> WalletProjectionRepository:
     return WalletProjectionRepository(session)
+
+
+def get_system_state_repository(
+    session: Annotated[Session, Depends(get_session)],
+) -> SystemStateRepository:
+    return SystemStateRepository(session)

@@ -18,8 +18,16 @@
 - Target lot-matching model and rationale: `../doc/LOT_MATCHING.md`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
 - Unified correction model (`LedgerCorrection` for discard, replacement, and opening balance): `src/domain/correction.py`
+- Main-flow run status: `src/domain/system_state.py`
 - Tax event projection types: `src/domain/tax_event.py`
 - Wallet tracking projection and statuses: `src/domain/wallet_projection.py`
+
+### Main-flow system state
+- The main pipeline persists the latest `SystemState` in `src/db/system_state.py`.
+- Active stages currently written by `src/main.py` are `RAW_IMPORT`, `CORRECTIONS`, and `WALLET_PROJECTION`.
+- Stage execution writes `RUNNING` before work starts. Successful completion after wallet projection writes `COMPLETED`.
+- Failures write `FAILED` with a flat `SystemStateError` (`exception_type`, `message`, optional `traceback`). Exceptions record the exception class name, its message, and traceback.
+- Wallet projection failure is a projection status rather than an exception, so it records `exception_type="WalletProjectionFailed"` with no traceback; the failed event and blocking issues stay in the separately persisted `WalletTrackingState`.
 
 ### Correction persistence and application
 - Unified correction persistence lives in `src/db/ledger_corrections.py`.

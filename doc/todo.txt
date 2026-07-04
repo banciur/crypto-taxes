@@ -1,8 +1,6 @@
 First stage: compute German taxes
 
 TODO: Review disposal and acquisition creation.
-  - projector logic with tests - this is done but now needs a review
-  - meticulously read tests for pricing
   - add to main
   - api
   - display it
@@ -15,6 +13,7 @@ TODO: On 2006-02-09 there is an interesting case of moving money from base to et
 
 Review the order of todos
 -----------------
+TODO: ui/src/components/SystemState and ui/src/components/WalletProjection are vibed not checked and are very bad but should be refactored.
 TODO: In valuation during acquisition / disposal matching I have a mid-point rule which might be not correct for Germany. Review it. Even if it is correct review the logic and tests again initial task was done a bit fast.
 TODO: Maybe it would make sense to add eur value to corrected events lane. Code that does price valuation exists in disposal. Maybe it should be stored in db to do it only once? Maybe this part of code should be executer earlier, not during acq / disposal matching
 TODO: Possible name cleaning. There are accounts with its endpoint and there is a wallet projection with another endpoint. Those carry different semantics.

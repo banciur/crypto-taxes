@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from decimal import Decimal
 
 from accounts import KRAKEN_ACCOUNT_ID

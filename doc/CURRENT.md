@@ -18,6 +18,8 @@ The system is a local-first pipeline for ingesting crypto activity, normalizing 
 
 Current operational output stops after corrected-ledger persistence and wallet projection rebuild. Inventory and tax stages exist only as partial downstream work and are not yet the main product output.
 
+The main flow persists a generic latest-run `SystemState` alongside stage outputs. It is `RUNNING` while the active stage is executing, `COMPLETED` after wallet projection succeeds, and `FAILED` with the failed stage and first error when a known or unexpected failure stops the run.
+
 The downstream inventory stage is modeled around `AcquisitionLot` and `DisposalLink`. Detailed quantity projection, valuation, and FIFO rules for that stage are documented in `doc/LOT_MATCHING.md`.
 
 ## Canonical Domain Objects
@@ -27,6 +29,7 @@ The downstream inventory stage is modeled around `AcquisitionLot` and `DisposalL
 - `LedgerLeg`: one asset delta for one account within a ledger event. `is_fee=True` marks an explicit fee leg.
 - `LedgerCorrection`: a manual override that discards raw events, replaces them with a synthetic corrected event, or adds an opening balance.
 - `AccountRegistry`: the canonical merged account catalog that includes both configured wallets and built-in exchange accounts.
+- `SystemState`: the persisted latest main-flow run status, including stage, start/finish timestamps, and first error details.
 - `WalletTrackingState`: the persisted result of rebuilding current balances from corrected events, including status, balances, and blocking issues.
 - `AcquisitionLot`: a downstream inventory lot created from corrected ledger activity.
 - `DisposalLink`: a downstream inventory disposal record that links a disposal quantity to the acquisition lot fragments consumed by FIFO.
@@ -60,9 +63,10 @@ The downstream inventory stage is modeled around `AcquisitionLot` and `DisposalL
 ## Current Capabilities
 
 - Import raw activity from the supported sources listed below.
-- Persist raw ledger events, unified corrections, corrected ledger events, and wallet projection state.
+- Persist raw ledger events, unified corrections, corrected ledger events, generic system state, and wallet projection state.
 - Review raw events, corrections, and corrected events in the UI.
 - Author and remove discard, replacement, and opening-balance corrections through the UI/API flow.
+- Review latest main-flow status, failed stage, known error details, and unexpected tracebacks in the UI.
 - Rebuild the current per-wallet, per-asset balance projection from corrected events.
 - Persist price snapshots that downstream valuation logic can use.
 

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 from datetime import datetime
-from typing import Any, NewType
+from typing import Any, NewType, Self
 from uuid import UUID, uuid4
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
@@ -38,7 +36,7 @@ class LedgerCorrectionDraft(StrictBaseModel):
         return value
 
     @model_validator(mode="after")
-    def _validate_shape(self) -> LedgerCorrectionDraft:
+    def _validate_shape(self) -> Self:
         if len(self.sources) == 0 and len(self.legs) == 0:
             raise ValueError("LedgerCorrection requires sources or legs")
 

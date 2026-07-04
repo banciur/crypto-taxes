@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from accounts import KRAKEN_ACCOUNT_ID
 from domain.acquisition_disposal.models import AbstractAcquisitionDisposal
 from domain.ledger import EventLegRef, EventLocation, EventOrigin, LegKey

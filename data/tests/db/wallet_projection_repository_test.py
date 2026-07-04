@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from decimal import Decimal
 
 import pytest
@@ -7,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from accounts import KRAKEN_ACCOUNT_ID
+from db.base import SINGLETON_ROW_ID
 from db.wallet_projection import (
     WalletProjectionRepository,
     WalletTrackingBalanceOrm,
@@ -82,8 +81,8 @@ def repo(test_session: Session) -> WalletProjectionRepository:
     return WalletProjectionRepository(test_session)
 
 
-def test_get_returns_none_when_wallet_tracking_state_is_empty(repo: WalletProjectionRepository) -> None:
-    assert repo.get() is None
+def test_get_returns_not_run_when_wallet_tracking_state_is_empty(repo: WalletProjectionRepository) -> None:
+    assert repo.get() == WalletTrackingState.not_run()
 
 
 def test_replace_persists_completed_state_with_deterministic_balance_order(
@@ -145,7 +144,7 @@ def test_replace_fully_replaces_prior_state(
 
     assert len(state_rows) == 1
     state_row = state_rows[0]
-    assert state_row.singleton_id == 1
+    assert state_row.singleton_id == SINGLETON_ROW_ID
     assert state_row.status == ProjectionStatus.COMPLETED.value
     assert state_row.failed_origin_location is None
     assert state_row.failed_origin_external_id is None
@@ -163,7 +162,6 @@ def test_replace_persists_failed_state_issues(repo: WalletProjectionRepository, 
     issue_rows = test_session.execute(select(WalletTrackingIssueOrm)).scalars().all()
 
     assert persisted == failed_state
-    assert reloaded is not None
     assert reloaded.status == failed_state.status
     assert reloaded.failed_event == failed_state.failed_event
     assert {(issue.account_chain_id, issue.asset_id, issue.missing_balance) for issue in reloaded.issues} == {

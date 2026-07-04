@@ -1,7 +1,5 @@
 # flake8: noqa: E402
 # uv run scripts/kraken/kraken_row_range_import.py 10 25 --csv artifacts/kraken-ledger.csv
-from __future__ import annotations
-
 import argparse
 import sys
 from csv import DictReader

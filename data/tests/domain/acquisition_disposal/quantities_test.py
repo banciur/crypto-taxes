@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from decimal import Decimal
 
 from domain.acquisition_disposal.quantities import project_event_quantities

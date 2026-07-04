@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import json
 from pathlib import Path
-from typing import Annotated, Iterable
+from typing import Annotated, Iterable, Self
 
 from pydantic import StringConstraints
 
@@ -131,7 +129,7 @@ class AccountRegistry:
                 )
 
     @classmethod
-    def from_path(cls, path: Path = ACCOUNTS_PATH) -> AccountRegistry:
+    def from_path(cls, path: Path = ACCOUNTS_PATH) -> Self:
         return cls(load_accounts(path))
 
     def resolve_owned_id(self, *, location: EventLocation, address: WalletAddress) -> AccountChainId | None:

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Generator
 from datetime import date, datetime, timedelta, timezone
 from typing import NamedTuple, cast

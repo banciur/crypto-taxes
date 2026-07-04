@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Callable, Generator
 from datetime import datetime
 from decimal import Decimal

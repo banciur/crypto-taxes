@@ -13,8 +13,4 @@ router = APIRouter()
 def get_wallet_projection(
     repo: Annotated[WalletProjectionRepository, Depends(get_wallet_projection_repository)],
 ) -> WalletTrackingState:
-    state = repo.get()
-    if state is not None:
-        return state
-
-    return WalletTrackingState.not_run()
+    return repo.get()

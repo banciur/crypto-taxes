@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections import deque
 from decimal import Decimal
 from uuid import uuid4

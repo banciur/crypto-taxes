@@ -1,6 +1,4 @@
 # This file is completely vibed and I didn't read it.
-from __future__ import annotations
-
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Mapping

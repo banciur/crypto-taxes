@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from csv import DictWriter
 from datetime import datetime, timezone
 from decimal import Decimal

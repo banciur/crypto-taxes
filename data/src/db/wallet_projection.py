@@ -1,12 +1,10 @@
-from __future__ import annotations
-
 from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import Integer, String, Uuid, delete, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from db.base import Base, DecimalAsString
+from db.base import SINGLETON_ROW_ID, Base, DecimalAsString
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin
 from domain.projection import ProjectionStatus
 from domain.wallet_projection import (
@@ -15,13 +13,11 @@ from domain.wallet_projection import (
     WalletTrackingState,
 )
 
-CURRENT_STATE_ID = 1
-
 
 class WalletTrackingStateOrm(Base):
     __tablename__ = "wallet_tracking_state"
 
-    singleton_id: Mapped[int] = mapped_column(Integer, primary_key=True, default=CURRENT_STATE_ID)
+    singleton_id: Mapped[int] = mapped_column(Integer, primary_key=True, default=SINGLETON_ROW_ID)
     status: Mapped[str] = mapped_column(String, nullable=False)
     failed_origin_location: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     failed_origin_external_id: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
@@ -52,10 +48,10 @@ class WalletProjectionRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def get(self) -> WalletTrackingState | None:
-        state_row = self._session.get(WalletTrackingStateOrm, CURRENT_STATE_ID)
+    def get(self) -> WalletTrackingState:
+        state_row = self._session.get(WalletTrackingStateOrm, SINGLETON_ROW_ID)
         if state_row is None:
-            return None
+            return WalletTrackingState.not_run()
 
         balance_rows = self._session.execute(
             select(WalletTrackingBalanceOrm).order_by(
@@ -105,7 +101,7 @@ class WalletProjectionRepository:
         self._session.expunge_all()
         self._session.add(
             WalletTrackingStateOrm(
-                singleton_id=CURRENT_STATE_ID,
+                singleton_id=SINGLETON_ROW_ID,
                 status=state.status.value,
                 failed_origin_location=failed_location,
                 failed_origin_external_id=failed_external_id,

@@ -3,6 +3,7 @@ import { performance } from "node:perf_hooks";
 import { Col, Container, Row } from "react-bootstrap";
 
 import { getAccounts } from "@/api/accounts";
+import { getSystemState } from "@/api/systemState";
 import { getWalletProjection } from "@/api/walletProjection";
 import { COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
@@ -20,6 +21,7 @@ import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext
 import { DateChooser } from "@/components/DateChooser";
 import { Events } from "@/components/Events";
 import { VisibleDayProvider } from "@/contexts/VisibleDayContext";
+import { SystemStateSection } from "@/components/SystemState/SystemStateSection";
 import { WalletProjectionSection } from "@/components/WalletProjection/WalletProjectionSection";
 import { clsx } from "clsx";
 
@@ -55,14 +57,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   const initialLoadStart = performance.now();
-  const [accounts, walletProjection] = await Promise.all([
+  const [accounts, systemState, walletProjection] = await Promise.all([
     getAccounts(),
+    getSystemState(),
     getWalletProjection(),
   ]);
 
   const columnsLoadStart = performance.now();
   console.log(
-    `Accounts + wallet projection fetch took: ${formatDuration(
+    `Accounts + system state + wallet projection fetch took: ${formatDuration(
       columnsLoadStart - initialLoadStart,
     )}`,
   );
@@ -123,6 +126,9 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <UrlColumnSelectionProvider>
         <VisibleDayProvider>
           <Container fluid className={clsx(styles.layoutContainer, "gap-3")}>
+            <section className={styles.systemStateSection}>
+              <SystemStateSection state={systemState} />
+            </section>
             <section className={styles.walletProjectionSection}>
               <WalletProjectionSection state={walletProjection} />
             </section>

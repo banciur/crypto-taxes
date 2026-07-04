@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from types import SimpleNamespace

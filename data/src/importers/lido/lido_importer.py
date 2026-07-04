@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from csv import DictReader
 from dataclasses import dataclass
 from datetime import datetime
