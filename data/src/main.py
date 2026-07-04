@@ -30,18 +30,17 @@ from db.tax_events import TaxEventRepository
 from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
-from db.wallet_projection import WalletProjectionRepository
+from db.wallet_projection import WalletBalanceRepository
 from domain.acquisition_disposal.projector import AcquisitionDisposalProjection, AcquisitionDisposalProjector
 from domain.ledger import LedgerEvent
 from domain.pricing import PriceProvider
-from domain.projection import ProjectionStatus
 from domain.system_state import (
     SystemState,
     SystemStateError,
     SystemStateStage,
     SystemStateStatus,
 )
-from domain.wallet_projection import WalletProjector, WalletTrackingState
+from domain.wallet_projection import WalletProjector
 from importers.coinbase.coinbase_importer import CoinbaseImporter
 from importers.kraken.kraken_importer import KrakenImporter
 from importers.lido.lido_importer import LidoImporter
@@ -116,14 +115,6 @@ def _system_state_error_from_exception(error: Exception) -> SystemStateError:
         exception_type=exception_type,
         message=str(error) or exception_type,
         traceback="".join(traceback_utils.format_exception(type(error), error, error.__traceback__)),
-    )
-
-
-def _system_state_error_from_wallet_projection() -> SystemStateError:
-    # Wallet projection failure is a projection status, not an exception.
-    return SystemStateError(
-        exception_type="WalletProjectionFailed",
-        message="Wallet projection failed",
     )
 
 
@@ -243,32 +234,38 @@ def _apply_and_persist_corrections(
     return corrected_event_repository.list()
 
 
-def _rebuild_wallet_projection(
+def _build_wallet_projection(
     *,
     corrected_events: list[LedgerEvent],
-    wallet_projection_repository: WalletProjectionRepository,
-) -> WalletTrackingState:
-    logger.info("Rebuilding wallet tracking from %d corrected events", len(corrected_events))
-    wallet_projection_state = WalletProjector().project(corrected_events)
-    wallet_projection_repository.replace(wallet_projection_state)
-    logger.info(
-        "Persisted wallet projection state with status=%s",
-        wallet_projection_state.status.value,
-    )
-    return wallet_projection_state
+    wallet_balance_repository: WalletBalanceRepository,
+) -> None:
+    logger.info("Building wallet balances from %d corrected events", len(corrected_events))
+    projector = WalletProjector()
+    try:
+        projector.project(corrected_events)
+    except Exception:
+        wallet_balance_repository.replace(projector.balances)
+        raise
+    wallet_balance_repository.replace(projector.balances)
+    logger.info("Persisted %d wallet balances", len(projector.balances))
 
 
-def _rebuild_acquisition_disposal_projection(
+def _build_acquisition_disposal_projection(
     *,
     corrected_events: list[LedgerEvent],
     price_service: PriceProvider,
     projection_repository: AcquisitionDisposalProjectionRepository,
 ) -> AcquisitionDisposalProjection:
     logger.info("Building acquisition/disposal projection from %d corrected events", len(corrected_events))
-    projection = AcquisitionDisposalProjector(price_provider=price_service).project(corrected_events)
+    projector = AcquisitionDisposalProjector(price_provider=price_service)
+    try:
+        projection = projector.project(corrected_events)
+    except Exception:
+        projection_repository.replace(projector.projection())
+        raise
     projection_repository.replace(projection)
     logger.info(
-        "Persisted acquisition/disposal projection with %d lots and %d disposals",
+        "Persisted %d lots and %d disposals",
         len(projection.acquisition_lots),
         len(projection.disposal_links),
     )
@@ -293,7 +290,7 @@ def run(
     )
     event_repository = LedgerEventRepository(events_session)
     corrected_event_repository = CorrectedLedgerEventRepository(events_session)
-    wallet_projection_repository = WalletProjectionRepository(events_session)
+    wallet_balance_repository = WalletBalanceRepository(events_session)
     acquisition_disposal_projection_repository = AcquisitionDisposalProjectionRepository(events_session)
     tax_event_repository = TaxEventRepository(events_session)
     system_state_repository = SystemStateRepository(events_session)
@@ -321,33 +318,22 @@ def run(
             corrected_event_repository=corrected_event_repository,
         ),
     )
-    wallet_projection_state = _run_system_state_stage(
+    _run_system_state_stage(
         system_state_repository,
         SystemStateStage.WALLET_PROJECTION,
         started_at=run_started_at,
-        action=lambda: _rebuild_wallet_projection(
+        action=lambda: _build_wallet_projection(
             corrected_events=corrected_events,
-            wallet_projection_repository=wallet_projection_repository,
+            wallet_balance_repository=wallet_balance_repository,
         ),
     )
-    if wallet_projection_state.status == ProjectionStatus.FAILED:
-        system_state_repository.replace(
-            SystemState(
-                status=SystemStateStatus.FAILED,
-                stage=SystemStateStage.WALLET_PROJECTION,
-                started_at=run_started_at,
-                finished_at=datetime.now(UTC),
-                error=_system_state_error_from_wallet_projection(),
-            )
-        )
-        return
 
     price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
     acquisition_disposal_projection = _run_system_state_stage(
         system_state_repository,
         SystemStateStage.ACQUISITION_DISPOSAL,
         started_at=run_started_at,
-        action=lambda: _rebuild_acquisition_disposal_projection(
+        action=lambda: _build_acquisition_disposal_projection(
             corrected_events=corrected_events,
             price_service=price_service,
             projection_repository=acquisition_disposal_projection_repository,

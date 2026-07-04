@@ -1,19 +1,23 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from sqlalchemy.orm import Session
 
+from accounts import KRAKEN_ACCOUNT_ID
 from corrections.validation import CorrectionValidationError
 from db.system_state import SystemStateRepository
+from domain.ledger import EventLocation, EventOrigin
 from domain.system_state import (
     SystemStateStage,
     SystemStateStatus,
 )
+from domain.wallet_projection import WalletBalanceIssue, WalletProjectionError
 from main import (
     _run_system_state_stage,
     _system_state_error_from_exception,
-    _system_state_error_from_wallet_projection,
 )
+from tests.constants import ETH
 
 STARTED_AT = datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC)
 
@@ -85,9 +89,22 @@ def test_unexpected_exception_maps_to_traceback_system_state_error() -> None:
     assert "RuntimeError: boom" in state_error.traceback
 
 
-def test_wallet_projection_failure_maps_to_system_state_error() -> None:
-    state_error = _system_state_error_from_wallet_projection()
+def test_wallet_projection_error_maps_to_system_state_error() -> None:
+    event = EventOrigin(location=EventLocation.BASE, external_id="evt-2")
+    issue = WalletBalanceIssue(
+        account_chain_id=KRAKEN_ACCOUNT_ID,
+        asset_id=ETH,
+        attempted_delta=Decimal("-1.5"),
+        available_balance=Decimal("1.0"),
+        missing_balance=Decimal("0.5"),
+    )
 
-    assert state_error.exception_type == "WalletProjectionFailed"
-    assert state_error.message == "Wallet projection failed"
-    assert state_error.traceback is None
+    try:
+        raise WalletProjectionError(event=event, issues=[issue])
+    except WalletProjectionError as error:
+        state_error = _system_state_error_from_exception(error)
+
+    assert state_error.exception_type == "WalletProjectionError"
+    assert "would go negative" in state_error.message
+    assert state_error.traceback is not None
+    assert "WalletProjectionError" in state_error.traceback

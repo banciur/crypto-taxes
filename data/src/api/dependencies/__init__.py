@@ -7,7 +7,7 @@ from db.acquisition_disposal import AcquisitionDisposalProjectionRepository
 from db.ledger_corrections import LedgerCorrectionRepository
 from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
 from db.system_state import SystemStateRepository
-from db.wallet_projection import WalletProjectionRepository
+from db.wallet_projection import WalletBalanceRepository
 
 
 def get_session(request: Request) -> Generator[Session, None, None]:
@@ -36,10 +36,10 @@ def get_correction_repository(
     return LedgerCorrectionRepository(session)
 
 
-def get_wallet_projection_repository(
+def get_wallet_balance_repository(
     session: Annotated[Session, Depends(get_session)],
-) -> WalletProjectionRepository:
-    return WalletProjectionRepository(session)
+) -> WalletBalanceRepository:
+    return WalletBalanceRepository(session)
 
 
 def get_system_state_repository(

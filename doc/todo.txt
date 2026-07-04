@@ -8,7 +8,8 @@ TODO: Probably need smarter price service
   - review it, it is completly vibed and seems it work but no clue how. What is model behind it does it make sense?
   - change interface of protocol so None can be returned this will simplify the code
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
-TODO: On 2006-02-09 there is an interesting case of moving money from base to eth through coinbase and I had to pay a fee on coinbase. See if the system can handle that correctly if I would collapse this to two fees and money lost on the transfer.
+TODO: NEU pricing and transfers case of sending NEU to no longer existing exchanges (will have the same with polygon network). Idea is to have own "fake wallet" and do operations there.
+TODO: On 2006-02-09 there is an interesting case of moving money from base to eth through coinbase and I had to pay a fee on coinbase. See if the system can handle that correctly if I collapse this to two fees and money lost on the transfer.
 
 Review the order of todos
 -----------------

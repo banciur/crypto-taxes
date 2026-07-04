@@ -5,168 +5,59 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from accounts import KRAKEN_ACCOUNT_ID
-from db.base import SINGLETON_ROW_ID
-from db.wallet_projection import (
-    WalletProjectionRepository,
-    WalletTrackingBalanceOrm,
-    WalletTrackingIssueOrm,
-    WalletTrackingStateOrm,
-)
-from domain.ledger import EventLocation, EventOrigin
-from domain.projection import ProjectionStatus
-from domain.wallet_projection import (
-    WalletBalance,
-    WalletTrackingIssue,
-    WalletTrackingState,
-)
+from db.wallet_projection import WalletBalanceOrm, WalletBalanceRepository
+from domain.wallet_projection import WalletBalance
 from tests.constants import BASE_WALLET, BTC, ETH, EUR, LEDGER_WALLET
 
 
-def _origin(location: EventLocation, external_id: str) -> EventOrigin:
-    return EventOrigin(location=location, external_id=external_id)
-
-
-def _completed_state(*, balances: list[WalletBalance]) -> WalletTrackingState:
-    return WalletTrackingState(
-        status=ProjectionStatus.COMPLETED,
-        failed_event=None,
-        issues=[],
-        balances=balances,
-    )
-
-
-def _failed_state() -> WalletTrackingState:
-    attempted_eth = Decimal("-1.2")
-    available_eth = Decimal("1.0")
-    attempted_eur = Decimal("-5.5")
-    available_eur = Decimal("5.0")
-    return WalletTrackingState(
-        status=ProjectionStatus.FAILED,
-        failed_event=_origin(EventLocation.BASE, "evt-2"),
-        issues=[
-            WalletTrackingIssue(
-                event=_origin(EventLocation.BASE, "evt-2"),
-                account_chain_id=BASE_WALLET,
-                asset_id=EUR,
-                attempted_delta=attempted_eur,
-                available_balance=available_eur,
-                missing_balance=-(available_eur + attempted_eur),
-            ),
-            WalletTrackingIssue(
-                event=_origin(EventLocation.BASE, "evt-2"),
-                account_chain_id=KRAKEN_ACCOUNT_ID,
-                asset_id=ETH,
-                attempted_delta=attempted_eth,
-                available_balance=available_eth,
-                missing_balance=-(available_eth + attempted_eth),
-            ),
-        ],
-        balances=[
-            WalletBalance(
-                account_chain_id=BASE_WALLET,
-                asset_id=EUR,
-                balance=available_eur,
-            ),
-            WalletBalance(
-                account_chain_id=KRAKEN_ACCOUNT_ID,
-                asset_id=ETH,
-                balance=available_eth,
-            ),
-        ],
-    )
-
-
 @pytest.fixture()
-def repo(test_session: Session) -> WalletProjectionRepository:
-    return WalletProjectionRepository(test_session)
+def repo(test_session: Session) -> WalletBalanceRepository:
+    return WalletBalanceRepository(test_session)
 
 
-def test_get_returns_not_run_when_wallet_tracking_state_is_empty(repo: WalletProjectionRepository) -> None:
-    assert repo.get() == WalletTrackingState.not_run()
+def test_get_returns_empty_list_when_no_balances_are_persisted(repo: WalletBalanceRepository) -> None:
+    assert repo.get() == []
 
 
-def test_replace_persists_completed_state_with_deterministic_balance_order(
-    repo: WalletProjectionRepository,
-) -> None:
+def test_replace_persists_balances_in_deterministic_order(repo: WalletBalanceRepository) -> None:
     kraken_eur = Decimal("1000")
     ledger_btc = Decimal("0.25")
     base_eth = Decimal("1.5")
-    state = _completed_state(
-        balances=[
-            WalletBalance(account_chain_id=LEDGER_WALLET, asset_id=BTC, balance=ledger_btc),
-            WalletBalance(account_chain_id=KRAKEN_ACCOUNT_ID, asset_id=EUR, balance=kraken_eur),
-            WalletBalance(account_chain_id=BASE_WALLET, asset_id=ETH, balance=base_eth),
-        ]
-    )
+    balances = [
+        WalletBalance(account_chain_id=LEDGER_WALLET, asset_id=BTC, balance=ledger_btc),
+        WalletBalance(account_chain_id=KRAKEN_ACCOUNT_ID, asset_id=EUR, balance=kraken_eur),
+        WalletBalance(account_chain_id=BASE_WALLET, asset_id=ETH, balance=base_eth),
+    ]
 
-    persisted = repo.replace(state)
+    persisted = repo.replace(balances)
     reloaded = repo.get()
 
-    expected_balances = [
+    assert persisted == balances
+    assert reloaded == [
         WalletBalance(account_chain_id=BASE_WALLET, asset_id=ETH, balance=base_eth),
         WalletBalance(account_chain_id=LEDGER_WALLET, asset_id=BTC, balance=ledger_btc),
         WalletBalance(account_chain_id=KRAKEN_ACCOUNT_ID, asset_id=EUR, balance=kraken_eur),
     ]
-    assert persisted == state
-    assert reloaded == WalletTrackingState(
-        status=ProjectionStatus.COMPLETED,
-        failed_event=None,
-        issues=[],
-        balances=expected_balances,
-    )
 
 
-def test_replace_fully_replaces_prior_state(
-    repo: WalletProjectionRepository,
+def test_replace_fully_replaces_prior_balances(
+    repo: WalletBalanceRepository,
     test_session: Session,
 ) -> None:
-    repo.replace(_failed_state())
-
-    final_balance = Decimal("2.0")
-    replacement_state = WalletTrackingState(
-        status=ProjectionStatus.COMPLETED,
-        failed_event=None,
-        issues=[],
-        balances=[
-            WalletBalance(
-                account_chain_id=LEDGER_WALLET,
-                asset_id=BTC,
-                balance=final_balance,
-            )
-        ],
+    repo.replace(
+        [
+            WalletBalance(account_chain_id=BASE_WALLET, asset_id=EUR, balance=Decimal("5.0")),
+            WalletBalance(account_chain_id=KRAKEN_ACCOUNT_ID, asset_id=ETH, balance=Decimal("1.0")),
+        ]
     )
 
-    repo.replace(replacement_state)
+    final_balance = Decimal("2.0")
+    replacement = [WalletBalance(account_chain_id=LEDGER_WALLET, asset_id=BTC, balance=final_balance)]
 
-    assert repo.get() == replacement_state
-    state_rows = test_session.execute(select(WalletTrackingStateOrm)).scalars().all()
-    balance_rows = test_session.execute(select(WalletTrackingBalanceOrm)).scalars().all()
+    repo.replace(replacement)
 
-    assert len(state_rows) == 1
-    state_row = state_rows[0]
-    assert state_row.singleton_id == SINGLETON_ROW_ID
-    assert state_row.status == ProjectionStatus.COMPLETED.value
-    assert state_row.failed_origin_location is None
-    assert state_row.failed_origin_external_id is None
+    assert repo.get() == replacement
+    balance_rows = test_session.execute(select(WalletBalanceOrm)).scalars().all()
     assert [(row.account_chain_id, row.asset_id, row.balance) for row in balance_rows] == [
         (LEDGER_WALLET, BTC, final_balance)
     ]
-    assert test_session.execute(select(WalletTrackingIssueOrm)).scalars().all() == []
-
-
-def test_replace_persists_failed_state_issues(repo: WalletProjectionRepository, test_session: Session) -> None:
-    failed_state = _failed_state()
-
-    persisted = repo.replace(failed_state)
-    reloaded = repo.get()
-    issue_rows = test_session.execute(select(WalletTrackingIssueOrm)).scalars().all()
-
-    assert persisted == failed_state
-    assert reloaded.status == failed_state.status
-    assert reloaded.failed_event == failed_state.failed_event
-    assert {(issue.account_chain_id, issue.asset_id, issue.missing_balance) for issue in reloaded.issues} == {
-        (BASE_WALLET, EUR, Decimal("0.5")),
-        (KRAKEN_ACCOUNT_ID, ETH, Decimal("0.2")),
-    }
-    assert len(issue_rows) == len(failed_state.issues)
-    assert all(row.id is not None for row in issue_rows)

@@ -20,14 +20,14 @@
 - Unified correction model (`LedgerCorrection` for discard, replacement, and opening balance): `src/domain/correction.py`
 - Main-flow run status: `src/domain/system_state.py`
 - Tax event projection types: `src/domain/tax_event.py`
-- Wallet tracking projection and statuses: `src/domain/wallet_projection.py`
+- Wallet balance projection: `src/domain/wallet_projection.py`
 
 ### Main-flow system state
 - The main pipeline persists the latest `SystemState` in `src/db/system_state.py`.
 - Active stages currently written by `src/main.py` are `RAW_IMPORT`, `CORRECTIONS`, `WALLET_PROJECTION`, and `ACQUISITION_DISPOSAL`.
 - Stage execution writes `RUNNING` before work starts. Successful completion after the acquisition/disposal projection writes `COMPLETED`.
 - Failures write `FAILED` with a flat `SystemStateError` (`exception_type`, `message`, optional `traceback`). Exceptions record the exception class name, its message, and traceback.
-- Wallet projection failure is a projection status rather than an exception, so it records `exception_type="WalletProjectionFailed"` with no traceback.
+- Every stage, including wallet projection, fails the same way: it raises a domain exception that the stage wrapper records as `FAILED`. There is no per-stage failure status field.
 
 ### Correction persistence and application
 - Unified correction persistence lives in `src/db/ledger_corrections.py`.
@@ -35,20 +35,17 @@
 - Source-backed corrections occupy sources only while active. Deleting one hard-deletes the correction and records source-level auto-suppression so importer automation does not recreate it while manual recreation remains allowed.
 - Current ingestion correction flow is: validate unified source ownership, remove all claimed raw events, emit synthetic events for corrections with legs, then sort corrected events once before persistence by `timestamp`, `event_origin.location`, and `event_origin.external_id`.
 
-### Wallet tracking
-- Wallet tracking is rebuilt from persisted corrected events.
-- The rebuild stores only the current snapshot in database.
-- A successful rebuild persists `COMPLETED`, including the zero-event case.
-- A failed rebuild stops on the first blocking event and persists:
-  - the failed event marker
-  - all blocking balance issues for that failed event
-  - balances as of the event immediately before the failed event
+### Wallet balances
+- Wallet balances are rebuilt from persisted corrected events into the `wallet_balances` table via `WalletBalanceRepository` (clear-then-write); only the current snapshot is stored.
+- `WalletProjector` folds corrected events into per-`(account, asset)` balances. It raises `WalletProjectionError` (carrying the failing event and every blocking balance issue) on the first event that would drive a balance negative.
+- On failure the wallet stage persists balances as of the last fully applied event before re-raising, so the partial (and possibly incoherent) snapshot is visible for debugging. Run health, including the failed stage and error, lives only in `SystemState`; the `/wallet-balances` endpoint returns bare balances with no status.
 
 ### Acquisition/disposal projection
 - After a successful wallet projection, the main flow rebuilds the acquisition/disposal projection from the same shared corrected-events list.
 - `AcquisitionDisposalProjector` (`src/domain/acquisition_disposal/`) values events and matches disposals against open lots via FIFO, producing `AcquisitionLot`s and `DisposalLink`s.
 - The projection is persisted with clear-then-write semantics through `AcquisitionDisposalProjectionRepository.replace()`, replacing any previous projection.
 - Projector failures (e.g. not-enough-open-lots, unavailable required prices) propagate as exceptions and are recorded as a `FAILED` `SystemState` at the `ACQUISITION_DISPOSAL` stage.
+- On failure the stage still persists `AcquisitionDisposalProjector.projection()` -- the lots/disposals produced up to the failing event. Event application is not atomic, so this partial snapshot may be incoherent (e.g. a disposal recorded without its event's acquisitions) and is intended only as debug output alongside the `FAILED` `SystemState`.
 - Tax-event generation and the weekly summary remain unreachable dead code below the `COMPLETED` return, pending a future `TAX_COMPUTATION` stage.
 
 ### Price services

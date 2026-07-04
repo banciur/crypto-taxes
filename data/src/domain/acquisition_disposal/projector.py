@@ -25,13 +25,18 @@ class AcquisitionDisposalProjector:
         price_provider: PriceProvider,
     ) -> None:
         self._price_provider = price_provider
+        self._acquisitions: list[AcquisitionLot] = []
+        self._disposals: list[DisposalLink] = []
+        self._open_lots_by_asset: dict[AssetId, deque[_LotBalance]] = defaultdict(deque)
+
+    def projection(self) -> AcquisitionDisposalProjection:
+        return AcquisitionDisposalProjection(
+            acquisition_lots=list(self._acquisitions),
+            disposal_links=list(self._disposals),
+        )
 
     def project(self, events: Iterable[LedgerEvent]) -> AcquisitionDisposalProjection:
         """Events must be provided in chronological order."""
-        acquisitions: list[AcquisitionLot] = []
-        disposals: list[DisposalLink] = []
-        open_lots_by_asset: dict[AssetId, deque[_LotBalance]] = defaultdict(deque)
-
         for event in events:
             projected_event = project_event_quantities(event)
             try:
@@ -48,15 +53,12 @@ class AcquisitionDisposalProjector:
                 prices=prices,
                 event_origin=event.event_origin,
                 timestamp=event.timestamp,
-                open_lots_by_asset=open_lots_by_asset,
-                acquisitions=acquisitions,
-                disposals=disposals,
+                open_lots_by_asset=self._open_lots_by_asset,
+                acquisitions=self._acquisitions,
+                disposals=self._disposals,
             )
 
-        return AcquisitionDisposalProjection(
-            acquisition_lots=acquisitions,
-            disposal_links=disposals,
-        )
+        return self.projection()
 
 
 def _add_event_context(

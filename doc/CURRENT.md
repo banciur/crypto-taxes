@@ -30,7 +30,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - `LedgerCorrection`: a manual override that discards raw events, replaces them with a synthetic corrected event, or adds an opening balance.
 - `AccountRegistry`: the canonical merged account catalog that includes both configured wallets and built-in exchange accounts.
 - `SystemState`: the persisted latest main-flow run status, including stage, start/finish timestamps, and first error details.
-- `WalletTrackingState`: the persisted result of rebuilding current balances from corrected events, including status, balances, and blocking issues.
+- `WalletBalance`: one persisted current balance for an `(account, asset)` pair, rebuilt from corrected events. Rebuild failures surface only through `SystemState`, not through a wallet status object.
 - `AcquisitionLot`: an inventory lot created from corrected ledger activity.
 - `DisposalLink`: an inventory disposal record that links a disposal quantity to the acquisition lot fragments consumed by FIFO.
 
@@ -63,7 +63,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 ## Current Capabilities
 
 - Import raw activity from the supported sources listed below.
-- Persist raw ledger events, unified corrections, corrected ledger events, generic system state, wallet projection state, and the acquisition/disposal projection.
+- Persist raw ledger events, unified corrections, corrected ledger events, generic system state, current wallet balances, and the acquisition/disposal projection.
 - Review raw events, corrections, and corrected events in the UI.
 - Author and remove discard, replacement, and opening-balance corrections through the UI/API flow.
 - Review latest main-flow status, failed stage, and error details (exception type, message, and traceback) in the UI.

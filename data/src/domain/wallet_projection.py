@@ -1,12 +1,11 @@
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, MutableMapping
 from decimal import Decimal
-from typing import Self
 
+from errors import CryptoTaxesError
 from pydantic_base import StrictBaseModel
 
 from .ledger import AccountChainId, AssetId, EventOrigin, LedgerEvent
-from .projection import ProjectionStatus
 
 BalanceKey = tuple[AccountChainId, AssetId]
 BalanceMap = Mapping[BalanceKey, Decimal]
@@ -19,8 +18,7 @@ class WalletBalance(StrictBaseModel):
     balance: Decimal
 
 
-class WalletTrackingIssue(StrictBaseModel):
-    event: EventOrigin
+class WalletBalanceIssue(StrictBaseModel):
     account_chain_id: AccountChainId
     asset_id: AssetId
     attempted_delta: Decimal
@@ -28,55 +26,45 @@ class WalletTrackingIssue(StrictBaseModel):
     missing_balance: Decimal
 
 
-class WalletTrackingState(StrictBaseModel):
-    status: ProjectionStatus
-    failed_event: EventOrigin | None = None
-    issues: list[WalletTrackingIssue]
-    balances: list[WalletBalance]
-
-    @classmethod
-    def not_run(cls) -> Self:
-        return cls(
-            status=ProjectionStatus.NOT_RUN,
-            issues=[],
-            balances=[],
+class WalletProjectionError(CryptoTaxesError):
+    def __init__(self, *, event: EventOrigin, issues: list[WalletBalanceIssue]) -> None:
+        self.event = event
+        self.issues = issues
+        detail = "; ".join(
+            f"{issue.account_chain_id}/{issue.asset_id} attempted={issue.attempted_delta} "
+            f"available={issue.available_balance} missing={issue.missing_balance}"
+            for issue in issues
+        )
+        super().__init__(
+            f"Wallet balance would go negative at event {event.location.value}/{event.external_id}: {detail}"
         )
 
 
 class WalletProjector:
-    def project(self, events: Iterable[LedgerEvent]) -> WalletTrackingState:
-        balances: MutableMapping[BalanceKey, Decimal] = {}
-        status = ProjectionStatus.COMPLETED
-        failed_event: EventOrigin | None = None
-        issues: list[WalletTrackingIssue] = []
+    def __init__(self) -> None:
+        self._balances: MutableMapping[BalanceKey, Decimal] = {}
 
+    @property
+    def balances(self) -> list[WalletBalance]:
+        return [
+            WalletBalance(account_chain_id=account_chain_id, asset_id=asset_id, balance=balance)
+            for (account_chain_id, asset_id), balance in sorted(self._balances.items())
+        ]
+
+    def project(self, events: Iterable[LedgerEvent]) -> list[WalletBalance]:
         for event in events:
             deltas = self._net_event_deltas(event)
-            if issues := self._validate_event(event, deltas, balances):
-                status = ProjectionStatus.FAILED
-                failed_event = event.event_origin
-                break
+            if issues := self._validate_event(deltas, self._balances):
+                raise WalletProjectionError(event=event.event_origin, issues=issues)
 
             for key, delta in deltas.items():
-                next_balance = balances.get(key, ZERO) + delta
+                next_balance = self._balances.get(key, ZERO) + delta
                 if next_balance == ZERO:
-                    balances.pop(key, None)
+                    self._balances.pop(key, None)
                     continue
-                balances[key] = next_balance
+                self._balances[key] = next_balance
 
-        return WalletTrackingState(
-            status=status,
-            failed_event=failed_event,
-            issues=issues,
-            balances=[
-                WalletBalance(
-                    account_chain_id=account_chain_id,
-                    asset_id=asset_id,
-                    balance=balance,
-                )
-                for (account_chain_id, asset_id), balance in sorted(balances.items())
-            ],
-        )
+        return self.balances
 
     @staticmethod
     def _net_event_deltas(event: LedgerEvent) -> BalanceMap:
@@ -88,11 +76,10 @@ class WalletProjector:
 
     @staticmethod
     def _validate_event(
-        event: LedgerEvent,
         deltas: BalanceMap,
         balances: BalanceMap,
-    ) -> list[WalletTrackingIssue]:
-        issues: list[WalletTrackingIssue] = []
+    ) -> list[WalletBalanceIssue]:
+        issues: list[WalletBalanceIssue] = []
 
         for (account_chain_id, asset_id), attempted_delta in sorted(deltas.items()):
             if attempted_delta >= ZERO:
@@ -104,8 +91,7 @@ class WalletProjector:
                 continue
 
             issues.append(
-                WalletTrackingIssue(
-                    event=event.event_origin,
+                WalletBalanceIssue(
                     account_chain_id=account_chain_id,
                     asset_id=asset_id,
                     attempted_delta=attempted_delta,
