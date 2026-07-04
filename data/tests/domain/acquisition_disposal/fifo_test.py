@@ -6,7 +6,7 @@ import pytest
 
 from accounts import KRAKEN_ACCOUNT_ID
 from domain.acquisition_disposal import AcquisitionDisposalProjectionError, AcquisitionLot, DisposalLink
-from domain.acquisition_disposal.fifo import match_event_fifo
+from domain.acquisition_disposal.fifo import QUANTITY_NEEDED_MESSAGE_SUFFIX, match_event_fifo
 from domain.acquisition_disposal.pipeline_types import (
     _LotBalance,
     _ProjectedAssetResidualGroup,
@@ -345,6 +345,7 @@ def test_raises_when_open_lots_are_insufficient() -> None:
         )
 
     assert exc_info.value.quantity_needed == Decimal("1")
+    assert QUANTITY_NEEDED_MESSAGE_SUFFIX.format(quantity_needed=exc_info.value.quantity_needed) in str(exc_info.value)
 
 
 def test_skips_fiat_groups() -> None:

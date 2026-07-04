@@ -10,6 +10,8 @@ from .errors import AcquisitionDisposalProjectionError
 from .models import AcquisitionLot, DisposalLink
 from .pipeline_types import _LotBalance, _ProjectedEvent
 
+QUANTITY_NEEDED_MESSAGE_SUFFIX = " quantity_needed={quantity_needed}"
+
 
 @dataclass(frozen=True)
 class _TrackedResidual:
@@ -175,9 +177,11 @@ def _matching_error(
     timestamp: datetime,
     quantity_needed: Decimal | None = None,
 ) -> AcquisitionDisposalProjectionError:
-    return AcquisitionDisposalProjectionError(
+    message = (
         f"{reason} for asset={asset_id} account={account_chain_id} "
         f"event_origin={event_origin.location.value}/{event_origin.external_id} "
-        f"@{timestamp.isoformat()}",
-        quantity_needed=quantity_needed,
+        f"@{timestamp.isoformat()}"
     )
+    if quantity_needed is not None:
+        message += QUANTITY_NEEDED_MESSAGE_SUFFIX.format(quantity_needed=quantity_needed)
+    return AcquisitionDisposalProjectionError(message, quantity_needed=quantity_needed)

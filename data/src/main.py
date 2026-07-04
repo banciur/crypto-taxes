@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
-from typing import Sequence, TypeVar
+from typing import Sequence
 
 from accounts import AccountRegistry, load_accounts
 from clients.coinbase import CoinbaseClient
@@ -20,7 +20,7 @@ from config import (
     config,
 )
 from corrections.ingestion import apply_ingestion_corrections
-from db.acquisition_disposal import AcquisitionLotRepository, DisposalLinkRepository
+from db.acquisition_disposal import AcquisitionDisposalProjectionRepository
 from db.base import Base
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
@@ -31,8 +31,9 @@ from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
 from db.wallet_projection import WalletProjectionRepository
-from domain.acquisition_disposal import AcquisitionDisposalProjector
+from domain.acquisition_disposal import AcquisitionDisposalProjection, AcquisitionDisposalProjector
 from domain.ledger import LedgerEvent
+from domain.pricing import PriceProvider
 from domain.projection import ProjectionStatus
 from domain.system_state import (
     SystemState,
@@ -59,7 +60,6 @@ logger = logging.getLogger(__name__)
 STAKEWISE_CSV_GLOB = "Stakewise*.csv"
 LIDO_CSV_PATH = ARTIFACTS_DIR / "lido.csv"
 STAKING_REWARDS_WALLET_ENV_VAR = "STAKING_REWARDS_WALLET_ADDRESS"
-T = TypeVar("T")
 
 
 def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int) -> PriceService:
@@ -128,7 +128,7 @@ def _system_state_error_from_wallet_projection() -> SystemStateError:
     )
 
 
-def _run_system_state_stage(
+def _run_system_state_stage[T](
     repository: SystemStateRepository,
     stage: SystemStateStage,
     *,
@@ -220,7 +220,7 @@ def _apply_and_persist_corrections(
     events: list[LedgerEvent],
     correction_repository: LedgerCorrectionRepository,
     corrected_event_repository: CorrectedLedgerEventRepository,
-) -> None:
+) -> list[LedgerEvent]:
     corrections = correction_repository.list()
     logger.info("Loaded %d active ledger corrections", len(corrections))
 
@@ -241,13 +241,14 @@ def _apply_and_persist_corrections(
     corrected_event_repository.create_many(corrected_events)
     logger.info("Persisted corrected events in %.2fs", perf_counter() - corrected_started)
 
+    return corrected_event_repository.list()
+
 
 def _rebuild_wallet_projection(
     *,
-    corrected_event_repository: CorrectedLedgerEventRepository,
+    corrected_events: list[LedgerEvent],
     wallet_projection_repository: WalletProjectionRepository,
 ) -> WalletTrackingState:
-    corrected_events = corrected_event_repository.list()
     logger.info("Rebuilding wallet tracking from %d corrected events", len(corrected_events))
     wallet_projection_state = WalletProjector().project(corrected_events)
     wallet_projection_repository.replace(wallet_projection_state)
@@ -256,6 +257,23 @@ def _rebuild_wallet_projection(
         wallet_projection_state.status.value,
     )
     return wallet_projection_state
+
+
+def _rebuild_acquisition_disposal_projection(
+    *,
+    corrected_events: list[LedgerEvent],
+    price_service: PriceProvider,
+    projection_repository: AcquisitionDisposalProjectionRepository,
+) -> AcquisitionDisposalProjection:
+    logger.info("Building acquisition/disposal projection from %d corrected events", len(corrected_events))
+    projection = AcquisitionDisposalProjector(price_provider=price_service).project(corrected_events)
+    projection_repository.replace(projection)
+    logger.info(
+        "Persisted acquisition/disposal projection with %d lots and %d disposals",
+        len(projection.acquisition_lots),
+        len(projection.disposal_links),
+    )
+    return projection
 
 
 def run(
@@ -277,8 +295,7 @@ def run(
     event_repository = LedgerEventRepository(events_session)
     corrected_event_repository = CorrectedLedgerEventRepository(events_session)
     wallet_projection_repository = WalletProjectionRepository(events_session)
-    lot_repository = AcquisitionLotRepository(events_session)
-    disposal_repository = DisposalLinkRepository(events_session)
+    acquisition_disposal_projection_repository = AcquisitionDisposalProjectionRepository(events_session)
     tax_event_repository = TaxEventRepository(events_session)
     system_state_repository = SystemStateRepository(events_session)
     correction_repository = LedgerCorrectionRepository(corrections_session)
@@ -295,7 +312,7 @@ def run(
             correction_repository=correction_repository,
         ),
     )
-    _run_system_state_stage(
+    corrected_events = _run_system_state_stage(
         system_state_repository,
         SystemStateStage.CORRECTIONS,
         started_at=run_started_at,
@@ -310,7 +327,7 @@ def run(
         SystemStateStage.WALLET_PROJECTION,
         started_at=run_started_at,
         action=lambda: _rebuild_wallet_projection(
-            corrected_event_repository=corrected_event_repository,
+            corrected_events=corrected_events,
             wallet_projection_repository=wallet_projection_repository,
         ),
     )
@@ -326,6 +343,18 @@ def run(
         )
         return
 
+    price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
+    acquisition_disposal_projection = _run_system_state_stage(
+        system_state_repository,
+        SystemStateStage.ACQUISITION_DISPOSAL,
+        started_at=run_started_at,
+        action=lambda: _rebuild_acquisition_disposal_projection(
+            corrected_events=corrected_events,
+            price_service=price_service,
+            projection_repository=acquisition_disposal_projection_repository,
+        ),
+    )
+
     system_state_repository.replace(
         SystemState(
             status=SystemStateStatus.COMPLETED,
@@ -335,12 +364,7 @@ def run(
     )
     return  # just for now
     # Process stuff
-    price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)  # type: ignore[unreachable]
-    acquisition_disposal_projector = AcquisitionDisposalProjector(price_provider=price_service)
-    acquisition_disposal_projection = acquisition_disposal_projector.project(events)
-    lot_repository.create_many(acquisition_disposal_projection.acquisition_lots)
-    disposal_repository.create_many(acquisition_disposal_projection.disposal_links)
-    tax_events = generate_tax_events(acquisition_disposal_projection, events)
+    tax_events = generate_tax_events(acquisition_disposal_projection, events)  # type: ignore[unreachable]
     tax_event_repository.create_many(tax_events)
     tax_events = tax_event_repository.list()
 

@@ -7,11 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from accounts import KRAKEN_ACCOUNT_ID
-from db.acquisition_disposal import (
-    AcquisitionDisposalProjectionRepository,
-    AcquisitionLotRepository,
-    DisposalLinkRepository,
-)
+from db.acquisition_disposal import AcquisitionDisposalProjectionRepository
 from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
 from db.tax_events import TaxEventRepository
 from domain.acquisition_disposal import AcquisitionDisposalProjection, AcquisitionLot, DisposalLink
@@ -83,16 +79,6 @@ def repo(test_session: Session) -> LedgerEventRepository:
 
 
 @pytest.fixture()
-def lot_repo(test_session: Session) -> AcquisitionLotRepository:
-    return AcquisitionLotRepository(test_session)
-
-
-@pytest.fixture()
-def disposal_repo(test_session: Session) -> DisposalLinkRepository:
-    return DisposalLinkRepository(test_session)
-
-
-@pytest.fixture()
 def tax_repo(test_session: Session) -> TaxEventRepository:
     return TaxEventRepository(test_session)
 
@@ -156,85 +142,6 @@ def test_create_many_rejects_duplicate_event_origins(repo: LedgerEventRepository
 
     with pytest.raises(IntegrityError):
         repo.create_many([first, second])
-
-
-def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: LedgerEventRepository) -> None:
-    acquisition_event = _sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
-    repo.create_many([acquisition_event])
-    stored_acquisition_event = repo.get(acquisition_event.id)
-    assert stored_acquisition_event is not None
-
-    lots = [
-        _acquisition_lot_from_event(stored_acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23")),
-        _acquisition_lot_from_event(stored_acquisition_event, leg_index=1, cost_per_unit=Decimal("2.34")),
-    ]
-
-    saved = lot_repo.create_many(lots)
-    assert {lot.id for lot in saved} == {lot.id for lot in lots}
-
-    stored = lot_repo.list()
-    stored_by_id = {lot.id: lot for lot in stored}
-    for original in lots:
-        reloaded = stored_by_id[original.id]
-        assert reloaded.event_origin == original.event_origin
-        assert reloaded.account_chain_id == original.account_chain_id
-        assert reloaded.asset_id == original.asset_id
-        assert reloaded.is_fee == original.is_fee
-        assert reloaded.timestamp == original.timestamp
-        assert reloaded.quantity_acquired == original.quantity_acquired
-        assert reloaded.cost_per_unit == original.cost_per_unit
-
-
-def test_persist_disposal_links(
-    disposal_repo: DisposalLinkRepository, lot_repo: AcquisitionLotRepository, repo: LedgerEventRepository
-) -> None:
-    acquisition_event = _sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
-    repo.create_many([acquisition_event])
-    stored_acquisition_event = repo.get(acquisition_event.id)
-    assert stored_acquisition_event is not None
-
-    lots = [
-        _acquisition_lot_from_event(stored_acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23")),
-        _acquisition_lot_from_event(stored_acquisition_event, leg_index=1, cost_per_unit=Decimal("2.34")),
-    ]
-    lot_repo.create_many(lots)
-
-    disposal_event = _sample_event("disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=timezone.utc))
-    repo.create_many([disposal_event])
-    stored_disposal_event = repo.get(disposal_event.id)
-    assert stored_disposal_event is not None
-
-    links = [
-        _disposal_link_from_event(
-            stored_disposal_event,
-            leg_index=0,
-            lot_id=lots[0].id,
-            quantity_used=Decimal("0.5"),
-            proceeds_total=Decimal("100"),
-        ),
-        _disposal_link_from_event(
-            stored_disposal_event,
-            leg_index=0,
-            lot_id=lots[1].id,
-            quantity_used=Decimal("1.25"),
-            proceeds_total=Decimal("250.75"),
-        ),
-    ]
-
-    saved = disposal_repo.create_many(links)
-    assert {link.id for link in saved} == {link.id for link in links}
-
-    stored = disposal_repo.list()
-    stored_by_id = {link.id: link for link in stored}
-    for original in links:
-        reloaded = stored_by_id[original.id]
-        assert reloaded.event_origin == original.event_origin
-        assert reloaded.account_chain_id == original.account_chain_id
-        assert reloaded.asset_id == original.asset_id
-        assert reloaded.is_fee == original.is_fee
-        assert reloaded.timestamp == original.timestamp
-        assert reloaded.quantity_used == original.quantity_used
-        assert reloaded.proceeds_total == original.proceeds_total
 
 
 def test_replace_acquisition_disposal_projection(projection_repo: AcquisitionDisposalProjectionRepository) -> None:

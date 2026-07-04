@@ -14,13 +14,13 @@ The system is a local-first pipeline for ingesting crypto activity, normalizing 
 2. Persist manual `LedgerCorrection`s that discard, replace, or add opening balances.
 3. Rebuild corrected `LedgerEvent`s by applying those corrections to the raw ledger.
 4. Rebuild the current wallet projection from corrected events.
-5. Feed corrected events into downstream inventory and tax stages.
+5. Rebuild the acquisition/disposal (inventory) projection from the same corrected events.
 
-Current operational output stops after corrected-ledger persistence and wallet projection rebuild. Inventory and tax stages exist only as partial downstream work and are not yet the main product output.
+Current operational output stops after the acquisition/disposal projection is rebuilt. The tax stage exists only as partial downstream work and is not yet the main product output.
 
-The main flow persists a generic latest-run `SystemState` alongside stage outputs. It is `RUNNING` while the active stage is executing, `COMPLETED` after wallet projection succeeds, and `FAILED` with the failed stage and first error when a known or unexpected failure stops the run.
+The main flow persists a generic latest-run `SystemState` alongside stage outputs. It is `RUNNING` while the active stage is executing, `COMPLETED` after the acquisition/disposal projection succeeds, and `FAILED` with the failed stage and error details (exception type, message, and traceback) when a stage stops the run.
 
-The downstream inventory stage is modeled around `AcquisitionLot` and `DisposalLink`. Detailed quantity projection, valuation, and FIFO rules for that stage are documented in `doc/LOT_MATCHING.md`.
+The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` and `DisposalLink`. Detailed quantity projection, valuation, and FIFO rules for that stage are documented in `doc/LOT_MATCHING.md`.
 
 ## Canonical Domain Objects
 
@@ -31,8 +31,8 @@ The downstream inventory stage is modeled around `AcquisitionLot` and `DisposalL
 - `AccountRegistry`: the canonical merged account catalog that includes both configured wallets and built-in exchange accounts.
 - `SystemState`: the persisted latest main-flow run status, including stage, start/finish timestamps, and first error details.
 - `WalletTrackingState`: the persisted result of rebuilding current balances from corrected events, including status, balances, and blocking issues.
-- `AcquisitionLot`: a downstream inventory lot created from corrected ledger activity.
-- `DisposalLink`: a downstream inventory disposal record that links a disposal quantity to the acquisition lot fragments consumed by FIFO.
+- `AcquisitionLot`: an inventory lot created from corrected ledger activity.
+- `DisposalLink`: an inventory disposal record that links a disposal quantity to the acquisition lot fragments consumed by FIFO.
 
 ## Core Rules
 
@@ -63,16 +63,17 @@ The downstream inventory stage is modeled around `AcquisitionLot` and `DisposalL
 ## Current Capabilities
 
 - Import raw activity from the supported sources listed below.
-- Persist raw ledger events, unified corrections, corrected ledger events, generic system state, and wallet projection state.
+- Persist raw ledger events, unified corrections, corrected ledger events, generic system state, wallet projection state, and the acquisition/disposal projection.
 - Review raw events, corrections, and corrected events in the UI.
 - Author and remove discard, replacement, and opening-balance corrections through the UI/API flow.
-- Review latest main-flow status, failed stage, known error details, and unexpected tracebacks in the UI.
+- Review latest main-flow status, failed stage, and error details (exception type, message, and traceback) in the UI.
 - Rebuild the current per-wallet, per-asset balance projection from corrected events.
+- Rebuild and persist the acquisition/disposal projection (acquisition lots and disposal links) from corrected events, marking the run `COMPLETED` only after it succeeds.
 - Persist price snapshots that downstream valuation logic can use.
 
 ## Current Non-Capabilities
 
-- The main pipeline does not yet treat inventory and tax stages as the primary operational output.
+- The main pipeline does not yet run the tax stage; tax computation remains unreachable dead code.
 - Tax calculation behavior is incomplete and should not be treated as authoritative current product behavior.
 - Operator-supplied valuation overrides for hard-to-price events are not implemented.
 - After correction changes, downstream pipeline outputs still require a manual rerun.

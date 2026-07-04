@@ -24,8 +24,8 @@
 
 ### Main-flow system state
 - The main pipeline persists the latest `SystemState` in `src/db/system_state.py`.
-- Active stages currently written by `src/main.py` are `RAW_IMPORT`, `CORRECTIONS`, and `WALLET_PROJECTION`.
-- Stage execution writes `RUNNING` before work starts. Successful completion after wallet projection writes `COMPLETED`.
+- Active stages currently written by `src/main.py` are `RAW_IMPORT`, `CORRECTIONS`, `WALLET_PROJECTION`, and `ACQUISITION_DISPOSAL`.
+- Stage execution writes `RUNNING` before work starts. Successful completion after the acquisition/disposal projection writes `COMPLETED`.
 - Failures write `FAILED` with a flat `SystemStateError` (`exception_type`, `message`, optional `traceback`). Exceptions record the exception class name, its message, and traceback.
 - Wallet projection failure is a projection status rather than an exception, so it records `exception_type="WalletProjectionFailed"` with no traceback; the failed event and blocking issues stay in the separately persisted `WalletTrackingState`.
 
@@ -43,6 +43,13 @@
   - the failed event marker
   - all blocking balance issues for that failed event
   - balances as of the event immediately before the failed event
+
+### Acquisition/disposal projection
+- After a successful wallet projection, the main flow rebuilds the acquisition/disposal projection from the same shared corrected-events list.
+- `AcquisitionDisposalProjector` (`src/domain/acquisition_disposal/`) values events and matches disposals against open lots via FIFO, producing `AcquisitionLot`s and `DisposalLink`s.
+- The projection is persisted with clear-then-write semantics through `AcquisitionDisposalProjectionRepository.replace()`, replacing any previous projection.
+- Projector failures (e.g. not-enough-open-lots, unavailable required prices) propagate as exceptions and are recorded as a `FAILED` `SystemState` at the `ACQUISITION_DISPOSAL` stage.
+- Tax-event generation and the weekly summary remain unreachable dead code below the `COMPLETED` return, pending a future `TAX_COMPUTATION` stage.
 
 ### Price services
 - `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
