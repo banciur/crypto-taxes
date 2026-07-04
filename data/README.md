@@ -27,7 +27,7 @@
 - Active stages currently written by `src/main.py` are `RAW_IMPORT`, `CORRECTIONS`, `WALLET_PROJECTION`, and `ACQUISITION_DISPOSAL`.
 - Stage execution writes `RUNNING` before work starts. Successful completion after the acquisition/disposal projection writes `COMPLETED`.
 - Failures write `FAILED` with a flat `SystemStateError` (`exception_type`, `message`, optional `traceback`). Exceptions record the exception class name, its message, and traceback.
-- Wallet projection failure is a projection status rather than an exception, so it records `exception_type="WalletProjectionFailed"` with no traceback; the failed event and blocking issues stay in the separately persisted `WalletTrackingState`.
+- Wallet projection failure is a projection status rather than an exception, so it records `exception_type="WalletProjectionFailed"` with no traceback.
 
 ### Correction persistence and application
 - Unified correction persistence lives in `src/db/ledger_corrections.py`.

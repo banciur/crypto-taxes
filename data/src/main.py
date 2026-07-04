@@ -120,8 +120,7 @@ def _system_state_error_from_exception(error: Exception) -> SystemStateError:
 
 
 def _system_state_error_from_wallet_projection() -> SystemStateError:
-    # Wallet projection failure is a projection status, not an exception; the failed event and blocking
-    # issues are persisted and rendered separately by the wallet projection output.
+    # Wallet projection failure is a projection status, not an exception.
     return SystemStateError(
         exception_type="WalletProjectionFailed",
         message="Wallet projection failed",

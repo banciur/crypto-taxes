@@ -24,7 +24,7 @@
 
 ## UI Structure
 
-- `src/app/page.tsx` loads the selected columns, the merged accounts catalog, the latest system state, and the wallet projection from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
+- `src/app/page.tsx` loads the selected columns, the merged accounts catalog, the latest system state, and wallet balances from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
 - `src/components/SystemState/SystemStateSection.tsx` renders the latest main-flow status, stage, timestamps, known error details, and unexpected tracebacks.
 - `src/components/Events/` owns event selection state, correction creation/removal actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
 - `src/components/Events/ReplacementEditorModal.tsx` owns the structured replacement-creation form, including UTC timestamp editing, leg authoring, and note capture.
@@ -48,7 +48,7 @@
 - Base URL comes from `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000`).
 - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
 - `GET /system-state` returns the latest main-flow run status with optional stage, first error details, and traceback.
-- `GET /wallet-projection` returns the current wallet projection snapshot with status `NOT_RUN`, `COMPLETED`, or `FAILED`.
+- `GET /wallet-balances` returns the current corrected-ledger wallet balances.
 - Ledger leg quantities remain string-backed decimal values at the API boundary.
 - `GET /corrections` returns feed for discard, replacement, and opening-balance items.
 - Source-backed corrections may be saved without legs; they consume the selected raw sources without emitting a corrected synthetic event.

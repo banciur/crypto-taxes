@@ -4,7 +4,7 @@ import { Col, Container, Row } from "react-bootstrap";
 
 import { getAccounts } from "@/api/accounts";
 import { getSystemState } from "@/api/systemState";
-import { getWalletProjection } from "@/api/walletProjection";
+import { getWalletBalances } from "@/api/walletBalances";
 import { COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
 import {
@@ -22,7 +22,7 @@ import { DateChooser } from "@/components/DateChooser";
 import { Events } from "@/components/Events";
 import { VisibleDayProvider } from "@/contexts/VisibleDayContext";
 import { SystemStateSection } from "@/components/SystemState/SystemStateSection";
-import { WalletProjectionSection } from "@/components/WalletProjection/WalletProjectionSection";
+import { WalletBalancesSection } from "@/components/WalletBalances/WalletBalancesSection";
 import { clsx } from "clsx";
 
 const formatDuration = (durationMs: number) => {
@@ -57,15 +57,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   const initialLoadStart = performance.now();
-  const [accounts, systemState, walletProjection] = await Promise.all([
+  const [accounts, systemState, walletBalances] = await Promise.all([
     getAccounts(),
     getSystemState(),
-    getWalletProjection(),
+    getWalletBalances(),
   ]);
 
   const columnsLoadStart = performance.now();
   console.log(
-    `Accounts + system state + wallet projection fetch took: ${formatDuration(
+    `Accounts + system state + wallet balances fetch took: ${formatDuration(
       columnsLoadStart - initialLoadStart,
     )}`,
   );
@@ -129,8 +129,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
             <section className={styles.systemStateSection}>
               <SystemStateSection state={systemState} />
             </section>
-            <section className={styles.walletProjectionSection}>
-              <WalletProjectionSection state={walletProjection} />
+            <section className={styles.walletBalancesSection}>
+              <WalletBalancesSection balances={walletBalances} />
             </section>
             <section className={clsx(styles.eventsSection, "gap-3")}>
               <Row>

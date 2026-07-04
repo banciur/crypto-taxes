@@ -1,19 +1,16 @@
-// This file is completely vibed and I didn't read it.
 "use client";
 
 import { Table } from "react-bootstrap";
 
 import { useAccountNames } from "@/contexts/AccountNamesContext";
 import { formatDecimalString } from "@/lib/decimalStrings";
-import type { WalletProjectionBalance } from "@/types/walletProjection";
+import type { WalletBalance } from "@/types/walletBalances";
 
-type WalletProjectionBalancesTableProps = {
-  balances: WalletProjectionBalance[];
+type WalletBalancesTableProps = {
+  balances: WalletBalance[];
 };
 
-export function WalletProjectionBalancesTable({
-  balances,
-}: WalletProjectionBalancesTableProps) {
+export function WalletBalancesTable({ balances }: WalletBalancesTableProps) {
   const { resolveAccountName } = useAccountNames();
 
   if (balances.length === 0) {

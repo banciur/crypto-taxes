@@ -4,13 +4,13 @@ from fastapi import APIRouter, Depends
 
 from api.dependencies import get_wallet_projection_repository
 from db.wallet_projection import WalletProjectionRepository
-from domain.wallet_projection import WalletTrackingState
+from domain.wallet_projection import WalletBalance
 
 router = APIRouter()
 
 
-@router.get("/wallet-projection", response_model=WalletTrackingState)
-def get_wallet_projection(
+@router.get("/wallet-balances", response_model=list[WalletBalance])
+def get_wallet_balances(
     repo: Annotated[WalletProjectionRepository, Depends(get_wallet_projection_repository)],
-) -> WalletTrackingState:
-    return repo.get()
+) -> list[WalletBalance]:
+    return repo.get().balances

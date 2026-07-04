@@ -12,7 +12,8 @@
 - Correction endpoints expose one unified `LedgerCorrection` resource for discard, replacement, and opening-balance corrections.
 - Accounts endpoints expose the merged account catalog used by the UI.
 - System-state endpoint exposes the latest main-flow run status and first error, if any.
-- Wallet-projection endpoint exposes the current corrected-ledger wallet projection snapshot.
+- Wallet-balances endpoint exposes the current corrected-ledger wallet balances.
+- Acquisition/disposal endpoint exposes the persisted projection as a UI display feed.
 
 ## Contract Notes
 
@@ -20,6 +21,5 @@
 - Corrections are deleted by `correction_id`; raw-event identity stays in the correction payload `sources`.
 - `GET /accounts` returns the merged wallet + system exchange catalog. Records expose `account_chain_id`, `display_name`, and `skip_sync`.
 - `GET /system-state` returns the latest main-flow `SystemState` with status `NOT_RUN`, `RUNNING`, `COMPLETED`, or `FAILED`.
-- `GET /wallet-projection` returns the current wallet projection snapshot with status `NOT_RUN`, `COMPLETED`, or `FAILED`.
 - Multi-location configured wallets are expanded into one record per location, with `display_name` suffixed as `<configured name>:<first 3 lowercase letters of location>` (for example `Farming:eth`).
 - Keep snake_case at the Python boundary; the UI API modules handle camelCase translation on the TypeScript side.
