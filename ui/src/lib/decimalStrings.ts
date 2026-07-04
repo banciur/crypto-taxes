@@ -46,3 +46,15 @@ export const normalizeDecimalInput = (value: string): DecimalString | null => {
 
 export const isNonZeroDecimalString = (value: DecimalString): boolean =>
   getDecimalStringSign(value) !== 0;
+
+export const subtractDecimalStrings = (
+  minuend: DecimalString,
+  subtrahend: DecimalString,
+): DecimalString =>
+  toNormalizedDecimalString(new Decimal(minuend).minus(subtrahend));
+
+export const divideDecimalStrings = (
+  numerator: DecimalString,
+  denominator: DecimalString,
+): DecimalString =>
+  toNormalizedDecimalString(new Decimal(numerator).div(denominator));

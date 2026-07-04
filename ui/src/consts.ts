@@ -2,6 +2,7 @@ export const COLUMN_METADATA = {
   raw: { label: "Raw events", order: 1 },
   corrections: { label: "Corrections", order: 2 },
   corrected: { label: "Corrected events", order: 3 },
+  acquisitionDisposal: { label: "Acquisitions / Disposals", order: 4 },
 } as const;
 
 export type ColumnKey = keyof typeof COLUMN_METADATA;
