@@ -66,13 +66,13 @@ Cache stores exactly what sources return — no numeraire normalization at write
 | field | meaning |
 |---|---|
 | `base_id`, `quote_id` | ordered pair as fetched |
-| `bucket_start`, `bucket_end` | half-open validity window `[start, end)` |
+| `valid_from`, `valid_to` | half-open validity window `[valid_from, valid_to)` |
 | `rate` | `Decimal`, **nullable** — `NULL` = negative cache ("asked, genuinely no price") |
 | `source` | provenance |
 | `fetched_at` | audit/debug |
 
-- Unique key `(base_id, quote_id, bucket_start)` (dedup). Lookup:
-  `base=? AND quote=? AND bucket_start <= ts < bucket_end`, newest `fetched_at` wins.
+- Unique key `(base_id, quote_id, valid_from)` (dedup). Lookup:
+  `base=? AND quote=? AND valid_from <= ts < valid_to`, newest `fetched_at` wins.
 - Negative caching (`rate IS NULL`) is written **only** on the genuine-no-data path, **never**
   on a `PriceClientError` (otherwise a transient blip poisons the cache permanently).
 - SQLite, following the `db/tx_cache_*` pattern, at `artifacts/price_cache.db`. No migration
@@ -161,7 +161,7 @@ not logged, to avoid flooding logs on every request.
 - [x] **Step 2 — Extract low-level HTTP clients into the existing `src/clients/` package.**
   - Add `src/clients/errors.py` with `PriceClientError(CryptoTaxesError)`.
   - `src/clients/coindesk.py`: `CoinDeskClient` (was `_CoinDeskClient`),
-    `SpotInstrumentOHLC`, `CoinDeskAPIError(PriceClientError)`, bucket helpers,
+    `SpotInstrumentOHLC`, `CoinDeskAPIError(PriceClientError)`, validity-window helpers,
     `fetch_spot_history`, `fetch_spot_candle`.
   - `src/clients/open_exchange_rates.py`: `OpenExchangeRatesClient`, `HistoricalRates`,
     `OpenExchangeRatesAPIError(PriceClientError)`.
@@ -172,7 +172,7 @@ not logged, to avoid flooding logs on every request.
 - [x] **Step 3 — SQLite edge store with negative caching.**
   - `db/price_cache.py`: SQLAlchemy model, base/init following `db/tx_cache_common.py`, and a
     repository implementing the `PriceCache` protocol; DB at `artifacts/price_cache.db`.
-  - Half-open bucket lookup; unique-key dedup; nullable `rate` negative rows.
+  - Half-open validity-window lookup; unique-key dedup; nullable `rate` negative rows.
   - `PriceService`: on genuine `None` write a negative row; on quote write the edge; never
     negative-cache on `PriceClientError`. Log only on cache miss / network fetch, not on hits.
   - Rewire `build_price_service` and the CLI arg in `main.py`; retire `JsonlPriceStore`.
@@ -185,35 +185,70 @@ not logged, to avoid flooding logs on every request.
     with `PriceProvider`. Update all imports.
   - Make `CoinDeskClient` and `OpenExchangeRatesClient` implement
     `fetch_record(base, quote, ts) -> PriceRecord` — i.e. fold in the mapping that lives
-    in the `*_source.py` adapters today (bucket → `PriceRecord`, cross-rate → `PriceRecord`,
+    in the `*_source.py` adapters today (validity window → `PriceRecord`, cross-rate → `PriceRecord`,
     first-trade override, valid-window). Keep the raw client methods for the scripts.
   - Delete `services/coindesk_source.py` and `services/open_exchange_rates_source.py`; rewire
     `main.py` and the scripts/tests to use the clients directly.
   - Keep the graph acyclic: clients import `domain`, never `services`.
   - Delete `HybridPriceSource`; route fiat/crypto source selection through `PriceResolver`.
-  - Tests: fold the source-mapping tests into the client tests (bucket→quote, cross-rate→quote,
+  - Tests: fold the source-mapping tests into the client tests (validity-window quote mapping, cross-rate→quote,
     `None`-on-no-data, operational-error propagation).
 
 - [ ] **Step 5 — Add CoinMarketCap crypto price source (replaces CoinDesk).**
-  - `src/clients/coinmarketcap.py`: `CoinMarketCapClient` (auth via `X-CMC_PRO_API_KEY` header,
-    base `https://pro-api.coinmarketcap.com`, retry/backoff), `CoinMarketCapAPIError(PriceClientError)`,
-    raw historical-quote method(s), AND `fetch_record(base, quote, ts) -> PriceRecord`
-    implementing `PriceSource` (per the Step 4 consolidation) — `rate=None` on genuine no-data,
-    raise `CoinMarketCapAPIError` on operational failure; fetches `base → numeraire` (USD). No
-    separate `services/` source file — the client is the source.
-  - Config: add `coinmarketcap_api_key` (env, `data/.env` + `.env.example`).
-  - Map CoinMarketCap's interval quote onto the edge store's half-open
-    `[bucket_start, bucket_end)` window.
+  - Add `src/clients/coinmarketcap.py` with `CoinMarketCapClient` and
+    `CoinMarketCapAPIError(PriceClientError)`. The client directly implements
+    `PriceSource.fetch_record(base, quote, ts) -> PriceRecord`; do not add a separate
+    `services/` source adapter. Keep any raw helper methods in the client for scripts/tests.
+  - Use CoinMarketCap Pro API base URL `https://pro-api.coinmarketcap.com`, auth header
+    `X-CMC_PRO_API_KEY`, retry/backoff for retryable failures, and the
+    `/v3/cryptocurrency/quotes/historical` endpoint for price records.
+  - Add config for `coinmarketcap_api_key`, `coinmarketcap_high_resolution_days` (default 30),
+    and `CMC_ASSET_MAP_PATH = ARTIFACTS_DIR / "cmc_asset_map.json"`. Update `data/.env.example`
+    for the API key and cutoff. The asset map lives under `artifacts/` and is never committed.
+  - Resolve asset identity through the operator-editable JSON map before fetching prices. CMC
+    symbols collide, so historical quote requests must use numeric CMC IDs. Example map:
+    `{ "BTC": 1, "ETH": 1027, "USDC": 3408, "NEU": 2318 }`.
+    - If the asset is present in the map, request historical quotes with `id=<cmc_id>`.
+    - If the asset is missing from the map, query CMC by symbol only to discover the numeric ID.
+    - If discovery returns exactly one candidate, use that candidate and write it back to the
+      JSON map so the mapping becomes explicit for future runs.
+    - If discovery returns zero candidates, raise `CoinMarketCapAPIError` asking the operator to
+      add `"ASSET": cmc_id` to `artifacts/cmc_asset_map.json`.
+    - If discovery returns multiple candidates, raise `CoinMarketCapAPIError` listing useful
+      candidate fields (`id`, `name`, `symbol`, `rank`, `status`, `platform`, `token_address`)
+      so the operator can choose the correct ID and update the JSON map.
+    - Missing, zero-candidate, and ambiguous mapping cases are configuration/client failures,
+      not genuine price unavailability, and must never be negative-cached.
+  - Implement interval selection for the Startup plan access pattern verified live:
+    - recent timestamps inside the rolling high-resolution window use `interval=5m`, with
+      `valid_from` floored to the 5-minute UTC boundary and `valid_to = valid_from + 5 minutes`;
+    - older timestamps use `interval=daily`, with `valid_from` floored to UTC day start and
+      `valid_to = valid_from + 1 day`.
+    Old daily quotes work for 2016/2020; old `5m` requests fail with an access-window error
+    (`error_code=400`, message like "Your plan allows 1 months of historical access."). Keep the
+    high-resolution cutoff explicit/configurable rather than discovering it dynamically.
+  - Map successful historical quote responses onto the edge store's half-open
+    `[valid_from, valid_to)` window. Parse the selected quote's `quote[quote_id]["price"]` into
+    `Decimal`.
+  - Return `PriceRecord(rate=None)` only for backend-confirmed no-data from an otherwise valid
+    historical quote request:
+    - `status.error_code=0` with `data[cmc_id].quotes=[]`;
+    - `status.error_code=0` with `data={}`.
+    These no-data shapes must not be confused with local asset-ID resolution failures.
+  - Raise `CoinMarketCapAPIError` for operational failures: HTTP/request errors, retry exhaustion,
+    CMC non-zero status, invalid JSON, malformed payloads, missing quote currency, and asset-ID
+    resolution failures.
+  - Wire `build_price_service` to use `CoinMarketCapClient` as the crypto source. Remove CoinDesk
+    as the crypto pricing source instead of keeping it as a fallback. Delete the CoinDesk
+    client/tests/scripts when they are no longer referenced by the Step 5 wiring.
   - Optional: `scripts/coinmarketcap.py` helper mirroring the CoinDesk one for live spot checks.
-  - Tests with a stubbed HTTP layer: quote mapping, `None`-on-no-data, operational-error propagation.
+  - Tests with a stubbed HTTP layer: 5-minute quote mapping, daily quote mapping, interval
+    selection at the high-resolution cutoff, `None` on empty `quotes`, `None` on empty `data`,
+    mapping-file lookup, auto-write after exactly-one-candidate symbol discovery, zero-candidate
+    discovery failure, ambiguous-candidate discovery failure with candidate details, and
+    operational-error propagation. Also verify asset-ID resolution failures are not
+    negative-cached.
   - Live-verify a real crypto price returns.
-  - Decide CoinDesk's fate: keep its client as a fallback source, or remove it.
-  - Open questions to settle when starting the step:
-    - **Plan/endpoint**: CoinMarketCap historical quotes (`/v2/cryptocurrency/quotes/historical`)
-      require a paid tier; the free Basic plan is latest-only. Confirm the account grants
-      historical access before building against it.
-    - **Asset identity**: CoinMarketCap symbols collide across coins; prefer resolving via CMC
-      numeric `id`, or accept symbol lookups initially and note the risk.
 
 - [ ] **Step 6 — Single-pivot cross-rate resolver + configurable currencies + stable pegs.**
   - Config: base currency (env, default EUR), numeraire (env, default USD), stable-asset set
