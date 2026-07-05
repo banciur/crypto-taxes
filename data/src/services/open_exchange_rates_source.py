@@ -10,7 +10,6 @@ from urllib3.util import Retry
 
 from config import config
 from domain.ledger import AssetId
-from domain.pricing import RequiredPriceUnavailableError
 from errors import CryptoTaxesError
 
 from .price_sources import PriceSnapshotSource
@@ -137,13 +136,16 @@ class OpenExchangeRatesSource(PriceSnapshotSource):
         self.client = client or _OpenExchangeRatesClient()
         self.source_name = source_name
 
-    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote | None:
         snapshot = self.client.get_historical_rates(target_date=timestamp.date())
 
         base = AssetId(base_id.upper())
         quote = AssetId(quote_id.upper())
 
-        rate = self._compute_rate(snapshot=snapshot, base=base, quote=quote, timestamp=timestamp)
+        rate = self._compute_rate(snapshot=snapshot, base=base, quote=quote)
+        if rate is None:
+            return None
+
         valid_from = datetime.combine(snapshot.date, time.min, tzinfo=timezone.utc)
         valid_to = valid_from + timedelta(days=1)
 
@@ -163,22 +165,15 @@ class OpenExchangeRatesSource(PriceSnapshotSource):
         snapshot: HistoricalRates,
         base: AssetId,
         quote: AssetId,
-        timestamp: datetime,
-    ) -> Decimal:
+    ) -> Decimal | None:
         if base == quote:
             return Decimal("1")
 
         try:
             base_rate = self._resolve_rate(snapshot=snapshot, currency=base)
             quote_rate = self._resolve_rate(snapshot=snapshot, currency=quote)
-        except KeyError as exc:
-            missing_currency = AssetId(str(exc.args[0]))
-            raise RequiredPriceUnavailableError(
-                base_id=base,
-                quote_id=quote,
-                timestamp=timestamp,
-                reason=f"Currency {missing_currency} not available in Open Exchange Rates data",
-            ) from exc
+        except KeyError:
+            return None
         return quote_rate / base_rate
 
     @staticmethod

@@ -25,13 +25,15 @@ class PriceService(PriceProvider):
         base_id: AssetId,
         quote_id: AssetId,
         timestamp: datetime | None = None,
-    ) -> Decimal:
+    ) -> Decimal | None:
         ts = timestamp or datetime.now(timezone.utc)
         existing = self.store.read(base_id=base_id, quote_id=quote_id, timestamp=ts)
         if existing is not None:
             return existing.rate
 
-        logger.debug("Price cache miss, fetching %s->%s @ %s from source", base_id, quote_id, ts.isoformat())
+        logger.info("Price cache miss, fetching %s->%s @ %s from source", base_id, quote_id, ts.isoformat())
         fetched = self.source.fetch_snapshot(base_id=base_id, quote_id=quote_id, timestamp=ts)
+        if fetched is None:
+            return None
         self.store.write(fetched)
         return fetched.rate

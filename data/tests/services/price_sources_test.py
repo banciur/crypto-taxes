@@ -72,6 +72,7 @@ def test_hybrid_source_routes_fiat_pairs() -> None:
 
     quote = source.fetch_snapshot(EUR_LOWER, USD_LOWER, timestamp=ts)
 
+    assert quote is not None
     assert quote.rate == Decimal("2")
     assert fiat.calls == [(EUR, USD, ts)]
     assert crypto.calls == []
@@ -85,6 +86,7 @@ def test_hybrid_source_uses_crypto_for_non_fiat_pairs() -> None:
 
     quote = source.fetch_snapshot(BTC_LOWER, EUR_LOWER, timestamp=ts)
 
+    assert quote is not None
     assert quote.rate == Decimal("3")
     assert crypto.calls == [(BTC, EUR, ts)]
     assert fiat.calls == []

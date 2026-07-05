@@ -7,7 +7,6 @@ import pytest
 import requests
 
 import services.open_exchange_rates_source as oxr_module
-from domain.pricing import RequiredPriceUnavailableError
 from services.open_exchange_rates_source import (
     HistoricalRates,
     OpenExchangeRatesSource,
@@ -97,6 +96,7 @@ def test_price_source_converts_cross_currency_pair() -> None:
     ts = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
     quote = source.fetch_snapshot(EUR, USD, timestamp=ts)
 
+    assert quote is not None
     assert quote.rate == Decimal("1") / Decimal("0.9")
     assert quote.base_id == EUR
     assert quote.quote_id == USD
@@ -105,7 +105,7 @@ def test_price_source_converts_cross_currency_pair() -> None:
     assert stub_client.requested_dates == [date(2024, 1, 1)]
 
 
-def test_price_source_raises_for_missing_currency() -> None:
+def test_price_source_returns_none_for_missing_currency() -> None:
     historical = HistoricalRates(
         date=date(2024, 1, 1),
         timestamp=datetime(2024, 1, 1, 23, 59, tzinfo=timezone.utc),
@@ -115,12 +115,7 @@ def test_price_source_raises_for_missing_currency() -> None:
     source = OpenExchangeRatesSource(client=cast(_OpenExchangeRatesClient, _StubOXRClient(snapshot=historical)))
 
     ts = datetime(2024, 1, 1, 9, 0, tzinfo=timezone.utc)
-    with pytest.raises(RequiredPriceUnavailableError, match="Currency EUR not available") as exc_info:
-        source.fetch_snapshot(EUR, USD, timestamp=ts)
-
-    assert exc_info.value.base_id == EUR
-    assert exc_info.value.quote_id == USD
-    assert exc_info.value.timestamp == ts
+    assert source.fetch_snapshot(EUR, USD, timestamp=ts) is None
 
 
 @pytest.mark.skip(reason="This test requires real api key in .env")

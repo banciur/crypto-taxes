@@ -23,13 +23,11 @@ class FixedPriceProvider(PriceProvider):
     def __init__(self, rates: dict[AssetId, Decimal]) -> None:
         self._rates = rates
 
-    def rate(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal:
+    def rate(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal | None:
         _ = timestamp
         if quote_id != EUR:
             raise LookupError(f"Unsupported quote asset: {quote_id}")
-        if base_id not in self._rates:
-            raise LookupError(f"Missing price for {base_id}")
-        return self._rates[base_id]
+        return self._rates.get(base_id)
 
 
 def _rates_for(event: LedgerEvent, *, rates: dict[AssetId, Decimal]) -> dict[AssetId, Decimal]:

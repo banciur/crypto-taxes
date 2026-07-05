@@ -55,7 +55,7 @@ class JsonlPriceStore(PriceStore):
                 valid_to_raw = record.get("valid_to")
                 valid_to = datetime.fromisoformat(valid_to_raw) if valid_to_raw is not None else valid_from
 
-                if not (valid_from <= target_ts <= valid_to):
+                if not (valid_from <= target_ts < valid_to):
                     continue
 
                 if best_ts is None or snapshot_ts > best_ts:

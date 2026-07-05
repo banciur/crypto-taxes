@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 
 from domain.ledger import AssetId
-from domain.pricing import RequiredPriceUnavailableError
 from services.price_service import PriceService
 from services.price_store import JsonlPriceStore
 from services.price_types import PriceQuote
@@ -47,27 +46,36 @@ def test_get_price_reuses_cached_snapshot(tmp_path: Path) -> None:
     assert refreshed_rate != first_rate
 
 
-class _FailingPriceSnapshotSource:
-    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
-        raise RequiredPriceUnavailableError(
-            base_id=base_id,
-            quote_id=quote_id,
-            timestamp=timestamp,
-            reason="missing price",
-        )
+class _UnpriceablePriceSnapshotSource:
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote | None:
+        _ = base_id, quote_id, timestamp
+        return None
 
 
-def test_required_price_unavailable_error_bubbles_from_source(tmp_path: Path) -> None:
+def test_unpriceable_pair_returns_none(tmp_path: Path) -> None:
     store = JsonlPriceStore(root_dir=tmp_path)
     fixed_now = datetime(2025, 1, 1, 15, 30, tzinfo=timezone.utc)
     service = PriceService(
-        source=_FailingPriceSnapshotSource(),
+        source=_UnpriceablePriceSnapshotSource(),
         store=store,
     )
 
-    with pytest.raises(RequiredPriceUnavailableError, match="missing price") as exc_info:
-        service.rate(USD, EUR, timestamp=fixed_now)
+    assert service.rate(USD, EUR, timestamp=fixed_now) is None
 
-    assert exc_info.value.base_id == USD
-    assert exc_info.value.quote_id == EUR
-    assert exc_info.value.timestamp == fixed_now
+
+class _RaisingPriceSnapshotSource:
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote | None:
+        _ = base_id, quote_id, timestamp
+        raise RuntimeError("backend down")
+
+
+def test_operational_error_from_source_propagates(tmp_path: Path) -> None:
+    store = JsonlPriceStore(root_dir=tmp_path)
+    fixed_now = datetime(2025, 1, 1, 15, 30, tzinfo=timezone.utc)
+    service = PriceService(
+        source=_RaisingPriceSnapshotSource(),
+        store=store,
+    )
+
+    with pytest.raises(RuntimeError, match="backend down"):
+        service.rate(USD, EUR, timestamp=fixed_now)

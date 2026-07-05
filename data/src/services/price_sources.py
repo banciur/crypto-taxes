@@ -7,7 +7,7 @@ from .price_types import PriceQuote
 
 
 class PriceSnapshotSource(Protocol):
-    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote: ...
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote | None: ...
 
 
 class HybridPriceSource(PriceSnapshotSource):
@@ -26,7 +26,7 @@ class HybridPriceSource(PriceSnapshotSource):
             raise ValueError(msg)
         self._fiat_codes = frozenset(fiat_codes)
 
-    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote | None:
         base = base_id.upper()
         quote = quote_id.upper()
         if self._is_fiat_pair(base, quote):

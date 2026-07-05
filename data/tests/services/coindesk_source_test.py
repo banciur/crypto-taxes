@@ -6,7 +6,6 @@ from unittest.mock import Mock
 import pytest
 import requests
 
-from domain.pricing import RequiredPriceUnavailableError
 from services.coindesk_source import (
     CoinDeskAPIError,
     CoinDeskSource,
@@ -58,6 +57,7 @@ def test_coindesk_source_transforms_hour_bucket_into_quote() -> None:
     source = CoinDeskSource(client=cast(_CoinDeskClient, client), market="coinbase")
     quote = source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
 
+    assert quote is not None
     assert quote.rate == Decimal("42050.12")
     assert quote.valid_from == bucket_start
     assert quote.valid_to == bucket_start + timedelta(minutes=60)
@@ -88,6 +88,7 @@ def test_coindesk_source_supports_minute_buckets() -> None:
     source = CoinDeskSource(client=cast(_CoinDeskClient, client), market="coinbase", aggregate_minutes=15)
     quote = source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
 
+    assert quote is not None
     assert quote.valid_to == bucket_start + timedelta(minutes=15)
     assert client.captured_minutes_params is not None
     assert client.captured_minutes_params["aggregate"] == 15
@@ -100,17 +101,12 @@ def test_coindesk_source_rejects_unsupported_bucket_lengths() -> None:
         CoinDeskSource(client=client, market="coinbase", aggregate_minutes=45)
 
 
-def test_coindesk_source_raises_structured_error_when_price_data_is_unavailable() -> None:
+def test_coindesk_source_returns_none_when_price_data_is_unavailable() -> None:
     requested_timestamp = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
     client = cast(_CoinDeskClient, _StubCoinDeskClient([]))
     source = CoinDeskSource(client=client, market="coinbase")
 
-    with pytest.raises(RequiredPriceUnavailableError, match="No price data returned") as exc_info:
-        source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=requested_timestamp)
-
-    assert exc_info.value.base_id == BTC
-    assert exc_info.value.quote_id == USD
-    assert exc_info.value.timestamp == requested_timestamp
+    assert source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=requested_timestamp) is None
 
 
 def test_fetch_spot_history_pages_backwards_and_returns_ascending_range() -> None:
@@ -387,6 +383,7 @@ def test_coindesk_source_retries_with_first_trade_timestamp() -> None:
 
     quote = source.fetch_snapshot(ETHW_LOWER, EUR_LOWER, timestamp=earlier)
 
+    assert quote is not None
     assert quote.rate == Decimal("10.5")
     assert quote.valid_from == earlier
     assert quote.valid_to == earlier + timedelta(minutes=60)

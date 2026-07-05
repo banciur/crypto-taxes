@@ -56,7 +56,7 @@ def test_store_prefers_higher_resolution_for_overlapping_windows(tmp_path: Path)
         _quote(base_id, quote_id, "100.00", ts, duration_minutes=60 * 12),
     )
     store.write(
-        _quote(base_id, quote_id, "101.00", later_ts),
+        _quote(base_id, quote_id, "101.00", later_ts, duration_minutes=1),
     )
 
     result = store.read(base_id, quote_id, later_ts)

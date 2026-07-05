@@ -11,7 +11,6 @@ from urllib3.util import Retry
 
 from config import config
 from domain.ledger import AssetId
-from domain.pricing import RequiredPriceUnavailableError
 from errors import CryptoTaxesError
 
 from .price_sources import PriceSnapshotSource
@@ -389,17 +388,12 @@ class CoinDeskSource(PriceSnapshotSource):
         self._aggregate_units = bucket_request.aggregate_units
         self._bucket_duration = bucket_request.duration
 
-    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote | None:
         instrument = f"{base_id.upper()}-{quote_id.upper()}"
         entries, override_valid_from = self._fetch_histo_entries(instrument=instrument, timestamp=timestamp)
 
         if not entries:
-            raise RequiredPriceUnavailableError(
-                base_id=AssetId(base_id.upper()),
-                quote_id=AssetId(quote_id.upper()),
-                timestamp=timestamp,
-                reason=f"No price data returned for {instrument} on {self.market}",
-            )
+            return None
 
         bucket = max(entries, key=lambda entry: entry.timestamp)
         valid_from = override_valid_from or bucket.timestamp

@@ -3,9 +3,9 @@ from datetime import datetime
 from decimal import Decimal
 
 from ..ledger import AssetId
-from ..pricing import PriceProvider, RequiredPriceUnavailableError
+from ..pricing import PriceProvider
 from .constants import BASE_CURRENCY_ASSET_ID, is_valuation_anchor
-from .errors import AcquisitionDisposalValuationError, RequiredValuationPriceUnavailableError
+from .errors import AcquisitionDisposalValuationError
 from .pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
 
 
@@ -288,9 +288,6 @@ def _try_direct_rate(
 ) -> Decimal | None:
     if asset_id == BASE_CURRENCY_ASSET_ID:
         return Decimal(1)
-    try:
-        return price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
-    except RequiredPriceUnavailableError as error:
-        raise RequiredValuationPriceUnavailableError(pricing_error=error) from error
-    except Exception:
-        return None
+    # ``None`` means the asset is genuinely unpriceable and feeds phase-2 remainder solving.
+    # Operational price-provider failures raise and must propagate as hard failures.
+    return price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)

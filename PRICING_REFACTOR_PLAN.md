@@ -126,7 +126,7 @@ not logged, to avoid flooding logs on every request.
 
 - [x] **Step 0 — Branch and plan.** Create `refactor/pricing-service`; write this plan.
 
-- [ ] **Step 1 — Flip the price-unavailability contract + error taxonomy.**
+- [x] **Step 1 — Flip the price-unavailability contract + error taxonomy.**
   - `domain/pricing.py`: `PriceProvider.rate` → `Decimal | None`; delete
     `RequiredPriceUnavailableError`.
   - Sources return `None` on genuine no-data instead of raising (CoinDesk empty entries; OER
@@ -168,7 +168,15 @@ not logged, to avoid flooding logs on every request.
     (env + built-in default).
   - Implement the 4-step resolution rule (direct-cached preference, stable peg, pivot through
     numeraire, fetch legs from the owning source by asset class).
-  - Source `base==quote==1`, stable pegs synthesized (no store/network).
+  - The resolver owns `base == quote → 1` (rule #1), short-circuiting before any store/source
+    lookup so identity pairs never hit the network or build nonsense `X-X` instruments. This
+    removes the "an asset priced in itself is 1" knowledge from the acquisition/disposal layer.
+    Consequently `valuation._try_direct_rate` loses its only remaining logic (the
+    `asset_id == BASE_CURRENCY_ASSET_ID` short-circuit) and becomes a redundant wrapper around
+    `price_provider.rate(...)`: delete it and inline `price_provider.rate(group.asset_id,
+    BASE_CURRENCY_ASSET_ID, timestamp)` at its two call sites (`_value_non_fee_groups`,
+    `_value_fee_groups`), relying on the documented `None`-means-unpriceable contract.
+  - Stable pegs synthesized (no store/network).
   - `BASE_CURRENCY_ASSET_ID` in `acquisition_disposal/constants.py` sourced from config.
   - Replace `HybridPriceSource` routing with resolver-driven source selection; rewire
     `main.py`.
