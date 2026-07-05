@@ -13,6 +13,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from clients.open_exchange_rates import OpenExchangeRatesClient
+from config import config
 from domain.ledger import AssetId
 from domain.pricing import PriceRecord
 
@@ -88,7 +89,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
-    quote = OpenExchangeRatesClient().fetch_record(
+    quote = OpenExchangeRatesClient(app_id=config().open_exchange_rates_app_id).fetch_record(
         AssetId(args.base),
         AssetId(args.quote),
         timestamp=args.timestamp,

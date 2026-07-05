@@ -8,7 +8,6 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-from config import config
 from domain.ledger import AssetId
 from domain.pricing import PriceRecord
 from utils.misc import utc_now
@@ -34,6 +33,8 @@ class HistoricalRates:
 class OpenExchangeRatesClient:
     def __init__(
         self,
+        *,
+        app_id: str,
         base_url: str = "https://openexchangerates.org/api",
         timeout: float = 10.0,
         session: requests.Session | None = None,
@@ -41,6 +42,7 @@ class OpenExchangeRatesClient:
         retry_backoff_seconds: float = 1,
         source_name: str = "open-exchange-rates",
     ) -> None:
+        self._app_id = app_id
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self._session = session or requests.Session()
@@ -100,7 +102,7 @@ class OpenExchangeRatesClient:
 
     def _request(self, method: str, path: str) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
-        params = {"app_id": config().open_exchange_rates_app_id}
+        params = {"app_id": self._app_id}
         try:
             response = self._session.request(method, url, params=params, timeout=self.timeout)
             response.raise_for_status()

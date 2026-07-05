@@ -9,7 +9,7 @@ from typing import Sequence
 
 from accounts import AccountRegistry, load_accounts
 from clients.coinbase import CoinbaseClient
-from clients.coindesk import CoinDeskClient
+from clients.coinmarketcap import CoinMarketCapClient
 from clients.moralis import MoralisClient
 from clients.open_exchange_rates import OpenExchangeRatesClient
 from config import (
@@ -61,12 +61,16 @@ LIDO_CSV_PATH = ARTIFACTS_DIR / "lido.csv"
 STAKING_REWARDS_WALLET_ENV_VAR = "STAKING_REWARDS_WALLET_ADDRESS"
 
 
-def build_price_service(price_cache_db_path: Path, *, market: str, aggregate_minutes: int) -> PriceService:
+def build_price_service(price_cache_db_path: Path) -> PriceService:
     price_cache_session = init_price_cache_db(db_path=price_cache_db_path)
     cache = PriceCacheRepository(price_cache_session)
+    settings = config()
     resolver = PriceResolver(
-        crypto_source=CoinDeskClient(market=market, aggregate_minutes=aggregate_minutes),
-        fiat_source=OpenExchangeRatesClient(),
+        crypto_source=CoinMarketCapClient(
+            api_key=settings.coinmarketcap_api_key,
+            high_resolution_days=settings.coinmarketcap_high_resolution_days,
+        ),
+        fiat_source=OpenExchangeRatesClient(app_id=settings.open_exchange_rates_app_id),
         fiat_currency_codes=("EUR", "USD"),
     )
     return PriceService(resolver=resolver, cache=cache)
@@ -273,9 +277,6 @@ def _build_acquisition_disposal_projection(
 def run(
     csv_path: Path,
     price_cache_db_path: Path,
-    *,
-    market: str,
-    aggregate_minutes: int,
 ) -> None:
     # Setup components
     logger.info("Initializing DB at %s", DB_PATH)
@@ -326,7 +327,7 @@ def run(
         ),
     )
 
-    price_service = build_price_service(price_cache_db_path, market=market, aggregate_minutes=aggregate_minutes)
+    price_service = build_price_service(price_cache_db_path)
     acquisition_disposal_projection = _run_system_state_stage(
         system_state_repository,
         SystemStateStage.ACQUISITION_DISPOSAL,
@@ -361,14 +362,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run Kraken, Stakewise, Lido, Coinbase, and Moralis importers.")
     parser.add_argument("--csv", type=Path, default=ARTIFACTS_DIR / "kraken-ledger.csv")
     parser.add_argument("--price-cache-db", type=Path, default=PRICE_CACHE_DB_PATH)
-    parser.add_argument("--market", default="kraken")
-    parser.add_argument("--aggregate", type=int, default=60)
     args = parser.parse_args(argv)
     run(
         args.csv,
         args.price_cache_db,
-        market=args.market,
-        aggregate_minutes=args.aggregate,
     )
 
 

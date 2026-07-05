@@ -194,7 +194,7 @@ not logged, to avoid flooding logs on every request.
   - Tests: fold the source-mapping tests into the client tests (validity-window quote mapping, cross-rate→quote,
     `None`-on-no-data, operational-error propagation).
 
-- [ ] **Step 5 — Add CoinMarketCap crypto price source (replaces CoinDesk).**
+- [x] **Step 5 — Add CoinMarketCap crypto price source (replaces CoinDesk).**
   - Add `src/clients/coinmarketcap.py` with `CoinMarketCapClient` and
     `CoinMarketCapAPIError(PriceClientError)`. The client directly implements
     `PriceSource.fetch_record(base, quote, ts) -> PriceRecord`; do not add a separate
