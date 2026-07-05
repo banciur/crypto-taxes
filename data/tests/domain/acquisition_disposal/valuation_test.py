@@ -25,6 +25,8 @@ class FixedPriceProvider(PriceProvider):
 
     def rate(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal | None:
         _ = timestamp
+        if base_id == quote_id:
+            return Decimal(1)
         if quote_id != EUR:
             raise LookupError(f"Unsupported quote asset: {quote_id}")
         return self._rates.get(base_id)

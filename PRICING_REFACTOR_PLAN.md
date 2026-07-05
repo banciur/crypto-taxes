@@ -250,7 +250,7 @@ not logged, to avoid flooding logs on every request.
     negative-cached.
   - Live-verify a real crypto price returns.
 
-- [ ] **Step 6 — Single-pivot cross-rate resolver + configurable currencies + stable pegs.**
+- [x] **Step 6 — Single-pivot cross-rate resolver + configurable currencies + stable pegs.**
   - Config: base currency (env, default EUR), numeraire (env, default USD), stable-asset set
     (env + built-in default).
   - Implement the 4-step resolution rule (direct-cached preference, stable peg, pivot through
@@ -271,11 +271,9 @@ not logged, to avoid flooding logs on every request.
     non-EUR base currency.
 
 - [ ] **Step 7 — Cleanup, docs, TODO pruning.**
-  - Simplify residual "vibed"/functional-experiment CoinDesk code surfaced in Steps 2–6.
   - Update `src/services/README.md`, add `src/clients/README.md`, update the price-services
     section of `data/README.md`, and update `doc/CURRENT.md` where documented
-    pricing/valuation behavior changed (genuine-missing prices now remainder-solve; pricing is
-    single-pivot cross-rate).
+    pricing/valuation behavior changed. For update use real code changes not this plan content.
   - Remove the resolved price TODO lines from `doc/todo.txt`; record deferred multi-hop pivot
     as a TODO.
   - Delete this plan file (or archive it) once the work lands.

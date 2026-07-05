@@ -76,6 +76,8 @@ class TestPriceService(PriceProvider):
         )
 
     def rate(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal:
+        if base_id.upper() == quote_id.upper():
+            return Decimal(1)
         snapshot = self._source.fetch_record(base_id=base_id, quote_id=quote_id, timestamp=timestamp)
         assert snapshot.rate is not None
         return snapshot.rate

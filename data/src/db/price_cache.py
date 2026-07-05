@@ -36,13 +36,9 @@ class PriceEdgeOrm(PriceCacheBase):
 
 
 def init_price_cache_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
-    def _ensure_models_loaded() -> None:
-        _ = PriceEdgeOrm
-
     return init_db_session(
         db_path=db_path,
         metadata=PriceCacheBase.metadata,
-        ensure_models_loaded=_ensure_models_loaded,
         echo=echo,
         reset=reset,
     )

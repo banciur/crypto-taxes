@@ -71,7 +71,6 @@ def build_price_service(price_cache_db_path: Path) -> PriceService:
             high_resolution_days=settings.coinmarketcap_high_resolution_days,
         ),
         fiat_source=OpenExchangeRatesClient(app_id=settings.open_exchange_rates_app_id),
-        fiat_currency_codes=("EUR", "USD"),
     )
     return PriceService(resolver=resolver, cache=cache)
 
