@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from types import SimpleNamespace
@@ -9,11 +7,13 @@ import pytest
 import requests
 
 import services.open_exchange_rates_source as oxr_module
+from domain.pricing import RequiredPriceUnavailableError
 from services.open_exchange_rates_source import (
     HistoricalRates,
     OpenExchangeRatesSource,
     _OpenExchangeRatesClient,
 )
+from tests.constants import EUR, USD
 
 
 class _StubResponse:
@@ -95,11 +95,11 @@ def test_price_source_converts_cross_currency_pair() -> None:
     source = OpenExchangeRatesSource(client=client, source_name="test-source")
 
     ts = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
-    quote = source.fetch_snapshot("EUR", "USD", timestamp=ts)
+    quote = source.fetch_snapshot(EUR, USD, timestamp=ts)
 
     assert quote.rate == Decimal("1") / Decimal("0.9")
-    assert quote.base_id == "EUR"
-    assert quote.quote_id == "USD"
+    assert quote.base_id == EUR
+    assert quote.quote_id == USD
     assert quote.valid_from == datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
     assert quote.valid_to == datetime(2024, 1, 2, 0, 0, tzinfo=timezone.utc)
     assert stub_client.requested_dates == [date(2024, 1, 1)]
@@ -115,15 +115,19 @@ def test_price_source_raises_for_missing_currency() -> None:
     source = OpenExchangeRatesSource(client=cast(_OpenExchangeRatesClient, _StubOXRClient(snapshot=historical)))
 
     ts = datetime(2024, 1, 1, 9, 0, tzinfo=timezone.utc)
-    with pytest.raises(RuntimeError):
-        source.fetch_snapshot("EUR", "USD", timestamp=ts)
+    with pytest.raises(RequiredPriceUnavailableError, match="Currency EUR not available") as exc_info:
+        source.fetch_snapshot(EUR, USD, timestamp=ts)
+
+    assert exc_info.value.base_id == EUR
+    assert exc_info.value.quote_id == USD
+    assert exc_info.value.timestamp == ts
 
 
 @pytest.mark.skip(reason="This test requires real api key in .env")
 def test_live_request() -> None:
     source = OpenExchangeRatesSource()
     ts = datetime.combine(date(2024, 1, 1), time.min, tzinfo=timezone.utc)
-    quote = source.fetch_snapshot("EUR", "USD", timestamp=ts)
+    quote = source.fetch_snapshot(EUR, USD, timestamp=ts)
     from pprint import pprint
 
     pprint(quote)

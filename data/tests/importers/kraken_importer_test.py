@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from csv import DictWriter
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -9,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from domain.ledger import EventLocation
-from importers.kraken import KrakenImporter, KrakenLedgerEntry
+from importers.kraken.kraken_importer import KrakenImporter, KrakenLedgerEntry
 
 FIELDNAMES = [
     "txid",
@@ -95,8 +93,8 @@ def _preprocess_entry(
         asset=asset,
         wallet="spot / main",
         amount=amount,
-        fee=Decimal("0"),
-        balance=Decimal("0"),
+        fee=Decimal(0),
+        balance=Decimal(0),
     )
 
 

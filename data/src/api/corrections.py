@@ -12,7 +12,7 @@ from api.dependencies import (
 )
 from corrections.validation import CorrectionValidationError, validate_ingestion_corrections
 from db.ledger_corrections import LedgerCorrectionRepository
-from db.repositories import LedgerEventRepository
+from db.ledger_events import LedgerEventRepository
 from domain.correction import CorrectionId, LedgerCorrection, LedgerCorrectionDraft
 
 router = APIRouter()

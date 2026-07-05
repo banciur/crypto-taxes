@@ -1,7 +1,5 @@
 # This file is completely vibed and I didn't read it.
 # flake8: noqa: E402
-from __future__ import annotations
-
 import argparse
 import json
 import sys

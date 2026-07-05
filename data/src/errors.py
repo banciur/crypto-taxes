@@ -1,0 +1,2 @@
+class CryptoTaxesError(Exception):
+    pass

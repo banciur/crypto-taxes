@@ -7,17 +7,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from accounts import KRAKEN_ACCOUNT_ID
-from db.repositories import (
-    AcquisitionLotRepository,
-    CorrectedLedgerEventRepository,
-    DisposalLinkRepository,
-    LedgerEventRepository,
-    TaxEventRepository,
-)
+from db.acquisition_disposal import AcquisitionDisposalProjectionRepository
+from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.tax_events import TaxEventRepository
+from domain.acquisition_disposal.models import AcquisitionLot, DisposalLink
+from domain.acquisition_disposal.projector import AcquisitionDisposalProjection
 from domain.ledger import (
-    AcquisitionLot,
     DisposalId,
-    DisposalLink,
     EventLocation,
     EventOrigin,
     LedgerEvent,
@@ -43,24 +39,54 @@ def _sample_event(external_id: str, timestamp: datetime, *, note: str | None = N
     )
 
 
+def _acquisition_lot_from_event(event: LedgerEvent, *, leg_index: int, cost_per_unit: Decimal) -> AcquisitionLot:
+    leg = event.legs[leg_index]
+    quantity_acquired = leg.quantity if leg.quantity > 0 else abs(leg.quantity)
+    return AcquisitionLot(
+        event_origin=event.event_origin,
+        account_chain_id=leg.account_chain_id,
+        asset_id=leg.asset_id,
+        is_fee=leg.is_fee,
+        timestamp=event.timestamp,
+        quantity_acquired=quantity_acquired,
+        cost_per_unit=cost_per_unit,
+    )
+
+
+def _disposal_link_from_event(
+    event: LedgerEvent,
+    *,
+    leg_index: int,
+    lot_id: LotId,
+    quantity_used: Decimal,
+    proceeds_total: Decimal,
+) -> DisposalLink:
+    leg = event.legs[leg_index]
+    return DisposalLink(
+        event_origin=event.event_origin,
+        account_chain_id=leg.account_chain_id,
+        asset_id=leg.asset_id,
+        is_fee=leg.is_fee,
+        timestamp=event.timestamp,
+        lot_id=lot_id,
+        quantity_used=quantity_used,
+        proceeds_total=proceeds_total,
+    )
+
+
 @pytest.fixture()
 def repo(test_session: Session) -> LedgerEventRepository:
     return LedgerEventRepository(test_session)
 
 
 @pytest.fixture()
-def lot_repo(test_session: Session) -> AcquisitionLotRepository:
-    return AcquisitionLotRepository(test_session)
-
-
-@pytest.fixture()
-def disposal_repo(test_session: Session) -> DisposalLinkRepository:
-    return DisposalLinkRepository(test_session)
-
-
-@pytest.fixture()
 def tax_repo(test_session: Session) -> TaxEventRepository:
     return TaxEventRepository(test_session)
+
+
+@pytest.fixture()
+def projection_repo(test_session: Session) -> AcquisitionDisposalProjectionRepository:
+    return AcquisitionDisposalProjectionRepository(test_session)
 
 
 @pytest.fixture()
@@ -119,85 +145,61 @@ def test_create_many_rejects_duplicate_event_origins(repo: LedgerEventRepository
         repo.create_many([first, second])
 
 
-def test_persist_acquisition_lots(lot_repo: AcquisitionLotRepository, repo: LedgerEventRepository) -> None:
+def test_replace_acquisition_disposal_projection(projection_repo: AcquisitionDisposalProjectionRepository) -> None:
     acquisition_event = _sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
-    repo.create_many([acquisition_event])
-    stored_acquisition_event = repo.get(acquisition_event.id)
-    assert stored_acquisition_event is not None
-
-    lots = [
-        AcquisitionLot(
-            acquired_leg_id=stored_acquisition_event.legs[0].id,
-            cost_per_unit=Decimal("1.23"),
-        ),
-        AcquisitionLot(
-            acquired_leg_id=stored_acquisition_event.legs[1].id,
-            cost_per_unit=Decimal("2.34"),
-        ),
-    ]
-
-    saved = lot_repo.create_many(lots)
-    assert {lot.id for lot in saved} == {lot.id for lot in lots}
-
-    stored = lot_repo.list()
-    stored_by_id = {lot.id: lot for lot in stored}
-    for original in lots:
-        reloaded = stored_by_id[original.id]
-        assert reloaded.acquired_leg_id == original.acquired_leg_id
-        assert reloaded.cost_per_unit == original.cost_per_unit
-
-
-def test_persist_disposal_links(
-    disposal_repo: DisposalLinkRepository, lot_repo: AcquisitionLotRepository, repo: LedgerEventRepository
-) -> None:
-    acquisition_event = _sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
-    repo.create_many([acquisition_event])
-    stored_acquisition_event = repo.get(acquisition_event.id)
-    assert stored_acquisition_event is not None
-
-    lots = [
-        AcquisitionLot(
-            acquired_leg_id=stored_acquisition_event.legs[0].id,
-            cost_per_unit=Decimal("1.23"),
-        ),
-        AcquisitionLot(
-            acquired_leg_id=stored_acquisition_event.legs[1].id,
-            cost_per_unit=Decimal("2.34"),
-        ),
-    ]
-    lot_repo.create_many(lots)
-
     disposal_event = _sample_event("disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=timezone.utc))
-    repo.create_many([disposal_event])
-    stored_disposal_event = repo.get(disposal_event.id)
-    assert stored_disposal_event is not None
-
-    disposal_leg_id = stored_disposal_event.legs[0].id
-
+    lots = [
+        _acquisition_lot_from_event(acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23")),
+        _acquisition_lot_from_event(acquisition_event, leg_index=1, cost_per_unit=Decimal("2.34")),
+    ]
     links = [
-        DisposalLink(
-            disposal_leg_id=disposal_leg_id,
+        _disposal_link_from_event(
+            disposal_event,
+            leg_index=0,
             lot_id=lots[0].id,
             quantity_used=Decimal("0.5"),
             proceeds_total=Decimal("100"),
         ),
-        DisposalLink(
-            disposal_leg_id=disposal_leg_id,
+        _disposal_link_from_event(
+            disposal_event,
+            leg_index=0,
             lot_id=lots[1].id,
             quantity_used=Decimal("1.25"),
             proceeds_total=Decimal("250.75"),
         ),
     ]
+    projection = AcquisitionDisposalProjection(acquisition_lots=lots, disposal_links=links)
 
-    saved = disposal_repo.create_many(links)
-    assert {link.id for link in saved} == {link.id for link in links}
+    saved = projection_repo.replace(projection)
 
-    stored = disposal_repo.list()
-    stored_by_id = {link.id: link for link in stored}
-    for original in links:
-        reloaded = stored_by_id[original.id]
-        assert reloaded.quantity_used == original.quantity_used
-        assert reloaded.proceeds_total == original.proceeds_total
+    assert saved == projection
+    stored = projection_repo.get()
+    assert {lot.id: lot for lot in stored.acquisition_lots} == {lot.id: lot for lot in lots}
+    assert {link.id: link for link in stored.disposal_links} == {link.id: link for link in links}
+
+
+def test_replace_acquisition_disposal_projection_clears_previous_rows(
+    projection_repo: AcquisitionDisposalProjectionRepository,
+) -> None:
+    first_acquisition_event = _sample_event("first-acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
+    first_disposal_event = _sample_event("first-disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=timezone.utc))
+    stale_lot = _acquisition_lot_from_event(first_acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23"))
+    stale_link = _disposal_link_from_event(
+        first_disposal_event,
+        leg_index=0,
+        lot_id=stale_lot.id,
+        quantity_used=Decimal("0.5"),
+        proceeds_total=Decimal("100"),
+    )
+    projection_repo.replace(AcquisitionDisposalProjection(acquisition_lots=[stale_lot], disposal_links=[stale_link]))
+
+    replacement_event = _sample_event("replacement-acq-ext", datetime(2024, 1, 6, 9, 0, 0, tzinfo=timezone.utc))
+    replacement_lot = _acquisition_lot_from_event(replacement_event, leg_index=0, cost_per_unit=Decimal("4.56"))
+    projection_repo.replace(AcquisitionDisposalProjection(acquisition_lots=[replacement_lot], disposal_links=[]))
+
+    stored = projection_repo.get()
+    assert stored.acquisition_lots == [replacement_lot]
+    assert stored.disposal_links == []
 
 
 def test_persist_tax_events(tax_repo: TaxEventRepository) -> None:

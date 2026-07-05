@@ -11,6 +11,7 @@
 - `Raw events` shows imported ledger events before corrections are applied.
 - `Corrections` shows one unified feed of persisted discard, replacement, and opening-balance corrections.
 - `Corrected events` shows the ledger after unified corrections are applied.
+- `Acquisitions / Disposals` shows the read-only acquisition/disposal projection as two card types in one lane, discriminated by the API's `ACQUISITION`/`DISPOSAL` kind. Cards are not selectable. Disposal cards derive cost-per-unit (`cost_basis_total / quantity_used`) and gain/loss (`proceeds_total - cost_basis_total`) in the UI; opening-lot linkage fields are intentionally not displayed.
 
 ### Supported actions
 
@@ -24,13 +25,15 @@
 
 ## UI Structure
 
-- `src/app/page.tsx` loads the selected columns, loads the merged accounts catalog from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
+- `src/app/page.tsx` loads the selected columns, the merged accounts catalog, the latest system state, and wallet balances from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
+- `src/components/SystemState/SystemStateSection.tsx` renders the latest main-flow status, stage, timestamps, known error details, and unexpected tracebacks.
 - `src/components/Events/` owns event selection state, correction creation/removal actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
 - `src/components/Events/ReplacementEditorModal.tsx` owns the structured replacement-creation form, including UTC timestamp editing, leg authoring, and note capture.
 - `src/components/Events/OpeningBalanceEditorModal.tsx` owns the source-less opening-balance creation form.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/TimestampBucketRow.tsx` renders one timestamp bucket across the currently selected columns and dispatches lane items to the appropriate card component.
 - `src/components/LedgerEventCard.tsx` is the shared card UI for raw and corrected ledger events.
+- `src/components/AcquisitionDisposalCard.tsx` renders both acquisition and disposal cards for the `Acquisitions / Disposals` lane, branching on the item `kind`.
 - `src/components/LedgerLegList.tsx` is the shared ledger-leg renderer for event and correction cards; it keeps leg rows in `wallet -> token -> amount` order and centralizes fee/quantity presentation.
 - `src/contexts/AccountNamesContext.tsx` exposes the merged account dataset plus account-label resolution helpers to client components.
 
@@ -46,7 +49,9 @@
 
 - Base URL comes from `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000`).
 - `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
-- `GET /wallet-tracking` returns the current wallet-tracking snapshot with status `NOT_RUN`, `COMPLETED`, or `FAILED`.
+- `GET /system-state` returns the latest main-flow run status with optional stage, first error details, and traceback.
+- `GET /wallet-balances` returns the current corrected-ledger wallet balances.
+- `GET /acquisition-disposal` returns the acquisition/disposal projection as a pre-sorted list of `ACQUISITION` and `DISPOSAL` items sharing common fields (`event_origin`, `account_chain_id`, `asset_id`, `is_fee`, `timestamp`) plus kind-specific decimal fields.
 - Ledger leg quantities remain string-backed decimal values at the API boundary.
 - `GET /corrections` returns feed for discard, replacement, and opening-balance items.
 - Source-backed corrections may be saved without legs; they consume the selected raw sources without emitting a corrected synthetic event.

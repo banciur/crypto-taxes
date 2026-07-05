@@ -1,6 +1,4 @@
 # flake8: noqa: E402 Module level import not at top of file
-from __future__ import annotations
-
 import argparse
 import json
 import logging

@@ -1,6 +1,10 @@
 *.db
 *.csv
-artifacts
+
+.cache
 .pycache
+artifacts
 
 private.txt
+
+.pnpm-store

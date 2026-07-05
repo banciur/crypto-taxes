@@ -62,10 +62,39 @@ export type CorrectionItemData = LedgerCorrection & {
   kind: "correction";
 };
 
+type AcquisitionDisposalBase = ItemBase & {
+  eventOrigin: EventOrigin;
+  accountChainId: AccountChainId;
+  assetId: AssetId;
+  isFee: boolean;
+};
+
+export type AcquisitionItemData = AcquisitionDisposalBase & {
+  kind: "ACQUISITION";
+  quantityAcquired: DecimalString;
+  costPerUnit: DecimalString;
+};
+
+export type DisposalItemData = AcquisitionDisposalBase & {
+  kind: "DISPOSAL";
+  acquisitionId: string;
+  acquisitionTimestamp: string;
+  acquisitionEventOrigin: EventOrigin;
+  quantityUsed: DecimalString;
+  proceedsTotal: DecimalString;
+  costBasisTotal: DecimalString;
+};
+
+export type AcquisitionDisposalItemData =
+  | AcquisitionItemData
+  | DisposalItemData;
+
 export type LaneItemData =
   | RawEventCardData
   | CorrectedEventCardData
-  | CorrectionItemData;
+  | CorrectionItemData
+  | AcquisitionItemData
+  | DisposalItemData;
 
 export type EventsByTimestamp = Record<
   string,

@@ -3,9 +3,11 @@ from typing import Annotated, Generator
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
+from db.acquisition_disposal import AcquisitionDisposalProjectionRepository
 from db.ledger_corrections import LedgerCorrectionRepository
-from db.repositories import CorrectedLedgerEventRepository, LedgerEventRepository
-from db.wallet_tracking import WalletTrackingRepository
+from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.system_state import SystemStateRepository
+from db.wallet_projection import WalletBalanceRepository
 
 
 def get_session(request: Request) -> Generator[Session, None, None]:
@@ -34,7 +36,19 @@ def get_correction_repository(
     return LedgerCorrectionRepository(session)
 
 
-def get_wallet_tracking_repository(
+def get_wallet_balance_repository(
     session: Annotated[Session, Depends(get_session)],
-) -> WalletTrackingRepository:
-    return WalletTrackingRepository(session)
+) -> WalletBalanceRepository:
+    return WalletBalanceRepository(session)
+
+
+def get_system_state_repository(
+    session: Annotated[Session, Depends(get_session)],
+) -> SystemStateRepository:
+    return SystemStateRepository(session)
+
+
+def get_acquisition_disposal_projection_repository(
+    session: Annotated[Session, Depends(get_session)],
+) -> AcquisitionDisposalProjectionRepository:
+    return AcquisitionDisposalProjectionRepository(session)

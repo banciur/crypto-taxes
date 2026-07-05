@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -12,14 +10,18 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from config import config
+from domain.ledger import AssetId
+from domain.pricing import RequiredPriceUnavailableError
+from errors import CryptoTaxesError
 
 from .price_sources import PriceSnapshotSource
 from .price_types import PriceQuote
 
 logger = logging.getLogger(__name__)
+_MAX_BASE_POINTS_PER_REQUEST = 2_000
 
 
-class CoinDeskAPIError(Exception):
+class CoinDeskAPIError(CryptoTaxesError):
     def __init__(self, message: str, *, status_code: int | None = None, payload: Any | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -42,13 +44,49 @@ class SpotInstrumentOHLC:
     quote_volume: Decimal | None
 
 
+@dataclass(frozen=True)
+class _BucketRequest:
+    mode: str
+    aggregate_units: int
+    duration: timedelta
+
+
+def _resolve_bucket_request(aggregate_minutes: int) -> _BucketRequest:
+    if aggregate_minutes <= 0:
+        msg = "aggregate_minutes must be greater than 0"
+        raise ValueError(msg)
+    if aggregate_minutes < 60 and aggregate_minutes > 30:
+        msg = "CoinDesk minute candles support aggregate_minutes up to 30"
+        raise ValueError(msg)
+    if aggregate_minutes >= 60 and aggregate_minutes % 60 != 0:
+        msg = "aggregate_minutes must be divisible by 60 when requesting hour candles"
+        raise ValueError(msg)
+
+    if aggregate_minutes < 60:
+        return _BucketRequest(
+            mode="minute",
+            aggregate_units=aggregate_minutes,
+            duration=timedelta(minutes=aggregate_minutes),
+        )
+
+    return _BucketRequest(
+        mode="hour",
+        aggregate_units=aggregate_minutes // 60,
+        duration=timedelta(minutes=aggregate_minutes),
+    )
+
+
+def _max_page_limit(*, aggregate_units: int) -> int:
+    return max(1, _MAX_BASE_POINTS_PER_REQUEST // aggregate_units)
+
+
 class _CoinDeskClient:
     def __init__(
         self,
         base_url: str = "https://data-api.coindesk.com",
         timeout: float = 10.0,
         session: requests.Session | None = None,
-        retry_attempts: int = 10,
+        retry_attempts: int = 2,
         retry_backoff_seconds: float = 1,
     ) -> None:
         self.base_url = base_url.rstrip("/")
@@ -238,6 +276,85 @@ class _CoinDeskClient:
         return instruments.get(instrument.upper())
 
 
+def fetch_spot_history(
+    *,
+    client: _CoinDeskClient,
+    market: str,
+    instrument: str,
+    from_timestamp: datetime,
+    to_timestamp: datetime,
+    aggregate_minutes: int = 60,
+    page_limit: int = 2_000,
+) -> list[SpotInstrumentOHLC]:
+    if from_timestamp >= to_timestamp:
+        msg = "from_timestamp must be before to_timestamp"
+        raise ValueError(msg)
+    if page_limit <= 0:
+        msg = "page_limit must be greater than 0"
+        raise ValueError(msg)
+
+    bucket_request = _resolve_bucket_request(aggregate_minutes)
+    effective_page_limit = min(page_limit, _max_page_limit(aggregate_units=bucket_request.aggregate_units))
+    cursor_ts = int(to_timestamp.timestamp())
+    entries_by_timestamp: dict[datetime, SpotInstrumentOHLC] = {}
+
+    while cursor_ts >= int(from_timestamp.timestamp()):
+        if bucket_request.mode == "minute":
+            entries = client.get_spot_historical_minutes(
+                market=market,
+                instrument=instrument,
+                to_ts=cursor_ts,
+                limit=effective_page_limit,
+                aggregate=bucket_request.aggregate_units,
+            )
+        else:
+            entries = client.get_spot_historical_hours(
+                market=market,
+                instrument=instrument,
+                to_ts=cursor_ts,
+                limit=effective_page_limit,
+                aggregate=bucket_request.aggregate_units,
+            )
+
+        if not entries:
+            break
+
+        ordered_entries = sorted(entries, key=lambda entry: entry.timestamp)
+        for entry in ordered_entries:
+            if from_timestamp <= entry.timestamp < to_timestamp:
+                entries_by_timestamp[entry.timestamp] = entry
+
+        earliest_entry = ordered_entries[0]
+        if earliest_entry.timestamp <= from_timestamp:
+            break
+        if len(ordered_entries) < effective_page_limit:
+            break
+
+        cursor_ts = int((earliest_entry.timestamp - bucket_request.duration).timestamp())
+
+    return [entries_by_timestamp[timestamp] for timestamp in sorted(entries_by_timestamp)]
+
+
+def fetch_spot_candle(
+    *,
+    client: _CoinDeskClient,
+    market: str,
+    instrument: str,
+    timestamp: datetime,
+    aggregate_minutes: int = 60,
+) -> SpotInstrumentOHLC:
+    source = CoinDeskSource(
+        market=market,
+        aggregate_minutes=aggregate_minutes,
+        client=client,
+    )
+    entries, _ = source._fetch_histo_entries(instrument=instrument, timestamp=timestamp)
+    if not entries:
+        msg = f"No price data returned for {instrument} on {market}"
+        raise RuntimeError(msg)
+    return max(entries, key=lambda entry: entry.timestamp)
+
+
 class CoinDeskSource(PriceSnapshotSource):
     def __init__(
         self,
@@ -263,27 +380,26 @@ class CoinDeskSource(PriceSnapshotSource):
             msg = "market must be provided"
             raise ValueError(msg)
 
+        bucket_request = _resolve_bucket_request(aggregate_minutes)
         self.client = resolved_client
         self.market = market
         self.aggregate_minutes = aggregate_minutes
         self.source_name = source_name
+        self._bucket_mode = bucket_request.mode
+        self._aggregate_units = bucket_request.aggregate_units
+        self._bucket_duration = bucket_request.duration
 
-        if aggregate_minutes < 60:
-            self._bucket_mode = "minute"
-            self._aggregate_units = aggregate_minutes
-            self._bucket_duration = timedelta(minutes=aggregate_minutes)
-        else:
-            self._bucket_mode = "hour"
-            self._aggregate_units = aggregate_minutes // 60
-            self._bucket_duration = timedelta(minutes=aggregate_minutes)
-
-    def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
         instrument = f"{base_id.upper()}-{quote_id.upper()}"
         entries, override_valid_from = self._fetch_histo_entries(instrument=instrument, timestamp=timestamp)
 
         if not entries:
-            msg = f"No price data returned for {instrument} on {self.market}"
-            raise RuntimeError(msg)
+            raise RequiredPriceUnavailableError(
+                base_id=AssetId(base_id.upper()),
+                quote_id=AssetId(quote_id.upper()),
+                timestamp=timestamp,
+                reason=f"No price data returned for {instrument} on {self.market}",
+            )
 
         bucket = max(entries, key=lambda entry: entry.timestamp)
         valid_from = override_valid_from or bucket.timestamp
@@ -291,8 +407,8 @@ class CoinDeskSource(PriceSnapshotSource):
 
         return PriceQuote(
             timestamp=valid_from,
-            base_id=base_id.upper(),
-            quote_id=quote_id.upper(),
+            base_id=AssetId(base_id.upper()),
+            quote_id=AssetId(quote_id.upper()),
             rate=bucket.close,
             source=self.source_name,
             valid_from=valid_from,
@@ -360,6 +476,3 @@ class CoinDeskSource(PriceSnapshotSource):
             first_dt.isoformat(),
         )
         return first_trade_ts, requested_dt
-
-
-__all__ = ["CoinDeskSource"]

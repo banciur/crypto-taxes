@@ -1,11 +1,9 @@
 # This file is completely vibed and I didn't read it.
-from __future__ import annotations
-
 import logging
 from collections.abc import Callable
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, Literal, cast
+from typing import Any, Literal, Self, cast
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
@@ -133,7 +131,7 @@ class CoinbaseAccountHistory(StrictBaseModel):
         return value.astimezone(timezone.utc)
 
     @model_validator(mode="after")
-    def _validate_counts(self) -> CoinbaseAccountHistory:
+    def _validate_counts(self) -> Self:
         if self.account_count != len(self.accounts):
             raise ValueError(f"account_count={self.account_count} does not match payload size {len(self.accounts)}")
         if self.transaction_count != len(self.transactions):

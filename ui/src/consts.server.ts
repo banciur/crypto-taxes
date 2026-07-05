@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getAcquisitionDisposal } from "@/api/acquisitionDisposal";
 import { getCorrections } from "@/api/corrections";
 import { getCorrectedEvents, getRawEvents } from "@/api/events";
 import type { LaneItemData } from "@/types/events";
@@ -39,5 +40,10 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
         })),
       );
     },
+  },
+  acquisitionDisposal: {
+    // Items already carry their "ACQUISITION" / "DISPOSAL" discriminant from the
+    // API, so no re-tagging is needed unlike the event/correction lanes.
+    load: async () => getAcquisitionDisposal(),
   },
 } as const;

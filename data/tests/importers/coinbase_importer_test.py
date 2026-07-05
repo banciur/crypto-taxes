@@ -1,12 +1,10 @@
 # This file is completely vibed and I didn't read it.
-from __future__ import annotations
-
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Mapping
 
 from accounts import COINBASE_ACCOUNT_ID
-from importers.coinbase import CoinbaseImporter
+from importers.coinbase.coinbase_importer import CoinbaseImporter
 from services.coinbase import CoinbaseAccountHistory
 from services.moralis import SyncMode
 

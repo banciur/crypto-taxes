@@ -1,11 +1,15 @@
-from __future__ import annotations
-
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+
+from domain.ledger import AssetId
+from domain.pricing import RequiredPriceUnavailableError
 from services.price_service import PriceService
 from services.price_store import JsonlPriceStore
+from services.price_types import PriceQuote
+from tests.constants import BTC, ETH, EUR, USD
 from tests.helpers.random_price_service import DeterministicRandomPriceSource
 
 
@@ -18,10 +22,10 @@ def test_fetch_and_get_flow(tmp_path: Path) -> None:
         store=store,
     )
 
-    rate = service.rate("ETH", "EUR", timestamp=fixed_now)
+    rate = service.rate(ETH, EUR, timestamp=fixed_now)
     assert isinstance(rate, Decimal)
 
-    stored_rate = service.rate("ETH", "EUR", timestamp=fixed_now)
+    stored_rate = service.rate(ETH, EUR, timestamp=fixed_now)
     assert stored_rate == rate
 
 
@@ -34,10 +38,36 @@ def test_get_price_reuses_cached_snapshot(tmp_path: Path) -> None:
         store=store,
     )
 
-    first_rate = service.rate("BTC", "USD", timestamp=base_ts)
-    reused_rate = service.rate("BTC", "USD", timestamp=base_ts)
+    first_rate = service.rate(BTC, USD, timestamp=base_ts)
+    reused_rate = service.rate(BTC, USD, timestamp=base_ts)
     assert reused_rate == first_rate
 
     later_ts = base_ts.replace(minute=base_ts.minute + 2)
-    refreshed_rate = service.rate("BTC", "USD", timestamp=later_ts)
+    refreshed_rate = service.rate(BTC, USD, timestamp=later_ts)
     assert refreshed_rate != first_rate
+
+
+class _FailingPriceSnapshotSource:
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
+        raise RequiredPriceUnavailableError(
+            base_id=base_id,
+            quote_id=quote_id,
+            timestamp=timestamp,
+            reason="missing price",
+        )
+
+
+def test_required_price_unavailable_error_bubbles_from_source(tmp_path: Path) -> None:
+    store = JsonlPriceStore(root_dir=tmp_path)
+    fixed_now = datetime(2025, 1, 1, 15, 30, tzinfo=timezone.utc)
+    service = PriceService(
+        source=_FailingPriceSnapshotSource(),
+        store=store,
+    )
+
+    with pytest.raises(RequiredPriceUnavailableError, match="missing price") as exc_info:
+        service.rate(USD, EUR, timestamp=fixed_now)
+
+    assert exc_info.value.base_id == USD
+    assert exc_info.value.quote_id == EUR
+    assert exc_info.value.timestamp == fixed_now

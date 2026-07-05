@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from csv import DictWriter
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -7,7 +5,7 @@ from pathlib import Path
 
 from accounts import account_chain_id_for
 from domain.ledger import EventLocation, WalletAddress
-from importers.lido import LidoImporter
+from importers.lido.lido_importer import LidoImporter
 
 FIELDNAMES = [
     "date",

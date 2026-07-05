@@ -1,6 +1,4 @@
 # This file is completely vibed and I didn't read it.
-from __future__ import annotations
-
 from collections.abc import Generator
 from datetime import datetime, timezone
 from typing import Any, NamedTuple, cast

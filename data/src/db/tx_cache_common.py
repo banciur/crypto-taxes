@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from sqlalchemy.orm import DeclarativeBase, Session

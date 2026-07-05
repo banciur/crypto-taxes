@@ -1,12 +1,10 @@
 # This file is completely vibed and I didn't read it.
-from __future__ import annotations
-
 import logging
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 from datetime import timedelta
 from decimal import Decimal
-from typing import Protocol, TypeVar
+from typing import Protocol
 
 from accounts import COINBASE_ACCOUNT_ID
 from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
@@ -49,8 +47,6 @@ _KNOWN_TYPES = (
     }
 )
 
-_TxT = TypeVar("_TxT", bound=CoinbaseTransaction)
-
 
 class CoinbaseHistoryProvider(Protocol):
     def get_history(self, sync_mode: SyncMode = SyncMode.BUDGET) -> CoinbaseAccountHistory: ...
@@ -88,7 +84,7 @@ def _positive_quote_money(total: CoinbaseMoney | None, fallback: CoinbaseMoney) 
     return CoinbaseMoney(amount=abs(fallback.amount), currency=fallback.currency)
 
 
-def _pair_transactions(
+def _pair_transactions[_TxT: CoinbaseTransaction](
     positives: Iterable[_TxT],
     negatives: Iterable[_TxT],
     *,

@@ -3,7 +3,8 @@ import { performance } from "node:perf_hooks";
 import { Col, Container, Row } from "react-bootstrap";
 
 import { getAccounts } from "@/api/accounts";
-import { getWalletTracking } from "@/api/walletTracking";
+import { getSystemState } from "@/api/systemState";
+import { getWalletBalances } from "@/api/walletBalances";
 import { COLUMNS_PARAM_NAME } from "@/consts";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
 import {
@@ -20,7 +21,8 @@ import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext
 import { DateChooser } from "@/components/DateChooser";
 import { Events } from "@/components/Events";
 import { VisibleDayProvider } from "@/contexts/VisibleDayContext";
-import { WalletTrackingSection } from "@/components/WalletTracking/WalletTrackingSection";
+import { SystemStateSection } from "@/components/SystemState/SystemStateSection";
+import { WalletBalancesSection } from "@/components/WalletBalances/WalletBalancesSection";
 import { clsx } from "clsx";
 
 const formatDuration = (durationMs: number) => {
@@ -55,14 +57,15 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   const initialLoadStart = performance.now();
-  const [accounts, walletTracking] = await Promise.all([
+  const [accounts, systemState, walletBalances] = await Promise.all([
     getAccounts(),
-    getWalletTracking(),
+    getSystemState(),
+    getWalletBalances(),
   ]);
 
   const columnsLoadStart = performance.now();
   console.log(
-    `Accounts + wallet tracking fetch took: ${formatDuration(
+    `Accounts + system state + wallet balances fetch took: ${formatDuration(
       columnsLoadStart - initialLoadStart,
     )}`,
   );
@@ -123,8 +126,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       <UrlColumnSelectionProvider>
         <VisibleDayProvider>
           <Container fluid className={clsx(styles.layoutContainer, "gap-3")}>
-            <section className={styles.walletTrackingSection}>
-              <WalletTrackingSection state={walletTracking} />
+            <section className={styles.systemStateSection}>
+              <SystemStateSection state={systemState} />
+            </section>
+            <section className={styles.walletBalancesSection}>
+              <WalletBalancesSection balances={walletBalances} />
             </section>
             <section className={clsx(styles.eventsSection, "gap-3")}>
               <Row>

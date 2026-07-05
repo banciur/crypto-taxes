@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
@@ -11,12 +9,15 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from config import config
+from domain.ledger import AssetId
+from domain.pricing import RequiredPriceUnavailableError
+from errors import CryptoTaxesError
 
 from .price_sources import PriceSnapshotSource
 from .price_types import PriceQuote
 
 
-class OpenExchangeRatesAPIError(Exception):
+class OpenExchangeRatesAPIError(CryptoTaxesError):
     def __init__(self, message: str, *, status_code: int | None = None, payload: Any | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -136,13 +137,13 @@ class OpenExchangeRatesSource(PriceSnapshotSource):
         self.client = client or _OpenExchangeRatesClient()
         self.source_name = source_name
 
-    def fetch_snapshot(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote:
+    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
         snapshot = self.client.get_historical_rates(target_date=timestamp.date())
 
-        base = base_id.upper()
-        quote = quote_id.upper()
+        base = AssetId(base_id.upper())
+        quote = AssetId(quote_id.upper())
 
-        rate = self._compute_rate(snapshot=snapshot, base=base, quote=quote)
+        rate = self._compute_rate(snapshot=snapshot, base=base, quote=quote, timestamp=timestamp)
         valid_from = datetime.combine(snapshot.date, time.min, tzinfo=timezone.utc)
         valid_to = valid_from + timedelta(days=1)
 
@@ -156,23 +157,32 @@ class OpenExchangeRatesSource(PriceSnapshotSource):
             valid_to=valid_to,
         )
 
-    def _compute_rate(self, *, snapshot: HistoricalRates, base: str, quote: str) -> Decimal:
+    def _compute_rate(
+        self,
+        *,
+        snapshot: HistoricalRates,
+        base: AssetId,
+        quote: AssetId,
+        timestamp: datetime,
+    ) -> Decimal:
         if base == quote:
             return Decimal("1")
 
-        base_rate = self._resolve_rate(snapshot=snapshot, currency=base)
-        quote_rate = self._resolve_rate(snapshot=snapshot, currency=quote)
+        try:
+            base_rate = self._resolve_rate(snapshot=snapshot, currency=base)
+            quote_rate = self._resolve_rate(snapshot=snapshot, currency=quote)
+        except KeyError as exc:
+            missing_currency = AssetId(str(exc.args[0]))
+            raise RequiredPriceUnavailableError(
+                base_id=base,
+                quote_id=quote,
+                timestamp=timestamp,
+                reason=f"Currency {missing_currency} not available in Open Exchange Rates data",
+            ) from exc
         return quote_rate / base_rate
 
     @staticmethod
-    def _resolve_rate(*, snapshot: HistoricalRates, currency: str) -> Decimal:
+    def _resolve_rate(*, snapshot: HistoricalRates, currency: AssetId) -> Decimal:
         if currency == snapshot.base:
             return Decimal("1")
-        try:
-            return snapshot.rates[currency]
-        except KeyError as exc:
-            msg = f"Currency {currency} not available in Open Exchange Rates data"
-            raise RuntimeError(msg) from exc
-
-
-__all__ = ["OpenExchangeRatesSource"]
+        return snapshot.rates[currency]

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { Col } from "react-bootstrap";
 
+import { AcquisitionDisposalCard } from "@/components/AcquisitionDisposalCard";
 import { LedgerCorrectionCard } from "@/components/LedgerCorrectionCard";
 import { LedgerEventCard } from "@/components/LedgerEventCard";
 import { orderColumnKeys } from "@/consts";
@@ -17,6 +18,12 @@ type TimestampBucketRowProps = {
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveCorrection: (correctionId: string) => void;
 };
+
+function assertUnreachableLaneItem(item: never): never {
+  throw new Error(
+    `Unhandled lane item kind: ${(item as { kind: string }).kind}`,
+  );
+}
 
 export function TimestampBucketRow({
   itemsByColumn,
@@ -39,24 +46,35 @@ export function TimestampBucketRow({
           className="d-flex flex-column gap-2"
           key={`section-${columnKey}`}
         >
-          {itemsByColumn[columnKey]?.map((item) =>
-            item.kind === "correction" ? (
-              <LedgerCorrectionCard
-                key={item.id}
-                item={item}
-                actionDisabled={isCorrectionChangePending}
-                onRemove={() => onRemoveCorrection(item.id)}
-              />
-            ) : (
-              <LedgerEventCard
-                key={item.id}
-                event={item}
-                selectedEventOriginKeys={selectedEventOriginKeys}
-                isCorrectionChangePending={isCorrectionChangePending}
-                onToggleEventSelection={onToggleEventSelection}
-              />
-            ),
-          )}
+          {itemsByColumn[columnKey]?.map((item) => {
+            switch (item.kind) {
+              case "correction":
+                return (
+                  <LedgerCorrectionCard
+                    key={item.id}
+                    item={item}
+                    actionDisabled={isCorrectionChangePending}
+                    onRemove={() => onRemoveCorrection(item.id)}
+                  />
+                );
+              case "ACQUISITION":
+              case "DISPOSAL":
+                return <AcquisitionDisposalCard key={item.id} item={item} />;
+              case "raw-event":
+              case "corrected-event":
+                return (
+                  <LedgerEventCard
+                    key={item.id}
+                    event={item}
+                    selectedEventOriginKeys={selectedEventOriginKeys}
+                    isCorrectionChangePending={isCorrectionChangePending}
+                    onToggleEventSelection={onToggleEventSelection}
+                  />
+                );
+              default:
+                return assertUnreachableLaneItem(item);
+            }
+          })}
         </Col>
       ))}
     </>

@@ -1,152 +1,87 @@
-# AI Dev Guide — Current State and Capabilities
+# Current System Behavior
 
-> **Note:** The legal/tax interpretations described here stem from internal research supported by AI tools and may not be exhaustive. Validate against authoritative guidance before relying on them.
+> **Note:** The legal and tax interpretations described here come from internal research supported by AI tools and may be incomplete. Validate against authoritative guidance before relying on them.
 
-This document captures the currently implemented domain for modeling crypto ledger activity for tax purposes. It reflects the simplified approach we are taking now to keep iteration fast.
+This document is the short first-read summary of the currently implemented domain behavior and cross-cutting system capabilities.
 
----
+## Purpose
 
-## Scope
+The system is a local-first pipeline for ingesting crypto activity, normalizing it into ledger events, applying manual corrections, and producing a corrected ledger state that can be reviewed and used by downstream wallet, inventory, and tax logic.
 
-- Represent basic events with legs, without enforcing double-entry balancing.
-- Minimal inventory structures for lots and disposals.
-- Current-state wallet tracking from corrected ledger events.
-- Unified price snapshots for crypto and fiat pairs.
-- First take on tax calculation
+## End-to-End Flow
 
----
+1. Import upstream activity from supported sources into raw `LedgerEvent`s.
+2. Persist manual `LedgerCorrection`s that discard, replace, or add opening balances.
+3. Rebuild corrected `LedgerEvent`s by applying those corrections to the raw ledger.
+4. Rebuild the current wallet projection from corrected events.
+5. Rebuild the acquisition/disposal (inventory) projection from the same corrected events.
 
-## Core Models
+Current operational output stops after the acquisition/disposal projection is rebuilt. The tax stage exists only as partial downstream work and is not yet the main product output.
 
-- LedgerEvent
-  - `id: UUID`
-  - `timestamp: datetime`
-  - `event_origin: EventOrigin` (upstream location + external transaction id)
-  - `ingestion: str` (import pipeline label, e.g., `kraken_ledger_csv`, `ledger_correction`)
-  - `note: str | None`
-  - `legs: list[LedgerLeg]`
+The main flow persists a generic latest-run `SystemState` alongside stage outputs. It is `NOT_RUN` until the first run is recorded, `RUNNING` while the active stage is executing, `COMPLETED` after the acquisition/disposal projection succeeds, and `FAILED` with the failed stage and error details (exception type, message, and traceback) when a stage stops the run.
 
-- LedgerLeg
-  - `id: UUID`
-  - `asset_id: str`
-  - `quantity: Decimal`
-  - `account_chain_id: str`
-  - `is_fee: bool`
+The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` and `DisposalLink`. Detailed quantity projection, valuation, and FIFO rules for that stage are documented in `doc/LOT_MATCHING.md`.
 
-- AcquisitionLot
-  - `id: UUID`
-  - `acquired_leg_id: UUID`
-  - `cost_per_unit: Decimal`
+## Canonical Domain Objects
 
-- DisposalLink
-  - `id: UUID`
-  - `disposal_leg_id: UUID`
-  - `lot_id: UUID`
-  - `quantity_used: Decimal`
-  - `proceeds_total: Decimal`
+- `EventOrigin`: stable identity of an upstream raw event, defined by `(location, external_id)`.
+- `LedgerEvent`: one imported or corrected operation represented as signed asset movements.
+- `LedgerLeg`: one asset delta for one account within a ledger event. `is_fee=True` marks an explicit fee leg.
+- `LedgerCorrection`: a manual override that discards raw events, replaces them with a synthetic corrected event, or adds an opening balance.
+- `AccountRegistry`: the canonical merged account catalog that includes both configured wallets and built-in exchange accounts.
+- `SystemState`: the persisted latest main-flow run status, including stage, start/finish timestamps, and first error details.
+- `WalletBalance`: one persisted current balance for an `(account, asset)` pair, rebuilt from corrected events. Rebuild failures surface only through `SystemState`, not through a wallet status object.
+- `AcquisitionLot`: an inventory lot created from corrected ledger activity.
+- `DisposalLink`: an inventory disposal record that links a disposal quantity to the acquisition lot fragments consumed by FIFO.
 
-- TaxEvent
-  - `source_id: UUID` (a `DisposalLink` for disposals, an `AcquisitionLot` for rewards)
-  - `kind: TaxEventKind` (`DISPOSAL`, `REWARD`)
-  - `taxable_gain: Decimal`
+## Core Rules
 
-- WalletTrackingState
-  - `status: WalletTrackingStatus` (`NOT_RUN`, `COMPLETED`, `FAILED`)
-  - `failed_event: EventOrigin | None`
-  - `issues: list[WalletTrackingIssue]`
-  - `balances: list[WalletBalance]`
+- `EventOrigin` is the stable event identity across imports, corrections, and API/UI flows. Do not build behavior around transient event or leg UUIDs.
+- Events may be unbalanced. The system models visible owned activity, not a full double-entry ledger of the outside world.
+- Internal timestamps are UTC.
+- Quantities and rates use exact decimal semantics. Do not rely on float-style rounding assumptions.
+- Within an event, legs are unique by `(account_chain_id, asset_id, is_fee)`.
 
-- WalletBalance
-  - `account_chain_id: str`
-  - `asset_id: str`
-  - `balance: Decimal`
+## Correction Semantics
 
-- WalletTrackingIssue
-  - `event: EventOrigin`
-  - `account_chain_id: str`
-  - `asset_id: str`
-  - `attempted_delta: Decimal`
-  - `available_balance: Decimal`
-  - `missing_balance: Decimal`
+- `sources != []` and `legs == []`: discard correction
+- `sources != []` and `legs != []`: replacement correction
+- `sources == []` and `legs != []`: opening-balance correction
+- Every claimed source must resolve to exactly one raw event.
+- A raw event cannot be claimed by more than one active correction.
+- Rebuilding corrected events works by validating source ownership, removing claimed raw events, adding synthetic corrected events for corrections with legs, and then sorting deterministically.
+- Deleting a source-backed correction frees that source for manual reuse while preserving auto-suppression so importer automation does not recreate it automatically.
 
-- LedgerCorrection
-  - `id: UUID`
-  - `timestamp: datetime`
-  - `sources: list[EventOrigin]`
-  - `legs: list[LedgerLeg]`
-  - `note: str | None`
-  - Shape semantics:
-    - `sources != []` and `legs == []` => discard correction
-    - `sources != []` and `legs != []` => replacement correction
-    - `sources == []` and `legs != []` => opening-balance correction
+## Fee and Valuation Rules
 
-- EventOrigin
-  - `location: EventLocation` (`ETHEREUM`, `ARBITRUM`, `KRAKEN`, `COINBASE`...)
-  - `external_id: str`
-
-- PriceProvider (protocol)
-  - `rate(base_id: str, quote_id: str, timestamp: datetime) -> Decimal`
-  - Current runtime wiring: `PriceService` composes a CoinDesk spot source for any pair touching crypto assets and an Open Exchange Rates source for fiat↔fiat pairs (EUR, PLN, USD), persisting snapshots via the JSONL store so downstream components can stay stateless.
-
----
-
-## Behavioral Notes
-
-- Inventory processing is automated: the `InventoryEngine` creates `AcquisitionLot`s and `DisposalLink`s from ordered events using FIFO matching.
-- EUR legs on an event take precedence for valuing acquisitions/disposals. Only when no unambiguous EUR leg exists do we fall back to the injected `PriceProvider` for EUR pricing.
-- Unbalanced events are allowed.
-- Precision: use `Decimal` for all quantities/rates. No floats.
-- Time: store all timestamps in UTC; perform any timezone conversion at data ingress (when time enters the system) so internal models always carry UTC `timestamp` values.
-- Inventory processing assumes events are already sorted chronologically; ingestion layers must enforce ordering before invoking the engine. Open lots are tracked per asset (not per account) and matched FIFO.
-- Internal account-to-account transfers are identified structurally (same-asset non-fee legs netting to zero inside one event) and do not create lots or disposal links.
-- Each event captures `event_origin` (where the transaction happened and its upstream id) and `ingestion` (which importer produced it).
-- `LedgerEvent.note` is optional display metadata. Moralis populates it from a trimmed upstream `method_label` when that label is available.
-- Raw `ledger_events` are stored with a DB-level uniqueness constraint on `EventOrigin` (`origin_location` + `origin_external_id`).
-- `AccountRegistry` is the canonical account catalog exposed to the UI. It merges configured wallet accounts from `accounts.json` with built-in system exchange accounts (currently Coinbase and Kraken). System accounts do not participate in address-based ownership resolution and use location-derived IDs such as `COINBASE:coinbase`.
-- Stakewise CSV rewards are imported onto the Ethereum wallet configured via `STAKING_REWARDS_WALLET_ADDRESS`
-- Lido CSV rewards are imported from `artifacts/lido.csv` onto the same Ethereum wallet configured via `STAKING_REWARDS_WALLET_ADDRESS`
-- Ingestion corrections are applied in this order: validate unified source ownership, remove claimed raw events, emit synthetic corrected events for corrections with legs, then sort once before persisting corrected events by `timestamp`, `event_origin.location`, and `event_origin.external_id`.
-- Corrections are persisted in the corrections DB as active header rows plus source rows plus leg rows, with a separate source-level auto-suppression table. Deleting a source-backed correction hard-deletes the correction and frees the source for explicit manual reuse while preserving auto-suppression for future importer runs; deleting a source-less opening-balance correction is a plain hard deletion.
-- Validation is strict: every claimed source must match exactly one raw event, and a raw event cannot be consumed by more than one active correction source.
-- Moralis possible-spam auto-generation creates discard corrections and respects active source claims plus source-level auto-suppressions so manually removed corrections are not recreated automatically.
-- The UI can author discard, replacement, and opening-balance corrections through the unified corrections API.
-- Wallet tracking is a separate projection over corrected events. It processes events in canonical deterministic order, tracks all assets including fiat, and validates event deltas atomically and store outcome in database.
-
----
-
-## Fees
-
-- Swaps and trades (custodial or on-chain) net their exchange fees into whichever leg uses the same asset: if the fee reduces the asset being spent, we decrease that outgoing quantity; if it comes out of what you acquired, we shrink the inbound leg. Only when the fee is taken in an asset that is not otherwise part of the event do we emit a separate disposal leg, allowing FIFO to consume that third asset and value it like any other disposal. Stablecoins follow the same rule as any crypto.
-- Execution costs such as gas are independent on-chain spends and always produce their own disposal legs, even if they happen in the same transaction as the swap. Paying ETH for gas when swapping WETH/WBTC still records an ETH disposal.
-- Deposits and withdrawals are modeled as single Kraken-side legs. Counterparty legs are not emitted.
-- Explicit fee legs set `is_fee=True` on the leg. Downstream views should use that to exclude fees from income while still valuing them for tax deductibility.
-
----
+- Swaps and trades net exchange fees into the same-asset leg when possible.
+- If a fee is taken in a third asset that is not otherwise part of the event, that fee becomes its own explicit disposal leg.
+- Gas and similar execution costs are always separate disposals.
+- Explicit fee legs stay explicit downstream through `is_fee=True`.
+- `EUR`, configured fiat currencies, and selected stable assets act as valuation anchors. Fiat anchors do not open or consume FIFO lots; selected stable assets still do.
 
 ## Current Capabilities
 
-- Model simple acquisitions/disposals with per-leg accounts and optional fee legs.
-- Automatically create lots for acquisitions and link disposals via `InventoryEngine.process` (FIFO only; other lot policies are future work).
-- Resolve EUR valuations through the injected `PriceProvider`; pricing data may be cached or persisted by the backing service.
-- Wallet tracking rebuilds a current-state per-wallet/per-asset projection from corrected events and persists it in SQLite.
-- `GET /wallet-tracking` exposes the current wallet-tracking snapshot with `NOT_RUN`/`COMPLETED`/`FAILED` semantics.
-- Tax calculations currently focus on disposal links.
-- CLI run persists ledger events plus corrected ledger events to SQLite, rebuilds the current wallet-tracking snapshot, and then stops before later inventory/tax stages in the current implementation. The raw-event import step currently combines Kraken, Stakewise, and Lido CSVs, Coinbase Track history, Moralis on-chain history.
+- Import raw activity from the supported sources listed below.
+- Persist raw ledger events, unified corrections, corrected ledger events, generic system state, current wallet balances, and the acquisition/disposal projection.
+- Review raw events, corrections, and corrected events in the UI.
+- Author and remove discard, replacement, and opening-balance corrections through the UI/API flow.
+- Review latest main-flow status, failed stage, and error details (exception type, message, and traceback) in the UI.
+- Rebuild the current per-wallet, per-asset balance projection from corrected events.
+- Rebuild and persist the acquisition/disposal projection (acquisition lots and disposal links) from corrected events, marking the run `COMPLETED` only after it succeeds.
+- Persist price snapshots that downstream valuation logic can use.
 
-### User Interface
+## Current Non-Capabilities
 
-- The UI supports reviewing raw events, unified persisted corrections, and corrected events.
-- The UI can author and remove unified corrections: discard, replacement, and opening-balance.
-- After correction mutations, the UI refreshes the server-rendered lane data immediately.
-- Corrected pipeline outputs still require a manual rerun after correction mutations.
-- Wallet-tracking backend delivery exists through `GET /wallet-tracking`, but the UI does not render that state yet.
-
----
+- The main pipeline does not yet run the tax stage; tax computation remains unreachable dead code.
+- Tax calculation behavior is incomplete and should not be treated as authoritative current product behavior.
+- Operator-supplied valuation overrides for hard-to-price events are not implemented.
+- After correction changes, downstream pipeline outputs still require a manual rerun.
 
 ## Supported Sources
 
-- Kraken ledger CSV
-- Coinbase Track account history
-- Stakewise reward CSV exports
-- Lido reward CSV exports
-- On-chain transactions via Moralis
+- Kraken CSV
+- Coinbase Track history
+- Stakewise CSV rewards
+- Lido CSV rewards
+- Moralis on-chain history

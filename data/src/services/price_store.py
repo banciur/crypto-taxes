@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 import json
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Protocol
+
+from domain.ledger import AssetId
 
 from .price_types import PriceQuote
 
@@ -12,7 +12,7 @@ from .price_types import PriceQuote
 class PriceStore(Protocol):
     def write(self, quote: PriceQuote) -> None: ...
 
-    def read(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote | None: ...
+    def read(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote | None: ...
 
 
 class JsonlPriceStore(PriceStore):
@@ -35,7 +35,7 @@ class JsonlPriceStore(PriceStore):
             handle.write(json.dumps(record))
             handle.write("\n")
 
-    def read(self, base_id: str, quote_id: str, timestamp: datetime) -> PriceQuote | None:
+    def read(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote | None:
         path = self._file_path(base_id, quote_id)
         if not path.exists():
             return None
@@ -67,18 +67,15 @@ class JsonlPriceStore(PriceStore):
 
         return PriceQuote(
             timestamp=best_ts,
-            base_id=best_record["base_id"],
-            quote_id=best_record["quote_id"],
+            base_id=AssetId(best_record["base_id"]),
+            quote_id=AssetId(best_record["quote_id"]),
             rate=Decimal(best_record["rate"]),
             source=best_record["source"],
             valid_from=datetime.fromisoformat(best_record["valid_from"]),
             valid_to=datetime.fromisoformat(best_record["valid_to"]),
         )
 
-    def _file_path(self, base_id: str, quote_id: str) -> Path:
+    def _file_path(self, base_id: AssetId, quote_id: AssetId) -> Path:
         safe_base = base_id.upper()
         safe_quote = quote_id.upper()
         return self.root_dir / "prices" / f"{safe_base}-{safe_quote}.jsonl"
-
-
-__all__ = ["JsonlPriceStore", "PriceStore"]
