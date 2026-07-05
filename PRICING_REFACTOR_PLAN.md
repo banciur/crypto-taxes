@@ -99,6 +99,17 @@ recomputed each query, so later manual edges are picked up with nothing stale to
   **EUR base / USD numeraire**. `BASE_CURRENCY_ASSET_ID` stops being a hardcoded constant.
 - Stable-asset set from config (env-overridable) with a small built-in default.
 
+### Sources
+
+- **Fiat → Open Exchange Rates** (unchanged, works).
+- **Crypto → CoinMarketCap** (new). CoinDesk/CryptoCompare's free tier is retired: it caps at
+  **100 API calls/month** (verified via a live 429 whose body read *"Rate limit exceeded.
+  Please upgrade your account"* with `max_calls.month = 100`, `calls_made.month = 173`,
+  monthly window resetting ~26 days out). That quota cannot price a real ledger, so CoinMarketCap
+  replaces CoinDesk as the crypto source. The `src/clients/` boundary from Step 2 makes this a
+  drop-in: a new client + `PriceSnapshotSource` adapter, selected by the resolver for crypto legs.
+  The extracted CoinDesk client/source may be kept as a fallback or removed — decided in the step.
+
 ### Layering / placement
 
 - `src/clients/` (already exists — holds `moralis.py`, `coinbase.py`): add the low-level
@@ -163,7 +174,30 @@ not logged, to avoid flooding logs on every request.
   - Rewire `build_price_service` and the CLI arg in `main.py`; retire `JsonlPriceStore`.
   - Migrate `price_store_test.py` / `price_service_test.py` to the SQLite store.
 
-- [ ] **Step 4 — Single-pivot cross-rate resolver + configurable currencies + stable pegs.**
+- [ ] **Step 4 — Add CoinMarketCap crypto price source (replaces CoinDesk).**
+  - `src/clients/coinmarketcap.py`: `CoinMarketCapClient` (auth via `X-CMC_PRO_API_KEY` header,
+    base `https://pro-api.coinmarketcap.com`, retry/backoff) and
+    `CoinMarketCapAPIError(PriceClientError)`, with a method to fetch the historical quote for a
+    symbol at/around a timestamp, returning the parsed price and the covered time window.
+  - `src/services/coinmarketcap_source.py`: `CoinMarketCapSource(PriceSnapshotSource)` returning
+    `PriceQuote | None` — `None` on genuine no-data, raise `CoinMarketCapAPIError` on operational
+    failure. Fetches `base → numeraire` (USD).
+  - Config: add `coinmarketcap_api_key` (env, `data/.env` + `.env.example`).
+  - Map CoinMarketCap's interval quote onto the edge store's half-open
+    `[bucket_start, bucket_end)` window.
+  - Optional: `scripts/coinmarketcap/token_price.py` helper mirroring the CoinDesk one for live
+    spot checks.
+  - Tests with a stubbed client: quote mapping, `None`-on-no-data, operational-error propagation.
+  - Live-verify a real crypto price returns.
+  - Decide CoinDesk's fate: keep its client/source as a fallback source, or remove it.
+  - Open questions to settle when starting the step:
+    - **Plan/endpoint**: CoinMarketCap historical quotes (`/v2/cryptocurrency/quotes/historical`)
+      require a paid tier; the free Basic plan is latest-only. Confirm the account grants
+      historical access before building against it.
+    - **Asset identity**: CoinMarketCap symbols collide across coins; prefer resolving via CMC
+      numeric `id`, or accept symbol lookups initially and note the risk.
+
+- [ ] **Step 5 — Single-pivot cross-rate resolver + configurable currencies + stable pegs.**
   - Config: base currency (env, default EUR), numeraire (env, default USD), stable-asset set
     (env + built-in default).
   - Implement the 4-step resolution rule (direct-cached preference, stable peg, pivot through
@@ -183,8 +217,8 @@ not logged, to avoid flooding logs on every request.
   - Tests: pivot composition, stable resolution avoids network, direct-edge preference, a
     non-EUR base currency.
 
-- [ ] **Step 5 — Cleanup, docs, TODO pruning.**
-  - Simplify residual "vibed"/functional-experiment CoinDesk code surfaced in Steps 2–4.
+- [ ] **Step 6 — Cleanup, docs, TODO pruning.**
+  - Simplify residual "vibed"/functional-experiment CoinDesk code surfaced in Steps 2–5.
   - Update `src/services/README.md`, add `src/clients/README.md`, update the price-services
     section of `data/README.md`, and update `doc/CURRENT.md` where documented
     pricing/valuation behavior changed (genuine-missing prices now remainder-solve; pricing is
