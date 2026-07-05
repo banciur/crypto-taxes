@@ -6,12 +6,9 @@ from typing import Any, cast
 import pytest
 import requests
 
-import services.open_exchange_rates_source as oxr_module
-from services.open_exchange_rates_source import (
-    HistoricalRates,
-    OpenExchangeRatesSource,
-    _OpenExchangeRatesClient,
-)
+import clients.open_exchange_rates as oxr_client_module
+from clients.open_exchange_rates import HistoricalRates, OpenExchangeRatesClient
+from services.open_exchange_rates_source import OpenExchangeRatesSource
 from tests.constants import EUR, USD
 
 
@@ -42,7 +39,7 @@ class _StubSession:
 
 
 def _set_app_id(monkeypatch: pytest.MonkeyPatch, value: str = "test-app") -> None:
-    monkeypatch.setattr(oxr_module, "config", lambda: SimpleNamespace(open_exchange_rates_app_id=value))
+    monkeypatch.setattr(oxr_client_module, "config", lambda: SimpleNamespace(open_exchange_rates_app_id=value))
 
 
 def test_open_exchange_rates_http_client_parses_historical_payload(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -54,7 +51,7 @@ def test_open_exchange_rates_http_client_parses_historical_payload(monkeypatch: 
     }
     stub_session = _StubSession(payload=payload)
     session = cast(requests.Session, stub_session)
-    client = _OpenExchangeRatesClient(base_url="https://example.com", session=session, retry_attempts=0)
+    client = OpenExchangeRatesClient(base_url="https://example.com", session=session, retry_attempts=0)
 
     snapshot = client.get_historical_rates(target_date=date(2024, 1, 1))
 
@@ -90,7 +87,7 @@ def test_price_source_converts_cross_currency_pair() -> None:
         },
     )
     stub_client = _StubOXRClient(snapshot=historical)
-    client = cast(_OpenExchangeRatesClient, stub_client)
+    client = cast(OpenExchangeRatesClient, stub_client)
     source = OpenExchangeRatesSource(client=client, source_name="test-source")
 
     ts = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
@@ -112,7 +109,7 @@ def test_price_source_returns_none_for_missing_currency() -> None:
         base="USD",
         rates={"USD": Decimal("1")},
     )
-    source = OpenExchangeRatesSource(client=cast(_OpenExchangeRatesClient, _StubOXRClient(snapshot=historical)))
+    source = OpenExchangeRatesSource(client=cast(OpenExchangeRatesClient, _StubOXRClient(snapshot=historical)))
 
     ts = datetime(2024, 1, 1, 9, 0, tzinfo=timezone.utc)
     assert source.fetch_snapshot(EUR, USD, timestamp=ts) is None

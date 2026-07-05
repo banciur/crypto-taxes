@@ -6,14 +6,14 @@ from unittest.mock import Mock
 import pytest
 import requests
 
-from services.coindesk_source import (
+from clients.coindesk import (
     CoinDeskAPIError,
-    CoinDeskSource,
+    CoinDeskClient,
     SpotInstrumentOHLC,
-    _CoinDeskClient,
     fetch_spot_candle,
     fetch_spot_history,
 )
+from services.coindesk_source import CoinDeskSource
 from tests.constants import BTC, USD
 from tests.services.constants import BTC_LOWER, ETHW_LOWER, EUR_LOWER, USD_LOWER
 
@@ -54,7 +54,7 @@ def test_coindesk_source_transforms_hour_bucket_into_quote() -> None:
     )
     client = _StubCoinDeskClient([entry])
 
-    source = CoinDeskSource(client=cast(_CoinDeskClient, client), market="coinbase")
+    source = CoinDeskSource(client=cast(CoinDeskClient, client), market="coinbase")
     quote = source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
 
     assert quote is not None
@@ -85,7 +85,7 @@ def test_coindesk_source_supports_minute_buckets() -> None:
     )
     client = _StubCoinDeskClient([entry])
 
-    source = CoinDeskSource(client=cast(_CoinDeskClient, client), market="coinbase", aggregate_minutes=15)
+    source = CoinDeskSource(client=cast(CoinDeskClient, client), market="coinbase", aggregate_minutes=15)
     quote = source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
 
     assert quote is not None
@@ -96,14 +96,14 @@ def test_coindesk_source_supports_minute_buckets() -> None:
 
 
 def test_coindesk_source_rejects_unsupported_bucket_lengths() -> None:
-    client = cast(_CoinDeskClient, _StubCoinDeskClient([]))
+    client = cast(CoinDeskClient, _StubCoinDeskClient([]))
     with pytest.raises(ValueError):
         CoinDeskSource(client=client, market="coinbase", aggregate_minutes=45)
 
 
 def test_coindesk_source_returns_none_when_price_data_is_unavailable() -> None:
     requested_timestamp = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
-    client = cast(_CoinDeskClient, _StubCoinDeskClient([]))
+    client = cast(CoinDeskClient, _StubCoinDeskClient([]))
     source = CoinDeskSource(client=client, market="coinbase")
 
     assert source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=requested_timestamp) is None
@@ -137,7 +137,7 @@ def test_fetch_spot_history_pages_backwards_and_returns_ascending_range() -> Non
     to_timestamp = bucket_base + timedelta(hours=4)
 
     entries = fetch_spot_history(
-        client=cast(_CoinDeskClient, client),
+        client=cast(CoinDeskClient, client),
         market="coinbase",
         instrument="ETH-EUR",
         from_timestamp=from_timestamp,
@@ -167,7 +167,7 @@ def test_fetch_spot_history_uses_minute_endpoint_for_sub_hour_buckets() -> None:
 
     client = _MinuteClient([])
     entries = fetch_spot_history(
-        client=cast(_CoinDeskClient, client),
+        client=cast(CoinDeskClient, client),
         market="coinbase",
         instrument="ETH-EUR",
         from_timestamp=bucket_start,
@@ -193,7 +193,7 @@ def test_fetch_spot_history_clamps_page_limit_to_api_max_for_aggregate() -> None
 
     client = _ClampedClient([])
     fetch_spot_history(
-        client=cast(_CoinDeskClient, client),
+        client=cast(CoinDeskClient, client),
         market="coinbase",
         instrument="ETH-EUR",
         from_timestamp=bucket_start,
@@ -218,7 +218,7 @@ def test_fetch_spot_candle_returns_latest_bucket_for_timestamp() -> None:
 
     client = _SingleBucketClient([])
     result = fetch_spot_candle(
-        client=cast(_CoinDeskClient, client),
+        client=cast(CoinDeskClient, client),
         market="coinbase",
         instrument="ETH-EUR",
         timestamp=requested_timestamp,
@@ -269,7 +269,7 @@ def test_coindesk_http_client_parses_minutes_payload() -> None:
     }
     session.request.return_value = _mock_response(payload)
 
-    client = _CoinDeskClient(session=session, retry_attempts=0)
+    client = CoinDeskClient(session=session, retry_attempts=0)
     entries = client.get_spot_historical_minutes(
         market="coinbase",
         instrument="BTC-USD",
@@ -304,7 +304,7 @@ def test_coindesk_http_client_parses_hour_payload() -> None:
     }
     session.request.return_value = _mock_response(payload)
 
-    client = _CoinDeskClient(session=session)
+    client = CoinDeskClient(session=session)
     entries = client.get_spot_historical_hours(
         market="coinbase",
         instrument="BTC-USD",
@@ -323,7 +323,7 @@ def test_coindesk_http_client_raises_on_api_error() -> None:
     payload = {"Data": [], "Err": {"message": "Invalid market"}}
     session.request.return_value = _mock_response(payload)
 
-    client = _CoinDeskClient(session=session)
+    client = CoinDeskClient(session=session)
     with pytest.raises(CoinDeskAPIError):
         client.get_spot_historical_minutes(market="bad", instrument="BTC-USD", to_ts=123)
 
@@ -333,7 +333,7 @@ def test_coindesk_http_client_wraps_http_errors() -> None:
     response = _http_error_response(429)
     session.request.return_value = response
 
-    client = _CoinDeskClient(session=session)
+    client = CoinDeskClient(session=session)
 
     with pytest.raises(CoinDeskAPIError):
         client.get_spot_historical_minutes(market="coinbase", instrument="BTC-USD", to_ts=1)
@@ -379,7 +379,7 @@ def test_coindesk_source_retries_with_first_trade_timestamp() -> None:
             return {"FIRST_TRADE_SPOT_TIMESTAMP": int(bucket_start.timestamp())}
 
     fallback_client = _FallbackClient()
-    source = CoinDeskSource(client=cast(_CoinDeskClient, fallback_client), market="kraken")
+    source = CoinDeskSource(client=cast(CoinDeskClient, fallback_client), market="kraken")
 
     quote = source.fetch_snapshot(ETHW_LOWER, EUR_LOWER, timestamp=earlier)
 

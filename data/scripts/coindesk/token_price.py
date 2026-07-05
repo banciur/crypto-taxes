@@ -3,7 +3,7 @@ import argparse
 import json
 import logging
 import sys
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -12,7 +12,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from services.coindesk_source import SpotInstrumentOHLC, _CoinDeskClient, fetch_spot_candle
+from clients.coindesk import CoinDeskClient, SpotInstrumentOHLC, fetch_spot_candle
 
 logger = logging.getLogger(__name__)
 DEFAULT_QUOTE = "EUR"
@@ -64,15 +64,21 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         description="Fetch one CoinDesk spot price bucket for a token at an ISO date or datetime."
     )
     parser.add_argument(
+        "token_positional",
+        nargs="?",
+        metavar="token",
+        help="Token/base asset symbol, e.g. ETH, BTC, SOL. May also be given as --token.",
+    )
+    parser.add_argument(
         "--token",
-        required=True,
-        help="Token/base asset symbol, e.g. ETH, BTC, SOL.",
+        dest="token_option",
+        help="Token/base asset symbol (alternative to the positional argument).",
     )
     parser.add_argument(
         "--timestamp",
-        required=True,
         type=_parse_requested_timestamp,
-        help="ISO date or datetime. Date-only values are interpreted as T00:00:00Z.",
+        default=datetime.now(timezone.utc) - timedelta(hours=1),
+        help="ISO date or datetime. Date-only values are interpreted as T00:00:00Z. Defaults to one hour ago (UTC).",
     )
     parser.add_argument(
         "--quote",
@@ -99,14 +105,19 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Optional path to write the JSON payload. Defaults to stdout.",
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    token = args.token_positional or args.token_option
+    if not token:
+        parser.error("token is required (as a positional argument or with --token)")
+    args.token = token
+    return args
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
     instrument = f"{args.token.upper()}-{args.quote.upper()}"
     candle = fetch_spot_candle(
-        client=_CoinDeskClient(),
+        client=CoinDeskClient(),
         market=args.market,
         instrument=instrument,
         timestamp=args.timestamp,

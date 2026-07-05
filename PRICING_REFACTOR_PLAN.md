@@ -143,7 +143,7 @@ not logged, to avoid flooding logs on every request.
     `None`), `price_service_test.py`, `coindesk_source_test.py`,
     `open_exchange_rates_source_test.py`.
 
-- [ ] **Step 2 — Extract low-level HTTP clients into the existing `src/clients/` package.**
+- [x] **Step 2 — Extract low-level HTTP clients into the existing `src/clients/` package.**
   - Add `src/clients/errors.py` with `PriceClientError(CryptoTaxesError)`.
   - `src/clients/coindesk.py`: `CoinDeskClient` (was `_CoinDeskClient`),
     `SpotInstrumentOHLC`, `CoinDeskAPIError(PriceClientError)`, bucket helpers,
