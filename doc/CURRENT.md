@@ -18,7 +18,7 @@ The system is a local-first pipeline for ingesting crypto activity, normalizing 
 
 Current operational output stops after the acquisition/disposal projection is rebuilt. The tax stage exists only as partial downstream work and is not yet the main product output.
 
-The main flow persists a generic latest-run `SystemState` alongside stage outputs. It is `RUNNING` while the active stage is executing, `COMPLETED` after the acquisition/disposal projection succeeds, and `FAILED` with the failed stage and error details (exception type, message, and traceback) when a stage stops the run.
+The main flow persists a generic latest-run `SystemState` alongside stage outputs. It is `NOT_RUN` until the first run is recorded, `RUNNING` while the active stage is executing, `COMPLETED` after the acquisition/disposal projection succeeds, and `FAILED` with the failed stage and error details (exception type, message, and traceback) when a stage stops the run.
 
 The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` and `DisposalLink`. Detailed quantity projection, valuation, and FIFO rules for that stage are documented in `doc/LOT_MATCHING.md`.
 

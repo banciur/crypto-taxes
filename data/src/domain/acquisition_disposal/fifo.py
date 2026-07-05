@@ -101,8 +101,6 @@ def _match_fifo_disposals(
                     is_fee=residual.is_fee,
                     timestamp=timestamp,
                     quantity_used=take_quantity,
-                    # TODO: Preserve the projected disposal total exactly by assigning
-                    # the rounding remainder to the final FIFO fragment.
                     proceeds_total=prices[residual.asset_id] * take_quantity,
                 )
             )

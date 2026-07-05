@@ -69,7 +69,7 @@ def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int)
     source = HybridPriceSource(
         crypto_source=crypto_source,
         fiat_source=fiat_source,
-        fiat_currency_codes=("EUR", "PLN", "USD"),
+        fiat_currency_codes=("EUR", "USD"),
     )
     return PriceService(source=source, store=store)
 

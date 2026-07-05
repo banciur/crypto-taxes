@@ -5,7 +5,6 @@ BTC = AssetId("BTC")
 ETH = AssetId("ETH")
 USDC = AssetId("USDC")
 EUR = AssetId("EUR")
-PLN = AssetId("PLN")
 USD = AssetId("USD")
 
 LOCATION = EventLocation.BASE

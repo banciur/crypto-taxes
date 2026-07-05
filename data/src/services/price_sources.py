@@ -20,7 +20,7 @@ class HybridPriceSource(PriceSnapshotSource):
     ) -> None:
         self.crypto_source = crypto_source
         self.fiat_source = fiat_source
-        fiat_codes = {code.upper() for code in (fiat_currency_codes or ("EUR", "PLN", "USD"))}
+        fiat_codes = {code.upper() for code in (fiat_currency_codes or ("EUR", "USD"))}
         if not fiat_codes:
             msg = "fiat_currency_codes must contain at least one entry"
             raise ValueError(msg)

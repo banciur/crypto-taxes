@@ -86,7 +86,7 @@ class _CoinDeskClient:
         base_url: str = "https://data-api.coindesk.com",
         timeout: float = 10.0,
         session: requests.Session | None = None,
-        retry_attempts: int = 10,
+        retry_attempts: int = 2,
         retry_backoff_seconds: float = 1,
     ) -> None:
         self.base_url = base_url.rstrip("/")

@@ -1,10 +1,16 @@
 First stage: compute German taxes
 
-TODO: Smarter price service
+TODO: Valuation price-unavailability contract is inverted and can fabricate values. In domain/acquisition_disposal/valuation.py _try_direct_rate re-raises RequiredPriceUnavailableError as a hard failure and only returns None (the "unpriceable" signal that feeds phase-2 remainder solving) for other exceptions. But the real sources raise RequiredPriceUnavailableError ONLY on genuine empty data (coindesk_source.py, open_exchange_rates_source.py); network/5xx/bad-json errors propagate as plain API errors. So a genuinely missing price hard-fails and never remainder-solves (phase-2 in LOT_MATCHING.md is unreachable in prod), while a transient network error is silently treated as unpriceable and remainder-solved into a fabricated EUR value that flows into cost basis / proceeds. Tests only pass because the fakes raise LookupError, which no real source emits.
+  - Catch RequiredPriceUnavailableError -> return None (genuine unpriceable), and let transient errors propagate as hard failures instead of `except Exception: return None`.
+  - Update the test fakes (valuation_test.py, projector_test.py) to raise RequiredPriceUnavailableError so they honor the real contract.
+  - Decide error taxonomy: anchor / one-sided / multi-unpriceable then raise AcquisitionDisposalValuationError, so RequiredValuationPriceUnavailableError may go away or be reserved for anchors (projector_test.py test_required_price_error asserts the current type).
+TODO: Price cache boundary off-by-one gives a false hit on the stale previous bucket. price_store.py write stamps valid_to = valid_from + duration (half-open) but read matches valid_from <= ts <= valid_to (inclusive both ends). A timestamp exactly on a bucket boundary (hourly XX:00:00, or midnight for OER daily) matches the previous bucket and, if only that one is cached, returns its price instead of fetching the correct bucket. Fix: half-open valid_from <= ts < valid_to.
+TODO: Better price service
   - review it, it is completly vibed and seems it work but no clue how. What is model behind it does it make sense?
   - change interface of protocol so None can be returned this will simplify the code
   - if there is no price for a token it also should be cached
   - add logging so I see when price service is using cache and when accessing the network?
+  - maybe special handling of stable tokens and always asssume 1USD / 1 EUR and list of those tokens?
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 TODO: NEU pricing and transfers case of sending NEU to no longer existing exchanges (will have the same with polygon network). Idea is to have own "fake wallet" and do operations there.
 TODO: On 2006-02-09 there is an interesting case of moving money from base to eth through coinbase and I had to pay a fee on coinbase. See if the system can handle that correctly if I collapse this to two fees and money lost on the transfer.

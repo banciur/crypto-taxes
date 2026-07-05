@@ -4,8 +4,6 @@ from sqlalchemy import String
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.types import TypeDecorator
 
-SINGLETON_ROW_ID = 1
-
 
 class DecimalAsString(TypeDecorator):
     impl = String

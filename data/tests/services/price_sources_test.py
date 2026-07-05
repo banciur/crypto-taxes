@@ -6,9 +6,9 @@ import pytest
 from domain.ledger import AssetId
 from services.price_sources import HybridPriceSource
 from services.price_types import PriceQuote
-from tests.constants import BTC, ETH, EUR, PLN, USD
+from tests.constants import BTC, ETH, EUR, USD
 from tests.helpers.random_price_service import DeterministicRandomPriceSource
-from tests.services.constants import BTC_LOWER, EUR_LOWER, PLN_LOWER
+from tests.services.constants import BTC_LOWER, EUR_LOWER, USD_LOWER
 
 
 def test_deterministic_source_returns_same_rate_for_same_inputs() -> None:
@@ -67,20 +67,20 @@ class _StubPriceSnapshotSource:
 def test_hybrid_source_routes_fiat_pairs() -> None:
     crypto = _StubPriceSnapshotSource(rate=Decimal("1"), source_name="crypto")
     fiat = _StubPriceSnapshotSource(rate=Decimal("2"), source_name="fiat")
-    source = HybridPriceSource(crypto_source=crypto, fiat_source=fiat, fiat_currency_codes=("EUR", "PLN"))
+    source = HybridPriceSource(crypto_source=crypto, fiat_source=fiat, fiat_currency_codes=("EUR", "USD"))
     ts = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
 
-    quote = source.fetch_snapshot(EUR_LOWER, PLN_LOWER, timestamp=ts)
+    quote = source.fetch_snapshot(EUR_LOWER, USD_LOWER, timestamp=ts)
 
     assert quote.rate == Decimal("2")
-    assert fiat.calls == [(EUR, PLN, ts)]
+    assert fiat.calls == [(EUR, USD, ts)]
     assert crypto.calls == []
 
 
 def test_hybrid_source_uses_crypto_for_non_fiat_pairs() -> None:
     crypto = _StubPriceSnapshotSource(rate=Decimal("3"), source_name="crypto")
     fiat = _StubPriceSnapshotSource(rate=Decimal("4"), source_name="fiat")
-    source = HybridPriceSource(crypto_source=crypto, fiat_source=fiat, fiat_currency_codes=("EUR", "PLN"))
+    source = HybridPriceSource(crypto_source=crypto, fiat_source=fiat, fiat_currency_codes=("EUR", "USD"))
     ts = datetime(2025, 1, 1, 15, 0, tzinfo=timezone.utc)
 
     quote = source.fetch_snapshot(BTC_LOWER, EUR_LOWER, timestamp=ts)

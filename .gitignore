@@ -6,3 +6,5 @@
 artifacts
 
 private.txt
+
+.pnpm-store

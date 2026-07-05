@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Integer, String, delete
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from db.base import SINGLETON_ROW_ID, Base
+from db.base import Base
 from domain.system_state import (
     SystemState,
     SystemStateError,
@@ -11,6 +11,8 @@ from domain.system_state import (
     SystemStateStatus,
 )
 from utils.misc import ensure_utc_datetime
+
+SINGLETON_ROW_ID = 1
 
 
 class SystemStateOrm(Base):
