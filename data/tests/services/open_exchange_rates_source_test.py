@@ -8,7 +8,6 @@ import requests
 
 import clients.open_exchange_rates as oxr_client_module
 from clients.open_exchange_rates import HistoricalRates, OpenExchangeRatesClient
-from services.open_exchange_rates_source import OpenExchangeRatesSource
 from tests.constants import EUR, USD
 
 
@@ -65,9 +64,10 @@ def test_open_exchange_rates_http_client_parses_historical_payload(monkeypatch: 
     }
 
 
-class _StubOXRClient:
-    def __init__(self, snapshot: HistoricalRates) -> None:
+class _StubOXRClient(OpenExchangeRatesClient):
+    def __init__(self, snapshot: HistoricalRates, *, source_name: str = "open-exchange-rates-historical") -> None:
         self.snapshot = snapshot
+        self.source_name = source_name
         self.requested_dates: list[date] = []
 
     def get_historical_rates(self, *, target_date: date) -> HistoricalRates:
@@ -86,12 +86,10 @@ def test_price_source_converts_cross_currency_pair() -> None:
             "GBP": Decimal("0.8"),
         },
     )
-    stub_client = _StubOXRClient(snapshot=historical)
-    client = cast(OpenExchangeRatesClient, stub_client)
-    source = OpenExchangeRatesSource(client=client, source_name="test-source")
+    source = _StubOXRClient(snapshot=historical, source_name="test-source")
 
     ts = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
-    quote = source.fetch_snapshot(EUR, USD, timestamp=ts)
+    quote = source.fetch_record(EUR, USD, timestamp=ts)
 
     assert quote is not None
     assert quote.rate == Decimal("1") / Decimal("0.9")
@@ -99,27 +97,30 @@ def test_price_source_converts_cross_currency_pair() -> None:
     assert quote.quote_id == USD
     assert quote.valid_from == datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
     assert quote.valid_to == datetime(2024, 1, 2, 0, 0, tzinfo=timezone.utc)
-    assert stub_client.requested_dates == [date(2024, 1, 1)]
+    assert source.requested_dates == [date(2024, 1, 1)]
 
 
-def test_price_source_returns_none_for_missing_currency() -> None:
+def test_price_source_returns_empty_record_for_missing_currency() -> None:
     historical = HistoricalRates(
         date=date(2024, 1, 1),
         timestamp=datetime(2024, 1, 1, 23, 59, tzinfo=timezone.utc),
         base="USD",
         rates={"USD": Decimal("1")},
     )
-    source = OpenExchangeRatesSource(client=cast(OpenExchangeRatesClient, _StubOXRClient(snapshot=historical)))
+    source = _StubOXRClient(snapshot=historical)
 
     ts = datetime(2024, 1, 1, 9, 0, tzinfo=timezone.utc)
-    assert source.fetch_snapshot(EUR, USD, timestamp=ts) is None
+    record = source.fetch_record(EUR, USD, timestamp=ts)
+    assert record.rate is None
+    assert record.valid_from == datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
+    assert record.valid_to == datetime(2024, 1, 2, 0, 0, tzinfo=timezone.utc)
 
 
 @pytest.mark.skip(reason="This test requires real api key in .env")
 def test_live_request() -> None:
-    source = OpenExchangeRatesSource()
+    source = OpenExchangeRatesClient()
     ts = datetime.combine(date(2024, 1, 1), time.min, tzinfo=timezone.utc)
-    quote = source.fetch_snapshot(EUR, USD, timestamp=ts)
+    quote = source.fetch_record(EUR, USD, timestamp=ts)
     from pprint import pprint
 
     pprint(quote)

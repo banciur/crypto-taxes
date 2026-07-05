@@ -13,14 +13,24 @@ from clients.coindesk import (
     fetch_spot_candle,
     fetch_spot_history,
 )
-from services.coindesk_source import CoinDeskSource
 from tests.constants import BTC, USD
 from tests.services.constants import BTC_LOWER, ETHW_LOWER, EUR_LOWER, USD_LOWER
 
 
-class _StubCoinDeskClient:
-    def __init__(self, entries: list[SpotInstrumentOHLC]) -> None:
+class _StubCoinDeskClient(CoinDeskClient):
+    def __init__(
+        self,
+        entries: list[SpotInstrumentOHLC],
+        *,
+        market: str = "coinbase",
+        aggregate_minutes: int = 60,
+        source_name: str = "coindesk-spot-api",
+    ) -> None:
         self.entries = entries
+        self.market = market
+        self.aggregate_minutes = aggregate_minutes
+        self.source_name = source_name
+        self._bucket_duration = timedelta(minutes=aggregate_minutes)
         self.captured_minutes_params: dict[str, object] | None = None
         self.captured_hours_params: dict[str, object] | None = None
 
@@ -54,8 +64,7 @@ def test_coindesk_source_transforms_hour_bucket_into_quote() -> None:
     )
     client = _StubCoinDeskClient([entry])
 
-    source = CoinDeskSource(client=cast(CoinDeskClient, client), market="coinbase")
-    quote = source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
+    quote = client.fetch_record(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
 
     assert quote is not None
     assert quote.rate == Decimal("42050.12")
@@ -83,10 +92,8 @@ def test_coindesk_source_supports_minute_buckets() -> None:
         volume=Decimal("10"),
         quote_volume=Decimal("420501.2"),
     )
-    client = _StubCoinDeskClient([entry])
-
-    source = CoinDeskSource(client=cast(CoinDeskClient, client), market="coinbase", aggregate_minutes=15)
-    quote = source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
+    client = _StubCoinDeskClient([entry], market="coinbase", aggregate_minutes=15)
+    quote = client.fetch_record(BTC_LOWER, USD_LOWER, timestamp=bucket_start)
 
     assert quote is not None
     assert quote.valid_to == bucket_start + timedelta(minutes=15)
@@ -96,17 +103,18 @@ def test_coindesk_source_supports_minute_buckets() -> None:
 
 
 def test_coindesk_source_rejects_unsupported_bucket_lengths() -> None:
-    client = cast(CoinDeskClient, _StubCoinDeskClient([]))
     with pytest.raises(ValueError):
-        CoinDeskSource(client=client, market="coinbase", aggregate_minutes=45)
+        CoinDeskClient(session=Mock(), market="coinbase", aggregate_minutes=45)
 
 
-def test_coindesk_source_returns_none_when_price_data_is_unavailable() -> None:
+def test_coindesk_source_returns_empty_record_when_price_data_is_unavailable() -> None:
     requested_timestamp = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
-    client = cast(CoinDeskClient, _StubCoinDeskClient([]))
-    source = CoinDeskSource(client=client, market="coinbase")
+    client = _StubCoinDeskClient([])
 
-    assert source.fetch_snapshot(BTC_LOWER, USD_LOWER, timestamp=requested_timestamp) is None
+    record = client.fetch_record(BTC_LOWER, USD_LOWER, timestamp=requested_timestamp)
+    assert record.rate is None
+    assert record.valid_from == requested_timestamp
+    assert record.valid_to == requested_timestamp + timedelta(minutes=60)
 
 
 def test_fetch_spot_history_pages_backwards_and_returns_ascending_range() -> None:
@@ -379,9 +387,9 @@ def test_coindesk_source_retries_with_first_trade_timestamp() -> None:
             return {"FIRST_TRADE_SPOT_TIMESTAMP": int(bucket_start.timestamp())}
 
     fallback_client = _FallbackClient()
-    source = CoinDeskSource(client=cast(CoinDeskClient, fallback_client), market="kraken")
+    fallback_client.market = "kraken"
 
-    quote = source.fetch_snapshot(ETHW_LOWER, EUR_LOWER, timestamp=earlier)
+    quote = fallback_client.fetch_record(ETHW_LOWER, EUR_LOWER, timestamp=earlier)
 
     assert quote is not None
     assert quote.rate == Decimal("10.5")
@@ -411,9 +419,9 @@ def _entry(timestamp: datetime) -> SpotInstrumentOHLC:
 
 @pytest.mark.skip(reason="This test requires real api key in .env")
 def test_live_request() -> None:
-    source = CoinDeskSource()
+    source = CoinDeskClient()
     ts = datetime.now(timezone.utc)
-    quote = source.fetch_snapshot(
+    quote = source.fetch_record(
         BTC,
         USD,
         timestamp=ts,

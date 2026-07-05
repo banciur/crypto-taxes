@@ -3,10 +3,9 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from domain.ledger import AssetId
-from domain.pricing import PriceProvider
+from domain.pricing import PriceCache, PriceProvider
 
-from .price_sources import PriceSnapshotSource
-from .price_store import PriceStore
+from .price_resolver import PriceResolver
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +13,11 @@ logger = logging.getLogger(__name__)
 class PriceService(PriceProvider):
     def __init__(
         self,
-        source: PriceSnapshotSource,
-        store: PriceStore,
+        resolver: PriceResolver,
+        cache: PriceCache,
     ) -> None:
-        self.source = source
-        self.store = store
+        self.resolver = resolver
+        self.cache = cache
 
     def rate(
         self,
@@ -27,13 +26,14 @@ class PriceService(PriceProvider):
         timestamp: datetime | None = None,
     ) -> Decimal | None:
         ts = timestamp or datetime.now(timezone.utc)
-        existing = self.store.read(base_id=base_id, quote_id=quote_id, timestamp=ts)
+        base = AssetId(base_id.upper())
+        quote = AssetId(quote_id.upper())
+
+        existing = self.cache.read(base_id=base, quote_id=quote, timestamp=ts)
         if existing is not None:
             return existing.rate
 
-        logger.info("Price cache miss, fetching %s->%s @ %s from source", base_id, quote_id, ts.isoformat())
-        fetched = self.source.fetch_snapshot(base_id=base_id, quote_id=quote_id, timestamp=ts)
-        if fetched is None:
-            return None
-        self.store.write(fetched)
+        logger.info("Price cache miss, fetching %s->%s @ %s from source", base, quote, ts.isoformat())
+        fetched = self.resolver.resolve(base_id=base, quote_id=quote, timestamp=ts)
+        self.cache.write(fetched)
         return fetched.rate

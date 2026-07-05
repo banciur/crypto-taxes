@@ -11,6 +11,12 @@ TODO: Better price service
   - if there is no price for a token it also should be cached
   - add logging so I see when price service is using cache and when accessing the network?
   - maybe special handling of stable tokens and always asssume 1USD / 1 EUR and list of those tokens?
+TODO: Price asset-id normalization (upper-casing) happens three times on the same call path:
+  PriceService.rate uppercases base/quote, PriceResolver.resolve uppercases them again, and each
+  client's fetch_record uppercases once more (e.g. CoinDeskClient, OpenExchangeRatesClient). Every
+  layer defends itself instead of trusting the caller. Pick one owner (the PriceService entry point
+  is the natural one) and let the resolver + clients assume already-normalized AssetIds.
+here put new todo
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 TODO: NEU pricing and transfers case of sending NEU to no longer existing exchanges (will have the same with polygon network). Idea is to have own "fake wallet" and do operations there.
 TODO: On 2006-02-09 there is an interesting case of moving money from base to eth through coinbase and I had to pay a fee on coinbase. See if the system can handle that correctly if I collapse this to two fees and money lost on the transfer.

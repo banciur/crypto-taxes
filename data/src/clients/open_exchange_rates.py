@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
@@ -9,6 +9,9 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from config import config
+from domain.ledger import AssetId
+from domain.pricing import PriceRecord
+from utils.misc import utc_now
 
 from .errors import PriceClientError
 
@@ -36,10 +39,12 @@ class OpenExchangeRatesClient:
         session: requests.Session | None = None,
         retry_attempts: int = 5,
         retry_backoff_seconds: float = 1,
+        source_name: str = "open-exchange-rates",
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self._session = session or requests.Session()
+        self.source_name = source_name
 
         retries = Retry(
             total=retry_attempts,
@@ -51,6 +56,25 @@ class OpenExchangeRatesClient:
         adapter = HTTPAdapter(max_retries=retries)
         self._session.mount("https://", adapter)
         self._session.mount("http://", adapter)
+
+    def fetch_record(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceRecord:
+        snapshot = self.get_historical_rates(target_date=timestamp.date())
+
+        base = AssetId(base_id.upper())
+        quote = AssetId(quote_id.upper())
+
+        rate = self._compute_rate(snapshot=snapshot, base=base, quote=quote)
+        valid_from = datetime.combine(snapshot.date, time.min, tzinfo=timezone.utc)
+
+        return PriceRecord(
+            base_id=base,
+            quote_id=quote,
+            rate=rate,
+            source=self.source_name,
+            valid_from=valid_from,
+            valid_to=valid_from + timedelta(days=1),
+            fetched_at=utc_now(),
+        )
 
     def get_historical_rates(self, *, target_date: date) -> HistoricalRates:
         path = f"/historical/{target_date.isoformat()}.json"
@@ -106,6 +130,29 @@ class OpenExchangeRatesClient:
     @staticmethod
     def _to_decimal(value: Any) -> Decimal:
         return Decimal(str(value))
+
+    def _compute_rate(
+        self,
+        *,
+        snapshot: HistoricalRates,
+        base: AssetId,
+        quote: AssetId,
+    ) -> Decimal | None:
+        if base == quote:
+            return Decimal("1")
+
+        try:
+            base_rate = self._resolve_rate(snapshot=snapshot, currency=base)
+            quote_rate = self._resolve_rate(snapshot=snapshot, currency=quote)
+        except KeyError:
+            return None
+        return quote_rate / base_rate
+
+    @staticmethod
+    def _resolve_rate(*, snapshot: HistoricalRates, currency: AssetId) -> Decimal:
+        if currency == snapshot.base:
+            return Decimal("1")
+        return snapshot.rates[currency]
 
     @staticmethod
     def _extract_error(response: Response | None) -> tuple[str, Any | None]:

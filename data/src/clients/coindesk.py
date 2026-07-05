@@ -10,6 +10,9 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from config import config
+from domain.ledger import AssetId
+from domain.pricing import PriceRecord
+from utils.misc import utc_now
 
 from .errors import PriceClientError
 
@@ -84,10 +87,21 @@ class CoinDeskClient:
         session: requests.Session | None = None,
         retry_attempts: int = 2,
         retry_backoff_seconds: float = 1,
+        market: str = "coinbase",
+        aggregate_minutes: int = 60,
+        source_name: str = "coindesk-spot-api",
     ) -> None:
+        if not market:
+            msg = "market must be provided"
+            raise ValueError(msg)
+
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self._session = session or requests.Session()
+        self.market = market
+        self.aggregate_minutes = aggregate_minutes
+        self.source_name = source_name
+        self._bucket_duration = _resolve_bucket_request(aggregate_minutes).duration
 
         retry = Retry(
             total=retry_attempts,
@@ -98,6 +112,43 @@ class CoinDeskClient:
         adapter = HTTPAdapter(max_retries=retry)
         self._session.mount("https://", adapter)
         self._session.mount("http://", adapter)
+
+    def fetch_record(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceRecord:
+        instrument = f"{base_id.upper()}-{quote_id.upper()}"
+        entries, override_valid_from = fetch_histo_candles(
+            client=self,
+            market=self.market,
+            instrument=instrument,
+            timestamp=timestamp,
+            aggregate_minutes=self.aggregate_minutes,
+        )
+
+        if not entries:
+            return self._empty_record(base_id=base_id, quote_id=quote_id, valid_from=timestamp)
+
+        bucket = max(entries, key=lambda entry: entry.timestamp)
+        valid_from = override_valid_from or bucket.timestamp
+
+        return PriceRecord(
+            base_id=AssetId(base_id.upper()),
+            quote_id=AssetId(quote_id.upper()),
+            rate=bucket.close,
+            source=self.source_name,
+            valid_from=valid_from,
+            valid_to=valid_from + self._bucket_duration,
+            fetched_at=utc_now(),
+        )
+
+    def _empty_record(self, *, base_id: AssetId, quote_id: AssetId, valid_from: datetime) -> PriceRecord:
+        return PriceRecord(
+            base_id=AssetId(base_id.upper()),
+            quote_id=AssetId(quote_id.upper()),
+            rate=None,
+            source=self.source_name,
+            valid_from=valid_from,
+            valid_to=valid_from + self._bucket_duration,
+            fetched_at=utc_now(),
+        )
 
     def get_spot_historical_minutes(
         self,

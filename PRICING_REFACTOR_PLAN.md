@@ -107,19 +107,23 @@ recomputed each query, so later manual edges are picked up with nothing stale to
   Please upgrade your account"* with `max_calls.month = 100`, `calls_made.month = 173`,
   monthly window resetting ~26 days out). That quota cannot price a real ledger, so CoinMarketCap
   replaces CoinDesk as the crypto source. The `src/clients/` boundary from Step 2 makes this a
-  drop-in: a new client + `PriceSnapshotSource` adapter, selected by the resolver for crypto legs.
-  The extracted CoinDesk client/source may be kept as a fallback or removed — decided in the step.
+  drop-in: a new client that implements `PriceSource`, selected by the resolver for crypto
+  legs. The extracted CoinDesk client may be kept as a fallback or removed — decided in the step.
 
 ### Layering / placement
 
-- `src/clients/` (already exists — holds `moralis.py`, `coinbase.py`): add the low-level
-  CoinDesk/OER HTTP clients here, plus `PriceClientError` in `src/clients/errors.py`.
-  `fetch_spot_history` / `fetch_spot_candle` move here with the CoinDesk client (still used by
-  `scripts/coindesk/token_price.py` and tests). New modules follow the existing plain naming
-  (`coindesk.py`, `open_exchange_rates.py`; classes `CoinDeskClient`,
-  `OpenExchangeRatesClient`).
-- `src/services/`: source adapters, the resolver/`PriceService`, store wiring.
+- `domain/pricing.py`: the pricing contract — `PriceProvider`, `PriceSource`, `PriceCache`,
+  and `PriceRecord`. Innermost layer; depends on nothing below it.
+- `src/clients/` (already holds `moralis.py`, `coinbase.py`): one module per provider
+  (`coindesk.py`, `open_exchange_rates.py`, `coinmarketcap.py`). Each client talks HTTP AND
+  implements `PriceSource.fetch_record(...) -> PriceRecord`, while keeping its
+  raw API methods (`get_spot_historical_*`, `fetch_spot_candle`, `get_historical_rates`) for the
+  scripts. `PriceClientError` lives in `src/clients/errors.py`. Clients may import `domain` but
+  never `services`.
+- `src/services/`: orchestration only — the resolver/`PriceService` and store wiring. No
+  per-provider source adapters.
 - `src/db/`: SQLite price cache.
+- Dependency direction stays acyclic: `domain ← clients ← services`.
 
 ### Logging
 
@@ -141,7 +145,7 @@ not logged, to avoid flooding logs on every request.
   - `domain/pricing.py`: `PriceProvider.rate` → `Decimal | None`; delete
     `RequiredPriceUnavailableError`.
   - Sources return `None` on genuine no-data instead of raising (CoinDesk empty entries; OER
-    missing currency). `fetch_snapshot` and `HybridPriceSource` → `PriceQuote | None`.
+    missing currency). `fetch_record` → `PriceRecord` with nullable `rate`.
   - `PriceService.rate`: source `None` → return `None`; log only on cache miss / network
     fetch (not on cache hits).
   - `valuation._try_direct_rate`: `None` → return `None`; remove `except Exception: return
@@ -161,35 +165,49 @@ not logged, to avoid flooding logs on every request.
     `fetch_spot_history`, `fetch_spot_candle`.
   - `src/clients/open_exchange_rates.py`: `OpenExchangeRatesClient`, `HistoricalRates`,
     `OpenExchangeRatesAPIError(PriceClientError)`.
-  - Reduce `coindesk_source.py` / `open_exchange_rates_source.py` to thin `PriceSnapshotSource`
+  - Reduce `coindesk_source.py` / `open_exchange_rates_source.py` to thin `PriceSource`
     adapters importing from `src/clients/`.
   - Update `scripts/coindesk/token_price.py` and test imports.
 
-- [ ] **Step 3 — SQLite edge store with negative caching.**
+- [x] **Step 3 — SQLite edge store with negative caching.**
   - `db/price_cache.py`: SQLAlchemy model, base/init following `db/tx_cache_common.py`, and a
-    repository implementing the `PriceStore` protocol; DB at `artifacts/price_cache.db`.
+    repository implementing the `PriceCache` protocol; DB at `artifacts/price_cache.db`.
   - Half-open bucket lookup; unique-key dedup; nullable `rate` negative rows.
   - `PriceService`: on genuine `None` write a negative row; on quote write the edge; never
     negative-cache on `PriceClientError`. Log only on cache miss / network fetch, not on hits.
   - Rewire `build_price_service` and the CLI arg in `main.py`; retire `JsonlPriceStore`.
   - Migrate `price_store_test.py` / `price_service_test.py` to the SQLite store.
+  - Consolidate price/store DTOs into one `PriceRecord` with nullable `rate` and provider-owned
+    `fetched_at`; delete `PriceQuote`, `PriceCacheRecord`, and `PriceCacheEntry`.
 
-- [ ] **Step 4 — Add CoinMarketCap crypto price source (replaces CoinDesk).**
+- [x] **Step 4 — Consolidate the pricing contract into `domain`; clients implement `PriceSource`.**
+  - Move `PriceRecord`, `PriceSource`, and `PriceCache` into `domain/pricing.py`, co-located
+    with `PriceProvider`. Update all imports.
+  - Make `CoinDeskClient` and `OpenExchangeRatesClient` implement
+    `fetch_record(base, quote, ts) -> PriceRecord` — i.e. fold in the mapping that lives
+    in the `*_source.py` adapters today (bucket → `PriceRecord`, cross-rate → `PriceRecord`,
+    first-trade override, valid-window). Keep the raw client methods for the scripts.
+  - Delete `services/coindesk_source.py` and `services/open_exchange_rates_source.py`; rewire
+    `main.py` and the scripts/tests to use the clients directly.
+  - Keep the graph acyclic: clients import `domain`, never `services`.
+  - Delete `HybridPriceSource`; route fiat/crypto source selection through `PriceResolver`.
+  - Tests: fold the source-mapping tests into the client tests (bucket→quote, cross-rate→quote,
+    `None`-on-no-data, operational-error propagation).
+
+- [ ] **Step 5 — Add CoinMarketCap crypto price source (replaces CoinDesk).**
   - `src/clients/coinmarketcap.py`: `CoinMarketCapClient` (auth via `X-CMC_PRO_API_KEY` header,
-    base `https://pro-api.coinmarketcap.com`, retry/backoff) and
-    `CoinMarketCapAPIError(PriceClientError)`, with a method to fetch the historical quote for a
-    symbol at/around a timestamp, returning the parsed price and the covered time window.
-  - `src/services/coinmarketcap_source.py`: `CoinMarketCapSource(PriceSnapshotSource)` returning
-    `PriceQuote | None` — `None` on genuine no-data, raise `CoinMarketCapAPIError` on operational
-    failure. Fetches `base → numeraire` (USD).
+    base `https://pro-api.coinmarketcap.com`, retry/backoff), `CoinMarketCapAPIError(PriceClientError)`,
+    raw historical-quote method(s), AND `fetch_record(base, quote, ts) -> PriceRecord`
+    implementing `PriceSource` (per the Step 4 consolidation) — `rate=None` on genuine no-data,
+    raise `CoinMarketCapAPIError` on operational failure; fetches `base → numeraire` (USD). No
+    separate `services/` source file — the client is the source.
   - Config: add `coinmarketcap_api_key` (env, `data/.env` + `.env.example`).
   - Map CoinMarketCap's interval quote onto the edge store's half-open
     `[bucket_start, bucket_end)` window.
-  - Optional: `scripts/coinmarketcap/token_price.py` helper mirroring the CoinDesk one for live
-    spot checks.
-  - Tests with a stubbed client: quote mapping, `None`-on-no-data, operational-error propagation.
+  - Optional: `scripts/coinmarketcap.py` helper mirroring the CoinDesk one for live spot checks.
+  - Tests with a stubbed HTTP layer: quote mapping, `None`-on-no-data, operational-error propagation.
   - Live-verify a real crypto price returns.
-  - Decide CoinDesk's fate: keep its client/source as a fallback source, or remove it.
+  - Decide CoinDesk's fate: keep its client as a fallback source, or remove it.
   - Open questions to settle when starting the step:
     - **Plan/endpoint**: CoinMarketCap historical quotes (`/v2/cryptocurrency/quotes/historical`)
       require a paid tier; the free Basic plan is latest-only. Confirm the account grants
@@ -197,7 +215,7 @@ not logged, to avoid flooding logs on every request.
     - **Asset identity**: CoinMarketCap symbols collide across coins; prefer resolving via CMC
       numeric `id`, or accept symbol lookups initially and note the risk.
 
-- [ ] **Step 5 — Single-pivot cross-rate resolver + configurable currencies + stable pegs.**
+- [ ] **Step 6 — Single-pivot cross-rate resolver + configurable currencies + stable pegs.**
   - Config: base currency (env, default EUR), numeraire (env, default USD), stable-asset set
     (env + built-in default).
   - Implement the 4-step resolution rule (direct-cached preference, stable peg, pivot through
@@ -212,13 +230,13 @@ not logged, to avoid flooding logs on every request.
     `_value_fee_groups`), relying on the documented `None`-means-unpriceable contract.
   - Stable pegs synthesized (no store/network).
   - `BASE_CURRENCY_ASSET_ID` in `acquisition_disposal/constants.py` sourced from config.
-  - Replace `HybridPriceSource` routing with resolver-driven source selection; rewire
-    `main.py`.
+  - Extend the existing `PriceResolver` from simple fiat/crypto routing to the full pivot
+    algorithm; rewire `main.py` as needed.
   - Tests: pivot composition, stable resolution avoids network, direct-edge preference, a
     non-EUR base currency.
 
-- [ ] **Step 6 — Cleanup, docs, TODO pruning.**
-  - Simplify residual "vibed"/functional-experiment CoinDesk code surfaced in Steps 2–5.
+- [ ] **Step 7 — Cleanup, docs, TODO pruning.**
+  - Simplify residual "vibed"/functional-experiment CoinDesk code surfaced in Steps 2–6.
   - Update `src/services/README.md`, add `src/clients/README.md`, update the price-services
     section of `data/README.md`, and update `doc/CURRENT.md` where documented
     pricing/valuation behavior changed (genuine-missing prices now remainder-solve; pricing is

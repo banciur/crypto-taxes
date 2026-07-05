@@ -12,9 +12,9 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from clients.open_exchange_rates import OpenExchangeRatesClient
 from domain.ledger import AssetId
-from services.open_exchange_rates_source import OpenExchangeRatesSource
-from services.price_types import PriceQuote
+from domain.pricing import PriceRecord
 
 logger = logging.getLogger(__name__)
 DEFAULT_BASE = "EUR"
@@ -43,15 +43,15 @@ def _parse_requested_timestamp(value: str) -> datetime:
     return parsed_datetime.astimezone(timezone.utc)
 
 
-def _serialize_quote(quote: PriceQuote) -> dict[str, Any]:
+def _serialize_quote(quote: PriceRecord) -> dict[str, Any]:
     return {
-        "timestamp": quote.timestamp.isoformat(),
         "base_id": quote.base_id,
         "quote_id": quote.quote_id,
         "rate": str(quote.rate),
         "source": quote.source,
         "valid_from": quote.valid_from.isoformat(),
         "valid_to": quote.valid_to.isoformat(),
+        "fetched_at": quote.fetched_at.isoformat(),
     }
 
 
@@ -88,7 +88,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
-    quote = OpenExchangeRatesSource().fetch_snapshot(
+    quote = OpenExchangeRatesClient().fetch_record(
         AssetId(args.base),
         AssetId(args.quote),
         timestamp=args.timestamp,
