@@ -1,5 +1,17 @@
 # Services
 
+## Price services
+
+- `PriceService` (`price_service.py`) implements the domain `PriceProvider`, resolving `base -> quote`
+  as a cross-rate through a single numeraire pivot (USD) and caching directional edges.
+- Stablecoins are valued via the fiat currency they are pegged to (peg target matters: EUR-pegged
+  stables are not worth 1 USD).
+- `PriceResolver` (`price_resolver.py`) only routes a fetch to the owning provider: fiat to Open
+  Exchange Rates, everything else to CoinMarketCap.
+- Config (numeraire, fiat codes, stable pegs) comes from `config` constants; the cache is SQLite
+  (`src/db/price_cache.py`). The pricing contract lives in `src/domain/pricing.py`, provider
+  clients in `src/clients/`.
+
 ## Moralis service
 - Fetches data for all tracked accounts storing them in the cache along the way.
 - Accounts with `skip_sync=true` are excluded from fetches.
