@@ -130,7 +130,7 @@ corrections.
   replacement resolve (override follows a raw origin into its replacement's synthetic event), discard/unresolved
   problem, split-across-events problem, and asset-not-in-event problem.
 
-- [ ] **Valuation integration.** Add the `overrides` parameter to `value_projected_event`,
+- [x] **Valuation integration.** Add the `overrides` parameter to `value_projected_event`,
   `_value_non_fee_groups`, and `_value_fee_groups`, consulting overrides before the price provider. Add tests
   covering: override supplies an otherwise-unpriceable non-fee asset, override on a fee-only asset, and an override
   rate flowing through rebalancing/remainder solving.
