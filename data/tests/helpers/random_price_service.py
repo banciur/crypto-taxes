@@ -4,12 +4,10 @@ from datetime import datetime
 from decimal import Decimal
 
 from domain.ledger import AssetId
-from domain.pricing import PriceProvider
-from services.price_sources import PriceSnapshotSource
-from services.price_types import PriceQuote
+from domain.pricing import PriceProvider, PriceRecord, PriceSource
 
 
-class DeterministicRandomPriceSource(PriceSnapshotSource):
+class DeterministicRandomPriceSource(PriceSource):
     def __init__(
         self,
         *,
@@ -30,16 +28,16 @@ class DeterministicRandomPriceSource(PriceSnapshotSource):
         self.max_price = max_price
         self.source_name = source_name
 
-    def fetch_snapshot(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceQuote:
+    def fetch_record(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceRecord:
         rate = self._generate_rate(base_id=base_id, quote_id=quote_id, timestamp=timestamp)
-        return PriceQuote(
-            timestamp=timestamp,
+        return PriceRecord(
             base_id=base_id,
             quote_id=quote_id,
             rate=rate,
             source=self.source_name,
             valid_from=timestamp,
             valid_to=timestamp,
+            fetched_at=timestamp,
         )
 
     def _generate_rate(self, *, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal:
@@ -78,5 +76,8 @@ class TestPriceService(PriceProvider):
         )
 
     def rate(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal:
-        snapshot = self._source.fetch_snapshot(base_id=base_id, quote_id=quote_id, timestamp=timestamp)
+        if base_id.upper() == quote_id.upper():
+            return Decimal(1)
+        snapshot = self._source.fetch_record(base_id=base_id, quote_id=quote_id, timestamp=timestamp)
+        assert snapshot.rate is not None
         return snapshot.rate

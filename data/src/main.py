@@ -9,12 +9,14 @@ from typing import Sequence
 
 from accounts import AccountRegistry, load_accounts
 from clients.coinbase import CoinbaseClient
+from clients.coinmarketcap import CoinMarketCapClient
 from clients.moralis import MoralisClient
+from clients.open_exchange_rates import OpenExchangeRatesClient
 from config import (
     ARTIFACTS_DIR,
     CORRECTIONS_DB_PATH,
     DB_PATH,
-    PROJECT_ROOT,
+    PRICE_CACHE_DB_PATH,
     TRANSACTIONS_CACHE_DB_PATH,
     AppSettings,
     config,
@@ -24,6 +26,7 @@ from db.acquisition_disposal import AcquisitionDisposalProjectionRepository
 from db.base import Base
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.price_cache import PriceCacheRepository, init_price_cache_db
 from db.session import init_db_session
 from db.system_state import SystemStateRepository
 from db.tax_events import TaxEventRepository
@@ -47,12 +50,9 @@ from importers.lido.lido_importer import LidoImporter
 from importers.moralis.moralis_importer import MoralisImporter
 from importers.stakewise.stakewise_importer import StakewiseImporter
 from services.coinbase import CoinbaseService
-from services.coindesk_source import CoinDeskSource
 from services.moralis import MoralisService
-from services.open_exchange_rates_source import OpenExchangeRatesSource
+from services.price_resolver import PriceResolver
 from services.price_service import PriceService
-from services.price_sources import HybridPriceSource
-from services.price_store import JsonlPriceStore
 from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
 logger = logging.getLogger(__name__)
@@ -61,17 +61,18 @@ LIDO_CSV_PATH = ARTIFACTS_DIR / "lido.csv"
 STAKING_REWARDS_WALLET_ENV_VAR = "STAKING_REWARDS_WALLET_ADDRESS"
 
 
-def build_price_service(cache_dir: Path, *, market: str, aggregate_minutes: int) -> PriceService:
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    store = JsonlPriceStore(root_dir=cache_dir)
-    crypto_source = CoinDeskSource(market=market, aggregate_minutes=aggregate_minutes)
-    fiat_source = OpenExchangeRatesSource()
-    source = HybridPriceSource(
-        crypto_source=crypto_source,
-        fiat_source=fiat_source,
-        fiat_currency_codes=("EUR", "USD"),
+def build_price_service(price_cache_db_path: Path) -> PriceService:
+    price_cache_session = init_price_cache_db(db_path=price_cache_db_path)
+    cache = PriceCacheRepository(price_cache_session)
+    settings = config()
+    resolver = PriceResolver(
+        crypto_source=CoinMarketCapClient(
+            api_key=settings.coinmarketcap_api_key,
+            high_resolution_days=settings.coinmarketcap_high_resolution_days,
+        ),
+        fiat_source=OpenExchangeRatesClient(app_id=settings.open_exchange_rates_app_id),
     )
-    return PriceService(source=source, store=store)
+    return PriceService(resolver=resolver, cache=cache)
 
 
 def load_stakewise_events(*, wallet_address: str | None) -> list[LedgerEvent]:
@@ -274,10 +275,7 @@ def _build_acquisition_disposal_projection(
 
 def run(
     csv_path: Path,
-    cache_dir: Path,
-    *,
-    market: str,
-    aggregate_minutes: int,
+    price_cache_db_path: Path,
 ) -> None:
     # Setup components
     logger.info("Initializing DB at %s", DB_PATH)
@@ -328,7 +326,7 @@ def run(
         ),
     )
 
-    price_service = build_price_service(cache_dir, market=market, aggregate_minutes=aggregate_minutes)
+    price_service = build_price_service(price_cache_db_path)
     acquisition_disposal_projection = _run_system_state_stage(
         system_state_repository,
         SystemStateStage.ACQUISITION_DISPOSAL,
@@ -362,15 +360,11 @@ def run(
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run Kraken, Stakewise, Lido, Coinbase, and Moralis importers.")
     parser.add_argument("--csv", type=Path, default=ARTIFACTS_DIR / "kraken-ledger.csv")
-    parser.add_argument("--price-cache-dir", type=Path, default=PROJECT_ROOT / ".cache" / "prices")
-    parser.add_argument("--market", default="kraken")
-    parser.add_argument("--aggregate", type=int, default=60)
+    parser.add_argument("--price-cache-db", type=Path, default=PRICE_CACHE_DB_PATH)
     args = parser.parse_args(argv)
     run(
         args.csv,
-        args.price_cache_dir,
-        market=args.market,
-        aggregate_minutes=args.aggregate,
+        args.price_cache_db,
     )
 
 

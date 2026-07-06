@@ -59,6 +59,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Gas and similar execution costs are always separate disposals.
 - Explicit fee legs stay explicit downstream through `is_fee=True`.
 - `EUR`, configured fiat currencies, and selected stable assets act as valuation anchors. Fiat anchors do not open or consume FIFO lots; selected stable assets still do.
+- Asset prices are resolved as cross-rates through a configured numeraire pivot (USD), with stablecoins valued via the fiat currency they are pegged to. A genuinely unavailable market price is a first-class "unpriceable" signal that feeds remainder solving; an operational price-backend failure aborts the run.
 
 ## Current Capabilities
 
@@ -69,7 +70,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Review latest main-flow status, failed stage, and error details (exception type, message, and traceback) in the UI.
 - Rebuild the current per-wallet, per-asset balance projection from corrected events.
 - Rebuild and persist the acquisition/disposal projection (acquisition lots and disposal links) from corrected events, marking the run `COMPLETED` only after it succeeds.
-- Persist price snapshots that downstream valuation logic can use.
+- Resolve asset prices as numeraire-pivot cross-rates (crypto via CoinMarketCap, fiat via Open Exchange Rates) and cache directional price edges in SQLite (`artifacts/price_cache.db`), negative-caching genuinely-missing prices.
 
 ## Current Non-Capabilities
 

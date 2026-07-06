@@ -1,31 +1,31 @@
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
 
-from errors import CryptoTaxesError
-
 from .ledger import AssetId
 
 
-class RequiredPriceUnavailableError(CryptoTaxesError):
-    def __init__(
-        self,
-        *,
-        base_id: AssetId,
-        quote_id: AssetId,
-        timestamp: datetime,
-        reason: str,
-    ) -> None:
-        super().__init__(
-            f"Required price unavailable: base={base_id} quote={quote_id} timestamp={timestamp.isoformat()}. {reason}"
-        )
-        self.base_id = base_id
-        self.quote_id = quote_id
-        self.timestamp = timestamp
-        self.reason = reason
+@dataclass(frozen=True)
+class PriceRecord:
+    base_id: AssetId
+    quote_id: AssetId
+    rate: Decimal | None
+    source: str
+    valid_from: datetime
+    valid_to: datetime
+    fetched_at: datetime
 
 
 class PriceProvider(Protocol):
-    """Lookup interface for asset→quote rates."""
+    def rate(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal | None: ...
 
-    def rate(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> Decimal: ...
+
+class PriceSource(Protocol):
+    def fetch_record(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceRecord: ...
+
+
+class PriceCache(Protocol):
+    def write(self, record: PriceRecord) -> None: ...
+
+    def read(self, base_id: AssetId, quote_id: AssetId, timestamp: datetime) -> PriceRecord | None: ...

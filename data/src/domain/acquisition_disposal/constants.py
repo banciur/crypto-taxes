@@ -1,20 +1,9 @@
+from config import FIAT_CURRENCY_CODES, STABLE_ASSETS_BY_PEG
+
 from ..ledger import AssetId
 
-BASE_CURRENCY_ASSET_ID = AssetId("EUR")
-VALUATION_FIAT_ANCHOR_ASSET_IDS = frozenset(
-    {
-        BASE_CURRENCY_ASSET_ID,
-        AssetId("USD"),
-    }
-)
-VALUATION_STABLE_ANCHOR_ASSET_IDS = frozenset(
-    {
-        AssetId("USDC"),
-        AssetId("USDT"),
-        AssetId("GHO"),
-    }
-)
-VALUATION_ANCHOR_ASSET_IDS = VALUATION_FIAT_ANCHOR_ASSET_IDS | VALUATION_STABLE_ANCHOR_ASSET_IDS
+_STABLE_ASSET_IDS = frozenset(stable for stables in STABLE_ASSETS_BY_PEG.values() for stable in stables)
+VALUATION_ANCHOR_ASSET_IDS = FIAT_CURRENCY_CODES | _STABLE_ASSET_IDS
 
 
 def is_valuation_anchor(asset_id: AssetId) -> bool:
@@ -22,4 +11,4 @@ def is_valuation_anchor(asset_id: AssetId) -> bool:
 
 
 def is_fifo_tracked_asset(asset_id: AssetId) -> bool:
-    return asset_id not in VALUATION_FIAT_ANCHOR_ASSET_IDS
+    return asset_id not in FIAT_CURRENCY_CODES

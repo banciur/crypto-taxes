@@ -2,10 +2,12 @@ from collections.abc import Sequence
 from datetime import datetime
 from decimal import Decimal
 
+from config import BASE_CURRENCY_ASSET_ID
+
 from ..ledger import AssetId
-from ..pricing import PriceProvider, RequiredPriceUnavailableError
-from .constants import BASE_CURRENCY_ASSET_ID, is_valuation_anchor
-from .errors import AcquisitionDisposalValuationError, RequiredValuationPriceUnavailableError
+from ..pricing import PriceProvider
+from .constants import is_valuation_anchor
+from .errors import AcquisitionDisposalValuationError
 from .pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
 
 
@@ -42,15 +44,12 @@ def _value_non_fee_groups(
     unknown_group: _ProjectedAssetResidualGroup | None = None
 
     for group in projected_event.non_fee_groups:
-        direct_rate = _try_direct_rate(
-            asset_id=group.asset_id,
-            timestamp=timestamp,
-            price_provider=price_provider,
-        )
+        direct_rate = price_provider.rate(group.asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
         if direct_rate is None:
             if is_valuation_anchor(group.asset_id):
                 raise AcquisitionDisposalValuationError(
-                    f"Valuation anchor asset cannot be priced directly in EUR: asset={group.asset_id}."
+                    f"Valuation anchor asset cannot be priced directly in {BASE_CURRENCY_ASSET_ID}: "
+                    f"asset={group.asset_id}."
                 )
             if unknown_group is not None:
                 raise AcquisitionDisposalValuationError(
@@ -91,14 +90,11 @@ def _value_fee_groups(
             fee_prices[group.asset_id] = non_fee_prices[group.asset_id]
             continue
 
-        direct_rate = _try_direct_rate(
-            asset_id=group.asset_id,
-            timestamp=timestamp,
-            price_provider=price_provider,
-        )
+        direct_rate = price_provider.rate(group.asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
         if direct_rate is None:
             raise AcquisitionDisposalValuationError(
-                f"Fee asset appears only in fee legs and cannot be priced in EUR: asset={group.asset_id}."
+                f"Fee asset appears only in fee legs and cannot be priced in {BASE_CURRENCY_ASSET_ID}: "
+                f"asset={group.asset_id}."
             )
         fee_prices[group.asset_id] = direct_rate
 
@@ -278,19 +274,3 @@ def _group_net_quantity(group: _ProjectedAssetResidualGroup) -> Decimal:
 
 def _format_asset_ids(groups: Sequence[_ProjectedAssetResidualGroup]) -> str:
     return ",".join(str(group.asset_id) for group in groups)
-
-
-def _try_direct_rate(
-    *,
-    asset_id: AssetId,
-    timestamp: datetime,
-    price_provider: PriceProvider,
-) -> Decimal | None:
-    if asset_id == BASE_CURRENCY_ASSET_ID:
-        return Decimal(1)
-    try:
-        return price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
-    except RequiredPriceUnavailableError as error:
-        raise RequiredValuationPriceUnavailableError(pricing_error=error) from error
-    except Exception:
-        return None

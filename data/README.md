@@ -49,7 +49,12 @@
 - Tax-event generation and the weekly summary remain unreachable dead code below the `COMPLETED` return, pending a future `TAX_COMPUTATION` stage.
 
 ### Price services
-- `src/services/price_service.py`, `price_store.py`, `price_sources.py` implement the caching layer used by the domain `PriceProvider`.
+- `src/services/price_service.py` implements the domain `PriceProvider`, resolving `base -> quote`
+  as a cross-rate through a single configured numeraire pivot (USD), with stablecoins pegged to
+  their fiat currency and directional edges cached in SQLite (`src/db/price_cache.py`).
+- `src/services/price_resolver.py` only routes a fetch to the owning provider (fiat vs crypto).
+- Pricing contracts and records live in `src/domain/pricing.py`; provider HTTP clients live in
+  `src/clients/`. Pricing model constants (numeraire, fiat codes, stable pegs) live in `config`.
 
 ### Data importers
 - Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `event_origin`/`ingestion` metadata.
