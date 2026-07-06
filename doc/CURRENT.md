@@ -57,6 +57,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Swaps and trades net exchange fees into the same-asset leg when possible.
 - If a fee is taken in a third asset that is not otherwise part of the event, that fee becomes its own explicit disposal leg.
 - Gas and similar execution costs are always separate disposals.
+- Reverted on-chain transactions move no value, so they contribute only the gas disposal; their attempted transfers are dropped.
 - Explicit fee legs stay explicit downstream through `is_fee=True`.
 - `EUR`, configured fiat currencies, and selected stable assets act as valuation anchors. Fiat anchors do not open or consume FIFO lots; selected stable assets still do.
 - Asset prices are resolved as cross-rates through a configured numeraire pivot (USD), with stablecoins valued via the fiat currency they are pegged to. A genuinely unavailable market price is a first-class "unpriceable" signal that feeds remainder solving; an operational price-backend failure aborts the run.
