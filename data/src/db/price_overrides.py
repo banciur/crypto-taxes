@@ -1,5 +1,4 @@
 from decimal import Decimal
-from pathlib import Path
 from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, Index, String, Uuid, select
@@ -7,7 +6,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, rela
 
 from db.base import DecimalAsString
 from db.mixins import TimestampAuditMixin
-from db.session import init_db_session
 from domain.ledger import AssetId, EventLocation, EventOrigin
 from domain.price_override import PriceOverride, PriceOverrideDraft, PriceOverrideId
 
@@ -45,15 +43,6 @@ class PriceOverrideSourceOrm(PriceOverridesBase):
     )
 
     override: Mapped[PriceOverrideOrm] = relationship(back_populates="sources")
-
-
-def init_price_overrides_db(*, db_path: Path, echo: bool = False, reset: bool = False) -> Session:
-    return init_db_session(
-        db_path=db_path,
-        metadata=PriceOverridesBase.metadata,
-        echo=echo,
-        reset=reset,
-    )
 
 
 class PriceOverrideRepository:

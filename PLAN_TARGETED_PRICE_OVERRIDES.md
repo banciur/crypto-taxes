@@ -122,8 +122,9 @@ corrections.
   strictly-positive `rate_eur`. Add unit tests for the validators.
 
 - [x] **Persistence.** Add `PRICE_OVERRIDES_DB_PATH` to `config`, the `price_overrides` / `price_override_sources`
-  ORM tables, an init function, and a `PriceOverrideRepository` with `list`, `create`, and `delete` under `src/db/`.
-  Add repository tests (round-trip, source set persistence, delete).
+  ORM tables under `PriceOverridesBase`, and a `PriceOverrideRepository` with `list`, `create`, and `delete` under
+  `src/db/`. `main.py` opens the DB by inlining `init_db_session` with `PriceOverridesBase.metadata` (same as the
+  sibling corrections DB). Add repository tests (round-trip, source set persistence, delete).
 
 - [x] **Resolution logic.** Add `resolve_price_overrides(corrected_events, corrections, overrides)` and
   `PriceOverrideResolutionError` in the acquisition/disposal domain package. Cover with tests: passthrough resolve,
@@ -135,7 +136,7 @@ corrections.
   covering: override supplies an otherwise-unpriceable non-fee asset, override on a fee-only asset, and an override
   rate flowing through rebalancing/remainder solving.
 
-- [ ] **Projector + main wiring.** Thread `overrides_by_event_origin` into `AcquisitionDisposalProjector.project`
+- [x] **Projector + main wiring.** Thread `overrides_by_event_origin` into `AcquisitionDisposalProjector.project`
   (looked up per event by `event.event_origin`). In `src/main.py`, load overrides, call `resolve_price_overrides`
   against the corrected events and corrections before projection, pass the result to the projector, and let a
   `PriceOverrideResolutionError` fail the `ACQUISITION_DISPOSAL` stage. Add a projector test with overrides applied.

@@ -32,7 +32,7 @@ def test_valuation_error_includes_event_context() -> None:
     )
 
     with pytest.raises(AcquisitionDisposalProjectionError) as exc_info:
-        AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project([event])
+        AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project([event], overrides_by_event_origin={})
 
     message = str(exc_info.value)
     assert f"asset={LP}" in message
@@ -41,6 +41,25 @@ def test_valuation_error_includes_event_context() -> None:
     assert exc_info.value.event == event
     assert isinstance(exc_info.value, AcquisitionDisposalValuationError)
     assert EUR not in message
+
+
+def test_override_prices_otherwise_unpriceable_acquisition() -> None:
+    event = make_event(
+        legs=[make_leg(asset_id=LP, quantity=Decimal("2"))],
+        timestamp=BASE_TIMESTAMP,
+    )
+    overrides_by_event_origin = {event.event_origin: {LP: Decimal("1500")}}
+
+    projection = AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project(
+        [event],
+        overrides_by_event_origin=overrides_by_event_origin,
+    )
+
+    assert len(projection.acquisition_lots) == 1
+    lot = projection.acquisition_lots[0]
+    assert lot.asset_id == LP
+    assert lot.quantity_acquired == Decimal("2")
+    assert lot.cost_per_unit == Decimal("1500")
 
 
 def test_unpriceable_anchor_error_includes_event_context() -> None:
@@ -52,7 +71,7 @@ def test_unpriceable_anchor_error_includes_event_context() -> None:
     )
 
     with pytest.raises(AcquisitionDisposalProjectionError) as exc_info:
-        AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project([event])
+        AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project([event], overrides_by_event_origin={})
 
     message = str(exc_info.value)
     assert "Valuation anchor asset" in message
