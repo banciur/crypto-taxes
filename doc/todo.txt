@@ -5,16 +5,12 @@ TODO: Price asset-id normalization (upper-casing) happens three times on the sam
   each client's fetch_record uppercases once more (e.g. CoinMarketCapClient, OpenExchangeRatesClient).
   Every layer defends itself instead of trusting the caller. Pick one owner (the PriceService entry
   point is the natural one) and let the resolver + clients assume already-normalized AssetIds.
-TODO: Pricing resolves cross-rates through a single numeraire pivot only. Multi-hop resolution
-  (arbitrary paths beyond one numeraire pivot) is deferred; the raw directional edge store does
-  not block adding it later.
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
-TODO:
-TODO: NEU pricing and transfers case of sending NEU to no longer existing exchanges (will have the same with polygon network). Idea is to have own "fake wallet" and do operations there.
 TODO: On 2006-02-09 there is an interesting case of moving money from base to eth through coinbase and I had to pay a fee on coinbase. See if the system can handle that correctly if I collapse this to two fees and money lost on the transfer.
 
 Review the order of todos
 -----------------
+TODO: Case of sending NEU to no longer existing exchanges. Similar case would be when I send some value to Polygon and ten retrved it. One idea is to have own "fake wallet" that will store those and some operations happened there.
 TODO: We introduced pegged stables, but it might be mistake. Stables sometimes depeg so maybe we should treat them as other coins and limit valuation only to stables.
 TODO: ui/src/components/SystemState and ui/src/components/WalletProjection are vibed not checked and are very bad but should be refactored.
 TODO: In valuation during acquisition / disposal matching I have a mid-point rule which might be not correct for Germany. Review it. Even if it is correct review the logic and tests again initial task was done a bit fast.
@@ -29,6 +25,7 @@ TODO: In a few places there are functions like _decimal_from_atomic_value unify 
 TODO: Idea to review. Add the ability to quickly navigate to the first failing transaction.
 TODO: Add value of current wallet balances
 TODO: Implement more sophisticated logic for tokens to handle this logic when a token with the same name on different chains might have different value and those are not spam tokens. I think its fGHO case (fluid repos)
+TODO: Token registry topic. CMC has problem resolving tokens by token name, we also have coinbase and kraken at some point binance.
 TODO: Another review of fee legs. Now without is_fee (or equivalent semantics), residual same-asset differences in transfer-like events (onchain with gas) require partial leg decomposition, and the current engine can only classify whole legs, causing misclassification of internal transfers as taxable disposals/acquisitions.
 TODO: Hide checkboxes for raw events that already have a correction.
 TODO: In tests there are two or three places where test instances LedgerEvents are generated. Those should be combined into one helper.
