@@ -256,7 +256,7 @@ def test_failed_tx_keeps_only_gas_fee_leg(test_ctx: _ImporterTestContext) -> Non
     event = test_ctx.importer._build_event(tx)
 
     assert event is not None
-    assert event.note == "tx failed: swapExactETHForTokens"
+    assert event.note == "tx failed | swapExactETHForTokens"
     assert len(event.legs) == 1
     leg = event.legs[0]
     assert leg.asset_id == ETH
