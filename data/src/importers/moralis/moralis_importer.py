@@ -46,6 +46,20 @@ class MoralisEventParseError(MoralisImporterError):
     pass
 
 
+def _is_tx_failed(tx: Mapping[str, Any]) -> bool:
+    """Return True when the transaction reverted on-chain.
+
+    Moralis exposes the EVM receipt status as "1" (success) or "0" (failed). A reverted
+    transaction rolls back every value movement, so only the gas is actually spent. Pre-Byzantium
+    transactions predate receipt status; when it is absent we cannot prove failure and treat the
+    transaction as successful.
+    """
+    receipt_status = tx.get("receipt_status")
+    if receipt_status is None:
+        return False
+    return str(receipt_status).strip() == "0"
+
+
 def _normalize_address(raw_value: object) -> str:
     return str(raw_value).strip().lower()
 
@@ -267,6 +281,7 @@ class MoralisImporter:
     def _build_event(self, tx: Mapping[str, Any]) -> LedgerEvent | None:
         location = tx["location"]
         tx_hash = str(tx["hash"])
+        tx_failed = _is_tx_failed(tx)
         native_transfers = _dedupe_native_transfers(cast(list, tx["native_transfers"]))
 
         try:
@@ -290,20 +305,23 @@ class MoralisImporter:
                     )
                 )
 
-                native_transfers = self._filter_fee_native_transfers(
-                    location=location,
-                    tx=tx,
-                    native_transfers=native_transfers,
-                    fee=fee,
-                )
+                if not tx_failed:
+                    native_transfers = self._filter_fee_native_transfers(
+                        location=location,
+                        tx=tx,
+                        native_transfers=native_transfers,
+                        fee=fee,
+                    )
 
-            legs_for_transfer = partial(self._legs_for_transfer, location=location)
+            # A reverted transaction moves no value; only the gas fee leg above survives.
+            if not tx_failed:
+                legs_for_transfer = partial(self._legs_for_transfer, location=location)
 
-            for transfer in native_transfers:
-                legs.extend(legs_for_transfer(transfer, asset_id_for_transfer=native_asset_id))
+                for transfer in native_transfers:
+                    legs.extend(legs_for_transfer(transfer, asset_id_for_transfer=native_asset_id))
 
-            for transfer in cast(list, tx["erc20_transfers"]):
-                legs.extend(legs_for_transfer(transfer, asset_id_for_transfer=erc20_asset_id))
+                for transfer in cast(list, tx["erc20_transfers"]):
+                    legs.extend(legs_for_transfer(transfer, asset_id_for_transfer=erc20_asset_id))
         except MoralisValueParseError as exc:
             raise MoralisEventParseError(
                 f"Failed to parse Moralis event numeric field for tx={tx_hash} location={location.value}: {exc}"
@@ -314,10 +332,14 @@ class MoralisImporter:
             # This could be NFT drop probably (probably spam)
             return None
 
+        note = str(tx.get("method_label") or "").strip() or None
+        if tx_failed:
+            note = f"tx failed | {note}" if note else "tx failed"
+
         return LedgerEvent(
             timestamp=ensure_utc_datetime(datetime.fromisoformat(tx["block_timestamp"].replace("Z", "+00:00"))),
             event_origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
-            note=str(tx.get("method_label") or "").strip() or None,
+            note=note,
             legs=legs,
         )

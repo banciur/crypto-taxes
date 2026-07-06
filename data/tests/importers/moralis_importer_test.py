@@ -41,6 +41,7 @@ def _build_tx(
     transaction_fee: str = "0",
     method_label: str | None = None,
     possible_spam: bool | None = None,
+    receipt_status: str | None = None,
 ) -> dict[str, object]:
     tx: dict[str, object] = {
         "block_timestamp": BLOCK_TS,
@@ -55,6 +56,8 @@ def _build_tx(
         tx["method_label"] = method_label
     if possible_spam is not None:
         tx["possible_spam"] = possible_spam
+    if receipt_status is not None:
+        tx["receipt_status"] = receipt_status
     return tx
 
 
@@ -221,6 +224,94 @@ def test_fee_leg_added_for_outgoing_tx(test_ctx: _ImporterTestContext) -> None:
     assert leg.quantity == -fee
     assert leg.account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
     assert leg.is_fee is True
+
+
+def test_failed_tx_keeps_only_gas_fee_leg(test_ctx: _ImporterTestContext) -> None:
+    fee = Decimal("0.003337834")
+    tx = _build_tx(
+        native_transfers=[
+            _outgoing_native_transfer(
+                amount=Decimal("0.25"),
+                value="250000000000000000",
+                to_address=ETH_ADDRESS_2,
+            )
+        ],
+        erc20_transfers=[
+            _erc20_transfer(
+                from_address=ETH_ADDRESS,
+                to_address=ETH_ADDRESS_2,
+                amount=Decimal("100"),
+                symbol="USDC",
+                token="0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+                value="100000000",
+                token_decimals="6",
+            )
+        ],
+        from_address=ETH_ADDRESS,
+        transaction_fee=str(fee),
+        method_label="swapExactETHForTokens",
+        receipt_status="0",
+    )
+
+    event = test_ctx.importer._build_event(tx)
+
+    assert event is not None
+    assert event.note == "tx failed: swapExactETHForTokens"
+    assert len(event.legs) == 1
+    leg = event.legs[0]
+    assert leg.asset_id == ETH
+    assert leg.quantity == -fee
+    assert leg.is_fee is True
+    assert leg.account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
+
+
+def test_failed_tx_without_method_label_notes_only_failure(test_ctx: _ImporterTestContext) -> None:
+    tx = _build_tx(
+        native_transfers=[],
+        from_address=ETH_ADDRESS,
+        transaction_fee="0.001",
+        receipt_status="0",
+    )
+
+    event = test_ctx.importer._build_event(tx)
+
+    assert event is not None
+    assert event.note == "tx failed"
+
+
+def test_failed_tx_with_unowned_sender_is_skipped(test_ctx: _ImporterTestContext) -> None:
+    tx = _build_tx(
+        native_transfers=[_native_transfer(Decimal("0.5"))],
+        from_address=ETH_ADDRESS_2,
+        transaction_fee="0.001",
+        receipt_status="0",
+    )
+
+    assert test_ctx.importer._build_event(tx) is None
+
+
+def test_successful_receipt_status_preserves_transfer_legs(test_ctx: _ImporterTestContext) -> None:
+    fee = Decimal("0.0025")
+    tx = _build_tx(
+        native_transfers=[
+            _outgoing_native_transfer(
+                amount=Decimal("0.25"),
+                value="250000000000000000",
+                to_address=ETH_ADDRESS_2,
+            )
+        ],
+        from_address=ETH_ADDRESS,
+        transaction_fee=str(fee),
+        receipt_status="1",
+    )
+
+    event = test_ctx.importer._build_event(tx)
+
+    assert event is not None
+    assert {(leg.asset_id, leg.is_fee): leg.quantity for leg in event.legs} == {
+        (ETH, False): Decimal("-0.25"),
+        (ETH, True): -fee,
+    }
 
 
 def test_method_label_is_trimmed_into_event_note(test_ctx: _ImporterTestContext) -> None:

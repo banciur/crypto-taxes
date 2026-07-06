@@ -11,6 +11,7 @@
   - Collapse legs by (`asset_id`, `account_chain_id`, `is_fee`) inside each transaction so same-token round-trips net to one leg.
   - Filter out from native transfers ones that Moralis sends as part of the fee (probably a bug).
   - Add a fee leg from `transaction_fee` when tx sender resolves to an owned account (`ETH`, `is_fee=True`).
+  - Failed transactions (`receipt_status == "0"`) import only the gas fee leg; all native and ERC20 transfers are dropped because a reverted tx moves no value, and the event `note` is prefixed with `tx failed`. Missing/absent `receipt_status` (pre-Byzantium) is treated as success.
   - Set `LedgerEvent.note` from Moralis `method_label` after trimming whitespace; leave it empty when Moralis does not provide a method label.
   - Event emission: emit an event when there is at least one owned leg; otherwise skip tx.
   - Automatic discard persistence: when a transaction emits an event and Moralis sets `possible_spam=true`, the importer writes a source-backed `LedgerCorrection` with no legs, unless that source already has an active correction or a source-level auto-suppression.
