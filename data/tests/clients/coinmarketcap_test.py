@@ -171,6 +171,26 @@ def test_zero_candidate_discovery_raises(tmp_path: Path) -> None:
     assert not (tmp_path / "cmc_asset_map.json").exists()
 
 
+def test_invalid_symbol_error_returns_unpriceable_record(tmp_path: Path) -> None:
+    symbol = AssetId("UNI-V2")
+    session = Mock()
+    session.get.return_value = _http_error_response(
+        400, {"status": {"error_code": 400, "error_message": f'Invalid value for "symbol": "{symbol}"'}}
+    )
+
+    record = _client(session, tmp_path).fetch_record(symbol, USD, timestamp=_OLD)
+
+    assert record.base_id == symbol
+    assert record.quote_id == USD
+    assert record.rate is None
+    assert record.source == "coinmarketcap"
+    assert record.valid_from == datetime(2020, 1, 1, tzinfo=timezone.utc)
+    assert record.valid_to == record.valid_from + timedelta(days=1)
+    assert session.get.call_count == 1
+    assert _MAP_PATH in session.get.call_args.args[0]
+    assert not (tmp_path / "cmc_asset_map.json").exists()
+
+
 def test_ambiguous_candidate_discovery_raises_with_details(tmp_path: Path) -> None:
     session = Mock()
     session.get.return_value = _mock_response(

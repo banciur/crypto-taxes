@@ -92,9 +92,17 @@ class CoinMarketCapClient:
         base = AssetId(base_id.upper())
         quote = AssetId(quote_id.upper())
 
-        cmc_id = self._resolve_cmc_id(base)
         interval = self._select_interval(timestamp)
-        rate = self._fetch_price(cmc_id=cmc_id, quote=quote, interval=interval)
+        try:
+            cmc_id = self._resolve_cmc_id(base)
+        except CoinMarketCapAPIError as exc:
+            if _is_invalid_symbol_error(exc, base):
+                logger.info("CoinMarketCap rejected symbol %s as invalid; treating it as unpriceable", base)
+                rate = None
+            else:
+                raise
+        else:
+            rate = self._fetch_price(cmc_id=cmc_id, quote=quote, interval=interval)
 
         return PriceRecord(
             base_id=base,
@@ -291,3 +299,7 @@ def _floor_to_five_minutes(moment: datetime) -> datetime:
 
 def _floor_to_day(moment: datetime) -> datetime:
     return moment.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def _is_invalid_symbol_error(error: CoinMarketCapAPIError, symbol: AssetId) -> bool:
+    return str(error) == f'Invalid value for "symbol": "{symbol}"'
