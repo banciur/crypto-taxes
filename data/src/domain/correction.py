@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from domain.ledger import EventOrigin, LedgerLeg
+from domain.ledger import EventLocation, EventOrigin, LedgerLeg
 from domain.validation import reject_duplicate_items, reject_internal_origins
 from pydantic_base import StrictBaseModel
 
@@ -46,3 +46,7 @@ class LedgerCorrectionDraft(StrictBaseModel):
 
 class LedgerCorrection(LedgerCorrectionDraft):
     id: CorrectionId = CorrectionId(Field(default_factory=uuid4))
+
+    @property
+    def synthetic_event_origin(self) -> EventOrigin:
+        return EventOrigin(location=EventLocation.INTERNAL, external_id=str(self.id))

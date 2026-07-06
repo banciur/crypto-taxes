@@ -50,22 +50,24 @@ specific corrected event, so events the market backend cannot price (or prices w
 
 ### Domain overview
 
-An override is identified by the **set of raw source `EventOrigin`s** of the economic transaction it prices, plus
-the `asset_id` it applies to and the EUR per-unit `rate`. This mirrors the ownership model already enforced by the
-corrections layer:
+An override is identified by the **set of raw source `EventOrigin`s** of the corrected event it prices, plus the
+`asset_id` it applies to and the EUR per-unit `rate`. It is matched against a corrected event by that event's own
+source set:
 
 - The corrected-events stream that valuation runs on (`AcquisitionDisposalProjector.project`) contains either
-  passthrough raw events (origin = the raw `EventOrigin`) or synthetic correction events
-  (origin = `(INTERNAL, correction.id)`, built by `ledger_event_from_correction`).
+  passthrough raw events (source set = `{own raw origin}`) or synthetic correction events (origin =
+  `(INTERNAL, correction.id)`, built by `ledger_event_from_correction`; source set = the raw origins the correction
+  claimed).
 - Every raw origin is claimed by at most one correction (DB-enforced by the unique index
-  `uq_ledger_correction_sources_active_origin` on `(origin_location, origin_external_id)`), so a raw origin maps to
-  exactly one place in the corrected stream: its own passthrough event, the synthetic event of the replacement that
-  claimed it, or nothing (claimed by a discard).
+  `uq_ledger_correction_sources_active_origin`), and passthrough origins are unique, so each source set identifies at
+  most one corrected event with no collisions.
 
-Keying on raw source origins (not on the corrected event's own origin) makes an override **follow its transaction
-across the corrections boundary**: an override authored against a raw event keeps resolving to the synthetic event
-after that raw event is later folded into a replacement correction. Because synthetic origins are UUID-derived and
-never persisted, the override references only durable raw origins and is re-resolved on every rebuild.
+An override resolves only when its source set **exactly equals** a corrected event's source set. This deliberately
+does **not** follow an event across a re-grouping: if a correction later merges more raw events into the priced event,
+splits it, or discards it, the override's set no longer matches and resolution raises so the operator can delete it
+and, if the price is still wanted, re-author it against the new event. An exact-source replacement (a correction that
+claims precisely the override's source set) still matches — the source set still uniquely identifies the event and a
+per-unit rate stays valid; if that replacement drops the priced asset, the asset-not-present check raises instead.
 
 Opening-balance corrections have no sources, so they are not addressable by this feature — which is the intended
 limitation, not a bug to work around.
@@ -88,14 +90,15 @@ Domain model `PriceOverride`:
 
 ### Resolution rules (re-run on every rebuild)
 
-`resolve_price_overrides(corrected_events, corrections, overrides)` builds a `raw_origin -> corrected_event`
-ownership index and returns `by_event_origin: dict[EventOrigin, dict[AssetId, Decimal]]`, keyed by the in-memory
-origin of the corrected event each override resolves to.
+`resolve_price_overrides(corrected_events, corrections, overrides)` indexes corrected events by their source set
+(`frozenset[EventOrigin] -> LedgerEvent`) and returns `by_event_origin: dict[EventOrigin, dict[AssetId, Decimal]]`,
+keyed by the origin of the corrected event each override resolves to.
 
 For each override, these conditions are surfaced as resolution problems:
-- an origin in `sources` resolves to no corrected event (unclaimed-but-absent, or claimed by a discard),
-- the origins in `sources` resolve to more than one distinct corrected event,
-- `asset_id` is not present among the resolved event's legs.
+- its source set matches no corrected event (unclaimed-but-absent, claimed by a discard, or the event was re-grouped
+  so its current source set differs — merge/split),
+- `asset_id` is not present among the resolved event's legs,
+- another override already prices the same `asset_id` on the same resolved event (conflict).
 
 A resolution problem aborts the `ACQUISITION_DISPOSAL` stage with a `PriceOverrideResolutionError` that lists every
 offending override, recorded as a `FAILED` `SystemState` (consistent with how correction validation fails a run).
@@ -122,7 +125,7 @@ corrections.
   ORM tables, an init function, and a `PriceOverrideRepository` with `list`, `create`, and `delete` under `src/db/`.
   Add repository tests (round-trip, source set persistence, delete).
 
-- [ ] **Resolution logic.** Add `resolve_price_overrides(corrected_events, corrections, overrides)` and
+- [x] **Resolution logic.** Add `resolve_price_overrides(corrected_events, corrections, overrides)` and
   `PriceOverrideResolutionError` in the acquisition/disposal domain package. Cover with tests: passthrough resolve,
   replacement resolve (override follows a raw origin into its replacement's synthetic event), discard/unresolved
   problem, split-across-events problem, and asset-not-in-event problem.
