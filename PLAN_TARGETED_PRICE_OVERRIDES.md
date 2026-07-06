@@ -118,7 +118,7 @@ corrections.
   `src/domain/`, with validation: non-empty `sources`, no `INTERNAL` origins in `sources`, upper-cased `asset_id`,
   strictly-positive `rate_eur`. Add unit tests for the validators.
 
-- [ ] **Persistence.** Add `PRICE_OVERRIDES_DB_PATH` to `config`, the `price_overrides` / `price_override_sources`
+- [x] **Persistence.** Add `PRICE_OVERRIDES_DB_PATH` to `config`, the `price_overrides` / `price_override_sources`
   ORM tables, an init function, and a `PriceOverrideRepository` with `list`, `create`, and `delete` under `src/db/`.
   Add repository tests (round-trip, source set persistence, delete).
 
