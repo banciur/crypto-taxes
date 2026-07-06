@@ -21,7 +21,7 @@ FIAT_CURRENCY_CODES = frozenset({AssetId("EUR"), AssetId("USD")})
 
 STABLE_ASSETS_BY_PEG: dict[AssetId, frozenset[AssetId]] = {
     AssetId("USD"): frozenset({AssetId("USDC"), AssetId("USDT"), AssetId("DAI"), AssetId("GHO")}),
-    AssetId("EUR"): frozenset({AssetId("EURC")}),
+    AssetId("EUR"): frozenset({AssetId("EURC"), AssetId("EUR-T")}),
 }
 
 
