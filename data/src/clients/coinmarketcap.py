@@ -1,4 +1,6 @@
 # This file is completely vibed and I didn't read it.
+# CoinMarketCap docs for humans: https://coinmarketcap.com/api/documentation/
+# CoinMarketCap docs for LLMs: https://pro.coinmarketcap.com/llms.txt
 
 import json
 import logging

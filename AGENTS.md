@@ -20,6 +20,10 @@ This repository builds a local-first pipeline for ingesting crypto activity, tra
 
 - Secrets, API keys and general configuration live in `data/.env` (see `data/.env.example`). **NEVER** commit this file. 
 
+## Preserved human-only comments
+
+- **LLMs MUST NEVER REMOVE comments such as `# This file is completely vibed and I didn't read it.` Only a human may remove or alter these comments. Treat them as explicit human-owned markers, even when editing nearby code.**
+
 ## Documentation hierarchy
 - `AGENTS.md` is the top-level map. Keep it limited to repo-wide structure, document ownership, and rules for how to find further guidance. Do not add feature-specific behavior here unless it is truly cross-cutting and important at the repository level.
 - `doc/CURRENT.md` is the canonical description of the currently implemented business/domain behavior and cross-cutting system capabilities.
