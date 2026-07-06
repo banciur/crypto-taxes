@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(make -C data code_fix)",
-      "Bash(make -C data test)"
+      "Bash(make code_fix)",
+      "Bash(make -C data test)",
+      "Bash(make test)",
+      "Bash(uv run --group dev pytest:*)"
     ]
   }
 }

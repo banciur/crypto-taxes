@@ -114,7 +114,7 @@ corrections.
 
 ## Steps
 
-- [ ] **Domain model.** Add `PriceOverride` (and a `PriceOverrideDraft` if the create path needs one) under
+- [x] **Domain model.** Add `PriceOverride` (and a `PriceOverrideDraft` if the create path needs one) under
   `src/domain/`, with validation: non-empty `sources`, no `INTERNAL` origins in `sources`, upper-cased `asset_id`,
   strictly-positive `rate_eur`. Add unit tests for the validators.
 

@@ -1,10 +1,11 @@
 from datetime import datetime
-from typing import Any, NewType, Self
+from typing import Any, NewType, Self, cast
 from uuid import UUID, uuid4
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from domain.ledger import EventLocation, EventOrigin, LedgerLeg
+from domain.ledger import EventOrigin, LedgerLeg
+from domain.validation import reject_duplicate_items, reject_internal_origins
 from pydantic_base import StrictBaseModel
 
 CorrectionId = NewType("CorrectionId", UUID)
@@ -19,21 +20,10 @@ class LedgerCorrectionDraft(StrictBaseModel):
     @field_validator("sources", "legs", mode="before")
     @classmethod
     def reject_duplicates(cls, value: Any, info: ValidationInfo) -> Any:
-        if not isinstance(value, (list, tuple, set, frozenset)):
-            return value
-
-        normalized_items: list[StrictBaseModel]
-        if info.field_name == "sources":
-            normalized_items = [EventOrigin.model_validate(item) for item in value]
-        elif info.field_name == "legs":
-            normalized_items = [LedgerLeg.model_validate(item) for item in value]
-        else:
-            raise ValueError(f"Unsupported duplicate validation field: {info.field_name}")
-
-        if len(normalized_items) != len(set(normalized_items)):
-            raise ValueError(f"{info.field_name} must not contain duplicates")
-
-        return value
+        # For bound field validator info.field_name is never None
+        field_name = cast(str, info.field_name)
+        item_model = EventOrigin if field_name == "sources" else LedgerLeg
+        return reject_duplicate_items(value, item_model=item_model, field_name=field_name)
 
     @model_validator(mode="after")
     def _validate_shape(self) -> Self:
@@ -50,8 +40,7 @@ class LedgerCorrectionDraft(StrictBaseModel):
                 raise ValueError("Source-less LedgerCorrection leg must not be a fee")
             return self
 
-        if any(source.location == EventLocation.INTERNAL for source in self.sources):
-            raise ValueError("LedgerCorrection.sources must not contain INTERNAL origins")
+        reject_internal_origins(self.sources)
         return self
 
 
