@@ -44,11 +44,13 @@ def test_valuation_error_includes_event_context() -> None:
 
 
 def test_override_prices_otherwise_unpriceable_acquisition() -> None:
+    lp_quantity = Decimal("2")
+    lp_override_rate = Decimal("1500")
     event = make_event(
-        legs=[make_leg(asset_id=LP, quantity=Decimal("2"))],
+        legs=[make_leg(asset_id=LP, quantity=lp_quantity)],
         timestamp=BASE_TIMESTAMP,
     )
-    overrides_by_event_origin = {event.event_origin: {LP: Decimal("1500")}}
+    overrides_by_event_origin = {event.event_origin: {LP: lp_override_rate}}
 
     projection = AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project(
         [event],
@@ -58,8 +60,8 @@ def test_override_prices_otherwise_unpriceable_acquisition() -> None:
     assert len(projection.acquisition_lots) == 1
     lot = projection.acquisition_lots[0]
     assert lot.asset_id == LP
-    assert lot.quantity_acquired == Decimal("2")
-    assert lot.cost_per_unit == Decimal("1500")
+    assert lot.quantity_acquired == lp_quantity
+    assert lot.cost_per_unit == lp_override_rate
 
 
 def test_unpriceable_anchor_error_includes_event_context() -> None:

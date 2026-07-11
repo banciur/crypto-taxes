@@ -1,7 +1,11 @@
 from decimal import Decimal
 
-from domain.ledger import AccountChainId, AssetId, LedgerLeg
+from domain.ledger import AccountChainId, AssetId, EventLocation, EventOrigin, LedgerLeg
 from tests.constants import BASE_WALLET, ETH
+
+
+def make_origin(external_id: str, *, location: EventLocation = EventLocation.ETHEREUM) -> EventOrigin:
+    return EventOrigin(location=location, external_id=external_id)
 
 
 def make_leg(

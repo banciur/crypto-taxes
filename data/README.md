@@ -58,16 +58,13 @@
   `src/clients/`. Pricing model constants (numeraire, fiat codes, stable pegs) live in `config`.
 
 ### Price overrides
-- `src/domain/price_override.py` owns both the `PriceOverride` model and `validate_overrides`, which
-  checks each override against the corrected events (origin must match one; asset must appear in its
-  legs) and raises `PriceOverrideValidationError` listing every problem.
+- `src/domain/price_override.py` owns the `PriceOverride` model and `validate_overrides`; the
+  targeting, validation, and valuation semantics live in `doc/CURRENT.md`.
 - Overrides live in their own durable store (`artifacts/price_overrides.db`, `src/db/price_overrides.py`),
   a sibling of `corrections.db`. A unique constraint on `(origin_location, origin_external_id, asset_id)`
   makes two competing rates for one asset unrepresentable, so `PriceOverrideRepository.rates_by_origin()`
   can regroup rows for valuation without silently dropping one. `POST /price-overrides` maps that
   constraint's `IntegrityError` to a `409`.
-- Valuation consults an override before the price provider and then treats the rate as an ordinary
-  known one, so it feeds mid-point rebalancing and remainder solving like a fetched rate.
 
 ### Data importers
 - Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `event_origin`/`ingestion` metadata.

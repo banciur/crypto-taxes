@@ -10,16 +10,13 @@ from .constants import is_valuation_anchor
 from .errors import AcquisitionDisposalValuationError
 from .pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
 
-# Empty operator-override map shared as the default; never mutated, so a module constant is safe.
-_NO_OVERRIDES: Mapping[AssetId, Decimal] = {}
-
 
 def value_projected_event(
     projected_event: _ProjectedEvent,
     *,
     timestamp: datetime,
     price_provider: PriceProvider,
-    overrides: Mapping[AssetId, Decimal] = _NO_OVERRIDES,
+    overrides: Mapping[AssetId, Decimal],
 ) -> dict[AssetId, Decimal]:
     non_fee_prices = _value_non_fee_groups(
         projected_event,

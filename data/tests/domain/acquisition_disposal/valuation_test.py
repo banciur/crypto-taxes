@@ -238,15 +238,18 @@ def test_fee_only_asset_without_direct_price_fails() -> None:
 
 def test_override_supplies_price_for_otherwise_unpriceable_asset() -> None:
     # Provider has no price for LP; the override supplies it and the one-sided event values.
+    lp_override_rate = Decimal("42")
     event = make_event(legs=[make_leg(asset_id=LP, quantity=Decimal("1"))])
 
-    rates = _rates_for(event, rates={}, overrides={LP: Decimal("42")})
+    rates = _rates_for(event, rates={}, overrides={LP: lp_override_rate})
 
-    assert rates == {LP: Decimal("42")}
+    assert rates == {LP: lp_override_rate}
 
 
 def test_override_prices_a_fee_only_asset() -> None:
     # Without the override this raises (see test_fee_only_asset_without_direct_price_fails).
+    usdc_rate = Decimal("1")
+    fee_override_rate = Decimal("2000")
     event = make_event(
         legs=[
             make_leg(asset_id=USDC, quantity=Decimal("100")),
@@ -254,9 +257,9 @@ def test_override_prices_a_fee_only_asset() -> None:
         ],
     )
 
-    rates = _rates_for(event, rates={USDC: Decimal("1")}, overrides={FEE_ASSET: Decimal("2000")})
+    rates = _rates_for(event, rates={USDC: usdc_rate}, overrides={FEE_ASSET: fee_override_rate})
 
-    assert rates == {USDC: Decimal("1"), FEE_ASSET: Decimal("2000")}
+    assert rates == {USDC: usdc_rate, FEE_ASSET: fee_override_rate}
 
 
 def test_override_rate_participates_in_midpoint_rebalancing() -> None:
@@ -283,6 +286,7 @@ def test_override_rate_participates_in_midpoint_rebalancing() -> None:
 
 def test_override_rate_feeds_remainder_solving() -> None:
     # ETH known via override, LP unpriceable: LP is solved by remainder against the override rate.
+    eth_override_rate = Decimal("200")
     event = make_event(
         legs=[
             make_leg(asset_id=ETH, quantity=Decimal("-1")),
@@ -290,9 +294,9 @@ def test_override_rate_feeds_remainder_solving() -> None:
         ],
     )
 
-    rates = _rates_for(event, rates={}, overrides={ETH: Decimal("200")})
+    rates = _rates_for(event, rates={}, overrides={ETH: eth_override_rate})
 
-    assert rates == {ETH: Decimal("200"), LP: Decimal("200")}
+    assert rates == {ETH: eth_override_rate, LP: eth_override_rate}
 
 
 def test_negative_remainder_fails() -> None:

@@ -5,13 +5,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.price_overrides import PriceOverrideOrm, PriceOverrideRepository
-from domain.ledger import AssetId, EventLocation, EventOrigin
+from domain.ledger import AssetId, EventLocation
 from domain.price_override import PriceOverrideDraft
 from tests.constants import ETH, USDC
-
-
-def _origin(external_id: str, *, location: EventLocation = EventLocation.ETHEREUM) -> EventOrigin:
-    return EventOrigin(location=location, external_id=external_id)
+from tests.helpers.ledger import make_origin
 
 
 def _draft(
@@ -23,7 +20,7 @@ def _draft(
     note: str | None = None,
 ) -> PriceOverrideDraft:
     return PriceOverrideDraft(
-        event_origin=_origin(external_id, location=location),
+        event_origin=make_origin(external_id, location=location),
         asset_id=AssetId(asset_id),
         rate_eur=Decimal(rate_eur),
         note=note,
@@ -36,7 +33,10 @@ def repo(price_overrides_session: Session) -> PriceOverrideRepository:
 
 
 def test_create_round_trips_all_fields(repo: PriceOverrideRepository) -> None:
-    created = repo.create(_draft(external_id="0xaaa", asset_id="ETH", rate_eur="1234.56", note="OTC deal"))
+    origin = make_origin("0xaaa")
+    rate_eur = Decimal("1234.56")
+    note = "OTC deal"
+    created = repo.create(_draft(external_id=origin.external_id, asset_id=ETH, rate_eur=str(rate_eur), note=note))
 
     listed = repo.list()
 
@@ -44,9 +44,9 @@ def test_create_round_trips_all_fields(repo: PriceOverrideRepository) -> None:
     override = listed[0]
     assert override.id == created.id
     assert override.asset_id == ETH
-    assert override.rate_eur == Decimal("1234.56")
-    assert override.note == "OTC deal"
-    assert override.event_origin == _origin("0xaaa")
+    assert override.rate_eur == rate_eur
+    assert override.note == note
+    assert override.event_origin == origin
 
 
 def test_persists_internal_synthetic_origin(repo: PriceOverrideRepository) -> None:
@@ -57,8 +57,8 @@ def test_persists_internal_synthetic_origin(repo: PriceOverrideRepository) -> No
 
 
 def test_multiple_overrides_may_share_an_event_origin(repo: PriceOverrideRepository) -> None:
-    repo.create(_draft(external_id="0xshared", asset_id="ETH"))
-    repo.create(_draft(external_id="0xshared", asset_id="USDC", rate_eur="1"))
+    repo.create(_draft(external_id="0xshared", asset_id=ETH))
+    repo.create(_draft(external_id="0xshared", asset_id=USDC, rate_eur="1"))
 
     assert {override.asset_id for override in repo.list()} == {ETH, USDC}
 
@@ -72,7 +72,7 @@ def test_rejects_a_second_override_for_the_same_origin_and_asset(repo: PriceOver
 
 def test_rates_by_origin_groups_by_event_origin_then_asset(repo: PriceOverrideRepository) -> None:
     eth_rate, usdc_rate = Decimal("1500"), Decimal("1")
-    priced, other = _origin("0xpriced"), _origin("0xother")
+    priced, other = make_origin("0xpriced"), make_origin("0xother")
     repo.create(_draft(external_id=priced.external_id, asset_id=ETH, rate_eur=str(eth_rate)))
     repo.create(_draft(external_id=priced.external_id, asset_id=USDC, rate_eur=str(usdc_rate)))
     repo.create(_draft(external_id=other.external_id, asset_id=ETH, rate_eur=str(eth_rate)))
