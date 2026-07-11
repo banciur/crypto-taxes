@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import { Badge, Card, CardBody, CardHeader } from "react-bootstrap";
 
 import { clsx } from "clsx";
-import { CorrectionRemoveButton } from "@/components/CorrectionRemoveButton";
+import { RemoveButton } from "@/components/RemoveButton";
 import { LedgerLegList } from "@/components/LedgerLegList";
 import { OriginId } from "@/components/OriginId";
 import { useCorrectionHighlight } from "@/contexts/CorrectionHighlightContext";
@@ -68,7 +68,7 @@ export function LedgerCorrectionCard({
         </Badge>
         <OriginId originId={item.id} className="text-muted small" />
         <span className="text-muted small">{timestampLabel}</span>
-        <CorrectionRemoveButton
+        <RemoveButton
           label={`Remove correction ${item.id}`}
           disabled={actionDisabled}
           onClick={onRemove}

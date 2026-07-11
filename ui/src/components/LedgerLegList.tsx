@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { ListGroup, ListGroupItem } from "react-bootstrap";
 
 import { clsx } from "clsx";
@@ -12,12 +14,15 @@ type LedgerLegListProps = {
   legs: readonly LedgerLeg[];
   className?: string;
   itemClassName?: string;
+  /** Trailing content per leg row, letting callers attach lane-specific affordances. */
+  renderLegAccessory?: (leg: LedgerLeg) => ReactNode;
 };
 
 export function LedgerLegList({
   legs,
   className,
   itemClassName,
+  renderLegAccessory,
 }: LedgerLegListProps) {
   const { resolveAccountName } = useAccountNames();
 
@@ -44,6 +49,7 @@ export function LedgerLegList({
             >
               {quantityPresentation.text}
             </span>
+            {renderLegAccessory?.(leg)}
           </ListGroupItem>
         );
       })}

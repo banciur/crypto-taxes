@@ -9,7 +9,11 @@ import { TimestampBucketRow } from "@/components/TimestampBucketRow";
 import { useVisibleDay } from "@/contexts/VisibleDayContext";
 import { dayIdFor } from "@/lib/dayHash";
 import { dayKeyForTimestampBucket } from "@/lib/timestampBuckets";
-import type { EventOrigin, EventsByTimestamp } from "@/types/events";
+import type {
+  EventOrigin,
+  EventsByTimestamp,
+  PriceOverrideEditorContext,
+} from "@/types/events";
 import { Col, Row } from "react-bootstrap";
 
 type DayHeaderRow = {
@@ -31,18 +35,24 @@ type VirtualizedDateSectionsProps = {
   eventsByTimestamp: EventsByTimestamp;
   selectedEventOriginKeys: ReadonlySet<string>;
   isCorrectionChangePending: boolean;
+  isPriceOverrideChangePending: boolean;
   className?: string;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveCorrection: (correctionId: string) => void;
+  onEditPriceOverride: (context: PriceOverrideEditorContext) => void;
+  onRemovePriceOverride: (priceOverrideId: string) => void;
 };
 
 export function VirtualizedDateSections({
   eventsByTimestamp,
   selectedEventOriginKeys,
   isCorrectionChangePending,
+  isPriceOverrideChangePending,
   className,
   onToggleEventSelection,
   onRemoveCorrection,
+  onEditPriceOverride,
+  onRemovePriceOverride,
 }: VirtualizedDateSectionsProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { activeDayKey, activeDaySource, setActiveDayKey } = useVisibleDay();
@@ -170,8 +180,11 @@ export function VirtualizedDateSections({
                   itemsByColumn={row.itemsByColumn}
                   selectedEventOriginKeys={selectedEventOriginKeys}
                   isCorrectionChangePending={isCorrectionChangePending}
+                  isPriceOverrideChangePending={isPriceOverrideChangePending}
                   onToggleEventSelection={onToggleEventSelection}
                   onRemoveCorrection={onRemoveCorrection}
+                  onEditPriceOverride={onEditPriceOverride}
+                  onRemovePriceOverride={onRemovePriceOverride}
                 />
               )}
             </Row>

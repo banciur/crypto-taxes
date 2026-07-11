@@ -1,3 +1,6 @@
+// The asset every valuation is denominated in. Mirrors `BASE_CURRENCY_ASSET_ID` in the data API.
+export const BASE_CURRENCY_ASSET_ID = "EUR";
+
 export const COLUMN_METADATA = {
   raw: { label: "Raw events", order: 1 },
   corrections: { label: "Corrections", order: 2 },

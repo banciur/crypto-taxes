@@ -9,14 +9,21 @@ import { LedgerCorrectionCard } from "@/components/LedgerCorrectionCard";
 import { LedgerEventCard } from "@/components/LedgerEventCard";
 import { orderColumnKeys } from "@/consts";
 import { useUrlColumnSelection } from "@/contexts/UrlColumnSelectionContext";
-import type { EventOrigin, EventsByTimestamp } from "@/types/events";
+import type {
+  EventOrigin,
+  EventsByTimestamp,
+  PriceOverrideEditorContext,
+} from "@/types/events";
 
 type TimestampBucketRowProps = {
   itemsByColumn: EventsByTimestamp[string];
   selectedEventOriginKeys: ReadonlySet<string>;
   isCorrectionChangePending: boolean;
+  isPriceOverrideChangePending: boolean;
   onToggleEventSelection: (eventOrigin: EventOrigin) => void;
   onRemoveCorrection: (correctionId: string) => void;
+  onEditPriceOverride: (context: PriceOverrideEditorContext) => void;
+  onRemovePriceOverride: (priceOverrideId: string) => void;
 };
 
 function assertUnreachableLaneItem(item: never): never {
@@ -29,8 +36,11 @@ export function TimestampBucketRow({
   itemsByColumn,
   selectedEventOriginKeys,
   isCorrectionChangePending,
+  isPriceOverrideChangePending,
   onToggleEventSelection,
   onRemoveCorrection,
+  onEditPriceOverride,
+  onRemovePriceOverride,
 }: TimestampBucketRowProps) {
   const { selected } = useUrlColumnSelection();
   const orderedSelectedColumns = useMemo(
@@ -68,7 +78,10 @@ export function TimestampBucketRow({
                     event={item}
                     selectedEventOriginKeys={selectedEventOriginKeys}
                     isCorrectionChangePending={isCorrectionChangePending}
+                    isPriceOverrideChangePending={isPriceOverrideChangePending}
                     onToggleEventSelection={onToggleEventSelection}
+                    onEditPriceOverride={onEditPriceOverride}
+                    onRemovePriceOverride={onRemovePriceOverride}
                   />
                 );
               default:

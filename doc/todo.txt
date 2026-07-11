@@ -10,6 +10,7 @@ TODO: On 2006-02-09 there is an interesting case of moving money from base to et
 
 Review the order of todos
 -----------------
+TODO: Handle orphaned price overrides. An override whose event_origin matches no corrected event a separate page listing all stored overrides with the ability to delete them, highlighting the orphaned ones (overrides whose event_origin is absent from /corrected-events -- a set difference the UI can compute from data it already fetches).
 TODO: Case of sending NEU to no longer existing exchanges. Similar case would be when I send some value to Polygon and ten retrved it. One idea is to have own "fake wallet" that will store those and some operations happened there.
 TODO: We introduced pegged stables, but it might be mistake. Stables sometimes depeg so maybe we should treat them as other coins and limit valuation only to stables.
 TODO: ui/src/components/SystemState and ui/src/components/WalletProjection are vibed not checked and are very bad but should be refactored.

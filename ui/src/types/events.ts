@@ -42,6 +42,19 @@ export type PriceOverride = {
 
 export type CreatePriceOverridePayload = Omit<PriceOverride, "id">;
 
+/**
+ * The corrected-event asset a price override is being authored against.
+ *
+ * An override is identified by `(eventOrigin, assetId)` and applies to the asset across the whole
+ * event. `legQuantity` is not part of that identity: it is the quantity of the leg the editor was
+ * opened from, and the editor only uses it to convert between the rate and total-value inputs.
+ */
+export type PriceOverrideEditorContext = {
+  eventOrigin: EventOrigin;
+  assetId: AssetId;
+  legQuantity: DecimalString;
+};
+
 type ItemBase = {
   id: string;
   timestamp: string;

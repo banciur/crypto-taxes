@@ -161,7 +161,7 @@ corrections.
   a plain dump of the stored overrides — problems reach the operator through the `FAILED` `SystemState`, so the API
   does not re-evaluate them. Map the unique-constraint `IntegrityError` on create to a `409`. Add API tests.
 
-- [ ] **UI.** Add an authoring surface in `ui/` to create an override from a selected event (using its
+- [x] **UI.** Add an authoring surface in `ui/` to create an override from a selected event (using its
   `event_origin`) and asset. The form exposes both a total-EUR-value field and a per-unit-rate field; editing either
   recomputes the other from the leg quantity (`rate = value / quantity`, `value = rate * quantity`). Only `rate_eur`
   is sent to the API. Also list and delete overrides. Wire it to the new endpoints.

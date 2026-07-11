@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { ApiError } from "@/api/core";
 import { createCorrection, deleteCorrection } from "@/api/corrections";
+import { createPriceOverride, deletePriceOverride } from "@/api/priceOverrides";
 import {
   EventsActionBar,
   type EventsActionFeedback,
@@ -13,11 +14,16 @@ import { VirtualizedDateSections } from "@/components/VirtualizedDateSections";
 import { CorrectionHighlightProvider } from "@/contexts/CorrectionHighlightContext";
 import type {
   CreateLedgerCorrectionPayload,
+  CreatePriceOverridePayload,
   EventsByTimestamp,
+  PriceOverrideEditorContext,
 } from "@/types/events";
 import { OpeningBalanceEditorModal } from "./OpeningBalanceEditorModal";
+import { PriceOverrideEditorModal } from "./PriceOverrideEditorModal";
 import { ReplacementEditorModal } from "./ReplacementEditorModal";
 import { useEventSelection } from "./useEventSelection";
+
+const RERUN_HINT = "Re-run the pipeline to apply it to the projections.";
 
 type EventsProps = {
   eventsByTimestamp: EventsByTimestamp;
@@ -37,6 +43,13 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     string | null
   >(null);
   const [feedback, setFeedback] = useState<EventsActionFeedback | null>(null);
+  const [isPriceOverrideChangePending, setIsPriceOverrideChangePending] =
+    useState(false);
+  const [priceOverrideEditorContext, setPriceOverrideEditorContext] =
+    useState<PriceOverrideEditorContext | null>(null);
+  const [priceOverrideEditorError, setPriceOverrideEditorError] = useState<
+    string | null
+  >(null);
   const {
     selectedEventOriginKeys,
     toggleEventSelection,
@@ -189,6 +202,73 @@ export function Events({ eventsByTimestamp }: EventsProps) {
     [router],
   );
 
+  const handleOpenPriceOverrideEditor = useCallback(
+    (context: PriceOverrideEditorContext) => {
+      setPriceOverrideEditorError(null);
+      setPriceOverrideEditorContext(context);
+    },
+    [],
+  );
+
+  const handleClosePriceOverrideEditor = () => {
+    setPriceOverrideEditorError(null);
+    setPriceOverrideEditorContext(null);
+  };
+
+  const handleCreatePriceOverride = useCallback(
+    async (payload: CreatePriceOverridePayload) => {
+      setFeedback(null);
+      setPriceOverrideEditorError(null);
+      setIsPriceOverrideChangePending(true);
+
+      try {
+        await createPriceOverride(payload);
+        setPriceOverrideEditorContext(null);
+        setFeedback({
+          tone: "success",
+          message: `Price override saved. ${RERUN_HINT}`,
+        });
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to create price override", error);
+        setPriceOverrideEditorError(
+          error instanceof ApiError
+            ? error.detail
+            : "Saving the price override failed. Check the console for details.",
+        );
+      } finally {
+        setIsPriceOverrideChangePending(false);
+      }
+    },
+    [router],
+  );
+
+  const handleRemovePriceOverride = useCallback(
+    async (priceOverrideId: string) => {
+      setFeedback(null);
+      setIsPriceOverrideChangePending(true);
+
+      try {
+        await deletePriceOverride(priceOverrideId);
+        setFeedback({
+          tone: "success",
+          message: `Price override removed. ${RERUN_HINT}`,
+        });
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to remove price override", error);
+        setFeedback({
+          tone: "danger",
+          message:
+            "Removing the price override failed. Check the console for details.",
+        });
+      } finally {
+        setIsPriceOverrideChangePending(false);
+      }
+    },
+    [router],
+  );
+
   const isCorrectionChangePending =
     isCreatingCorrection || isRemovingCorrection;
 
@@ -222,13 +302,26 @@ export function Events({ eventsByTimestamp }: EventsProps) {
             onSubmit={handleCreateOpeningBalance}
           />
         )}
+        {priceOverrideEditorContext && (
+          <PriceOverrideEditorModal
+            show
+            context={priceOverrideEditorContext}
+            isSaving={isPriceOverrideChangePending}
+            errorMessage={priceOverrideEditorError}
+            onHide={handleClosePriceOverrideEditor}
+            onSubmit={handleCreatePriceOverride}
+          />
+        )}
         <VirtualizedDateSections
           eventsByTimestamp={eventsByTimestamp}
           selectedEventOriginKeys={selectedEventOriginKeys}
           isCorrectionChangePending={isCorrectionChangePending}
+          isPriceOverrideChangePending={isPriceOverrideChangePending}
           className="flex-grow-1"
           onToggleEventSelection={toggleEventSelection}
           onRemoveCorrection={handleRemoveCorrection}
+          onEditPriceOverride={handleOpenPriceOverrideEditor}
+          onRemovePriceOverride={handleRemovePriceOverride}
         />
       </div>
     </CorrectionHighlightProvider>
