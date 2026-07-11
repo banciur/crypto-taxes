@@ -44,11 +44,8 @@ class LedgerCorrectionSourceOrm(CorrectionsBase):
     origin_external_id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
 
     __table_args__ = (
-        Index(
-            "ix_ledger_correction_sources_origin",
-            "origin_location",
-            "origin_external_id",
-        ),
+        # Unique: a raw event may be claimed by at most one active correction. This index also
+        # serves plain origin lookups, so no separate non-unique index is needed.
         Index(
             "uq_ledger_correction_sources_active_origin",
             "origin_location",

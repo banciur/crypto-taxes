@@ -3,19 +3,19 @@
 import { clsx } from "clsx";
 import { Button } from "react-bootstrap";
 
-type CorrectionRemoveButtonProps = {
+type RemoveButtonProps = {
   label: string;
   disabled: boolean;
   onClick: () => void;
   className?: string;
 };
 
-export function CorrectionRemoveButton({
+export function RemoveButton({
   label,
   disabled,
   onClick,
   className,
-}: CorrectionRemoveButtonProps) {
+}: RemoveButtonProps) {
   return (
     <Button
       type="button"

@@ -1,8 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(make -C data code_fix)",
-      "Bash(make -C data test)"
+      "Bash(make -C data code_check:*)",
+      "Bash(make code_check:*)",
+      "Bash(make -C data code_fix:*)",
+      "Bash(make code_fix:*)",
+      "Bash(make -C data test:*)",
+      "Bash(make test:*)",
+      "Bash(uv run --group dev pytest:*)",
+      "Bash(pnpm prettier)"
     ]
   }
 }

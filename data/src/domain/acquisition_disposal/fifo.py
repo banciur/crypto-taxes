@@ -176,9 +176,7 @@ def _matching_error(
     quantity_needed: Decimal | None = None,
 ) -> AcquisitionDisposalLotMatchingError:
     message = (
-        f"{reason} for asset={asset_id} account={account_chain_id} "
-        f"event_origin={event_origin.location.value}/{event_origin.external_id} "
-        f"@{timestamp.isoformat()}"
+        f"{reason} for asset={asset_id} account={account_chain_id} event_origin={event_origin} @{timestamp.isoformat()}"
     )
     if quantity_needed is not None:
         message += QUANTITY_NEEDED_MESSAGE_SUFFIX.format(quantity_needed=quantity_needed)

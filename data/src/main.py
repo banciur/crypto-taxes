@@ -17,6 +17,7 @@ from config import (
     CORRECTIONS_DB_PATH,
     DB_PATH,
     PRICE_CACHE_DB_PATH,
+    PRICE_OVERRIDES_DB_PATH,
     TRANSACTIONS_CACHE_DB_PATH,
     AppSettings,
     config,
@@ -27,6 +28,7 @@ from db.base import Base
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
 from db.price_cache import PriceCacheRepository, init_price_cache_db
+from db.price_overrides import PriceOverrideRepository, PriceOverridesBase
 from db.session import init_db_session
 from db.system_state import SystemStateRepository
 from db.tax_events import TaxEventRepository
@@ -35,7 +37,9 @@ from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
 from db.wallet_projection import WalletBalanceRepository
 from domain.acquisition_disposal.projector import AcquisitionDisposalProjection, AcquisitionDisposalProjector
+from domain.correction import LedgerCorrection
 from domain.ledger import LedgerEvent
+from domain.price_override import validate_overrides
 from domain.pricing import PriceProvider
 from domain.system_state import (
     SystemState,
@@ -209,12 +213,9 @@ def _import_and_persist_raw_events(
 def _apply_and_persist_corrections(
     *,
     events: list[LedgerEvent],
-    correction_repository: LedgerCorrectionRepository,
+    corrections: list[LedgerCorrection],
     corrected_event_repository: CorrectedLedgerEventRepository,
 ) -> list[LedgerEvent]:
-    corrections = correction_repository.list()
-    logger.info("Loaded %d active ledger corrections", len(corrections))
-
     logger.info("Applying corrections to %d raw events", len(events))
     corrections_started = perf_counter()
     corrected_events = apply_ingestion_corrections(
@@ -254,13 +255,19 @@ def _build_wallet_projection(
 def _build_acquisition_disposal_projection(
     *,
     corrected_events: list[LedgerEvent],
+    price_override_repository: PriceOverrideRepository,
     price_service: PriceProvider,
     projection_repository: AcquisitionDisposalProjectionRepository,
 ) -> AcquisitionDisposalProjection:
+    overrides = price_override_repository.list()
+    logger.info("Loaded %d price overrides", len(overrides))
+    validate_overrides(corrected_events, overrides)
+    overrides_by_event_origin = price_override_repository.rates_by_origin()
+
     logger.info("Building acquisition/disposal projection from %d corrected events", len(corrected_events))
     projector = AcquisitionDisposalProjector(price_provider=price_service)
     try:
-        projection = projector.project(corrected_events)
+        projection = projector.project(corrected_events, overrides_by_event_origin=overrides_by_event_origin)
     except Exception:
         projection_repository.replace(projector.projection())
         raise
@@ -286,6 +293,11 @@ def run(
         metadata=CorrectionsBase.metadata,
         reset=False,
     )
+    price_overrides_session = init_db_session(
+        db_path=PRICE_OVERRIDES_DB_PATH,
+        metadata=PriceOverridesBase.metadata,
+        reset=False,
+    )
     event_repository = LedgerEventRepository(events_session)
     corrected_event_repository = CorrectedLedgerEventRepository(events_session)
     wallet_balance_repository = WalletBalanceRepository(events_session)
@@ -293,6 +305,7 @@ def run(
     tax_event_repository = TaxEventRepository(events_session)
     system_state_repository = SystemStateRepository(events_session)
     correction_repository = LedgerCorrectionRepository(corrections_session)
+    price_override_repository = PriceOverrideRepository(price_overrides_session)
 
     run_started_at = datetime.now(UTC)
     events = _run_system_state_stage(
@@ -306,13 +319,15 @@ def run(
             correction_repository=correction_repository,
         ),
     )
+    corrections = correction_repository.list()
+    logger.info("Loaded %d active ledger corrections", len(corrections))
     corrected_events = _run_system_state_stage(
         system_state_repository,
         SystemStateStage.CORRECTIONS,
         started_at=run_started_at,
         action=lambda: _apply_and_persist_corrections(
             events=events,
-            correction_repository=correction_repository,
+            corrections=corrections,
             corrected_event_repository=corrected_event_repository,
         ),
     )
@@ -333,6 +348,7 @@ def run(
         started_at=run_started_at,
         action=lambda: _build_acquisition_disposal_projection(
             corrected_events=corrected_events,
+            price_override_repository=price_override_repository,
             price_service=price_service,
             projection_repository=acquisition_disposal_projection_repository,
         ),

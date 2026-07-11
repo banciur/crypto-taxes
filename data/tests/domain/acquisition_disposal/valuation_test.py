@@ -32,11 +32,17 @@ class FixedPriceProvider(PriceProvider):
         return self._rates.get(base_id)
 
 
-def _rates_for(event: LedgerEvent, *, rates: dict[AssetId, Decimal]) -> dict[AssetId, Decimal]:
+def _rates_for(
+    event: LedgerEvent,
+    *,
+    rates: dict[AssetId, Decimal],
+    overrides: dict[AssetId, Decimal] | None = None,
+) -> dict[AssetId, Decimal]:
     return value_projected_event(
         project_event_quantities(event),
         timestamp=event.timestamp,
         price_provider=FixedPriceProvider(rates),
+        overrides=overrides or {},
     )
 
 
@@ -228,6 +234,69 @@ def test_fee_only_asset_without_direct_price_fails() -> None:
 
     with pytest.raises(AcquisitionDisposalProjectionError, match="fee legs"):
         _rates_for(event, rates={USDC: Decimal("1")})
+
+
+def test_override_supplies_price_for_otherwise_unpriceable_asset() -> None:
+    # Provider has no price for LP; the override supplies it and the one-sided event values.
+    lp_override_rate = Decimal("42")
+    event = make_event(legs=[make_leg(asset_id=LP, quantity=Decimal("1"))])
+
+    rates = _rates_for(event, rates={}, overrides={LP: lp_override_rate})
+
+    assert rates == {LP: lp_override_rate}
+
+
+def test_override_prices_a_fee_only_asset() -> None:
+    # Without the override this raises (see test_fee_only_asset_without_direct_price_fails).
+    usdc_rate = Decimal("1")
+    fee_override_rate = Decimal("2000")
+    event = make_event(
+        legs=[
+            make_leg(asset_id=USDC, quantity=Decimal("100")),
+            make_leg(asset_id=FEE_ASSET, quantity=Decimal("-0.01"), is_fee=True),
+        ],
+    )
+
+    rates = _rates_for(event, rates={USDC: usdc_rate}, overrides={FEE_ASSET: fee_override_rate})
+
+    assert rates == {USDC: usdc_rate, FEE_ASSET: fee_override_rate}
+
+
+def test_override_rate_participates_in_midpoint_rebalancing() -> None:
+    eth_quantity = Decimal("-1")
+    bonus_quantity = Decimal("1")
+    eth_override_rate = Decimal("1500")
+    bonus_rate = Decimal("1800")
+    expected_midpoint_rate = (eth_override_rate + bonus_rate) / Decimal(2)
+
+    # ETH is supplied only by the override, BONUS only by the provider; both are known and rebalance.
+    rates = _rates_for(
+        make_event(
+            legs=[
+                make_leg(asset_id=ETH, quantity=eth_quantity),
+                make_leg(asset_id=BONUS, quantity=bonus_quantity),
+            ],
+        ),
+        rates={BONUS: bonus_rate},
+        overrides={ETH: eth_override_rate},
+    )
+
+    assert rates == {ETH: expected_midpoint_rate, BONUS: expected_midpoint_rate}
+
+
+def test_override_rate_feeds_remainder_solving() -> None:
+    # ETH known via override, LP unpriceable: LP is solved by remainder against the override rate.
+    eth_override_rate = Decimal("200")
+    event = make_event(
+        legs=[
+            make_leg(asset_id=ETH, quantity=Decimal("-1")),
+            make_leg(asset_id=LP, quantity=Decimal("1")),
+        ],
+    )
+
+    rates = _rates_for(event, rates={}, overrides={ETH: eth_override_rate})
+
+    assert rates == {ETH: eth_override_rate, LP: eth_override_rate}
 
 
 def test_negative_remainder_fails() -> None:

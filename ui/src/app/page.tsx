@@ -3,6 +3,7 @@ import { performance } from "node:perf_hooks";
 import { Col, Container, Row } from "react-bootstrap";
 
 import { getAccounts } from "@/api/accounts";
+import { getPriceOverrides } from "@/api/priceOverrides";
 import { getSystemState } from "@/api/systemState";
 import { getWalletBalances } from "@/api/walletBalances";
 import { COLUMNS_PARAM_NAME } from "@/consts";
@@ -16,6 +17,7 @@ import type { EventsByTimestamp } from "@/types/events";
 
 import styles from "./page.module.css";
 import { AccountNamesProvider } from "@/contexts/AccountNamesContext";
+import { PriceOverridesProvider } from "@/contexts/PriceOverridesContext";
 import { ColumnChooser } from "@/components/ColumnChooser";
 import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext";
 import { DateChooser } from "@/components/DateChooser";
@@ -57,15 +59,17 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   );
 
   const initialLoadStart = performance.now();
-  const [accounts, systemState, walletBalances] = await Promise.all([
-    getAccounts(),
-    getSystemState(),
-    getWalletBalances(),
-  ]);
+  const [accounts, systemState, walletBalances, priceOverrides] =
+    await Promise.all([
+      getAccounts(),
+      getSystemState(),
+      getWalletBalances(),
+      getPriceOverrides(),
+    ]);
 
   const columnsLoadStart = performance.now();
   console.log(
-    `Accounts + system state + wallet balances fetch took: ${formatDuration(
+    `Accounts + system state + wallet balances + price overrides fetch took: ${formatDuration(
       columnsLoadStart - initialLoadStart,
     )}`,
   );
@@ -123,34 +127,36 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
   return (
     <AccountNamesProvider accounts={accounts}>
-      <UrlColumnSelectionProvider>
-        <VisibleDayProvider>
-          <Container fluid className={clsx(styles.layoutContainer, "gap-3")}>
-            <section className={styles.systemStateSection}>
-              <SystemStateSection state={systemState} />
-            </section>
-            <section className={styles.walletBalancesSection}>
-              <WalletBalancesSection balances={walletBalances} />
-            </section>
-            <section className={clsx(styles.eventsSection, "gap-3")}>
-              <Row>
-                <Col>
-                  <h2 className="text-center">Ledger events</h2>
-                </Col>
-              </Row>
-              <Row className={styles.eventsColumnsRow}>
-                <Col xs={2} className={styles.eventsColumn}>
-                  <ColumnChooser />
-                  <DateChooser dates={eventCountsByDate} />
-                </Col>
-                <Col xs={10} className={styles.eventsColumn}>
-                  <Events eventsByTimestamp={eventsByTimestamp} />
-                </Col>
-              </Row>
-            </section>
-          </Container>
-        </VisibleDayProvider>
-      </UrlColumnSelectionProvider>
+      <PriceOverridesProvider priceOverrides={priceOverrides}>
+        <UrlColumnSelectionProvider>
+          <VisibleDayProvider>
+            <Container fluid className={clsx(styles.layoutContainer, "gap-3")}>
+              <section className={styles.systemStateSection}>
+                <SystemStateSection state={systemState} />
+              </section>
+              <section className={styles.walletBalancesSection}>
+                <WalletBalancesSection balances={walletBalances} />
+              </section>
+              <section className={clsx(styles.eventsSection, "gap-3")}>
+                <Row>
+                  <Col>
+                    <h2 className="text-center">Ledger events</h2>
+                  </Col>
+                </Row>
+                <Row className={styles.eventsColumnsRow}>
+                  <Col xs={2} className={styles.eventsColumn}>
+                    <ColumnChooser />
+                    <DateChooser dates={eventCountsByDate} />
+                  </Col>
+                  <Col xs={10} className={styles.eventsColumn}>
+                    <Events eventsByTimestamp={eventsByTimestamp} />
+                  </Col>
+                </Row>
+              </section>
+            </Container>
+          </VisibleDayProvider>
+        </UrlColumnSelectionProvider>
+      </PriceOverridesProvider>
     </AccountNamesProvider>
   );
 }

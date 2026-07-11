@@ -16,6 +16,7 @@ from accounts import KRAKEN_ACCOUNT_ID
 from db.base import Base
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
+from db.price_overrides import PriceOverridesBase
 from domain.correction import LedgerCorrection, LedgerCorrectionDraft
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
 from tests.constants import BTC, EUR
@@ -44,11 +45,14 @@ def db_engine_factory() -> Generator[Callable[[], Engine], None, None]:
 def client(db_engine_factory: Callable[[], Engine]) -> Generator[TestClient, None, None]:
     main_engine = db_engine_factory()
     corrections_engine = db_engine_factory()
+    price_overrides_engine = db_engine_factory()
     Base.metadata.create_all(main_engine)
     CorrectionsBase.metadata.create_all(corrections_engine)
+    PriceOverridesBase.metadata.create_all(price_overrides_engine)
     app = api.create_app(
         sessionmaker_factory=sessionmaker(main_engine),
         corrections_sessionmaker_factory=sessionmaker(corrections_engine),
+        price_overrides_sessionmaker_factory=sessionmaker(price_overrides_engine),
     )
     with TestClient(app) as test_client:
         yield test_client

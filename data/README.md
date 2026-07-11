@@ -44,6 +44,7 @@
 - After a successful wallet projection, the main flow rebuilds the acquisition/disposal projection from the same shared corrected-events list.
 - `AcquisitionDisposalProjector` (`src/domain/acquisition_disposal/`) values events and matches disposals against open lots via FIFO, producing `AcquisitionLot`s and `DisposalLink`s.
 - The projection is persisted with clear-then-write semantics through `AcquisitionDisposalProjectionRepository.replace()`, replacing any previous projection.
+- The stage first loads the stored price overrides and calls `validate_overrides` against the corrected events, so a stale override fails `ACQUISITION_DISPOSAL` rather than escaping the stage wrapper. Validation lives here and not in `CORRECTIONS` because overrides do not affect the corrected-event stream, and failing earlier would also block the wallet projection the operator needs while fixing the override.
 - Projector failures (e.g. not-enough-open-lots, unavailable required prices) propagate as exceptions and are recorded as a `FAILED` `SystemState` at the `ACQUISITION_DISPOSAL` stage.
 - On failure the stage still persists `AcquisitionDisposalProjector.projection()` -- the lots/disposals produced up to the failing event. Event application is not atomic, so this partial snapshot may be incoherent (e.g. a disposal recorded without its event's acquisitions) and is intended only as debug output alongside the `FAILED` `SystemState`.
 - Tax-event generation and the weekly summary remain unreachable dead code below the `COMPLETED` return, pending a future `TAX_COMPUTATION` stage.
@@ -55,6 +56,15 @@
 - `src/services/price_resolver.py` only routes a fetch to the owning provider (fiat vs crypto).
 - Pricing contracts and records live in `src/domain/pricing.py`; provider HTTP clients live in
   `src/clients/`. Pricing model constants (numeraire, fiat codes, stable pegs) live in `config`.
+
+### Price overrides
+- `src/domain/price_override.py` owns the `PriceOverride` model and `validate_overrides`; the
+  targeting, validation, and valuation semantics live in `doc/CURRENT.md`.
+- Overrides live in their own durable store (`artifacts/price_overrides.db`, `src/db/price_overrides.py`),
+  a sibling of `corrections.db`. A unique constraint on `(origin_location, origin_external_id, asset_id)`
+  makes two competing rates for one asset unrepresentable, so `PriceOverrideRepository.rates_by_origin()`
+  can regroup rows for valuation without silently dropping one. `POST /price-overrides` maps that
+  constraint's `IntegrityError` to a `409`.
 
 ### Data importers
 - Importers live in `src/importers/` and translate upstream data sources into domain `LedgerEvent`s with normalized types (`Decimal`, UTC `timestamp`), canonical asset identifiers, and consistent `event_origin`/`ingestion` metadata.

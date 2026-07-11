@@ -10,6 +10,11 @@ TODO: On 2006-02-09 there is an interesting case of moving money from base to et
 
 Review the order of todos
 -----------------
+TODO: An override on EUR (or another valuation anchor) is accepted and wins over the base==quote rate, silently skewing anchor totals; reject anchor overrides and hide the Set price button on those legs.
+TODO: Reconsider the separate price_overrides.db (third SQLite file): merging it into corrections.db would drop the parallel engine/sessionmaker/lifespan/fixture stack and allow joins with corrections, but it requires starting to write migrations, so there is a cost.
+TODO: EventOrigin<->(origin_location, origin_external_id) column conversion is hand-rolled in four db modules (ledger_events, ledger_corrections, acquisition_disposal, price_overrides); extract a shared mixin/helper in db/.
+TODO: UI events flow cleanups: the three price-override mutation props are drilled through VirtualizedDateSections and TimestampBucketRow (which never use them) while reads already go through PriceOverridesContext -- move handlers + pending flag into a provider mounted in Events.tsx (like CorrectionHighlightProvider); Events.tsx also holds five near-identical setFeedback/setPending/try/catch/router.refresh mutation handlers and two variants of the re-run hint message -- extract one shared mutation helper.
+TODO: Handle orphaned price overrides. An override whose event_origin matches no corrected event a separate page listing all stored overrides with the ability to delete them, highlighting the orphaned ones (overrides whose event_origin is absent from /corrected-events -- a set difference the UI can compute from data it already fetches).
 TODO: Case of sending NEU to no longer existing exchanges. Similar case would be when I send some value to Polygon and ten retrved it. One idea is to have own "fake wallet" that will store those and some operations happened there.
 TODO: We introduced pegged stables, but it might be mistake. Stables sometimes depeg so maybe we should treat them as other coins and limit valuation only to stables.
 TODO: ui/src/components/SystemState and ui/src/components/WalletProjection are vibed not checked and are very bad but should be refactored.

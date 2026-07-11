@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from decimal import Decimal
 
@@ -16,19 +16,35 @@ def value_projected_event(
     *,
     timestamp: datetime,
     price_provider: PriceProvider,
+    overrides: Mapping[AssetId, Decimal],
 ) -> dict[AssetId, Decimal]:
     non_fee_prices = _value_non_fee_groups(
         projected_event,
         timestamp=timestamp,
         price_provider=price_provider,
+        overrides=overrides,
     )
     fee_prices = _value_fee_groups(
         projected_event.fee_groups,
         non_fee_prices=non_fee_prices,
         timestamp=timestamp,
         price_provider=price_provider,
+        overrides=overrides,
     )
     return non_fee_prices | fee_prices
+
+
+def _rate_in_base_currency(
+    asset_id: AssetId,
+    *,
+    overrides: Mapping[AssetId, Decimal],
+    price_provider: PriceProvider,
+    timestamp: datetime,
+) -> Decimal | None:
+    """An override wins over the market price; otherwise fall back to the price provider."""
+    if asset_id in overrides:
+        return overrides[asset_id]
+    return price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
 
 
 def _value_non_fee_groups(
@@ -36,6 +52,7 @@ def _value_non_fee_groups(
     *,
     timestamp: datetime,
     price_provider: PriceProvider,
+    overrides: Mapping[AssetId, Decimal],
 ) -> dict[AssetId, Decimal]:
     if not projected_event.non_fee_groups:
         return {}
@@ -44,7 +61,9 @@ def _value_non_fee_groups(
     unknown_group: _ProjectedAssetResidualGroup | None = None
 
     for group in projected_event.non_fee_groups:
-        direct_rate = price_provider.rate(group.asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
+        direct_rate = _rate_in_base_currency(
+            group.asset_id, overrides=overrides, price_provider=price_provider, timestamp=timestamp
+        )
         if direct_rate is None:
             if is_valuation_anchor(group.asset_id):
                 raise AcquisitionDisposalValuationError(
@@ -80,6 +99,7 @@ def _value_fee_groups(
     non_fee_prices: dict[AssetId, Decimal],
     timestamp: datetime,
     price_provider: PriceProvider,
+    overrides: Mapping[AssetId, Decimal],
 ) -> dict[AssetId, Decimal]:
     fee_prices: dict[AssetId, Decimal] = {}
 
@@ -90,7 +110,9 @@ def _value_fee_groups(
             fee_prices[group.asset_id] = non_fee_prices[group.asset_id]
             continue
 
-        direct_rate = price_provider.rate(group.asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
+        direct_rate = _rate_in_base_currency(
+            group.asset_id, overrides=overrides, price_provider=price_provider, timestamp=timestamp
+        )
         if direct_rate is None:
             raise AcquisitionDisposalValuationError(
                 f"Fee asset appears only in fee legs and cannot be priced in {BASE_CURRENCY_ASSET_ID}: "

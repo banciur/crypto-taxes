@@ -28,6 +28,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - `LedgerEvent`: one imported or corrected operation represented as signed asset movements.
 - `LedgerLeg`: one asset delta for one account within a ledger event. `is_fee=True` marks an explicit fee leg.
 - `LedgerCorrection`: a manual override that discards raw events, replaces them with a synthetic corrected event, or adds an opening balance.
+  - `PriceOverride`: an operator-supplied EUR per-unit rate for one asset of one corrected event, identified by that event's `event_origin` plus the `asset_id`. At most one rate exists per `(event_origin, asset_id)`.
 - `AccountRegistry`: the canonical merged account catalog that includes both configured wallets and built-in exchange accounts.
 - `SystemState`: the persisted latest main-flow run status, including stage, start/finish timestamps, and first error details.
 - `WalletBalance`: one persisted current balance for an `(account, asset)` pair, rebuilt from corrected events. Rebuild failures surface only through `SystemState`, not through a wallet status object.
@@ -52,6 +53,13 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Rebuilding corrected events works by validating source ownership, removing claimed raw events, adding synthetic corrected events for corrections with legs, and then sorting deterministically.
 - Deleting a source-backed correction frees that source for manual reuse while preserving auto-suppression so importer automation does not recreate it automatically.
 
+## Price Override Semantics
+
+- An override targets a corrected event by that event's own `event_origin`: a passthrough event's raw origin, or a replacement's or opening balance's synthetic `(INTERNAL, correction.id)` origin. Unlike correction sources, an `INTERNAL` origin is a valid target.
+- Every override is re-validated on each rebuild. It is a problem if its `event_origin` matches no corrected event, or if its `asset_id` is absent from that event's legs. Either aborts the `ACQUISITION_DISPOSAL` stage and is recorded as a `FAILED` `SystemState` listing every offending override.
+- Matching is by exact origin equality and deliberately does not follow an event across a re-grouping. Folding a priced raw event into a replacement, discarding it, or deleting and recreating its correction (which mints a new id) leaves the override orphaned, so the operator deletes it and re-authors it against the new event.
+- The `FAILED` `SystemState` is the only channel through which override problems reach the operator; the API does not re-evaluate them.
+
 ## Fee and Valuation Rules
 
 - Swaps and trades net exchange fees into the same-asset leg when possible.
@@ -61,6 +69,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Explicit fee legs stay explicit downstream through `is_fee=True`.
 - `EUR`, configured fiat currencies, and selected stable assets act as valuation anchors. Fiat anchors do not open or consume FIFO lots; selected stable assets still do.
 - Asset prices are resolved as cross-rates through a configured numeraire pivot (USD), with stablecoins valued via the fiat currency they are pegged to. A genuinely unavailable market price is a first-class "unpriceable" signal that feeds remainder solving; an operational price-backend failure aborts the run.
+- A `PriceOverride` supplies the rate for its asset instead of the price backend, and is then treated as an ordinary known rate: it participates in mid-point rebalancing and remainder solving exactly like a fetched one. This is what makes otherwise-unpriceable events valuable by hand.
 
 ## Current Capabilities
 
@@ -68,6 +77,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Persist raw ledger events, unified corrections, corrected ledger events, generic system state, current wallet balances, and the acquisition/disposal projection.
 - Review raw events, corrections, and corrected events in the UI.
 - Author and remove discard, replacement, and opening-balance corrections through the UI/API flow.
+- Author and remove price overrides through the UI/API flow, per asset on a corrected event, and persist them in a durable store (`artifacts/price_overrides.db`).
 - Review latest main-flow status, failed stage, and error details (exception type, message, and traceback) in the UI.
 - Rebuild the current per-wallet, per-asset balance projection from corrected events.
 - Rebuild and persist the acquisition/disposal projection (acquisition lots and disposal links) from corrected events, marking the run `COMPLETED` only after it succeeds.
@@ -77,8 +87,8 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 
 - The main pipeline does not yet run the tax stage; tax computation remains unreachable dead code.
 - Tax calculation behavior is incomplete and should not be treated as authoritative current product behavior.
-- Operator-supplied valuation overrides for hard-to-price events are not implemented.
-- After correction changes, downstream pipeline outputs still require a manual rerun.
+- An orphaned price override (one whose target corrected event no longer exists) fails every rebuild, and the UI offers no way to find or delete it.
+- After correction or price-override changes, downstream pipeline outputs still require a manual rerun.
 
 ## Supported Sources
 

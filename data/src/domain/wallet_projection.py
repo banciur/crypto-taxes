@@ -35,9 +35,7 @@ class WalletProjectionError(CryptoTaxesError):
             f"available={issue.available_balance} missing={issue.missing_balance}"
             for issue in issues
         )
-        super().__init__(
-            f"Wallet balance would go negative at event {event.location.value}/{event.external_id}: {detail}"
-        )
+        super().__init__(f"Wallet balance would go negative at event {event}: {detail}")
 
 
 class WalletProjector:

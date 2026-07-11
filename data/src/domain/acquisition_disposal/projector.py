@@ -1,8 +1,9 @@
 from collections import defaultdict, deque
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Iterable
+from decimal import Decimal
 
-from ..ledger import AssetId, LedgerEvent
+from ..ledger import AssetId, EventOrigin, LedgerEvent
 from ..pricing import PriceProvider
 from .errors import AcquisitionDisposalProjectionError
 from .fifo import match_event_fifo
@@ -35,7 +36,12 @@ class AcquisitionDisposalProjector:
             disposal_links=list(self._disposals),
         )
 
-    def project(self, events: Iterable[LedgerEvent]) -> AcquisitionDisposalProjection:
+    def project(
+        self,
+        events: Iterable[LedgerEvent],
+        *,
+        overrides_by_event_origin: Mapping[EventOrigin, Mapping[AssetId, Decimal]],
+    ) -> AcquisitionDisposalProjection:
         """Events must be provided in chronological order."""
         for event in events:
             projected_event = project_event_quantities(event)
@@ -44,6 +50,7 @@ class AcquisitionDisposalProjector:
                     projected_event,
                     timestamp=event.timestamp,
                     price_provider=self._price_provider,
+                    overrides=overrides_by_event_origin.get(event.event_origin, {}),
                 )
             except AcquisitionDisposalProjectionError as error:
                 _add_event_context(error, event=event)
@@ -66,6 +73,5 @@ def _add_event_context(
     *,
     event: LedgerEvent,
 ) -> None:
-    origin = event.event_origin
-    error.args = (f"{error} event_origin={origin.location.value}/{origin.external_id} @{event.timestamp.isoformat()}",)
+    error.args = (f"{error} event_origin={event.event_origin} @{event.timestamp.isoformat()}",)
     error.event = event

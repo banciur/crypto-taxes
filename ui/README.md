@@ -18,10 +18,12 @@
 - Selection is available only for raw-backed event cards; selected cards drive discard and replacement creation from the action bar.
 - Opening-balance creation is action-bar driven and does not require any selected source events.
 - Removing a correction is initiated from the corresponding card in the `Corrections` lane.
+- Price overrides are authored per leg on `Corrected events` cards: a leg without an override offers `Set price`, and a leg with one shows its EUR-per-unit rate plus a remove control. An override prices one asset of one corrected event, so it is shown on every leg carrying that asset. The affordance is deliberately absent from the `Raw events` lane, because a passthrough event shares its origin across both lanes while an override only ever prices the corrected one.
+- The price override form exposes a per-unit rate and a total EUR value; editing either recomputes the other from the absolute leg quantity. Only the rate is sent to the API, so the conversion is a convenience calculator. A zero-quantity leg disables the total-value field.
 - Hovering a source-backed correction activates shared source-highlighting state that colors the listed correction sources and every matching raw/corrected event card.
 - The date chooser updates the visible timeline day by scrolling the virtualized event list.
 - The column chooser updates which lanes are loaded and rendered.
-- Correction mutations refresh the server-rendered lane data immediately; corrected pipeline outputs still require a manual rerun outside the UI.
+- Correction and price-override mutations refresh the server-rendered lane data immediately; corrected pipeline outputs still require a manual rerun outside the UI.
 
 ## UI Structure
 
@@ -29,6 +31,7 @@
 - `src/components/SystemState/SystemStateSection.tsx` renders the latest main-flow status, stage, timestamps, known error details, and unexpected tracebacks.
 - `src/components/Events/` owns event selection state, correction creation/removal actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
 - `src/components/Events/ReplacementEditorModal.tsx` owns the structured replacement-creation form, including UTC timestamp editing, leg authoring, and note capture.
+- `src/components/Events/PriceOverrideEditorModal.tsx` owns the price-override creation form and the rate/total-value conversion.
 - `src/components/Events/OpeningBalanceEditorModal.tsx` owns the source-less opening-balance creation form.
 - `src/components/VirtualizedDateSections.tsx` virtualizes timeline rows for rendering performance; all selected column data is still loaded in memory up front.
 - `src/components/TimestampBucketRow.tsx` renders one timestamp bucket across the currently selected columns and dispatches lane items to the appropriate card component.
@@ -36,6 +39,8 @@
 - `src/components/AcquisitionDisposalCard.tsx` renders both acquisition and disposal cards for the `Acquisitions / Disposals` lane, branching on the item `kind`.
 - `src/components/LedgerLegList.tsx` is the shared ledger-leg renderer for event and correction cards; it keeps leg rows in `wallet -> token -> amount` order and centralizes fee/quantity presentation.
 - `src/contexts/AccountNamesContext.tsx` exposes the merged account dataset plus account-label resolution helpers to client components.
+- `src/contexts/PriceOverridesContext.tsx` indexes the stored price overrides by `(event origin, asset)` so event cards can look one up without prop drilling.
+- `src/components/LedgerLegList.tsx` takes an optional `renderLegAccessory` render prop so a lane can attach per-leg affordances (price overrides) without the shared leg renderer knowing about them.
 
 ## Architecture and Integration
 
@@ -56,6 +61,8 @@
 - `GET /corrections` returns feed for discard, replacement, and opening-balance items.
 - Source-backed corrections may be saved without legs; they consume the selected raw sources without emitting a corrected synthetic event.
 - Correction mutations refresh the server-rendered lane data after they are complete.
+- `GET /price-overrides` returns a flat list of stored overrides (`event_origin`, `asset_id`, `rate_eur`, optional `note`). It does not report whether an override still matches a corrected event; a stale one fails the pipeline and surfaces through `GET /system-state`.
+- `POST /price-overrides` answers `409` when the asset already has an override on that event.
 - After manual correction changes, the ingestion pipeline still needs to be rerun manually for corrected pipeline outputs to reflect those changes end-to-end.
 
 ### Decimal handling

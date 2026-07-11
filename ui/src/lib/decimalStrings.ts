@@ -58,3 +58,11 @@ export const divideDecimalStrings = (
   denominator: DecimalString,
 ): DecimalString =>
   toNormalizedDecimalString(new Decimal(numerator).div(denominator));
+
+export const multiplyDecimalStrings = (
+  left: DecimalString,
+  right: DecimalString,
+): DecimalString => toNormalizedDecimalString(new Decimal(left).times(right));
+
+export const absDecimalString = (value: DecimalString): DecimalString =>
+  toNormalizedDecimalString(new Decimal(value).abs());
