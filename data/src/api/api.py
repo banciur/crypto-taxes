@@ -10,20 +10,23 @@ from accounts import AccountRecord, AccountRegistry
 from api.acquisition_disposal import router as acquisition_disposal_router
 from api.corrections import router as corrections_router
 from api.events import router as events_router
+from api.price_overrides import router as price_overrides_router
 from api.system_state import router as system_state_router
 from api.wallet_balances import router as wallet_balances_router
-from config import CORRECTIONS_DB_PATH, DB_PATH
+from config import CORRECTIONS_DB_PATH, DB_PATH, PRICE_OVERRIDES_DB_PATH
 
 
 def create_app(
     *,
     sessionmaker_factory: sessionmaker[Session] | None = None,
     corrections_sessionmaker_factory: sessionmaker[Session] | None = None,
+    price_overrides_sessionmaker_factory: sessionmaker[Session] | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
         engine: Engine | None = None
         corrections_engine: Engine | None = None
+        price_overrides_engine: Engine | None = None
 
         if sessionmaker_factory is None:
             engine = create_engine(f"sqlite:///{DB_PATH}", echo=False)
@@ -37,8 +40,16 @@ def create_app(
         else:
             fastapi_app.state.corrections_sessionmaker = corrections_sessionmaker_factory
 
+        if price_overrides_sessionmaker_factory is None:
+            price_overrides_engine = create_engine(f"sqlite:///{PRICE_OVERRIDES_DB_PATH}", echo=False)
+            fastapi_app.state.price_overrides_sessionmaker = sessionmaker(price_overrides_engine)
+        else:
+            fastapi_app.state.price_overrides_sessionmaker = price_overrides_sessionmaker_factory
+
         yield
 
+        if price_overrides_engine is not None:
+            price_overrides_engine.dispose()
         if corrections_engine is not None:
             corrections_engine.dispose()
         if engine is not None:
@@ -59,6 +70,7 @@ def create_app(
     fastapi_app.include_router(wallet_balances_router)
     fastapi_app.include_router(system_state_router)
     fastapi_app.include_router(acquisition_disposal_router)
+    fastapi_app.include_router(price_overrides_router)
 
     @fastapi_app.get("/accounts")
     def get_accounts() -> list[AccountRecord]:

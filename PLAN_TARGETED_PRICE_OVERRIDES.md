@@ -157,7 +157,7 @@ corrections.
   and take the rates from `rates_by_origin()` — so a `PriceOverrideValidationError` fails the `ACQUISITION_DISPOSAL`
   stage. Add a projector test with overrides applied.
 
-- [ ] **API.** Add FastAPI endpoints under `src/api/` to list, create, and delete price overrides. The list endpoint is
+- [x] **API.** Add FastAPI endpoints under `src/api/` to list, create, and delete price overrides. The list endpoint is
   a plain dump of the stored overrides — problems reach the operator through the `FAILED` `SystemState`, so the API
   does not re-evaluate them. Map the unique-constraint `IntegrityError` on create to a `409`. Add API tests.
 
