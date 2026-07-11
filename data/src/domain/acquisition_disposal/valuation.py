@@ -44,7 +44,7 @@ def _rate_in_base_currency(
     price_provider: PriceProvider,
     timestamp: datetime,
 ) -> Decimal | None:
-    """An operator override wins over the market price; otherwise fall back to the price provider."""
+    """An override wins over the market price; otherwise fall back to the price provider."""
     if asset_id in overrides:
         return overrides[asset_id]
     return price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)

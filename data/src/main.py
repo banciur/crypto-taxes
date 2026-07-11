@@ -3,7 +3,6 @@ import logging
 import traceback as traceback_utils
 from collections.abc import Callable
 from datetime import UTC, datetime
-from decimal import Decimal
 from pathlib import Path
 from time import perf_counter
 from typing import Sequence
@@ -37,10 +36,10 @@ from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
 from db.wallet_projection import WalletBalanceRepository
-from domain.acquisition_disposal.price_override_resolution import build_override_rates_by_event_origin
 from domain.acquisition_disposal.projector import AcquisitionDisposalProjection, AcquisitionDisposalProjector
 from domain.correction import LedgerCorrection
-from domain.ledger import AssetId, EventOrigin, LedgerEvent
+from domain.ledger import LedgerEvent
+from domain.price_override import validate_overrides
 from domain.pricing import PriceProvider
 from domain.system_state import (
     SystemState,
@@ -256,10 +255,15 @@ def _build_wallet_projection(
 def _build_acquisition_disposal_projection(
     *,
     corrected_events: list[LedgerEvent],
-    overrides_by_event_origin: dict[EventOrigin, dict[AssetId, Decimal]],
+    price_override_repository: PriceOverrideRepository,
     price_service: PriceProvider,
     projection_repository: AcquisitionDisposalProjectionRepository,
 ) -> AcquisitionDisposalProjection:
+    overrides = price_override_repository.list()
+    logger.info("Loaded %d price overrides", len(overrides))
+    validate_overrides(corrected_events, overrides)
+    overrides_by_event_origin = price_override_repository.rates_by_origin()
+
     logger.info("Building acquisition/disposal projection from %d corrected events", len(corrected_events))
     projector = AcquisitionDisposalProjector(price_provider=price_service)
     try:
@@ -337,12 +341,6 @@ def run(
         ),
     )
 
-    overrides = price_override_repository.list()
-    logger.info("Loaded %d price overrides", len(overrides))
-    # TODO: a PriceOverrideResolutionError here escapes the stage wrapper, so it is not recorded
-    # as a FAILED ACQUISITION_DISPOSAL SystemState. Revisit whether resolution should fail the stage.
-    overrides_by_event_origin = build_override_rates_by_event_origin(corrected_events, corrections, overrides)
-
     price_service = build_price_service(price_cache_db_path)
     acquisition_disposal_projection = _run_system_state_stage(
         system_state_repository,
@@ -350,7 +348,7 @@ def run(
         started_at=run_started_at,
         action=lambda: _build_acquisition_disposal_projection(
             corrected_events=corrected_events,
-            overrides_by_event_origin=overrides_by_event_origin,
+            price_override_repository=price_override_repository,
             price_service=price_service,
             projection_repository=acquisition_disposal_projection_repository,
         ),
