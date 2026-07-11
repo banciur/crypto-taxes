@@ -6,7 +6,6 @@ TODO: Price asset-id normalization (upper-casing) happens three times on the sam
   Every layer defends itself instead of trusting the caller. Pick one owner (the PriceService entry
   point is the natural one) and let the resolver + clients assume already-normalized AssetIds.
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
-TODO: On 2006-02-09 there is an interesting case of moving money from base to eth through coinbase and I had to pay a fee on coinbase. See if the system can handle that correctly if I collapse this to two fees and money lost on the transfer.
 
 Review the order of todos
 -----------------
