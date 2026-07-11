@@ -32,6 +32,16 @@ export type CreateLedgerCorrectionPayload = {
   note?: string;
 };
 
+export type PriceOverride = {
+  id: string;
+  eventOrigin: EventOrigin;
+  assetId: AssetId;
+  rateEur: DecimalString;
+  note?: string;
+};
+
+export type CreatePriceOverridePayload = Omit<PriceOverride, "id">;
+
 type ItemBase = {
   id: string;
   timestamp: string;
