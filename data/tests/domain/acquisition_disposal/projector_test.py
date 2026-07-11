@@ -36,7 +36,7 @@ def test_valuation_error_includes_event_context() -> None:
 
     message = str(exc_info.value)
     assert f"asset={LP}" in message
-    assert f"event_origin={event.event_origin.location.value}/{external_id}" in message
+    assert f"event_origin={event.event_origin}" in message
     assert f"@{BASE_TIMESTAMP.isoformat()}" in message
     assert exc_info.value.event == event
     assert isinstance(exc_info.value, AcquisitionDisposalValuationError)
@@ -76,7 +76,7 @@ def test_unpriceable_anchor_error_includes_event_context() -> None:
     message = str(exc_info.value)
     assert "Valuation anchor asset" in message
     assert f"asset={USDC}" in message
-    assert f"event_origin={event.event_origin.location.value}/{external_id}" in message
+    assert f"event_origin={event.event_origin}" in message
     assert f"@{BASE_TIMESTAMP.isoformat()}" in message
     assert exc_info.value.event == event
     assert isinstance(exc_info.value, AcquisitionDisposalValuationError)

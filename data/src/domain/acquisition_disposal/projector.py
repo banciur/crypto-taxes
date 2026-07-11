@@ -73,6 +73,5 @@ def _add_event_context(
     *,
     event: LedgerEvent,
 ) -> None:
-    origin = event.event_origin
-    error.args = (f"{error} event_origin={origin.location.value}/{origin.external_id} @{event.timestamp.isoformat()}",)
+    error.args = (f"{error} event_origin={event.event_origin} @{event.timestamp.isoformat()}",)
     error.event = event

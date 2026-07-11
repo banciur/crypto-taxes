@@ -35,6 +35,9 @@ class EventOrigin(StrictBaseModel):
     location: EventLocation
     external_id: Annotated[str, StringConstraints(min_length=1, strip_whitespace=True)]
 
+    def __str__(self) -> str:
+        return f"{self.location.value}/{self.external_id}"
+
 
 # TODO: Idea maybe this should be just a deterministic hash and stored further downstream
 @dataclass(frozen=True, order=True)
