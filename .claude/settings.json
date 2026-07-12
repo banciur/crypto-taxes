@@ -8,7 +8,9 @@
       "Bash(make -C data test:*)",
       "Bash(make test:*)",
       "Bash(uv run --group dev pytest:*)",
-      "Bash(pnpm prettier)"
+      "Bash(pnpm prettier)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm types)"
     ]
   }
 }
