@@ -13,6 +13,7 @@ from tests.constants import BTC, ETH, EUR, USD, USDC
 
 TS = datetime(2025, 6, 1, 12, 0, tzinfo=timezone.utc)
 EURC = AssetId("EURC")
+RETH2 = AssetId("RETH2")  # configured in ASSETS_PRICED_AS as taking ETH's price
 
 
 class _StubSource:
@@ -182,6 +183,52 @@ def test_operational_error_propagates_without_caching(tmp_path: Path) -> None:
     with pytest.raises(RuntimeError, match="backend down"):
         service.rate(ETH, EUR, TS)
     assert store.read(ETH, USD, TS) is None
+
+
+def test_asset_priced_as_another_borrows_that_asset_rate(tmp_path: Path) -> None:
+    eth_usd = Decimal("2000")
+    eur_usd = Decimal("1.25")
+    crypto = _StubSource({(ETH, USD): eth_usd}, source_name="crypto")
+    fiat = _StubSource({(EUR, USD): eur_usd}, source_name="fiat")
+    store = _store(tmp_path)
+    service = _service(crypto=crypto, fiat=fiat, store=store)
+
+    assert service.rate(RETH2, EUR, TS) == eth_usd / eur_usd
+    # RETH2 never reaches the source or the cache; only the substituted ETH leg does.
+    assert crypto.calls == [(ETH, USD, TS)]
+    assert store.read(RETH2, USD, TS) is None
+
+
+def test_asset_priced_as_another_is_one_to_one_against_it(tmp_path: Path) -> None:
+    crypto = _empty_source("crypto")
+    fiat = _empty_source("fiat")
+    service = _service(crypto=crypto, fiat=fiat, store=_store(tmp_path))
+
+    # Both sides substitute to ETH, so the identity short-circuit answers without any lookup.
+    assert service.rate(RETH2, ETH, TS) == Decimal(1)
+    assert crypto.calls == []
+
+
+def test_asset_priced_as_another_ignores_its_own_cached_edge(tmp_path: Path) -> None:
+    eth_usd = Decimal("2000")
+    crypto = _StubSource({(ETH, USD): eth_usd}, source_name="crypto")
+    fiat = _empty_source("fiat")
+    store = _store(tmp_path)
+    store.write(
+        PriceRecord(
+            base_id=RETH2,
+            quote_id=USD,
+            rate=None,
+            source="crypto",
+            valid_from=TS - timedelta(days=1),
+            valid_to=TS + timedelta(days=1),
+            fetched_at=TS,
+        )
+    )
+    service = _service(crypto=crypto, fiat=fiat, store=store)
+
+    # Substitution happens above the cache, so a stale RETH2 edge cannot make it unpriceable.
+    assert service.rate(RETH2, USD, TS) == eth_usd
 
 
 def test_service_defaults_timestamp_and_normalizes_case(tmp_path: Path) -> None:

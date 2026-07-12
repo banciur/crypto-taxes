@@ -55,7 +55,8 @@
   their fiat currency and directional edges cached in SQLite (`src/db/price_cache.py`).
 - `src/services/price_resolver.py` only routes a fetch to the owning provider (fiat vs crypto).
 - Pricing contracts and records live in `src/domain/pricing.py`; provider HTTP clients live in
-  `src/clients/`. Pricing model constants (numeraire, fiat codes, stable pegs) live in `config`.
+  `src/clients/`. Pricing model constants (numeraire, fiat codes, stable pegs, priced-as assets)
+  live in `config`; see `src/services/README.md` for how `ASSETS_PRICED_AS` is applied.
 
 ### Price overrides
 - `src/domain/price_override.py` owns the `PriceOverride` model and `validate_overrides`; the

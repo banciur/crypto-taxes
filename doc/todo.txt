@@ -1,7 +1,5 @@
 First stage: compute German taxes
 
-TODO: add functionality to strictly bypass any coint. Like RETH2 price is checked as ETH.
-
 Review the order of todos
 -----------------
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
@@ -10,7 +8,7 @@ TODO: Price asset-id normalization (upper-casing) happens three times on the sam
   each client's fetch_record uppercases once more (e.g. CoinMarketCapClient, OpenExchangeRatesClient).
   Every layer defends itself instead of trusting the caller. Pick one owner (the PriceService entry
   point is the natural one) and let the resolver + clients assume already-normalized AssetIds.
-TODO: Handle Polygon sittuation. Was moving founds there through kraken(visible) and Coinbase and Coinbase PRO. As coinbase pro is not handled I'm missing data. Use manual flow find those tx in koinly. Add as manual transaction deposi EUR, buy USDC (use real price) and transform to second wallet
+TODO: Handle Polygon situation. Was moving founds there through kraken(visible) and Coinbase and Coinbase PRO. As coinbase pro is not handled I'm missing data. Use manual flow find those tx in koinly. Add as manual transaction deposi EUR, buy USDC (use real price) and transform to second wallet
 TODO: An override on EUR (or another valuation anchor) is accepted and wins over the base==quote rate, silently skewing anchor totals; reject anchor overrides and hide the Set price button on those legs.
 TODO: Reconsider the separate price_overrides.db (third SQLite file): merging it into corrections.db would drop the parallel engine/sessionmaker/lifespan/fixture stack and allow joins with corrections, but it requires starting to write migrations, so there is a cost.
 TODO: EventOrigin<->(origin_location, origin_external_id) column conversion is hand-rolled in four db modules (ledger_events, ledger_corrections, acquisition_disposal, price_overrides); extract a shared mixin/helper in db/.

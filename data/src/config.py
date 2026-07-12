@@ -25,6 +25,11 @@ STABLE_ASSETS_BY_PEG: dict[AssetId, frozenset[AssetId]] = {
     AssetId("EUR"): frozenset({AssetId("EURC"), AssetId("EUR-T")}),
 }
 
+# Assets that take another asset's market price 1:1, keyed by the asset supplying that price.
+ASSETS_PRICED_AS: dict[AssetId, frozenset[AssetId]] = {
+    AssetId("ETH"): frozenset({AssetId("RETH2")}),
+}
+
 
 class AppSettings(BaseSettings):
     coinmarketcap_api_key: str

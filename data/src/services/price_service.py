@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from config import NUMERAIRE_ASSET_ID, STABLE_ASSETS_BY_PEG
+from config import ASSETS_PRICED_AS, NUMERAIRE_ASSET_ID, STABLE_ASSETS_BY_PEG
 from domain.ledger import AssetId
 from domain.pricing import PriceCache, PriceProvider
 
@@ -10,9 +10,12 @@ from .price_resolver import PriceResolver
 
 logger = logging.getLogger(__name__)
 
-# Flatten {peg_currency: {stables}} into {stable: peg_currency} for per-asset lookup.
 _PEG_BY_STABLE: dict[AssetId, AssetId] = {
     stable: peg for peg, stables in STABLE_ASSETS_BY_PEG.items() for stable in stables
+}
+
+_PRICED_AS_BY_ASSET: dict[AssetId, AssetId] = {
+    asset: priced_as for priced_as, assets in ASSETS_PRICED_AS.items() for asset in assets
 }
 
 
@@ -21,6 +24,7 @@ class PriceService(PriceProvider):
 
     Resolution order for `rate(base, quote, ts)`:
 
+    0. substitute each side that is priced as another asset (rETH2 -> ETH).
     1. `base == quote` -> `1` (short-circuits before any store/source lookup).
     2. a cached `base -> quote` edge (including manual entries) -> use it, no network.
     3. otherwise pivot: resolve `base -> numeraire` and `quote -> numeraire` and divide.
@@ -43,8 +47,8 @@ class PriceService(PriceProvider):
         timestamp: datetime | None = None,
     ) -> Decimal | None:
         ts = timestamp or datetime.now(timezone.utc)
-        base = AssetId(base_id.upper())
-        quote = AssetId(quote_id.upper())
+        base = _priced_as(AssetId(base_id.upper()))
+        quote = _priced_as(AssetId(quote_id.upper()))
 
         if base == quote:
             return Decimal(1)
@@ -78,3 +82,7 @@ class PriceService(PriceProvider):
         record = self.resolver.fetch_record(asset, NUMERAIRE_ASSET_ID, timestamp)
         self.cache.write(record)
         return record.rate
+
+
+def _priced_as(asset: AssetId) -> AssetId:
+    return _PRICED_AS_BY_ASSET.get(asset, asset)
