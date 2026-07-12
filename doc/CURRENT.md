@@ -76,6 +76,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Import raw activity from the supported sources listed below.
 - Persist raw ledger events, unified corrections, corrected ledger events, generic system state, current wallet balances, and the acquisition/disposal projection.
 - Review raw events, corrections, and corrected events in the UI.
+- Filter those three lanes by a single asset. An event matches when any of its legs holds the asset and is then shown whole; a correction matches on its own legs or on the raw events it claims, so discards stay visible. The acquisition/disposal lane and wallet balances are never filtered.
 - Author and remove discard, replacement, and opening-balance corrections through the UI/API flow.
 - Author and remove price overrides through the UI/API flow, per asset on a corrected event, and persist them in a durable store (`artifacts/price_overrides.db`).
 - Review latest main-flow status, failed stage, and error details (exception type, message, and traceback) in the UI.

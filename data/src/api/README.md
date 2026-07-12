@@ -17,6 +17,12 @@
 
 ## Contract Notes
 
+- `GET /raw-events`, `GET /corrected-events`, and `GET /corrections` accept an optional `asset` query
+  param (`api/params.py`) that limits the response to items holding that asset. Matching is exact. Events match 
+  whole: a matching event is returned with all of its legs, including the ones in other assets. A correction matches
+  when the asset is in its own legs **or** in a raw event it claims as a source, which is what keeps a legless discard
+  visible next to the raw event it removes.  
+  `GET /acquisition-disposal` is deliberately not filterable.
 - `EventOrigin` (`location` + `external_id`) is the stable raw-event identity across API and UI.
 - Corrections are deleted by `correction_id`; raw-event identity stays in the correction payload `sources`.
 - `GET /accounts` returns the merged wallet + system exchange catalog. Records expose `account_chain_id`, `display_name`, and `skip_sync`.

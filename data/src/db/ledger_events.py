@@ -115,16 +115,17 @@ class LedgerEventRepository:
             return None
         return self._to_domain(orm_event)
 
-    def list(self) -> list[LedgerEvent]:
-        orm_events = (
-            self._session.query(LedgerEventOrm)
-            .order_by(
-                LedgerEventOrm.timestamp.asc(),
-                LedgerEventOrm.origin_location.asc(),
-                LedgerEventOrm.origin_external_id.asc(),
-            )
-            .all()
-        )
+    def list(self, asset_id: AssetId | None = None) -> list[LedgerEvent]:
+        query = self._session.query(LedgerEventOrm)
+        if asset_id is not None:
+            # EXISTS over the legs, so a matching event keeps every leg, including its other assets.
+            query = query.filter(LedgerEventOrm.legs.any(LedgerLegOrm.asset_id == asset_id))
+
+        orm_events = query.order_by(
+            LedgerEventOrm.timestamp.asc(),
+            LedgerEventOrm.origin_location.asc(),
+            LedgerEventOrm.origin_external_id.asc(),
+        ).all()
         return [self._to_domain(event) for event in orm_events]
 
     def list_event_timestamps_for_origins(
@@ -213,16 +214,16 @@ class CorrectedLedgerEventRepository:
         self._session.commit()
         return events
 
-    def list(self) -> list[LedgerEvent]:
-        orm_events = (
-            self._session.query(CorrectedLedgerEventOrm)
-            .order_by(
-                CorrectedLedgerEventOrm.timestamp.asc(),
-                CorrectedLedgerEventOrm.origin_location.asc(),
-                CorrectedLedgerEventOrm.origin_external_id.asc(),
-            )
-            .all()
-        )
+    def list(self, asset_id: AssetId | None = None) -> list[LedgerEvent]:
+        query = self._session.query(CorrectedLedgerEventOrm)
+        if asset_id is not None:
+            query = query.filter(CorrectedLedgerEventOrm.legs.any(CorrectedLedgerLegOrm.asset_id == asset_id))
+
+        orm_events = query.order_by(
+            CorrectedLedgerEventOrm.timestamp.asc(),
+            CorrectedLedgerEventOrm.origin_location.asc(),
+            CorrectedLedgerEventOrm.origin_external_id.asc(),
+        ).all()
         return [self._to_domain(event) for event in orm_events]
 
     @staticmethod

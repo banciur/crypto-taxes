@@ -114,8 +114,25 @@ export const doApiRequest = async <T>(
   return camelcaseKeys(data, { deep: true }) as T;
 };
 
-export const getFromApi = async <T>(path: string): Promise<T> => {
-  return (await doApiRequest<T>(path)) as T;
+// Adding query params is purely vibed. Review it when touching
+type QueryParams = Record<string, string | undefined>;
+
+const withQuery = (path: string, query: QueryParams | undefined) => {
+  const params = new URLSearchParams(
+    Object.entries(query ?? {}).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
+  );
+  const queryString = params.toString();
+
+  return queryString ? `${path}?${queryString}` : path;
+};
+
+export const getFromApi = async <T>(
+  path: string,
+  query?: QueryParams,
+): Promise<T> => {
+  return (await doApiRequest<T>(withQuery(path, query))) as T;
 };
 
 export const mutateApi = async <T = void>(

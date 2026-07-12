@@ -6,6 +6,20 @@
 - The left toolbar contains the column chooser and date chooser.
 - The main event section shows the selected lanes of ledger data plus the action bar for lane-level actions and feedback.
 
+### Asset filter
+
+- The `?asset=<assetId>` query param filters `Raw events`, `Corrections`, and `Corrected events` down to
+  items holding that asset; `Acquisitions / Disposals` and the wallet balances table stay unfiltered.
+  `ASSET_FILTERED_COLUMNS` in `src/consts.ts` is the source of truth for which lanes it reaches.
+- Filtering happens in the backend (`asset` query param on the three lane endpoints); the UI only
+  forwards the param, so lane counts in the date chooser follow the filter for free.
+- Entry points are the asset cells in the wallet balances table (clicking one filters, clicking the
+  active one clears) and editing the query string by hand. An asset with no current balance has no row
+  to click and can only be reached by editing the URL.
+- `AssetFilterNotice` warns, while the filter is active, that only those three lanes are limited, that
+  events match whole (a shown card still lists legs in other assets), and that a correction matches on
+  its own legs or on the raw events it claims.
+
 ### Lane behavior
 
 - `Raw events` shows imported ledger events before corrections are applied.
@@ -27,7 +41,8 @@
 
 ## UI Structure
 
-- `src/app/page.tsx` loads the selected columns, the merged accounts catalog, the latest system state, and wallet balances from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
+- `src/app/page.tsx` loads the selected columns (honoring the active asset filter), the merged accounts catalog, the latest system state, and wallet balances from the backend, groups all loaded lane items by timestamp bucket, and wires the page-level providers.
+- `src/hooks/useAssetFilter.ts` reads the active asset filter from the URL and builds the hrefs that set or clear it; `src/components/AssetFilterNotice.tsx` renders the warning and the clear control.
 - `src/components/SystemState/SystemStateSection.tsx` renders the latest main-flow status, stage, timestamps, known error details, and unexpected tracebacks.
 - `src/components/Events/` owns event selection state, correction creation/removal actions, and the action bar shown above the timeline. The directory keeps the React component in `Events.tsx`, selection state in `useEventSelection.ts`, and pure event-derivation helpers in `selectableEvents.ts`.
 - `src/components/Events/ReplacementEditorModal.tsx` owns the structured replacement-creation form, including UTC timestamp editing, leg authoring, and note capture.
@@ -59,6 +74,7 @@
 - `GET /acquisition-disposal` returns the acquisition/disposal projection as a pre-sorted list of `ACQUISITION` and `DISPOSAL` items sharing common fields (`event_origin`, `account_chain_id`, `asset_id`, `is_fee`, `timestamp`) plus kind-specific decimal fields.
 - Ledger leg quantities remain string-backed decimal values at the API boundary.
 - `GET /corrections` returns feed for discard, replacement, and opening-balance items.
+- `GET /raw-events`, `GET /corrected-events`, and `GET /corrections` take an optional `asset` query param that limits them to items holding that asset; see `data/src/api/README.md` for the matching rules.
 - Source-backed corrections may be saved without legs; they consume the selected raw sources without emitting a corrected synthetic event.
 - Correction mutations refresh the server-rendered lane data after they are complete.
 - `GET /price-overrides` returns a flat list of stored overrides (`event_origin`, `asset_id`, `rate_eur`, optional `note`). It does not report whether an override still matches a corrected event; a stale one fails the pipeline and surfaces through `GET /system-state`.
