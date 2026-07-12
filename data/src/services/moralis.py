@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Sequence
 
-from accounts import AccountConfig
+from accounts import RealAccountConfig
 from clients.moralis import MoralisClient
 from db.tx_cache_moralis import (
     MoralisCacheRepository,
@@ -28,12 +28,10 @@ class MoralisService:
         self,
         client: MoralisClient,
         cache_repo: MoralisCacheRepository,
-        accounts: Sequence[AccountConfig],
         now_fn: Callable[[], datetime] = utc_now,
     ):
         self.client = client
         self.cache = cache_repo
-        self.accounts = accounts
         self._now = now_fn
 
     def _persist(self, location: EventLocation, records: RawTxs) -> None:
@@ -53,8 +51,8 @@ class MoralisService:
 
         self.cache.upsert_transactions(rows)
 
-    def _ensure_locations_synced(self, mode: SyncMode) -> None:
-        for account in self.accounts:
+    def _ensure_locations_synced(self, sync_accounts: Sequence[RealAccountConfig], mode: SyncMode) -> None:
+        for account in sync_accounts:
             if account.skip_sync:
                 logger.info("Address %s (%s) is marked skip_sync; skipping fetch", account.address, account.name)
                 continue
@@ -74,6 +72,11 @@ class MoralisService:
                 self._persist(location, txs)
                 self.cache.mark_synced(location, address, self._now())
 
-    def get_transactions(self, sync_mode: SyncMode = SyncMode.BUDGET) -> RawTxs:
-        self._ensure_locations_synced(sync_mode)
+    def get_transactions(
+        self,
+        *,
+        sync_accounts: Sequence[RealAccountConfig],
+        sync_mode: SyncMode = SyncMode.BUDGET,
+    ) -> RawTxs:
+        self._ensure_locations_synced(sync_accounts, sync_mode)
         return self.cache.load_all_transactions()

@@ -1,12 +1,20 @@
-[
-  {
-    "name": "Wallet 1",
-    "address": "0x1a5d4F9bb274D8333C794E7AffD55ADFA19b9187",
-    "locations": ["ethereum"]
-  },
-  {
-    "name": "Wallet 2",
-    "address": "0xcB1C1FdE09f811B294172696404e88E658659905",
-    "locations": ["ethereum", "base"]
-  }
-]
+{
+  "real": [
+    {
+      "name": "Wallet 1",
+      "address": "0x1a5d4F9bb274D8333C794E7AffD55ADFA19b9187",
+      "locations": ["ethereum"]
+    },
+    {
+      "name": "Wallet 2",
+      "address": "0xcB1C1FdE09f811B294172696404e88E658659905",
+      "locations": ["ethereum", "base"]
+    }
+  ],
+  "artificial": [
+    {
+      "name": "Polygon Artificial",
+      "account_id": "polygon-artificial-2021"
+    }
+  ]
+}

@@ -29,7 +29,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - `LedgerLeg`: one asset delta for one account within a ledger event. `is_fee=True` marks an explicit fee leg.
 - `LedgerCorrection`: a manual override that discards raw events, replaces them with a synthetic corrected event, or adds an opening balance.
   - `PriceOverride`: an operator-supplied EUR per-unit rate for one asset of one corrected event, identified by that event's `event_origin` plus the `asset_id`. At most one rate exists per `(event_origin, asset_id)`.
-- `AccountRegistry`: the canonical merged account catalog that includes both configured wallets and built-in exchange accounts.
+- `AccountRegistry`: the canonical merged account catalog that includes configured real wallets, configured artificial accounts, and built-in exchange accounts.
 - `SystemState`: the persisted latest main-flow run status, including stage, start/finish timestamps, and first error details.
 - `WalletBalance`: one persisted current balance for an `(account, asset)` pair, rebuilt from corrected events. Rebuild failures surface only through `SystemState`, not through a wallet status object.
 - `AcquisitionLot`: an inventory lot created from corrected ledger activity.
@@ -75,6 +75,7 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 
 - Import raw activity from the supported sources listed below.
 - Persist raw ledger events, unified corrections, corrected ledger events, generic system state, current wallet balances, and the acquisition/disposal projection.
+- Configure real accounts separately from artificial accounts. Real accounts can feed source importers; artificial accounts are manual ledger accounts exposed for corrections and projections only.
 - Review raw events, corrections, and corrected events in the UI.
 - Filter those three lanes by a single asset. An event matches when any of its legs holds the asset and is then shown whole; a correction matches on its own legs or on the raw events it claims, so discards stay visible. The acquisition/disposal lane and wallet balances are never filtered.
 - Author and remove discard, replacement, and opening-balance corrections through the UI/API flow.

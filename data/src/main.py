@@ -7,7 +7,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Sequence
 
-from accounts import AccountRegistry, load_accounts
+from accounts import AccountRegistry
 from clients.coinbase import CoinbaseClient
 from clients.coinmarketcap import CoinMarketCapClient
 from clients.moralis import MoralisClient
@@ -172,14 +172,13 @@ def _import_and_persist_raw_events(
     )
     coinbase_importer = CoinbaseImporter(service=coinbase_service)
 
-    accounts = load_accounts()
+    account_registry = AccountRegistry.from_path()
     moralis_importer = MoralisImporter(
         service=MoralisService(
             MoralisClient(api_key=settings.moralis_api_key),
             MoralisCacheRepository(tx_cache_session),
-            accounts=accounts,
         ),
-        account_registry=AccountRegistry(accounts),
+        account_registry=account_registry,
         correction_repository=correction_repository,
     )
 

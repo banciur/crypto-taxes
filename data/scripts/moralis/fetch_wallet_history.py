@@ -14,14 +14,14 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 
-from accounts import AccountRegistry, load_accounts
+from accounts import AccountRegistry
 from clients.moralis import MoralisClient
 from config import CORRECTIONS_DB_PATH, TRANSACTIONS_CACHE_DB_PATH, config
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.session import init_db_session
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
-from importers.moralis import MoralisImporter
+from importers.moralis.moralis_importer import MoralisImporter
 from services.moralis import MoralisService, SyncMode
 
 
@@ -52,7 +52,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> None:
     args = parse_args(argv)
 
-    accounts = load_accounts(args.accounts)
+    account_registry = AccountRegistry.from_path(args.accounts)
     cache_session = init_transactions_cache_db(db_path=TRANSACTIONS_CACHE_DB_PATH)
     corrections_session = init_db_session(
         db_path=CORRECTIONS_DB_PATH,
@@ -62,11 +62,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     service = MoralisService(
         MoralisClient(api_key=config().moralis_api_key),
         MoralisCacheRepository(cache_session),
-        accounts=accounts,
     )
     importer = MoralisImporter(
         service=service,
-        account_registry=AccountRegistry(accounts),
+        account_registry=account_registry,
         correction_repository=LedgerCorrectionRepository(corrections_session),
         sync_mode=args.sync_mode,
     )
