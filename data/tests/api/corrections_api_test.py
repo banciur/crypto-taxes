@@ -250,3 +250,60 @@ def test_delete_is_idempotent_for_missing_correction(client: TestClient) -> None
 
     assert response.status_code == 204
     assert client.get("/corrections").json() == []
+
+
+def test_get_filtered_by_asset_matches_correction_legs(
+    client: TestClient,
+    persist_correction: Callable[[LedgerCorrectionDraft], LedgerCorrection],
+) -> None:
+    btc_opening_balance = persist_correction(
+        LedgerCorrectionDraft(
+            timestamp=datetime(2024, 2, 1, 12, 0, tzinfo=timezone.utc),
+            legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
+        )
+    )
+
+    btc_response = client.get("/corrections", params={"asset": BTC})
+    eth_response = client.get("/corrections", params={"asset": ETH})
+
+    assert [item["id"] for item in btc_response.json()] == [str(btc_opening_balance.id)]
+    assert eth_response.json() == []
+
+
+def test_get_filtered_by_asset_matches_assets_of_claimed_raw_sources(
+    client: TestClient,
+    persist_raw_events: Callable[[list[LedgerEvent]], None],
+    persist_correction: Callable[[LedgerCorrectionDraft], LedgerCorrection],
+) -> None:
+    timestamp = datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc)
+
+    def eth_source(external_id: str) -> LedgerEvent:
+        return raw_event(
+            location=EventLocation.ARBITRUM,
+            external_id=external_id,
+            timestamp=timestamp,
+            legs=[LedgerLeg(asset_id=ETH, quantity=Decimal("-1"), account_chain_id=LEDGER_WALLET)],
+        )
+
+    discarded_source = eth_source("0xeth-discarded")
+    replaced_source = eth_source("0xeth-replaced")
+    persist_raw_events([discarded_source, replaced_source])
+
+    # A legless discard reaches the ETH filter only through the raw event it claims.
+    eth_discard = persist_correction(
+        LedgerCorrectionDraft(timestamp=timestamp, sources=frozenset([discarded_source.event_origin]))
+    )
+    # A replacement of an ETH source that books BTC instead matches on both assets.
+    btc_replacement = persist_correction(
+        LedgerCorrectionDraft(
+            timestamp=timestamp,
+            sources=frozenset([replaced_source.event_origin]),
+            legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
+        )
+    )
+
+    eth_response = client.get("/corrections", params={"asset": ETH})
+    btc_response = client.get("/corrections", params={"asset": BTC})
+
+    assert {item["id"] for item in eth_response.json()} == {str(eth_discard.id), str(btc_replacement.id)}
+    assert [item["id"] for item in btc_response.json()] == [str(btc_replacement.id)]

@@ -35,6 +35,15 @@ if (!Object.keys(COLUMN_METADATA).includes(DEFAULT_COLUMN)) {
 
 export const COLUMNS_PARAM_NAME = "columns";
 
+export const ASSET_PARAM_NAME = "asset";
+
+// Lanes the asset filter applies to. The other lanes stay unfiltered, which `AssetFilterNotice` warns about.
+export const ASSET_FILTERED_COLUMNS: ReadonlySet<ColumnKey> = new Set([
+  "raw",
+  "corrections",
+  "corrected",
+]);
+
 export const orderColumnKeys = (keys: Iterable<ColumnKey>): ColumnKey[] =>
   Array.from(keys).sort(
     (left, right) => COLUMN_METADATA[left].order - COLUMN_METADATA[right].order,

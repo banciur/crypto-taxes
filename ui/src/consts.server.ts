@@ -3,18 +3,18 @@ import "server-only";
 import { getAcquisitionDisposal } from "@/api/acquisitionDisposal";
 import { getCorrections } from "@/api/corrections";
 import { getCorrectedEvents, getRawEvents } from "@/api/events";
-import type { LaneItemData } from "@/types/events";
+import type { AssetId, LaneItemData } from "@/types/events";
 import type { ColumnKey } from "@/consts";
 import { orderByTimestamp } from "@/lib/sort";
 
 type ColumnDefinition = {
-  load: () => Promise<LaneItemData[]>;
+  load: (assetFilter: AssetId | null) => Promise<LaneItemData[]>;
 };
 
 export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   raw: {
-    load: async () => {
-      const events = await getRawEvents();
+    load: async (assetFilter) => {
+      const events = await getRawEvents(assetFilter);
       return events.map((event) => ({
         ...event,
         kind: "raw-event" as const,
@@ -22,8 +22,8 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
     },
   },
   corrected: {
-    load: async () => {
-      const events = await getCorrectedEvents();
+    load: async (assetFilter) => {
+      const events = await getCorrectedEvents(assetFilter);
       return events.map((event) => ({
         ...event,
         kind: "corrected-event" as const,
@@ -31,8 +31,8 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
     },
   },
   corrections: {
-    load: async () => {
-      const corrections = await getCorrections();
+    load: async (assetFilter) => {
+      const corrections = await getCorrections(assetFilter);
       return orderByTimestamp(
         corrections.map((correction) => ({
           ...correction,
@@ -44,6 +44,7 @@ export const COLUMN_DEFINITIONS: Record<ColumnKey, ColumnDefinition> = {
   acquisitionDisposal: {
     // Items already carry their "ACQUISITION" / "DISPOSAL" discriminant from the
     // API, so no re-tagging is needed unlike the event/correction lanes.
+    // The asset filter deliberately does not reach this lane; `ASSET_FILTERED_COLUMNS` lists the ones it does.
     load: async () => getAcquisitionDisposal(),
   },
 } as const;

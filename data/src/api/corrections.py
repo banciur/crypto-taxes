@@ -10,12 +10,26 @@ from api.dependencies import (
     get_corrections_session,
     get_raw_events_repository,
 )
+from api.params import AssetFilterQuery
 from corrections.validation import CorrectionValidationError, validate_ingestion_corrections
 from db.ledger_corrections import LedgerCorrectionRepository
 from db.ledger_events import LedgerEventRepository
 from domain.correction import CorrectionId, LedgerCorrection, LedgerCorrectionDraft
+from domain.ledger import AssetId, EventOrigin
 
 router = APIRouter()
+
+
+def _involves_asset(
+    correction: LedgerCorrection,
+    *,
+    asset_id: AssetId,
+    raw_origins_holding_asset: frozenset[EventOrigin],
+) -> bool:
+    if any(leg.asset_id == asset_id for leg in correction.legs):
+        return True
+
+    return bool(correction.sources & raw_origins_holding_asset)
 
 
 @router.get(
@@ -25,8 +39,19 @@ router = APIRouter()
 )
 def get_corrections(
     repo: Annotated[LedgerCorrectionRepository, Depends(get_correction_repository)],
+    raw_repo: Annotated[LedgerEventRepository, Depends(get_raw_events_repository)],
+    asset: AssetFilterQuery = None,
 ) -> list[LedgerCorrection]:
-    return repo.list()
+    corrections = repo.list()
+    if asset is None:
+        return corrections
+
+    raw_origins_holding_asset = frozenset(event.event_origin for event in raw_repo.list(asset_id=asset))
+    return [
+        correction
+        for correction in corrections
+        if _involves_asset(correction, asset_id=asset, raw_origins_holding_asset=raw_origins_holding_asset)
+    ]
 
 
 @router.post(

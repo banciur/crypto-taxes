@@ -64,6 +64,7 @@ def raw_event(
     external_id: str,
     timestamp: datetime,
     note: str | None = None,
+    legs: list[LedgerLeg] | None = None,
 ) -> LedgerEvent:
     return LedgerEvent(
         id=LedgerEventId(uuid4()),
@@ -71,7 +72,8 @@ def raw_event(
         event_origin=EventOrigin(location=location, external_id=external_id),
         ingestion="api_test",
         note=note,
-        legs=[
+        legs=legs
+        or [
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
             LedgerLeg(asset_id=EUR, quantity=Decimal("-100"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
         ],

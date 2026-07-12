@@ -6,7 +6,8 @@ import { getAccounts } from "@/api/accounts";
 import { getPriceOverrides } from "@/api/priceOverrides";
 import { getSystemState } from "@/api/systemState";
 import { getWalletBalances } from "@/api/walletBalances";
-import { COLUMNS_PARAM_NAME } from "@/consts";
+import { ASSET_PARAM_NAME, COLUMNS_PARAM_NAME } from "@/consts";
+import { resolveAssetFilter } from "@/lib/assetFilter";
 import { resolveSelectedColumns } from "@/lib/columnSelection";
 import {
   dayKeyForTimestampBucket,
@@ -18,6 +19,7 @@ import type { EventsByTimestamp } from "@/types/events";
 import styles from "./page.module.css";
 import { AccountNamesProvider } from "@/contexts/AccountNamesContext";
 import { PriceOverridesProvider } from "@/contexts/PriceOverridesContext";
+import { AssetFilterNotice } from "@/components/AssetFilterNotice";
 import { ColumnChooser } from "@/components/ColumnChooser";
 import { UrlColumnSelectionProvider } from "@/contexts/UrlColumnSelectionContext";
 import { DateChooser } from "@/components/DateChooser";
@@ -57,6 +59,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const selectedColumns = Array.from(
     resolveSelectedColumns(query[COLUMNS_PARAM_NAME]),
   );
+  const assetFilter = resolveAssetFilter(query[ASSET_PARAM_NAME]);
 
   const initialLoadStart = performance.now();
   const [accounts, systemState, walletBalances, priceOverrides] =
@@ -77,7 +80,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const loadedColumns = await Promise.all(
     selectedColumns.map(async (key) => ({
       key,
-      events: await COLUMN_DEFINITIONS[key].load(),
+      events: await COLUMN_DEFINITIONS[key].load(assetFilter),
     })),
   );
 
@@ -141,6 +144,11 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                 <Row>
                   <Col>
                     <h2 className="text-center">Ledger events</h2>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col>
+                    <AssetFilterNotice />
                   </Col>
                 </Row>
                 <Row className={styles.eventsColumnsRow}>
