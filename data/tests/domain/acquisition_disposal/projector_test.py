@@ -64,8 +64,8 @@ def test_override_prices_otherwise_unpriceable_acquisition() -> None:
     assert lot.cost_per_unit == lp_override_rate
 
 
-def test_unpriceable_anchor_error_includes_event_context() -> None:
-    external_id = "projector-unpriceable-anchor"
+def test_unpriceable_reference_asset_error_includes_event_context() -> None:
+    external_id = "projector-unpriceable-reference"
     event = make_event(
         external_id=external_id,
         legs=[make_leg(asset_id=USDC, quantity=Decimal("1"))],
@@ -76,7 +76,7 @@ def test_unpriceable_anchor_error_includes_event_context() -> None:
         AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project([event], overrides_by_event_origin={})
 
     message = str(exc_info.value)
-    assert "Valuation anchor asset" in message
+    assert "Reference-priced asset" in message
     assert f"asset={USDC}" in message
     assert f"event_origin={event.event_origin}" in message
     assert f"@{BASE_TIMESTAMP.isoformat()}" in message

@@ -67,9 +67,9 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Gas and similar execution costs are always separate disposals.
 - Reverted on-chain transactions move no value, so they contribute only the gas disposal; their attempted transfers are dropped.
 - Explicit fee legs stay explicit downstream through `is_fee=True`.
-- `EUR`, configured fiat currencies, and selected stable assets act as valuation anchors. Fiat anchors do not open or consume FIFO lots; selected stable assets still do.
+- Assets are ranked by how far their EUR rate can be trusted: `EUR` first, then other fiat, then selected stable assets, then market-priced assets. Within an event only the weakest rank present is adjusted to make the event balance; everything above it anchors. A `EUR`/`DAI` trade is therefore valued by the EUR actually paid, while an `ETH`/`USDC` trade is still valued by the `USDC` leg. Fiat does not open or consume FIFO lots; selected stable assets still do.
 - Asset prices are resolved as cross-rates through a configured numeraire pivot (USD), with stablecoins valued via the fiat currency they are pegged to. A genuinely unavailable market price is a first-class "unpriceable" signal that feeds remainder solving; an operational price-backend failure aborts the run.
-- A configured asset takes another asset's price 1:1 (rETH2 takes ETH's). Only the price is borrowed: the asset stays distinct in the ledger, in wallet balances, and in FIFO inventory, is not a valuation anchor, and can still be superseded by a `PriceOverride`.
+- A configured asset takes another asset's price 1:1 (rETH2 takes ETH's). Only the price is borrowed: the asset stays distinct in the ledger, in wallet balances, and in FIFO inventory, stays a market-priced asset for ranking purposes, and can still be superseded by a `PriceOverride`.
 - A `PriceOverride` supplies the rate for its asset instead of the price backend, and is then treated as an ordinary known rate: it participates in mid-point rebalancing and remainder solving exactly like a fetched one. This is what makes otherwise-unpriceable events valuable by hand.
 
 ## Current Capabilities

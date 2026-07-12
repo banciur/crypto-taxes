@@ -2,6 +2,7 @@ First stage: compute German taxes
 
 Review the order of todos
 -----------------
+TODO: Code that adjust prices by tier is not clear to me. Vibed it quickly.
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 TODO: Price asset-id normalization (upper-casing) happens three times on the same call path:
   PriceService.rate uppercases base/quote, PriceResolver.fetch_record uppercases them again, and

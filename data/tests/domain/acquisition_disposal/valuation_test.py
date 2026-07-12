@@ -8,10 +8,11 @@ from domain.acquisition_disposal.quantities import project_event_quantities
 from domain.acquisition_disposal.valuation import value_projected_event
 from domain.ledger import AssetId, LedgerEvent
 from domain.pricing import PriceProvider
-from tests.constants import ETH, EUR, USDC
+from tests.constants import ETH, EUR, USD, USDC
 from tests.domain.acquisition_disposal.helpers import EXOTIC, make_event
 from tests.helpers.ledger import make_leg
 
+USDT = AssetId("USDT")
 LP = AssetId("LP")
 LP_A = AssetId("LP_A")
 LP_B = AssetId("LP_B")
@@ -141,7 +142,7 @@ def test_more_than_one_distinct_unpriceable_non_fee_asset_fails() -> None:
     assert f"assets={LP_A},{LP_B}" in str(exc_info.value)
 
 
-def test_unpriceable_anchor_asset_fails_instead_of_being_remainder_solved() -> None:
+def test_unpriceable_reference_priced_asset_fails_instead_of_being_remainder_solved() -> None:
     eth_quantity = Decimal("-1")
     usdc_quantity = Decimal("200")
     event = make_event(
@@ -151,7 +152,7 @@ def test_unpriceable_anchor_asset_fails_instead_of_being_remainder_solved() -> N
         ],
     )
 
-    with pytest.raises(AcquisitionDisposalProjectionError, match="Valuation anchor asset"):
+    with pytest.raises(AcquisitionDisposalProjectionError, match="Reference-priced asset"):
         _rates_for(event, rates={ETH: Decimal("200")})
 
 
@@ -169,19 +170,89 @@ def test_one_sided_event_requires_direct_price() -> None:
     assert isinstance(exc_info.value, AcquisitionDisposalValuationError)
 
 
-def test_fully_anchored_mismatch_fails() -> None:
-    eur_quantity = Decimal("100")
-    usdc_quantity = Decimal("-90")
+def test_stable_yields_to_base_currency_when_peg_rate_disagrees() -> None:
+    # Buying a stable for EUR: the EUR spent is what the stable cost, whatever the peg-derived rate says.
+    eur_quantity = Decimal("-172.26")
+    usdc_quantity = Decimal("200")
+    usdc_peg_rate = Decimal("0.860956")
+    expected_usdc_rate = abs(eur_quantity) / usdc_quantity
 
-    event = make_event(
-        legs=[
-            make_leg(asset_id=EUR, quantity=eur_quantity),
-            make_leg(asset_id=USDC, quantity=usdc_quantity),
-        ],
+    rates = _rates_for(
+        make_event(
+            legs=[
+                make_leg(asset_id=EUR, quantity=eur_quantity),
+                make_leg(asset_id=USDC, quantity=usdc_quantity),
+            ],
+        ),
+        rates={USDC: usdc_peg_rate},
     )
 
-    with pytest.raises(AcquisitionDisposalProjectionError, match="fully anchored"):
-        _rates_for(event, rates={USDC: Decimal("1")})
+    assert rates == {EUR: Decimal("1"), USDC: expected_usdc_rate}
+
+
+def test_fiat_yields_to_base_currency() -> None:
+    eur_quantity = Decimal("-100")
+    usd_quantity = Decimal("125")
+    usd_fx_rate = Decimal("0.85")
+    expected_usd_rate = abs(eur_quantity) / usd_quantity
+
+    rates = _rates_for(
+        make_event(
+            legs=[
+                make_leg(asset_id=EUR, quantity=eur_quantity),
+                make_leg(asset_id=USD, quantity=usd_quantity),
+            ],
+        ),
+        rates={USD: usd_fx_rate},
+    )
+
+    assert rates == {EUR: Decimal("1"), USD: expected_usd_rate}
+
+
+def test_only_the_weakest_tier_absorbs_the_discrepancy() -> None:
+    # EUR and USDC both outrank ETH, so USDC keeps its own rate and ETH absorbs the whole gap on its own.
+    eur_quantity = Decimal("-1000")
+    usdc_quantity = Decimal("400")
+    eth_quantity = Decimal("0.5")
+    usdc_rate = Decimal("0.9")
+    eth_rate = Decimal("1000")
+    expected_eth_rate = (abs(eur_quantity) - usdc_quantity * usdc_rate) / eth_quantity
+
+    rates = _rates_for(
+        make_event(
+            legs=[
+                make_leg(asset_id=EUR, quantity=eur_quantity),
+                make_leg(asset_id=USDC, quantity=usdc_quantity),
+                make_leg(asset_id=ETH, quantity=eth_quantity),
+            ],
+        ),
+        rates={USDC: usdc_rate, ETH: eth_rate},
+    )
+
+    assert rates == {EUR: Decimal("1"), USDC: usdc_rate, ETH: expected_eth_rate}
+
+
+def test_same_tier_stables_move_toward_midpoint() -> None:
+    usdc_quantity = Decimal("-100")
+    usdt_quantity = Decimal("100")
+    usdc_rate = Decimal("1")
+    usdt_rate = Decimal("0.98")
+    expected_midpoint_total = (abs(usdc_quantity) * usdc_rate + usdt_quantity * usdt_rate) / Decimal(2)
+
+    rates = _rates_for(
+        make_event(
+            legs=[
+                make_leg(asset_id=USDC, quantity=usdc_quantity),
+                make_leg(asset_id=USDT, quantity=usdt_quantity),
+            ],
+        ),
+        rates={USDC: usdc_rate, USDT: usdt_rate},
+    )
+
+    assert rates == {
+        USDC: expected_midpoint_total / abs(usdc_quantity),
+        USDT: expected_midpoint_total / usdt_quantity,
+    }
 
 
 def test_fee_asset_is_excluded_from_non_fee_balancing_and_inherits_same_event_rate() -> None:

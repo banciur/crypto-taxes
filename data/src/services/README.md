@@ -9,8 +9,8 @@
 - An asset listed in `ASSETS_PRICED_AS` takes another asset's price 1:1 (rETH2 takes ETH's). The
   substitution happens on both sides of the pair before the cache is consulted, so such an asset is
   never cached, never fetched, and needs no `cmc_asset_map.json` entry. Keep this table separate
-  from `STABLE_ASSETS_BY_PEG`: that one feeds `VALUATION_ANCHOR_ASSET_IDS`, and a priced-as asset
-  must stay a normal rebalanceable, FIFO-tracked asset that merely borrows a rate.
+  from `STABLE_ASSETS_BY_PEG`: that one feeds the `STABLE` `ValuationTier`, and a priced-as asset
+  must stay a normal `MARKET`-tier, FIFO-tracked asset that merely borrows a rate.
 - `PriceResolver` (`price_resolver.py`) only routes a fetch to the owning provider: fiat to Open
   Exchange Rates, everything else to CoinMarketCap.
 - Config (numeraire, fiat codes, stable pegs) comes from `config` constants; the cache is SQLite

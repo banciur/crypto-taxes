@@ -6,7 +6,7 @@ from config import BASE_CURRENCY_ASSET_ID
 
 from ..ledger import AssetId
 from ..pricing import PriceProvider
-from .constants import is_valuation_anchor
+from .constants import ValuationTier, is_reference_priced, valuation_tier
 from .errors import AcquisitionDisposalValuationError
 from .pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
 
@@ -41,7 +41,6 @@ def _rate_in_base_currency(
     price_provider: PriceProvider,
     timestamp: datetime,
 ) -> Decimal | None:
-    """An override wins over the market price; otherwise fall back to the price provider."""
     if asset_id in overrides:
         return overrides[asset_id]
     return price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
@@ -65,9 +64,9 @@ def _value_non_fee_groups(
             group.asset_id, overrides=overrides, price_provider=price_provider, timestamp=timestamp
         )
         if direct_rate is None:
-            if is_valuation_anchor(group.asset_id):
+            if is_reference_priced(group.asset_id):
                 raise AcquisitionDisposalValuationError(
-                    f"Valuation anchor asset cannot be priced directly in {BASE_CURRENCY_ASSET_ID}: "
+                    f"Reference-priced asset cannot be priced directly in {BASE_CURRENCY_ASSET_ID}: "
                     f"asset={group.asset_id}."
                 )
             if unknown_group is not None:
@@ -128,10 +127,17 @@ def _rebalance_known_rates(
     *,
     direct_rates: dict[AssetId, Decimal],
 ) -> dict[AssetId, Decimal]:
-    acquisition_anchor_groups = _groups_for_side(groups, side=1, anchor_only=True)
-    acquisition_adjustable_groups = _groups_for_side(groups, side=1, anchor_only=False)
-    disposal_anchor_groups = _groups_for_side(groups, side=-1, anchor_only=True)
-    disposal_adjustable_groups = _groups_for_side(groups, side=-1, anchor_only=False)
+    """Move the event's least trustworthy rates until both sides agree.
+
+    Only the weakest `ValuationTier` present in the event is adjustable; every stronger tier anchors. An event
+    whose assets all sit in one tier has nothing stronger to anchor against, so all of its groups adjust.
+    """
+    adjustable_tier = max(valuation_tier(group.asset_id) for group in groups)
+
+    acquisition_anchor_groups = _groups_for_side(groups, side=1, tier=adjustable_tier, adjustable=False)
+    acquisition_adjustable_groups = _groups_for_side(groups, side=1, tier=adjustable_tier, adjustable=True)
+    disposal_anchor_groups = _groups_for_side(groups, side=-1, tier=adjustable_tier, adjustable=False)
+    disposal_adjustable_groups = _groups_for_side(groups, side=-1, tier=adjustable_tier, adjustable=True)
 
     acquisition_anchor_total = _groups_total(acquisition_anchor_groups, rates=direct_rates)
     acquisition_adjustable_total = _groups_total(acquisition_adjustable_groups, rates=direct_rates)
@@ -143,7 +149,7 @@ def _rebalance_known_rates(
 
     balanced_rates = dict(direct_rates)
 
-    if acquisition_total == 0 or disposal_total == 0:
+    if acquisition_total == 0 or disposal_total == 0 or acquisition_total == disposal_total:
         return balanced_rates
 
     if acquisition_adjustable_total > 0 and disposal_adjustable_total > 0:
@@ -180,11 +186,10 @@ def _rebalance_known_rates(
         )
         return balanced_rates
 
-    if acquisition_total != disposal_total:
-        raise AcquisitionDisposalValuationError(
-            "Non-fee event totals disagree and cannot be rebalanced because both sides are fully anchored."
-        )
-    return balanced_rates
+    raise AcquisitionDisposalValuationError(
+        "Non-fee event totals disagree and cannot be rebalanced because the adjustable assets are valued at "
+        f"zero: assets={_format_asset_ids(acquisition_adjustable_groups + disposal_adjustable_groups)}."
+    )
 
 
 def _solve_unknown_rate(
@@ -238,10 +243,13 @@ def _groups_for_side(
     groups: Sequence[_ProjectedAssetResidualGroup],
     *,
     side: int,
-    anchor_only: bool,
+    tier: ValuationTier,
+    adjustable: bool,
 ) -> list[_ProjectedAssetResidualGroup]:
     return [
-        group for group in groups if _group_side(group) == side and is_valuation_anchor(group.asset_id) is anchor_only
+        group
+        for group in groups
+        if _group_side(group) == side and (valuation_tier(group.asset_id) is tier) is adjustable
     ]
 
 
@@ -266,12 +274,6 @@ def _apply_target_total(
         )
 
     current_total = _groups_total(groups, rates=direct_rates)
-    if current_total <= 0:
-        raise AcquisitionDisposalValuationError(
-            "One-sided event relies on direct price service valuation and the price is unavailable: "
-            f"assets={_format_asset_ids(groups)}."
-        )
-
     remaining_total = target_total
     for group in groups[:-1]:
         scaled_total = target_total * _direct_total(group, rate=direct_rates[group.asset_id]) / current_total

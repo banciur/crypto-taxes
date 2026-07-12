@@ -31,9 +31,9 @@ The projection is split into three steps:
 - `AcquisitionLot.cost_per_unit` and `DisposalLink.proceeds_total` are both EUR-based values.
 - `LedgerLeg.quantity` is never zero.
 - `LedgerLeg.is_fee=True` means the leg is explicit and must stay explicit downstream.
-- Non-fee `EUR` is a valuation anchor. It already carries EUR value in the event and is not proportionally adjusted during balancing.
-- Other fiat currencies and selected stable assets are also treated as valuation anchors. They may need direct EUR pricing first, but once valued, they are not proportionally adjusted during balancing.
-- Fiat valuation anchors do not open or consume FIFO lots. Selected stable anchors still participate in FIFO.
+- Every asset has a valuation tier that says how far its EUR rate can be trusted: `EUR` is exact by definition, other fiat comes from an FX quote, selected stable assets add a peg assumption on top of that quote, and everything else is a market price.
+- Anchoring is decided per event, not per asset: every tier stronger than the weakest one present in the event is anchored, so only the weakest tier's rates are proportionally adjusted during balancing.
+- Fiat does not open or consume FIFO lots. Selected stable assets still participate in FIFO regardless of how they were valued.
 - Each projected acquisition or disposal maps to exactly one source event leg. If one residual quantity comes from multiple current-event legs, it must be split before downstream records are created.
 - Fees are not folded into swap or trade consideration. They are separate projected legs because downstream disposals attach to a single source leg.
 - Fee valuation is event-coupled. If a fee asset also appears as a non-fee projected asset in the same event, the fee inherits that event's EUR-per-unit rate for the asset.
@@ -47,7 +47,7 @@ For non-fee legs, phase 1 first nets quantities per asset across the whole event
 
 Explicit fee legs are different because their source-leg identity matters downstream. They stay explicit and are projected directly instead of being netted with non-fee movement, even when the fee asset also appears as a non-fee asset in the same event.
 
-Non-fee anchor assets such as `EUR`, other fiat currencies, and selected stable assets remain part of the non-fee projection. Their special treatment happens in valuation, not in quantity projection.
+Fiat and selected stable assets remain part of the non-fee projection. Their special treatment happens in valuation, not in quantity projection.
 
 If one asset residual survives on multiple same-sign current-event legs, phase 1 must split that residual across those legs. That split is not just an implementation detail. Each projected acquisition or disposal maps to exactly one source event leg, so one projected record cannot represent multiple current-event legs at once.
 
@@ -70,10 +70,16 @@ Phase 2 first resolves non-fee projected assets. The high-level algorithm is:
 1. ask the price service for direct EUR rates for the non-fee projected assets
 2. if more than one distinct non-fee asset is unpriceable, fail
 3. if exactly one distinct non-fee asset is unpriceable, solve it as the remainder needed to make the non-fee event balance
-4. keep `EUR`, other fiat currencies, and selected stable assets fixed as valuation anchors
-5. proportionally adjust only the remaining non-anchor assets so the non-fee event balances
+4. anchor every asset except those in the weakest valuation tier present in the event
+5. proportionally adjust only that weakest tier so the non-fee event balances
 
-When both sides of the event contain adjustable non-anchor assets, the adjustment is symmetric and moves both sides toward a midpoint. When only one side contains adjustable assets, that side absorbs the adjustment.
+Step 4 is what makes a `EUR`/`DAI` trade work. Both assets are reference-priced, but they are not equally trustworthy: the EUR leg *is* the EUR value, while `DAI`'s rate is a peg assumption on top of a daily FX quote. The exchange spread makes the two disagree by a fraction of a percent. Anchoring `EUR` and letting `DAI` absorb the difference values the acquired `DAI` at what was actually paid for it. The same ordering keeps a stable anchored against a market asset, so an `ETH`/`USDC` trade still takes its valuation from the `USDC` leg.
+
+Only the weakest tier moves, not every tier below the strongest. In a `EUR -> ETH + USDC` event the discrepancy is absorbed entirely by `ETH`; `USDC` keeps its own rate rather than being dragged around by `ETH`'s pricing error.
+
+An event whose assets all share one tier has nothing stronger to anchor against, so all of its groups are adjustable. Two market assets rebalance against each other, and so do two stables.
+
+When both sides of the event contain adjustable assets, the adjustment is symmetric and moves both sides toward a midpoint. When only one side contains adjustable assets, that side absorbs the adjustment.
 
 Fees stay structurally separate from non-fee legs and do not participate in the non-fee balancing equation. After non-fee rates are resolved, a fee first tries to inherit the same-event EUR-per-unit rate for the same asset. If that is not available, it falls back to direct pricing.
 
@@ -86,23 +92,24 @@ Projection must fail when automatic valuation cannot produce a defensible result
 Important failure boundaries:
 
 - more than one distinct non-fee asset is unpriceable in the same event
-- a valuation anchor asset cannot be priced directly in EUR
+- a reference-priced asset (fiat or a selected stable) cannot be priced directly in EUR, which means the price data is broken rather than the asset being genuinely unpriceable
 - a fee asset appears only in fee legs and cannot be priced in EUR
 - a one-sided event relies on direct price service valuation and the price is unavailable
 - remainder solving would require negative value
 - remainder solving is required but there is not enough known value on the other side to solve it
-- a two-sided event contains only anchored assets and their valued totals disagree
+- the event totals disagree and the adjustable assets are valued at zero, leaving nothing that can absorb the difference
 
 ## Phase 3: FIFO Matching
 
-FIFO matches each projected non-fiat disposal against older open acquisition lots of the same asset. Fiat anchors do not open or consume FIFO lots. Disposals are processed before acquisitions so that a same-event acquisition residual cannot fund a same-event disposal residual, and a single projected disposal leg may still produce multiple `DisposalLink`s, one for each historical lot fragment consumed by FIFO.
+FIFO matches each projected non-fiat disposal against older open acquisition lots of the same asset. Fiat does not open or consume FIFO lots. Disposals are processed before acquisitions so that a same-event acquisition residual cannot fund a same-event disposal residual, and a single projected disposal leg may still produce multiple `DisposalLink`s, one for each historical lot fragment consumed by FIFO.
 
 ## Consequences of the Model
 
 - Internal transfers do not create fresh tax lots.
 - Moving an asset between owned accounts does not reset FIFO because lots are tracked per asset, not per account.
 - Fees remain explicit and separately deductible / taxable because they keep their own source-leg identity through `is_fee=True`.
-- Fiat and selected stable consideration anchor event valuation instead of being proportionally adjusted together with non-anchor assets. Fiat does this without creating or consuming FIFO lots, while selected stable assets remain lot-tracked.
+- Fiat and selected stable consideration anchor event valuation against weaker-tier assets instead of being proportionally adjusted alongside them. Fiat does this without creating or consuming FIFO lots, while selected stable assets remain lot-tracked.
+- A trade between two reference-priced assets is valued by the trade itself rather than by two independently quoted rates that will never agree exactly.
 - Current-event valuation is determined before inventory history is consulted.
 
 ## Future Extension: Operator-Supplied Valuation Corrections
