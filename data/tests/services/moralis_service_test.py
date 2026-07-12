@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import Engine
 from sqlalchemy.orm import sessionmaker
 
-from accounts import AccountConfig
+from accounts import RealAccountConfig
 from clients.moralis import MoralisClient
 from db.tx_cache_common import TransactionsCacheBase
 from db.tx_cache_moralis import MoralisCacheRepository
@@ -68,8 +68,8 @@ def _account(
     address: WalletAddress = ETH_ADDRESS,
     locations: frozenset[EventLocation] = frozenset([LOCATION]),
     skip_sync: bool = False,
-) -> AccountConfig:
-    return AccountConfig(name=name, address=address, locations=locations, skip_sync=skip_sync)
+) -> RealAccountConfig:
+    return RealAccountConfig(name=name, address=address, locations=locations, skip_sync=skip_sync)
 
 
 @pytest.fixture()
@@ -82,7 +82,6 @@ def test_ctx(db_engine: Engine) -> Generator[_ServiceTestContext, None, None]:
         service = MoralisService(
             cast(MoralisClient, client),
             cache_repo,
-            accounts=[_account()],
             now_fn=clock,
         )
         yield _ServiceTestContext(service=service, client=client, cache_repo=cache_repo, clock=clock)
@@ -95,13 +94,13 @@ def test_budget_fetches_new_wallet_chain_from_start_even_when_chain_has_recent_c
     new_address = WalletAddress("0xddeeff")
     existing_cursor = FIXED_NOW - timedelta(hours=2)
 
-    test_ctx.service.accounts = [
+    sync_accounts = [
         _account(name="Existing"),
         _account(name="New", address=new_address),
     ]
     test_ctx.cache_repo.mark_synced(LOCATION, ETH_ADDRESS, existing_cursor)
 
-    test_ctx.service.get_transactions(SyncMode.BUDGET)
+    test_ctx.service.get_transactions(sync_accounts=sync_accounts, sync_mode=SyncMode.BUDGET)
 
     assert _calls_as_tuples(test_ctx.client.calls) == [(LOCATION.value, new_address, None)]
     assert test_ctx.cache_repo.last_synced_at(LOCATION, new_address) is not None
@@ -114,7 +113,7 @@ def test_budget_fetches_wallet_when_last_sync_was_on_previous_day(
     last_synced_2 = FIXED_NOW - timedelta(days=1, hours=1)
     address_2 = WalletAddress("0xddeeff")
 
-    test_ctx.service.accounts = [
+    sync_accounts = [
         _account(name="Account 1"),
         _account(name="Account 2", address=address_2),
     ]
@@ -123,7 +122,7 @@ def test_budget_fetches_wallet_when_last_sync_was_on_previous_day(
     test_ctx.cache_repo.mark_synced(LOCATION, ETH_ADDRESS, last_synced_1)
     test_ctx.cache_repo.mark_synced(LOCATION, address_2, last_synced_2)
 
-    test_ctx.service.get_transactions(SyncMode.BUDGET)
+    test_ctx.service.get_transactions(sync_accounts=sync_accounts, sync_mode=SyncMode.BUDGET)
 
     assert _calls_as_tuples(test_ctx.client.calls) == [
         (LOCATION.value, ETH_ADDRESS, expected_from_date),
@@ -137,15 +136,15 @@ def test_budget_skips_wallet_chain_synced_today(test_ctx: _ServiceTestContext) -
     last_synced_at = FIXED_NOW - timedelta(hours=1, minutes=59)
     test_ctx.cache_repo.mark_synced(LOCATION, ETH_ADDRESS, last_synced_at)
 
-    test_ctx.service.get_transactions(SyncMode.BUDGET)
+    test_ctx.service.get_transactions(sync_accounts=[_account()], sync_mode=SyncMode.BUDGET)
 
     assert test_ctx.client.calls == []
 
 
 def test_budget_skips_wallet_marked_as_skip_sync(test_ctx: _ServiceTestContext) -> None:
-    test_ctx.service.accounts = [_account(name="Dormant", skip_sync=True)]
-
-    test_ctx.service.get_transactions(SyncMode.BUDGET)
+    test_ctx.service.get_transactions(
+        sync_accounts=[_account(name="Dormant", skip_sync=True)], sync_mode=SyncMode.BUDGET
+    )
 
     assert test_ctx.client.calls == []
 
@@ -155,7 +154,7 @@ def test_fresh_fetches_even_when_wallet_chain_was_recently_synced(test_ctx: _Ser
     expected_from_date = (recent_cursor - timedelta(days=1)).date()
     test_ctx.cache_repo.mark_synced(LOCATION, ETH_ADDRESS, recent_cursor)
 
-    test_ctx.service.get_transactions(SyncMode.FRESH)
+    test_ctx.service.get_transactions(sync_accounts=[_account()], sync_mode=SyncMode.FRESH)
 
     assert _calls_as_tuples(test_ctx.client.calls) == [(LOCATION.value, ETH_ADDRESS, expected_from_date)]
 
@@ -174,7 +173,7 @@ def test_get_transactions_persists_fetched_transactions(test_ctx: _ServiceTestCo
 
     test_ctx.client.set_transactions(location=LOCATION, address=ETH_ADDRESS, transactions=[tx])
 
-    transactions = test_ctx.service.get_transactions(SyncMode.FRESH)
+    transactions = test_ctx.service.get_transactions(sync_accounts=[_account()], sync_mode=SyncMode.FRESH)
     cached_transactions = test_ctx.cache_repo.load_all_transactions()
 
     assert _calls_as_tuples(test_ctx.client.calls) == [(LOCATION.value, ETH_ADDRESS, None)]

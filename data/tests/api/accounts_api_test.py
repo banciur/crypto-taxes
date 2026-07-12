@@ -9,8 +9,9 @@ from accounts import (
     COINBASE_ACCOUNT_NAME,
     KRAKEN_ACCOUNT_ID,
     KRAKEN_ACCOUNT_NAME,
-    AccountConfig,
     AccountRegistry,
+    ArtificialAccountConfig,
+    RealAccountConfig,
 )
 from domain.ledger import EventLocation, WalletAddress
 
@@ -21,14 +22,20 @@ def test_get_accounts_returns_merged_wallet_and_system_accounts(
 ) -> None:
     address = WalletAddress("0x4838b106fce9647bdf1e7877bf73ce8b0bad5f97")
     registry = AccountRegistry(
-        [
-            AccountConfig(
+        real_accounts=[
+            RealAccountConfig(
                 name="Main Wallet",
                 address=address,
                 locations=frozenset({EventLocation.BASE, EventLocation.ETHEREUM}),
                 skip_sync=False,
             )
-        ]
+        ],
+        artificial_accounts=[
+            ArtificialAccountConfig(
+                name="Polygon Artificial",
+                account_id="polygon-2021",
+            )
+        ],
     )
 
     monkeypatch.setattr(
@@ -60,5 +67,10 @@ def test_get_accounts_returns_merged_wallet_and_system_accounts(
             "account_chain_id": KRAKEN_ACCOUNT_ID,
             "display_name": KRAKEN_ACCOUNT_NAME,
             "skip_sync": False,
+        },
+        "INTERNAL:polygon-2021": {
+            "account_chain_id": "INTERNAL:polygon-2021",
+            "display_name": "Polygon Artificial",
+            "skip_sync": True,
         },
     }

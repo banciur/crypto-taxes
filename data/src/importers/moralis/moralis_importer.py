@@ -189,7 +189,10 @@ class MoralisImporter:
         self.correction_repository = correction_repository
 
     def load_events(self) -> list[LedgerEvent]:
-        transactions = self.service.get_transactions(self.sync_mode)
+        transactions = self.service.get_transactions(
+            sync_accounts=self.account_registry.real_accounts(),
+            sync_mode=self.sync_mode,
+        )
         events: list[LedgerEvent] = []
 
         for tx in transactions:

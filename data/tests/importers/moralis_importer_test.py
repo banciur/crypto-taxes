@@ -1,13 +1,13 @@
 from collections.abc import Generator
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, NamedTuple, cast
+from typing import Any, NamedTuple, Sequence, cast
 
 import pytest
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import sessionmaker
 
-from accounts import AccountConfig, AccountRegistry
+from accounts import AccountRegistry, RealAccountConfig
 from db.ledger_corrections import (
     CorrectionsBase,
     LedgerCorrectionAutoSuppressionOrm,
@@ -114,11 +114,18 @@ def _erc20_transfer(
 class _StubMoralisService:
     def __init__(self) -> None:
         self._transactions: list[dict[str, Any]] = []
+        self.sync_accounts: Sequence[RealAccountConfig] | None = None
 
     def set_transactions(self, transactions: list[dict[str, Any]]) -> None:
         self._transactions = transactions
 
-    def get_transactions(self, _mode: object) -> list[dict[str, Any]]:
+    def get_transactions(
+        self,
+        *,
+        sync_accounts: Sequence[RealAccountConfig],
+        sync_mode: object,
+    ) -> list[dict[str, Any]]:
+        self.sync_accounts = sync_accounts
         return self._transactions
 
 
@@ -137,8 +144,8 @@ def test_ctx(db_engine: Engine) -> Generator[_ImporterTestContext, None, None]:
         importer = MoralisImporter(
             service=cast(MoralisService, service),
             account_registry=AccountRegistry(
-                [
-                    AccountConfig(
+                real_accounts=[
+                    RealAccountConfig(
                         name="Wallet",
                         address=ETH_ADDRESS,
                         locations=frozenset([LOCATION]),
@@ -611,6 +618,13 @@ def test_fee_parse_failure_includes_transaction_context(test_ctx: _ImporterTestC
 def test_decimal_from_atomic_value_rejects_non_integral_base_value() -> None:
     with pytest.raises(MoralisValueParseError, match="base_value"):
         _decimal_from_atomic_value("1.5", "18")
+
+
+def test_load_events_fetches_transactions_for_registry_real_accounts(test_ctx: _ImporterTestContext) -> None:
+    events = test_ctx.importer.load_events()
+
+    assert events == []
+    assert test_ctx.service.sync_accounts == test_ctx.importer.account_registry.real_accounts()
 
 
 def test_load_events_marks_moralis_spam_transactions(test_ctx: _ImporterTestContext) -> None:

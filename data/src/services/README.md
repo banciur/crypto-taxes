@@ -13,8 +13,8 @@
   clients in `src/clients/`.
 
 ## Moralis service
-- Fetches data for all tracked accounts storing them in the cache along the way.
-- Accounts with `skip_sync=true` are excluded from fetches.
+- Fetches data for real accounts, storing fetched transactions in the cache along the way.
+- Real accounts with `skip_sync=true` are excluded from fetches.
 - Cache uses SQLite persistence.
 - Raw cache implementation lives in `db/tx_cache_moralis.py`.
 - Helper scripts live under `scripts/moralis/`.

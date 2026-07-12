@@ -68,7 +68,7 @@
 ### API contract
 
 - Base URL comes from `CRYPTO_TAXES_API_URL` (defaults to `http://localhost:8000`).
-- `GET /accounts` returns the merged wallet + system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
+- `GET /accounts` returns the merged real-account, artificial-account, and system exchange catalog; records expose `account_chain_id`, `display_name`, and `skip_sync`.
 - `GET /system-state` returns the latest main-flow run status with optional stage, first error details, and traceback.
 - `GET /wallet-balances` returns the current corrected-ledger wallet balances.
 - `GET /acquisition-disposal` returns the acquisition/disposal projection as a pre-sorted list of `ACQUISITION` and `DISPOSAL` items sharing common fields (`event_origin`, `account_chain_id`, `asset_id`, `is_fee`, `timestamp`) plus kind-specific decimal fields.
