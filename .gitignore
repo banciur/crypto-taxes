@@ -5,6 +5,7 @@
 .pycache
 artifacts
 
+/private
 private.txt
 
 .pnpm-store

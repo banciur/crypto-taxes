@@ -1,4 +1,5 @@
 from abc import ABC
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -83,6 +84,18 @@ class LedgerLeg(StrictBaseModel):
         )
 
 
+def duplicate_leg_keys(legs: Iterable[LedgerLeg]) -> tuple[LegKey, ...]:
+    seen: set[LegKey] = set()
+    duplicates: set[LegKey] = set()
+    for leg in legs:
+        key = leg.leg_key
+        if key in seen:
+            duplicates.add(key)
+        else:
+            seen.add(key)
+    return tuple(sorted(duplicates))
+
+
 # TODO: This here seems to complicated
 class DuplicateLegIdentityError(CryptoTaxesError, ValueError):
     def __init__(self, duplicates: tuple[LegKey, ...]) -> None:
@@ -91,7 +104,7 @@ class DuplicateLegIdentityError(CryptoTaxesError, ValueError):
             f"account={duplicate.account_chain_id} asset={duplicate.asset_id} is_fee={duplicate.is_fee}"
             for duplicate in duplicates
         )
-        super().__init__(f"AbstractEvent.legs contains duplicate leg identities: {duplicates_summary}")
+        super().__init__(f"legs contain duplicate leg identities: {duplicates_summary}")
 
 
 class AbstractEvent(StrictBaseModel, ABC):
@@ -101,19 +114,9 @@ class AbstractEvent(StrictBaseModel, ABC):
     @field_validator("legs")
     @classmethod
     def _validate_unique_leg_identity(cls, legs: list[LedgerLeg]) -> list[LedgerLeg]:
-        seen_leg_keys: set[LegKey] = set()
-        duplicate_leg_keys: set[LegKey] = set()
-
-        for leg in legs:
-            leg_key = leg.leg_key
-            if leg_key in seen_leg_keys:
-                duplicate_leg_keys.add(leg_key)
-                continue
-            seen_leg_keys.add(leg_key)
-
-        if duplicate_leg_keys:
-            raise DuplicateLegIdentityError(tuple(sorted(duplicate_leg_keys)))
-
+        duplicates = duplicate_leg_keys(legs)
+        if duplicates:
+            raise DuplicateLegIdentityError(duplicates)
         return legs
 
 

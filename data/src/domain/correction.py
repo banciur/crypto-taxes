@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from pydantic import Field, ValidationInfo, field_validator, model_validator
 
-from domain.ledger import EventLocation, EventOrigin, LedgerLeg
+from domain.ledger import DuplicateLegIdentityError, EventLocation, EventOrigin, LedgerLeg, duplicate_leg_keys
 from domain.validation import reject_duplicate_items, reject_internal_origins
 from pydantic_base import StrictBaseModel
 
@@ -30,15 +30,9 @@ class LedgerCorrectionDraft(StrictBaseModel):
         if len(self.sources) == 0 and len(self.legs) == 0:
             raise ValueError("LedgerCorrection requires sources or legs")
 
-        if len(self.sources) == 0:
-            if len(self.legs) != 1:
-                raise ValueError("Source-less LedgerCorrection requires exactly one leg")
-            leg = next(iter(self.legs))
-            if leg.quantity <= 0:
-                raise ValueError("Source-less LedgerCorrection leg must be positive")
-            if leg.is_fee:
-                raise ValueError("Source-less LedgerCorrection leg must not be a fee")
-            return self
+        duplicates = duplicate_leg_keys(self.legs)
+        if duplicates:
+            raise DuplicateLegIdentityError(duplicates)
 
         reject_internal_origins(self.sources)
         return self

@@ -17,7 +17,7 @@
 - Acquisition/disposal projection models and projector package: `src/domain/acquisition_disposal/`
 - Target lot-matching model and rationale: `../doc/LOT_MATCHING.md`
 - Pricing snapshots (crypto and fiat unified): `src/domain/pricing.py`
-- Unified correction model (`LedgerCorrection` for discard, replacement, and opening balance): `src/domain/correction.py`
+- Unified correction model (`LedgerCorrection` for discard, replacement, and standalone synthetic events, including opening balances): `src/domain/correction.py`
 - Main-flow run status: `src/domain/system_state.py`
 - Tax event projection types: `src/domain/tax_event.py`
 - Wallet balance projection: `src/domain/wallet_projection.py`
@@ -32,6 +32,7 @@
 ### Correction persistence and application
 - Unified correction persistence lives in `src/db/ledger_corrections.py`.
 - Ingestion-layer correction application and validation live under `src/corrections/`.
+- Corrections without sources create standalone synthetic events and may contain any non-empty set of valid ledger legs. The UI's opening-balance flow remains restricted to one positive, non-fee leg.
 - Source-backed corrections occupy sources only while active. Deleting one hard-deletes the correction and records source-level auto-suppression so importer automation does not recreate it while manual recreation remains allowed.
 - Current ingestion correction flow is: validate unified source ownership, remove all claimed raw events, emit synthetic events for corrections with legs, then sort corrected events once before persistence by `timestamp`, `event_origin.location`, and `event_origin.external_id`.
 

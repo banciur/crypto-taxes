@@ -47,9 +47,10 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 
 - `sources != []` and `legs == []`: discard correction
 - `sources != []` and `legs != []`: replacement correction
-- `sources == []` and `legs != []`: opening-balance correction
+- `sources == []` and `legs != []`: standalone synthetic event.
 - Every claimed source must resolve to exactly one raw event.
 - A raw event cannot be claimed by more than one active correction.
+- A correction's legs, like any event's, must be unique by `(account_chain_id, asset_id, is_fee)`.
 - Rebuilding corrected events works by validating source ownership, removing claimed raw events, adding synthetic corrected events for corrections with legs, and then sorting deterministically.
 - Deleting a source-backed correction frees that source for manual reuse while preserving auto-suppression so importer automation does not recreate it automatically.
 

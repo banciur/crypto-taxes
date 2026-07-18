@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 
 from accounts import KRAKEN_ACCOUNT_ID
 from corrections.ingestion import (
@@ -12,7 +13,15 @@ from corrections.ingestion import (
 )
 from corrections.validation import CorrectionValidationError, validate_ingestion_corrections
 from domain.correction import LedgerCorrection
-from domain.ledger import AccountChainId, EventLocation, EventOrigin, LedgerEvent, LedgerEventId, LedgerLeg
+from domain.ledger import (
+    AccountChainId,
+    DuplicateLegIdentityError,
+    EventLocation,
+    EventOrigin,
+    LedgerEvent,
+    LedgerEventId,
+    LedgerLeg,
+)
 from tests.constants import BTC, ETH, LEDGER_WALLET
 
 
@@ -169,20 +178,38 @@ def test_validate_ingestion_corrections_rejects_duplicate_consumption() -> None:
         validate_ingestion_corrections(raw_events=[raw_event], corrections=[first, second])
 
 
-def test_source_less_correction_requires_positive_non_fee_single_leg() -> None:
-    with pytest.raises(ValueError, match="Source-less LedgerCorrection requires exactly one leg"):
+def test_source_less_correction_allows_arbitrary_non_empty_legs() -> None:
+    timestamp = datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc)
+
+    multi_leg = LedgerCorrection(
+        timestamp=timestamp,
+        legs=frozenset(
+            [
+                LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),
+                LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),
+            ]
+        ),
+    )
+    assert len(multi_leg.legs) == 2
+
+    fee_only = LedgerCorrection(
+        timestamp=timestamp,
+        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("-1"), account_chain_id=LEDGER_WALLET, is_fee=True)]),
+    )
+    assert next(iter(fee_only.legs)).is_fee
+
+
+def test_correction_rejects_duplicate_leg_identity() -> None:
+    with pytest.raises(ValidationError, match="duplicate leg identities") as exc_info:
         LedgerCorrection(
             timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc),
             legs=frozenset(
                 [
                     LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),
-                    LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),
+                    LedgerLeg(asset_id=BTC, quantity=Decimal("2"), account_chain_id=LEDGER_WALLET),
                 ]
             ),
         )
 
-    with pytest.raises(ValueError, match="Source-less LedgerCorrection leg must be positive"):
-        LedgerCorrection(
-            timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc),
-            legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("-1"), account_chain_id=LEDGER_WALLET)]),
-        )
+    error = exc_info.value.errors()[0]["ctx"]["error"]
+    assert isinstance(error, DuplicateLegIdentityError)
