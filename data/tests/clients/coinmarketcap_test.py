@@ -57,20 +57,22 @@ def _client(session: Mock, tmp_path: Path, *, high_resolution_days: int = 30, **
     return CoinMarketCapClient(
         api_key="test-key",
         session=session,
-        asset_map_path=tmp_path / "cmc_asset_map.json",
+        config_path=tmp_path / "cmc_config.json",
         high_resolution_days=high_resolution_days,
         **kwargs,
     )
 
 
-def _write_map(tmp_path: Path, mapping: dict[str, int]) -> Path:
-    path = tmp_path / "cmc_asset_map.json"
-    path.write_text(json.dumps(mapping))
+def _write_config(
+    tmp_path: Path, *, asset_map: dict[str, int] | None = None, unpriceable: list[str] | None = None
+) -> Path:
+    path = tmp_path / "cmc_config.json"
+    path.write_text(json.dumps({"asset_map": asset_map or {}, "unpriceable": unpriceable or []}))
     return path
 
 
 def test_recent_timestamp_uses_five_minute_interval(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"BTC": 1})
+    _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.return_value = _mock_response(_quotes_payload(cmc_id=1, quote="USD", price=42000.5))
 
@@ -88,7 +90,7 @@ def test_recent_timestamp_uses_five_minute_interval(tmp_path: Path) -> None:
 
 
 def test_old_timestamp_uses_daily_interval(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"BTC": 1})
+    _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.return_value = _mock_response(_quotes_payload(cmc_id=1, quote="EUR", price=7200))
 
@@ -101,7 +103,7 @@ def test_old_timestamp_uses_daily_interval(tmp_path: Path) -> None:
 
 
 def test_interval_selection_at_high_resolution_cutoff(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"BTC": 1})
+    _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.return_value = _mock_response(_quotes_payload(cmc_id=1, quote="USD", price=1))
 
@@ -115,7 +117,7 @@ def test_interval_selection_at_high_resolution_cutoff(tmp_path: Path) -> None:
 
 
 def test_returns_none_on_empty_quotes(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"BTC": 1})
+    _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.return_value = _mock_response({"status": {"error_code": 0}, "data": {"1": {"id": 1, "quotes": []}}})
 
@@ -125,7 +127,7 @@ def test_returns_none_on_empty_quotes(tmp_path: Path) -> None:
 
 
 def test_returns_none_on_empty_data(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"BTC": 1})
+    _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.return_value = _mock_response({"status": {"error_code": 0}, "data": {}})
 
@@ -134,7 +136,7 @@ def test_returns_none_on_empty_data(tmp_path: Path) -> None:
 
 
 def test_uses_id_from_asset_map(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"NEU": 2318})
+    _write_config(tmp_path, asset_map={"NEU": 2318})
     session = Mock()
     session.get.return_value = _mock_response(_quotes_payload(cmc_id=2318, quote="USD", price=3))
 
@@ -147,7 +149,7 @@ def test_uses_id_from_asset_map(tmp_path: Path) -> None:
 
 
 def test_discovers_single_candidate_and_writes_map(tmp_path: Path) -> None:
-    map_path = tmp_path / "cmc_asset_map.json"
+    config_path = tmp_path / "cmc_config.json"
     session = Mock()
     session.get.side_effect = [
         _mock_response({"status": {"error_code": 0}, "data": [{"id": 2318, "symbol": "NEU", "name": "Neumark"}]}),
@@ -159,7 +161,7 @@ def test_discovers_single_candidate_and_writes_map(tmp_path: Path) -> None:
     assert record.rate == Decimal("9")
     assert session.get.call_count == 2
     assert _MAP_PATH in session.get.call_args_list[0].args[0]
-    assert json.loads(map_path.read_text()) == {"NEU": 2318}
+    assert json.loads(config_path.read_text()) == {"asset_map": {"NEU": 2318}, "unpriceable": []}
 
 
 def test_zero_candidate_discovery_raises(tmp_path: Path) -> None:
@@ -168,7 +170,7 @@ def test_zero_candidate_discovery_raises(tmp_path: Path) -> None:
 
     with pytest.raises(CoinMarketCapAPIError, match="no asset for symbol WAT"):
         _client(session, tmp_path).fetch_record(AssetId("wat"), USD, timestamp=_OLD)
-    assert not (tmp_path / "cmc_asset_map.json").exists()
+    assert not (tmp_path / "cmc_config.json").exists()
 
 
 def test_invalid_symbol_error_returns_unpriceable_record(tmp_path: Path) -> None:
@@ -188,7 +190,23 @@ def test_invalid_symbol_error_returns_unpriceable_record(tmp_path: Path) -> None
     assert record.valid_to == record.valid_from + timedelta(days=1)
     assert session.get.call_count == 1
     assert _MAP_PATH in session.get.call_args.args[0]
-    assert not (tmp_path / "cmc_asset_map.json").exists()
+    assert not (tmp_path / "cmc_config.json").exists()
+
+
+def test_configured_unpriceable_symbol_returns_none_without_request(tmp_path: Path) -> None:
+    symbol = AssetId("UNI-V2")
+    _write_config(tmp_path, asset_map={"BTC": 1}, unpriceable=[symbol])
+    session = Mock()
+
+    record = _client(session, tmp_path).fetch_record(AssetId("uni-v2"), USD, timestamp=_OLD)
+
+    assert record.base_id == symbol
+    assert record.rate is None
+    assert record.source == "coinmarketcap"
+    assert record.valid_from == datetime(2020, 1, 1, tzinfo=timezone.utc)
+    assert record.valid_to == record.valid_from + timedelta(days=1)
+    # Neither symbol discovery nor a historical quote is requested.
+    assert session.get.call_count == 0
 
 
 def test_ambiguous_candidate_discovery_raises_with_details(tmp_path: Path) -> None:
@@ -220,7 +238,7 @@ def test_ambiguous_candidate_discovery_raises_with_details(tmp_path: Path) -> No
 
 
 def test_http_error_propagates(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"BTC": 1})
+    _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.return_value = _http_error_response(
         400, {"status": {"error_code": 400, "error_message": "Your plan allows 1 months of historical access."}}
@@ -231,7 +249,7 @@ def test_http_error_propagates(tmp_path: Path) -> None:
 
 
 def test_non_zero_status_propagates(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"BTC": 1})
+    _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.return_value = _mock_response({"status": {"error_code": 1001, "error_message": "Invalid API key"}})
 
@@ -240,7 +258,7 @@ def test_non_zero_status_propagates(tmp_path: Path) -> None:
 
 
 def test_missing_convert_currency_propagates(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"BTC": 1})
+    _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     # Quote present, but keyed by a different currency than requested.
     session.get.return_value = _mock_response(_quotes_payload(cmc_id=1, quote="GBP", price=1))
@@ -250,7 +268,7 @@ def test_missing_convert_currency_propagates(tmp_path: Path) -> None:
 
 
 def test_request_exception_propagates(tmp_path: Path) -> None:
-    _write_map(tmp_path, {"BTC": 1})
+    _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.side_effect = requests.ConnectionError("network down")
 
