@@ -8,11 +8,17 @@
   stables are not worth 1 USD).
 - An asset listed in `ASSETS_PRICED_AS` takes another asset's price 1:1 (rETH2 takes ETH's). The
   substitution happens on both sides of the pair before the cache is consulted, so such an asset is
-  never cached, never fetched, and needs no `cmc_asset_map.json` entry. Keep this table separate
+  never cached, never fetched, and needs no `cmc_config.json` entry. Keep this table separate
   from `STABLE_ASSETS_BY_PEG`: that one feeds the `STABLE` `ValuationTier`, and a priced-as asset
   must stay a normal `MARKET`-tier, FIFO-tracked asset that merely borrows a rate.
 - `PriceResolver` (`price_resolver.py`) only routes a fetch to the owning provider: fiat to Open
   Exchange Rates, everything else to CoinMarketCap.
+- The CoinMarketCap client reads `artifacts/cmc_config.json` at startup. Its `asset_map` resolves
+  colliding symbols to numeric CMC ids (newly discovered ids are written back); its `unpriceable`
+  list names symbols CMC prices incorrectly, which the
+  client short-circuits to an unpriceable record (`rate=None`) with no request. Such an asset stays
+  `MARKET`-tier, so its EUR value comes from a `PriceOverride` or the acquisition/disposal
+  adjacent/remainder solver rather than the price backend.
 - Config (numeraire, fiat codes, stable pegs) comes from `config` constants; the cache is SQLite
   (`src/db/price_cache.py`). The pricing contract lives in `src/domain/pricing.py`, provider
   clients in `src/clients/`.

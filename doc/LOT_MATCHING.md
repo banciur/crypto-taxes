@@ -61,19 +61,23 @@ Examples:
 
 Valuation is event-aware. Pure market pricing is not enough on its own because the event itself can carry stronger valuation evidence. Some assets should anchor the event instead of moving with crypto market noise, and some imported events are unbalanced because the system sees only owned wallets.
 
-Some projected assets may be unpriceable by the price service at the event timestamp. In that case, phase 2 may solve one missing non-fee asset as the remainder implied by the other valued non-fee legs in the same event. This only works when the visible non-fee legs contain enough opposing value to infer the missing EUR value. It does not apply to one-sided events where the counterparty side is outside the owned ledger.
+For each asset, direct valuation first uses a manual `PriceOverride` targeting that event and asset, then asks the price service at the event timestamp. Some projected assets have neither. In that case, phase 2 may solve one missing non-fee asset as the remainder implied by the other valued non-fee legs in the same event. This only works when the visible non-fee legs contain enough opposing value to infer the missing EUR value.
 
 This is a narrower assumption than the ledger model uses elsewhere. The system generally accepts unbalanced events because unseen external legs may be outside the owned ledger, but phase 2 does not model that uncertainty when it remainder-solves a missing asset value. If economically relevant value is missing from the visible non-fee legs, the inferred EUR value may be wrong even though the event shape is accepted by the broader system.
 
-Phase 2 first resolves non-fee projected assets. The high-level algorithm is:
+Phase 2 values the complete event sequence before FIFO matching:
 
-1. ask the price service for direct EUR rates for the non-fee projected assets
-2. if more than one distinct non-fee asset is unpriceable, fail
-3. if exactly one distinct non-fee asset is unpriceable, solve it as the remainder needed to make the non-fee event balance
-4. anchor every asset except those in the weakest valuation tier present in the event
-5. proportionally adjust only that weakest tier so the non-fee event balances
+1. Standard-value every event's non-fee groups using manual overrides, price-service rates, same-event remainder solving, and valuation-tier rebalancing.
+2. Index the final non-fee rates from events that standard valuation resolved completely.
+3. For each unresolved event, find the standard-valued event closest in time that contains one of its unresolved assets. Past and future events are both eligible. Equal-distance candidates are selected deterministically by stable event origin, then asset id.
+4. Borrow that asset's final rate transiently and retry the target event's normal non-fee valuation from the beginning. Repeat until the event resolves or no eligible anchor remains.
+5. Resolve fees after every event has final non-fee rates.
 
-Step 4 is what makes a `EUR`/`DAI` trade work. Both assets are reference-priced, but they are not equally trustworthy: the EUR leg *is* the EUR value, while `DAI`'s rate is a peg assumption on top of a daily FX quote. The exchange spread makes the two disagree by a fraction of a percent. Anchoring `EUR` and letting `DAI` absorb the difference values the acquired `DAI` at what was actually paid for it. The same ordering keeps a stable anchored against a market asset, so an `ETH`/`USDC` trade still takes its valuation from the `USDC` leg.
+Only standard-valued events enter the anchor index. An event that needs an adjacent rate cannot anchor another event, so resolution never recurses or forms derived-rate chains. Borrowed rates exist only during the current projection and are not persisted as `PriceOverride`s.
+
+A two-sided event may finish after borrowing fewer rates than it originally lacked because the final missing rate can be remainder-solved from the event itself. A one-sided event has no opposing value, so every unavailable non-fee rate must come from an adjacent anchor.
+
+Valuation-tier rebalancing is what makes a `EUR`/`DAI` trade work. Both assets are reference-priced, but they are not equally trustworthy: the EUR leg *is* the EUR value, while `DAI`'s rate is a peg assumption on top of a daily FX quote. The exchange spread makes the two disagree by a fraction of a percent. Anchoring `EUR` and letting `DAI` absorb the difference values the acquired `DAI` at what was actually paid for it. The same ordering keeps a stable anchored against a market asset, so an `ETH`/`USDC` trade still takes its valuation from the `USDC` leg.
 
 Only the weakest tier moves, not every tier below the strongest. In a `EUR -> ETH + USDC` event the discrepancy is absorbed entirely by `ETH`; `USDC` keeps its own rate rather than being dragged around by `ETH`'s pricing error.
 
@@ -91,13 +95,12 @@ Projection must fail when automatic valuation cannot produce a defensible result
 
 Important failure boundaries:
 
-- more than one distinct non-fee asset is unpriceable in the same event
+- one or more non-fee assets remain unavailable and none has an eligible standard-valued adjacent anchor
 - a reference-priced asset (fiat or a selected stable) cannot be priced directly in EUR, which means the price data is broken rather than the asset being genuinely unpriceable
 - a fee asset appears only in fee legs and cannot be priced in EUR
-- a one-sided event relies on direct price service valuation and the price is unavailable
 - remainder solving would require negative value
-- remainder solving is required but there is not enough known value on the other side to solve it
 - the event totals disagree and the adjustable assets are valued at zero, leaving nothing that can absorb the difference
+- the price backend fails operationally
 
 ## Phase 3: FIFO Matching
 
@@ -110,17 +113,11 @@ FIFO matches each projected non-fiat disposal against older open acquisition lot
 - Fees remain explicit and separately deductible / taxable because they keep their own source-leg identity through `is_fee=True`.
 - Fiat and selected stable consideration anchor event valuation against weaker-tier assets instead of being proportionally adjusted alongside them. Fiat does this without creating or consuming FIFO lots, while selected stable assets remain lot-tracked.
 - A trade between two reference-priced assets is valued by the trade itself rather than by two independently quoted rates that will never agree exactly.
+- Assets without direct prices can borrow transient rates from nearby independently valued events without creating persisted corrections or derived-rate chains.
 - Current-event valuation is determined before inventory history is consulted.
 
-## Future Extension: Operator-Supplied Valuation Corrections
+## Operator-Supplied Valuation Corrections
 
-Some events will remain impossible to value automatically, especially when multiple distinct non-fee assets are unpriceable in the same event.
+Some events remain impossible to value automatically because no standard-valued adjacent anchor exists. A manual `PriceOverride` supplies a EUR-per-unit rate for one asset of one corrected event, identified by the event's stable `EventOrigin` and the `asset_id`.
 
-For those cases the next step should add operator-supplied valuation overrides for projected acquisitions and disposals. The operator would provide replacement or correction values, and the projector would use those values instead of failing.
-
-This is intentionally deferred for now to keep the first implementation simpler.
-
-The current model already gives stable attachment points for future overrides:
-
-- source event identity is stable through `EventOrigin`
-- source leg identity is stable through `leg_key` / `source_leg_ref`
+Manual overrides take precedence over the price service, participate in same-event remainder solving and rebalancing, and make a fully standard-valued event eligible as an adjacent anchor. Their targeting and validation semantics are documented in `doc/CURRENT.md`.

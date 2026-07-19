@@ -15,7 +15,7 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-from config import CMC_ASSET_MAP_PATH
+from config import CMC_CONFIG_PATH
 from domain.ledger import AssetId
 from domain.pricing import PriceRecord
 from utils.misc import utc_now
@@ -51,9 +51,15 @@ class _Interval:
 class CoinMarketCapClient:
     """CoinMarketCap Pro API price source.
 
-    Implements :class:`domain.pricing.PriceSource` for crypto legs. CMC symbols collide, so
-    the base asset is resolved to a numeric CMC id through an operator-editable JSON map
-    (``artifacts/cmc_asset_map.json``) before any historical quote is requested.
+    Implements :class:`domain.pricing.PriceSource` for crypto legs. Both structures it needs come
+    from an operator-editable JSON config (``artifacts/cmc_config.json``), loaded once at startup:
+
+    - ``asset_map``: symbol -> numeric CMC id, because CMC symbols collide. The base asset is
+      resolved through it before any historical quote is requested; newly discovered ids are
+      written back.
+    - ``unpriceable``: symbols CMC prices incorrectly (illiquid LP tokens, wrapped receipts). A
+      listed symbol short-circuits to an unpriceable record (``rate=None``) without any request,
+      leaving its EUR value to a ``PriceOverride`` or the adjacent/remainder solver downstream.
     """
 
     def __init__(
@@ -66,7 +72,7 @@ class CoinMarketCapClient:
         retry_attempts: int = 5,
         retry_backoff_seconds: float = 1,
         high_resolution_days: int = 30,
-        asset_map_path: Path = CMC_ASSET_MAP_PATH,
+        config_path: Path = CMC_CONFIG_PATH,
         source_name: str = "coinmarketcap",
     ) -> None:
         self._api_key = api_key
@@ -74,8 +80,9 @@ class CoinMarketCapClient:
         self.timeout = timeout
         self._session = session or requests.Session()
         self.high_resolution_days = high_resolution_days
-        self.asset_map_path = asset_map_path
+        self.config_path = config_path
         self.source_name = source_name
+        self._asset_map, self._unpriceable = self._load_config()
 
         retries = Retry(
             total=retry_attempts,
@@ -93,16 +100,22 @@ class CoinMarketCapClient:
         quote = AssetId(quote_id.upper())
 
         interval = self._select_interval(timestamp)
-        try:
-            cmc_id = self._resolve_cmc_id(base)
-        except CoinMarketCapAPIError as exc:
-            if _is_invalid_symbol_error(exc, base):
-                logger.info("CoinMarketCap rejected symbol %s as invalid; treating it as unpriceable", base)
-                rate = None
-            else:
-                raise
+        if base in self._unpriceable:
+            logger.info(
+                "Symbol %s is configured unpriceable; skipping CoinMarketCap and treating it as unpriceable", base
+            )
+            rate = None
         else:
-            rate = self._fetch_price(cmc_id=cmc_id, quote=quote, interval=interval)
+            try:
+                cmc_id = self._resolve_cmc_id(base)
+            except CoinMarketCapAPIError as exc:
+                if _is_invalid_symbol_error(exc, base):
+                    logger.info("CoinMarketCap rejected symbol %s as invalid; treating it as unpriceable", base)
+                    rate = None
+                else:
+                    raise
+            else:
+                rate = self._fetch_price(cmc_id=cmc_id, quote=quote, interval=interval)
 
         return PriceRecord(
             base_id=base,
@@ -181,14 +194,13 @@ class CoinMarketCapClient:
             ) from exc
 
     def _resolve_cmc_id(self, symbol: AssetId) -> int:
-        asset_map = self._load_asset_map()
-        if symbol in asset_map:
-            return asset_map[symbol]
+        if symbol in self._asset_map:
+            return self._asset_map[symbol]
 
         cmc_id = self._discover_cmc_id(symbol)
-        asset_map[symbol] = cmc_id
-        self._write_asset_map(asset_map)
-        logger.info("Mapped symbol %s to CoinMarketCap id %s in %s", symbol, cmc_id, self.asset_map_path)
+        self._asset_map[symbol] = cmc_id
+        self._write_config()
+        logger.info("Mapped symbol %s to CoinMarketCap id %s in %s", symbol, cmc_id, self.config_path)
         return cmc_id
 
     def _discover_cmc_id(self, symbol: AssetId) -> int:
@@ -199,13 +211,15 @@ class CoinMarketCapClient:
 
         if len(candidates) == 0:
             raise CoinMarketCapAPIError(
-                f'CoinMarketCap has no asset for symbol {symbol}. Add "{symbol}": <cmc_id> to {self.asset_map_path}.'
+                f'CoinMarketCap has no asset for symbol {symbol}. Add "{symbol}": <cmc_id> under "asset_map" in '
+                f'{self.config_path}, or list it under "unpriceable" to treat it as unpriceable.'
             )
         if len(candidates) > 1:
             summaries = [self._candidate_summary(candidate) for candidate in candidates]
             raise CoinMarketCapAPIError(
                 f"CoinMarketCap returned {len(candidates)} candidates for symbol {symbol}. "
-                f'Choose one and add "{symbol}": <cmc_id> to {self.asset_map_path}. Candidates: {summaries}'
+                f'Choose one and add "{symbol}": <cmc_id> under "asset_map" in {self.config_path}. '
+                f"Candidates: {summaries}"
             )
 
         cmc_id = candidates[0].get("id")
@@ -222,26 +236,41 @@ class CoinMarketCapClient:
         summary["token_address"] = platform.get("token_address")
         return summary
 
-    def _load_asset_map(self) -> dict[AssetId, int]:
-        if not self.asset_map_path.exists():
-            return {}
+    def _load_config(self) -> tuple[dict[AssetId, int], frozenset[AssetId]]:
+        if not self.config_path.exists():
+            return {}, frozenset()
         try:
-            raw = json.loads(self.asset_map_path.read_text())
+            raw = json.loads(self.config_path.read_text())
         except (OSError, ValueError) as exc:
-            raise CoinMarketCapAPIError(f"Failed to read CoinMarketCap asset map at {self.asset_map_path}") from exc
+            raise CoinMarketCapAPIError(f"Failed to read CoinMarketCap config at {self.config_path}") from exc
         if not isinstance(raw, dict):
-            raise CoinMarketCapAPIError(f"CoinMarketCap asset map at {self.asset_map_path} must be a JSON object")
+            raise CoinMarketCapAPIError(f"CoinMarketCap config at {self.config_path} must be a JSON object")
+        return self._parse_asset_map(raw.get("asset_map", {})), self._parse_unpriceable(raw.get("unpriceable", []))
+
+    def _parse_asset_map(self, raw: Any) -> dict[AssetId, int]:
+        if not isinstance(raw, dict):
+            raise CoinMarketCapAPIError(f'CoinMarketCap config "asset_map" at {self.config_path} must be a JSON object')
         try:
             return {AssetId(str(symbol).upper()): int(cmc_id) for symbol, cmc_id in raw.items()}
         except (TypeError, ValueError) as exc:
             raise CoinMarketCapAPIError(
-                f"CoinMarketCap asset map at {self.asset_map_path} must map symbols to integer ids"
+                f'CoinMarketCap config "asset_map" at {self.config_path} must map symbols to integer ids'
             ) from exc
 
-    def _write_asset_map(self, asset_map: dict[AssetId, int]) -> None:
-        self.asset_map_path.parent.mkdir(parents=True, exist_ok=True)
-        serialized = {symbol: asset_map[symbol] for symbol in sorted(asset_map)}
-        self.asset_map_path.write_text(json.dumps(serialized, indent=2) + "\n")
+    def _parse_unpriceable(self, raw: Any) -> frozenset[AssetId]:
+        if not isinstance(raw, list) or not all(isinstance(symbol, str) for symbol in raw):
+            raise CoinMarketCapAPIError(
+                f'CoinMarketCap config "unpriceable" at {self.config_path} must be a JSON list of symbol strings'
+            )
+        return frozenset(AssetId(symbol.upper()) for symbol in raw)
+
+    def _write_config(self) -> None:
+        self.config_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "asset_map": {symbol: self._asset_map[symbol] for symbol in sorted(self._asset_map)},
+            "unpriceable": sorted(self._unpriceable),
+        }
+        self.config_path.write_text(json.dumps(payload, indent=2) + "\n")
 
     def _request(self, path: str, *, params: dict[str, Any]) -> dict[str, Any]:
         url = f"{self.base_url}{path}"

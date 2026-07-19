@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from errors import CryptoTaxesError
 
-from ..ledger import LedgerEvent, LedgerLeg
+from ..ledger import AssetId, LedgerEvent, LedgerLeg
 
 
 class AcquisitionDisposalProjectionError(CryptoTaxesError):
@@ -22,6 +22,12 @@ class AcquisitionDisposalProjectionError(CryptoTaxesError):
 
 class AcquisitionDisposalValuationError(AcquisitionDisposalProjectionError):
     pass
+
+
+class AcquisitionDisposalUnresolvedRatesError(AcquisitionDisposalValuationError):
+    def __init__(self, message: str, *, asset_ids: frozenset[AssetId]) -> None:
+        super().__init__(message)
+        self.asset_ids = asset_ids
 
 
 class AcquisitionDisposalLotMatchingError(AcquisitionDisposalProjectionError):
