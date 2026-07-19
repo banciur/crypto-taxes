@@ -264,12 +264,12 @@ def _build_acquisition_disposal_projection(
     overrides_by_event_origin = price_override_repository.rates_by_origin()
 
     logger.info("Building acquisition/disposal projection from %d corrected events", len(corrected_events))
-    projector = AcquisitionDisposalProjector(price_provider=price_service)
+    projector = AcquisitionDisposalProjector(
+        price_provider=price_service,
+        overrides_by_event_origin=overrides_by_event_origin,
+    )
     try:
-        projection = projector.project(
-            events=corrected_events,
-            overrides_by_event_origin=overrides_by_event_origin,
-        )
+        projection = projector.project(events=corrected_events)
     except Exception:
         projection_repository.replace(projector.projection())
         raise

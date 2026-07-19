@@ -50,8 +50,12 @@ class AcquisitionDisposalProjector:
         self,
         *,
         price_provider: PriceProvider,
+        overrides_by_event_origin: Mapping[EventOrigin, Mapping[AssetId, Decimal]],
     ) -> None:
-        self._price_provider = price_provider
+        self._rate_resolver = _DirectRateResolver(
+            price_provider=price_provider,
+            overrides_by_event_origin=overrides_by_event_origin,
+        )
         self._acquisitions: list[AcquisitionLot] = []
         self._disposals: list[DisposalLink] = []
         self._open_lots_by_asset: dict[AssetId, deque[_LotBalance]] = defaultdict(deque)
@@ -66,7 +70,6 @@ class AcquisitionDisposalProjector:
         self,
         *,
         events: Iterable[LedgerEvent],
-        overrides_by_event_origin: Mapping[EventOrigin, Mapping[AssetId, Decimal]],
     ) -> AcquisitionDisposalProjection:
         """Events must be provided in chronological order."""
         projected_events = [
@@ -76,14 +79,9 @@ class AcquisitionDisposalProjector:
             )
             for event in events
         ]
-        rate_resolver = _DirectRateResolver(
-            price_provider=self._price_provider,
-            overrides_by_event_origin=overrides_by_event_origin,
-        )
-
         standard_valuation = _value_standard_non_fee_events(
             projected_events=projected_events,
-            rate_resolver=rate_resolver,
+            rate_resolver=self._rate_resolver,
         )
         non_fee_rates_by_event_origin = dict(standard_valuation.resolved)
 
@@ -96,14 +94,14 @@ class AcquisitionDisposalProjector:
                 _resolve_non_fee_events_by_anchor(
                     unresolved_events=standard_valuation.unresolved,
                     anchors=anchors,
-                    rate_resolver=rate_resolver,
+                    rate_resolver=self._rate_resolver,
                 )
             )
 
         rates_by_event_origin = _complete_rates_with_fees(
             projected_events=projected_events,
             non_fee_rates_by_event_origin=non_fee_rates_by_event_origin,
-            rate_resolver=rate_resolver,
+            rate_resolver=self._rate_resolver,
         )
 
         for projected in projected_events:

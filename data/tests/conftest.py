@@ -42,4 +42,7 @@ def price_service() -> TestPriceService:
 
 @pytest.fixture(scope="function")
 def acquisition_disposal_projector(price_service: TestPriceService) -> AcquisitionDisposalProjector:
-    return AcquisitionDisposalProjector(price_provider=price_service)
+    return AcquisitionDisposalProjector(
+        price_provider=price_service,
+        overrides_by_event_origin={},
+    )
