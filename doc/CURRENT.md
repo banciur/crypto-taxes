@@ -72,6 +72,9 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Asset prices are resolved as cross-rates through a configured numeraire pivot (USD), with stablecoins valued via the fiat currency they are pegged to. A genuinely unavailable market price is a first-class "unpriceable" signal that feeds remainder solving; an operational price-backend failure aborts the run.
 - A configured asset takes another asset's price 1:1 (rETH2 takes ETH's). Only the price is borrowed: the asset stays distinct in the ledger, in wallet balances, and in FIFO inventory, stays a market-priced asset for ranking purposes, and can still be superseded by a `PriceOverride`.
 - A `PriceOverride` supplies the rate for its asset instead of the price backend, and is then treated as an ordinary known rate: it participates in mid-point rebalancing and remainder solving exactly like a fetched one. This is what makes otherwise-unpriceable events valuable by hand.
+- The acquisition/disposal projector standard-values every event's non-fee groups before FIFO. When rates remain unavailable, it borrows one rate at a time from the closest past or future event that standard valuation resolved independently, retrying same-event resolution after each borrowed rate.
+- Only independently standard-valued events can supply adjacent rates. Borrowed rates are transient, are not persisted as price overrides, and cannot be chained through another adjacent-resolved event.
+- Fee rates are resolved after all non-fee rates. A fee inherits its asset's final same-event non-fee rate when present and otherwise requires a manual override or price-service rate.
 
 ## Current Capabilities
 
@@ -86,10 +89,11 @@ The acquisition/disposal (inventory) stage is modeled around `AcquisitionLot` an
 - Rebuild the current per-wallet, per-asset balance projection from corrected events.
 - Rebuild and persist the acquisition/disposal projection (acquisition lots and disposal links) from corrected events, marking the run `COMPLETED` only after it succeeds.
 - Resolve asset prices as numeraire-pivot cross-rates (crypto via CoinMarketCap, fiat via Open Exchange Rates) and cache directional price edges in SQLite (`artifacts/price_cache.db`), negative-caching genuinely-missing prices.
+- Resolve genuinely unavailable non-fee rates from the closest independently valued event containing the same asset when same-event valuation alone is insufficient.
 
 ## Current Non-Capabilities
 
-- The main pipeline does not yet run the tax stage; tax computation remains unreachable dead code.
+- The main pipeline does not run a tax stage.
 - Tax calculation behavior is incomplete and should not be treated as authoritative current product behavior.
 - An orphaned price override (one whose target corrected event no longer exists) fails every rebuild, and the UI offers no way to find or delete it.
 - After correction or price-override changes, downstream pipeline outputs still require a manual rerun.

@@ -34,30 +34,6 @@ class _DirectRateResolver:
         return self._price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
 
 
-def value_projected_event(
-    projected_event: _ProjectedEvent,
-    *,
-    event_origin: EventOrigin,
-    timestamp: datetime,
-    rate_resolver: _DirectRateResolver,
-) -> dict[AssetId, Decimal]:
-    non_fee_prices = _value_non_fee_groups(
-        projected_event,
-        event_origin=event_origin,
-        timestamp=timestamp,
-        rate_resolver=rate_resolver,
-        borrowed_rates={},
-    )
-    fee_prices = _value_fee_groups(
-        projected_event.fee_groups,
-        non_fee_prices=non_fee_prices,
-        event_origin=event_origin,
-        timestamp=timestamp,
-        rate_resolver=rate_resolver,
-    )
-    return non_fee_prices | fee_prices
-
-
 def _value_non_fee_groups(
     projected_event: _ProjectedEvent,
     *,

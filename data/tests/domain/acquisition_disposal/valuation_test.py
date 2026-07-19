@@ -5,7 +5,7 @@ import pytest
 
 from domain.acquisition_disposal.errors import AcquisitionDisposalProjectionError, AcquisitionDisposalValuationError
 from domain.acquisition_disposal.quantities import project_event_quantities
-from domain.acquisition_disposal.valuation import _DirectRateResolver, value_projected_event
+from domain.acquisition_disposal.valuation import _DirectRateResolver, _value_fee_groups, _value_non_fee_groups
 from domain.ledger import AssetId, LedgerEvent
 from domain.pricing import PriceProvider
 from tests.constants import ETH, EUR, USD, USDC
@@ -39,15 +39,26 @@ def _rates_for(
     rates: dict[AssetId, Decimal],
     overrides: dict[AssetId, Decimal] | None = None,
 ) -> dict[AssetId, Decimal]:
-    return value_projected_event(
-        project_event_quantities(event),
+    projected_event = project_event_quantities(event)
+    rate_resolver = _DirectRateResolver(
+        price_provider=FixedPriceProvider(rates),
+        overrides_by_event_origin={event.event_origin: overrides or {}},
+    )
+    non_fee_rates = _value_non_fee_groups(
+        projected_event,
         event_origin=event.event_origin,
         timestamp=event.timestamp,
-        rate_resolver=_DirectRateResolver(
-            price_provider=FixedPriceProvider(rates),
-            overrides_by_event_origin={event.event_origin: overrides or {}},
-        ),
+        rate_resolver=rate_resolver,
+        borrowed_rates={},
     )
+    fee_rates = _value_fee_groups(
+        projected_event.fee_groups,
+        non_fee_prices=non_fee_rates,
+        event_origin=event.event_origin,
+        timestamp=event.timestamp,
+        rate_resolver=rate_resolver,
+    )
+    return non_fee_rates | fee_rates
 
 
 def test_anchor_asset_stays_fixed_while_adjustable_side_scales() -> None:

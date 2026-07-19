@@ -44,10 +44,11 @@
 ### Acquisition/disposal projection
 - After a successful wallet projection, the main flow rebuilds the acquisition/disposal projection from the same shared corrected-events list.
 - `AcquisitionDisposalProjector` (`src/domain/acquisition_disposal/`) values events and matches disposals against open lots via FIFO, producing `AcquisitionLot`s and `DisposalLink`s.
+- The projector first projects quantities for the complete event stream, standard-values all non-fee groups, indexes only those standard results as adjacent anchors, resolves remaining non-fee rates from the closest eligible anchors, completes fee rates, and then performs FIFO chronologically. Adjacent-resolved events never become anchors.
 - The projection is persisted with clear-then-write semantics through `AcquisitionDisposalProjectionRepository.replace()`, replacing any previous projection.
 - The stage first loads the stored price overrides and calls `validate_overrides` against the corrected events, so a stale override fails `ACQUISITION_DISPOSAL` rather than escaping the stage wrapper. Validation lives here and not in `CORRECTIONS` because overrides do not affect the corrected-event stream, and failing earlier would also block the wallet projection the operator needs while fixing the override.
 - Projector failures (e.g. not-enough-open-lots, unavailable required prices) propagate as exceptions and are recorded as a `FAILED` `SystemState` at the `ACQUISITION_DISPOSAL` stage.
-- On failure the stage still persists `AcquisitionDisposalProjector.projection()` -- the lots/disposals produced up to the failing event. Event application is not atomic, so this partial snapshot may be incoherent (e.g. a disposal recorded without its event's acquisitions) and is intended only as debug output alongside the `FAILED` `SystemState`.
+- On failure the stage still persists `AcquisitionDisposalProjector.projection()`. A valuation failure occurs before FIFO and therefore persists an empty projection. A FIFO failure persists lots/disposals through the last fully matched event, plus any records emitted before the failing event raised; this partial snapshot is debug-only and may be incoherent.
 - Tax-event models and persistence are not connected to the main flow, pending a future `TAX_COMPUTATION` stage.
 
 ### Price services
