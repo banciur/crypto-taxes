@@ -31,7 +31,6 @@ from db.price_cache import PriceCacheRepository, init_price_cache_db
 from db.price_overrides import PriceOverrideRepository, PriceOverridesBase
 from db.session import init_db_session
 from db.system_state import SystemStateRepository
-from db.tax_events import TaxEventRepository
 from db.tx_cache_coinbase import CoinbaseCacheRepository
 from db.tx_cache_common import init_transactions_cache_db
 from db.tx_cache_moralis import MoralisCacheRepository
@@ -57,7 +56,6 @@ from services.coinbase import CoinbaseService
 from services.moralis import MoralisService
 from services.price_resolver import PriceResolver
 from services.price_service import PriceService
-from utils.tax_summary import compute_weekly_tax_summary, generate_tax_events, render_weekly_tax_summary
 
 logger = logging.getLogger(__name__)
 STAKEWISE_CSV_GLOB = "Stakewise*.csv"
@@ -304,7 +302,6 @@ def run(
     corrected_event_repository = CorrectedLedgerEventRepository(events_session)
     wallet_balance_repository = WalletBalanceRepository(events_session)
     acquisition_disposal_projection_repository = AcquisitionDisposalProjectionRepository(events_session)
-    tax_event_repository = TaxEventRepository(events_session)
     system_state_repository = SystemStateRepository(events_session)
     correction_repository = LedgerCorrectionRepository(corrections_session)
     price_override_repository = PriceOverrideRepository(price_overrides_session)
@@ -344,7 +341,7 @@ def run(
     )
 
     price_service = build_price_service(price_cache_db_path)
-    acquisition_disposal_projection = _run_system_state_stage(
+    _run_system_state_stage(
         system_state_repository,
         SystemStateStage.ACQUISITION_DISPOSAL,
         started_at=run_started_at,
@@ -363,16 +360,6 @@ def run(
             finished_at=datetime.now(UTC),
         )
     )
-    return  # just for now
-    # Process stuff
-    tax_events = generate_tax_events(acquisition_disposal_projection, events)  # type: ignore[unreachable]
-    tax_event_repository.create_many(tax_events)
-    tax_events = tax_event_repository.list()
-
-    # Print summary
-    print(f"Imported {len(events)} events from {csv_path}")
-    weekly_tax = compute_weekly_tax_summary(tax_events, acquisition_disposal_projection, events)
-    render_weekly_tax_summary(weekly_tax)
 
 
 def main(argv: Sequence[str] | None = None) -> None:

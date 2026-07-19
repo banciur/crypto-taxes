@@ -116,7 +116,7 @@ def _value_non_fee_groups(
 def _value_fee_groups(
     fee_groups: Sequence[_ProjectedAssetResidualGroup],
     *,
-    non_fee_prices: dict[AssetId, Decimal],
+    non_fee_prices: Mapping[AssetId, Decimal],
     event_origin: EventOrigin,
     timestamp: datetime,
     rate_resolver: _DirectRateResolver,

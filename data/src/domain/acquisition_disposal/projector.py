@@ -11,7 +11,7 @@ from .fifo import match_event_fifo
 from .models import AcquisitionLot, DisposalLink
 from .pipeline_types import _LotBalance, _ProjectedEvent
 from .quantities import project_event_quantities
-from .valuation import _DirectRateResolver, _value_non_fee_groups
+from .valuation import _DirectRateResolver, _value_fee_groups, _value_non_fee_groups
 
 
 @dataclass(frozen=True)
@@ -213,9 +213,13 @@ def _resolve_non_fee_events_by_anchor(
                 default=None,
             )
             if candidate is None:
+                if len(unresolved_asset_ids) == 1:
+                    unresolved_assets = f"asset={next(iter(unresolved_asset_ids))}"
+                else:
+                    unresolved_assets = f"assets={','.join(sorted(unresolved_asset_ids))}"
                 error = AcquisitionDisposalUnresolvedRatesError(
                     "No standard-valued adjacent anchor is available for unresolved non-fee assets: "
-                    f"assets={','.join(sorted(unresolved_asset_ids))}.",
+                    f"{unresolved_assets}.",
                     asset_ids=unresolved_asset_ids,
                 )
                 _add_event_context(error=error, event=event)
@@ -249,7 +253,25 @@ def _complete_rates_with_fees(
     non_fee_rates_by_event_origin: Mapping[EventOrigin, Mapping[AssetId, Decimal]],
     rate_resolver: _DirectRateResolver,
 ) -> dict[EventOrigin, dict[AssetId, Decimal]]:
-    raise NotImplementedError
+    completed: dict[EventOrigin, dict[AssetId, Decimal]] = {}
+
+    for projected in projected_events:
+        event = projected.ledger_event
+        non_fee_rates = non_fee_rates_by_event_origin[event.event_origin]
+        try:
+            fee_rates = _value_fee_groups(
+                projected.projected_event.fee_groups,
+                non_fee_prices=non_fee_rates,
+                event_origin=event.event_origin,
+                timestamp=event.timestamp,
+                rate_resolver=rate_resolver,
+            )
+        except AcquisitionDisposalProjectionError as error:
+            _add_event_context(error=error, event=event)
+            raise
+        completed[event.event_origin] = dict(non_fee_rates) | fee_rates
+
+    return completed
 
 
 def _add_event_context(

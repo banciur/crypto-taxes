@@ -48,7 +48,7 @@
 - The stage first loads the stored price overrides and calls `validate_overrides` against the corrected events, so a stale override fails `ACQUISITION_DISPOSAL` rather than escaping the stage wrapper. Validation lives here and not in `CORRECTIONS` because overrides do not affect the corrected-event stream, and failing earlier would also block the wallet projection the operator needs while fixing the override.
 - Projector failures (e.g. not-enough-open-lots, unavailable required prices) propagate as exceptions and are recorded as a `FAILED` `SystemState` at the `ACQUISITION_DISPOSAL` stage.
 - On failure the stage still persists `AcquisitionDisposalProjector.projection()` -- the lots/disposals produced up to the failing event. Event application is not atomic, so this partial snapshot may be incoherent (e.g. a disposal recorded without its event's acquisitions) and is intended only as debug output alongside the `FAILED` `SystemState`.
-- Tax-event generation and the weekly summary remain unreachable dead code below the `COMPLETED` return, pending a future `TAX_COMPUTATION` stage.
+- Tax-event models and persistence are not connected to the main flow, pending a future `TAX_COMPUTATION` stage.
 
 ### Price services
 - `src/services/price_service.py` implements the domain `PriceProvider`, resolving `base -> quote`
