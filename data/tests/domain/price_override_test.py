@@ -49,12 +49,16 @@ def test_price_override_accepts_internal_synthetic_origin() -> None:
     assert override.event_origin.location == EventLocation.INTERNAL
 
 
-def test_price_override_rejects_non_positive_rate() -> None:
-    with pytest.raises(ValueError, match="greater than 0"):
+def test_price_override_rejects_zero_rate() -> None:
+    with pytest.raises(ValueError, match="non-zero"):
         _override(event_origin=make_origin("0xabc"), rate_eur="0")
 
-    with pytest.raises(ValueError, match="greater than 0"):
-        _override(event_origin=make_origin("0xabc"), rate_eur="-5")
+
+def test_price_override_accepts_negative_rate() -> None:
+    # A liability (debt-token) leg is priced at the negative of its underlying.
+    override = _override(event_origin=make_origin("0xabc"), rate_eur="-1500")
+
+    assert override.rate_eur == Decimal("-1500")
 
 
 def test_price_override_draft_has_no_id_and_override_generates_one() -> None:

@@ -34,11 +34,11 @@ class AbstractAcquisitionDisposal(StrictBaseModel, ABC):
 class AcquisitionLot(AbstractAcquisitionDisposal):
     id: LotId = LotId(Field(default_factory=uuid4))
     quantity_acquired: Annotated[Decimal, Field(gt=0)]
-    cost_per_unit: Annotated[Decimal, Field(ge=0)]
+    cost_per_unit: Decimal
 
 
 class DisposalLink(AbstractAcquisitionDisposal):
     id: DisposalId = DisposalId(Field(default_factory=uuid4))
     lot_id: LotId
     quantity_used: Annotated[Decimal, Field(gt=0)]
-    proceeds_total: Annotated[Decimal, Field(ge=0)]
+    proceeds_total: Decimal

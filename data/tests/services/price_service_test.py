@@ -14,6 +14,8 @@ from tests.constants import BTC, ETH, EUR, USD, USDC
 TS = datetime(2025, 6, 1, 12, 0, tzinfo=timezone.utc)
 EURC = AssetId("EURC")
 RETH2 = AssetId("RETH2")  # configured in ASSETS_PRICED_AS as taking ETH's price
+VARIABLE_DEBT_WSTETH = AssetId("variableDebtArbwstETH")  # configured in ASSETS_PRICED_AS_NEGATED
+WSTETH = AssetId("WSTETH")
 
 
 class _StubSource:
@@ -240,3 +242,27 @@ def test_service_defaults_timestamp_and_normalizes_case(tmp_path: Path) -> None:
     assert len(crypto.calls) == 1
     assert crypto.calls[0][0] == BTC
     assert crypto.calls[0][1] == USD
+
+
+def test_negated_priced_as_asset_borrows_underlying_rate_with_flipped_sign(tmp_path: Path) -> None:
+    wsteth_usd = Decimal("2500")
+    eur_usd = Decimal("1.25")
+    crypto = _StubSource({(WSTETH, USD): wsteth_usd}, source_name="crypto")
+    fiat = _StubSource({(EUR, USD): eur_usd}, source_name="fiat")
+    store = _store(tmp_path)
+    service = _service(crypto=crypto, fiat=fiat, store=store)
+
+    assert service.rate(VARIABLE_DEBT_WSTETH, EUR, TS) == -(wsteth_usd / eur_usd)
+    # The debt token never reaches the source or the cache; only its substituted wstETH leg does.
+    assert crypto.calls == [(WSTETH, USD, TS)]
+    assert store.read(VARIABLE_DEBT_WSTETH, USD, TS) is None
+
+
+def test_negated_priced_as_asset_is_negative_one_against_its_underlying(tmp_path: Path) -> None:
+    crypto = _empty_source("crypto")
+    fiat = _empty_source("fiat")
+    service = _service(crypto=crypto, fiat=fiat, store=_store(tmp_path))
+
+    # Both sides substitute to wstETH, so the identity short-circuit answers -- owing one wstETH.
+    assert service.rate(VARIABLE_DEBT_WSTETH, WSTETH, TS) == Decimal(-1)
+    assert crypto.calls == []

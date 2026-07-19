@@ -2,7 +2,7 @@ import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from config import ASSETS_PRICED_AS, NUMERAIRE_ASSET_ID, STABLE_ASSETS_BY_PEG
+from config import ASSETS_PRICED_AS, ASSETS_PRICED_AS_NEGATED, NUMERAIRE_ASSET_ID, STABLE_ASSETS_BY_PEG
 from domain.ledger import AssetId
 from domain.pricing import PriceCache, PriceProvider
 
@@ -16,6 +16,10 @@ _PEG_BY_STABLE: dict[AssetId, AssetId] = {
 
 _PRICED_AS_BY_ASSET: dict[AssetId, AssetId] = {
     asset: priced_as for priced_as, assets in ASSETS_PRICED_AS.items() for asset in assets
+}
+
+_NEGATED_PRICED_AS_BY_ASSET: dict[AssetId, AssetId] = {
+    asset: priced_as for priced_as, assets in ASSETS_PRICED_AS_NEGATED.items() for asset in assets
 }
 
 
@@ -47,21 +51,22 @@ class PriceService(PriceProvider):
         timestamp: datetime | None = None,
     ) -> Decimal | None:
         ts = timestamp or datetime.now(timezone.utc)
-        base = _priced_as(AssetId(base_id.upper()))
-        quote = _priced_as(AssetId(quote_id.upper()))
+        base, base_sign = _substitute(AssetId(base_id.upper()))
+        quote, quote_sign = _substitute(AssetId(quote_id.upper()))
+        sign = base_sign * quote_sign
 
         if base == quote:
-            return Decimal(1)
+            return Decimal(sign)
 
         direct = self.cache.read(base_id=base, quote_id=quote, timestamp=ts)
         if direct is not None:
-            return direct.rate
+            return None if direct.rate is None else direct.rate * sign
 
         base_leg = self._resolve_to_numeraire(base, ts)
         quote_leg = self._resolve_to_numeraire(quote, ts)
         if base_leg is None or quote_leg is None:
             return None
-        return base_leg / quote_leg
+        return (base_leg / quote_leg) * sign
 
     def _resolve_to_numeraire(self, asset: AssetId, timestamp: datetime) -> Decimal | None:
         if asset == NUMERAIRE_ASSET_ID:
@@ -84,5 +89,13 @@ class PriceService(PriceProvider):
         return record.rate
 
 
-def _priced_as(asset: AssetId) -> AssetId:
-    return _PRICED_AS_BY_ASSET.get(asset, asset)
+def _substitute(asset: AssetId) -> tuple[AssetId, int]:
+    """Return the asset actually priced and the sign its EUR value carries.
+
+    A negated priced-as asset (a debt/liability token) borrows its underlying's market rate with the
+    sign flipped: holding one is owing the underlying, so its EUR value is negative.
+    """
+    negated = _NEGATED_PRICED_AS_BY_ASSET.get(asset)
+    if negated is not None:
+        return negated, -1
+    return _PRICED_AS_BY_ASSET.get(asset, asset), 1

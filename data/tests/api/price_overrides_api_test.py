@@ -56,10 +56,17 @@ def test_post_rejects_a_second_override_for_the_same_event_and_asset(client: Tes
     assert client.get("/price-overrides").json() == [first.json()]
 
 
-def test_post_rejects_non_positive_rate(client: TestClient) -> None:
+def test_post_rejects_zero_rate(client: TestClient) -> None:
     response = client.post("/price-overrides", json=_override_payload(rate_eur="0"))
 
     assert response.status_code == 422
+
+
+def test_post_accepts_negative_rate(client: TestClient) -> None:
+    response = client.post("/price-overrides", json=_override_payload(rate_eur="-40000"))
+
+    assert response.status_code == 201
+    assert response.json()["rate_eur"] == "-40000"
 
 
 def test_post_rejects_missing_event_origin(client: TestClient) -> None:

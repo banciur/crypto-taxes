@@ -11,6 +11,10 @@
   never cached, never fetched, and needs no `cmc_config.json` entry. Keep this table separate
   from `STABLE_ASSETS_BY_PEG`: that one feeds the `STABLE` `ValuationTier`, and a priced-as asset
   must stay a normal `MARKET`-tier, FIFO-tracked asset that merely borrows a rate.
+- An asset listed in `ASSETS_PRICED_AS_NEGATED` takes another asset's price with the sign flipped
+  (an Aave variable-debt token takes the negative of the borrowed asset's price). It uses the same
+  pre-cache substitution, so only its underlying leg is ever fetched and the composed rate is then
+  negated; this is how a borrowed-asset debt token is valued as a liability (negative EUR per unit).
 - `PriceResolver` (`price_resolver.py`) only routes a fetch to the owning provider: fiat to Open
   Exchange Rates, everything else to CoinMarketCap.
 - The CoinMarketCap client reads `artifacts/cmc_config.json` at startup. Its `asset_map` resolves

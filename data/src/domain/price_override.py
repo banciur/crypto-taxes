@@ -1,9 +1,9 @@
 from collections.abc import Iterable
 from decimal import Decimal
-from typing import Annotated, NewType
+from typing import NewType
 from uuid import UUID, uuid4
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from domain.ledger import AssetId, EventOrigin, LedgerEvent
 from errors import CryptoTaxesError
@@ -15,8 +15,16 @@ PriceOverrideId = NewType("PriceOverrideId", UUID)
 class PriceOverrideDraft(StrictBaseModel):
     event_origin: EventOrigin
     asset_id: AssetId
-    rate_eur: Annotated[Decimal, Field(gt=0)]
+    rate_eur: Decimal
     note: str | None = None
+
+    @field_validator("rate_eur")
+    @classmethod
+    def _validate_rate_eur(cls, value: Decimal) -> Decimal:
+        # Negative rates value liability legs (debt tokens); only zero is meaningless.
+        if value == 0:
+            raise ValueError("PriceOverride.rate_eur must be non-zero")
+        return value
 
 
 class PriceOverride(PriceOverrideDraft):
