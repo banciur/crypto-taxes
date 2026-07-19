@@ -54,18 +54,17 @@ Sort candidates by absolute timestamp difference. If multiple candidates are equ
 
 ## Resolution algorithm
 
-For each target event:
+Process the complete chronological event sequence in explicit phases:
 
-1. Project its quantities with `project_event_quantities`.
-2. Attempt standard valuation.
-3. If standard valuation succeeds, continue to FIFO matching.
-4. If standard valuation fails because non-fee rates remain unavailable, find the nearest standard-valued anchor available for each unresolved asset.
-5. Select the closest anchor across those unresolved assets using the deterministic ordering above.
-6. Add that asset's anchor rate to a transient rate map for the target event.
-7. Retry standard valuation from the beginning with the saved manual overrides and transient rates available as inputs. Manual overrides and price-service rates still take precedence.
-8. Repeat steps 4–7 until standard valuation succeeds.
-9. If no anchor exists for any unresolved asset, fail the projection with event context.
-10. Propagate valuation failures unrelated to unavailable non-fee rates without starting or continuing adjacent resolution.
+1. Project quantities for every event with `project_event_quantities`.
+2. Attempt standard non-fee valuation for every projected event. Store successful rates separately from events that remain unresolved because non-fee rates are unavailable.
+3. Build an anchor index from the successful standard valuations, grouped by non-fee `asset_id`. Only this index is eligible for adjacent lookup.
+4. Make a second valuation pass over unresolved events. For each event, find the nearest indexed anchor available for each unresolved asset and select the closest asset-anchor pair using the deterministic ordering above.
+5. Add that asset's anchor rate to a transient rate map for the target event and retry its non-fee valuation from the beginning. Manual overrides and price-service rates still take precedence.
+6. Repeat steps 4–5 for the target event until valuation succeeds. If no anchor exists for any unresolved asset, fail with event context.
+7. After all non-fee groups are valued, resolve fee rates using the final same-event non-fee rates and the existing fee rules.
+8. After every event is completely valued, perform FIFO matching in chronological order.
+9. Propagate valuation failures unrelated to unavailable non-fee rates without starting or continuing adjacent resolution.
 
 The transient map is local to the target event. A borrowed rate is never added to the saved override collection and never makes the target event eligible as an anchor.
 
@@ -83,14 +82,14 @@ For a one-sided event, standard valuation cannot remainder-solve the final missi
 
 ## Implementation design
 
-### Prepare projected events and candidate indexes
+### Quantity projection pass
 
 `AcquisitionDisposalProjector.project()` needs the complete chronological event sequence because anchor events may be in the past or future.
 
 - Change the input type from `Iterable[LedgerEvent]` to `Sequence[LedgerEvent]`.
 - Project quantities once for every event.
-- Build an index from each non-fee `asset_id` to the projected events containing that asset.
-- Keep the original chronological sequence for FIFO application.
+- Store each source event together with its projected groups.
+- Keep the original chronological sequence for valuation and FIFO application.
 
 ### Separate direct-rate discovery from completed valuation
 
@@ -104,34 +103,48 @@ Refactor valuation so the projector can distinguish:
 
 Reuse this rate-discovery logic in standard valuation and target-event retrying. Do not duplicate the manual-override and price-service precedence rules in the projector.
 
-### Memoize standard anchor valuation
+### Standard non-fee valuation pass
 
-Standard valuation of a candidate is a pure result of:
+Attempt standard non-fee valuation once for every projected event using:
 
-- its projected quantities and timestamp
-- the price provider
-- its saved manual overrides
+- the event's saved manual overrides
+- the price provider at the event timestamp
+- same-event remainder solving
+- valuation-tier rebalancing
 
-Memoize the result by `event_origin` for the duration of one projection. Cache both successful and unresolvable results so repeated searches do not revalue the same candidate.
+Store successful final non-fee rates by `event_origin`. For events that cannot be standard-valued because rates remain unavailable, store the unresolved asset ids for the adjacent valuation pass.
 
-Operational price-provider exceptions must propagate and must not be cached as an unpriceable result.
+Build the anchor index only from successful results, grouped by each non-fee asset present in the result. This makes the no-chaining rule structural: events resolved later through adjacency are never added to the index.
 
-### Resolve the target event
+Operational price-provider exceptions and valuation failures unrelated to unavailable rates propagate immediately.
 
-When standard valuation reports multiple unavailable non-fee assets:
+### Adjacent valuation pass
 
-- inspect only indexed candidate events for those assets
+Process the events left unresolved by the standard pass. For each target event:
+
+- inspect only indexed anchors for its unresolved assets
 - exclude the target event
-- consider only candidates with successful memoized standard valuation
 - choose the closest asset-anchor pair
 - add its final rate to the target event's transient rates
-- retry the existing valuation logic
+- retry non-fee valuation from the beginning
+- continue until non-fee valuation succeeds or no eligible anchor remains
 
-The existing remainder solver, valuation tiers, balancing, and fee inheritance remain authoritative. The adjacency resolver supplies missing evidence but does not implement a second balancing algorithm.
+The existing remainder solver, valuation tiers, and balancing remain authoritative. The adjacency resolver supplies missing evidence but does not implement a second balancing algorithm.
+
+### Fee valuation and FIFO pass
+
+After every event has final non-fee rates:
+
+- resolve fee rates using the final same-event non-fee rate when the asset is present there
+- otherwise use the existing manual-override and price-service fee lookup
+- fail if a fee-only asset remains unpriceable
+- perform FIFO matching for the completely valued events in chronological order
 
 ### Preserve failure behavior
 
-Keep projection fail-fast. If adjacency cannot resolve an event, attach its origin and timestamp to the valuation error and stop before applying that event to FIFO.
+Keep each pass fail-fast and attach event origin and timestamp to valuation and FIFO errors.
+
+Because all valuation finishes before FIFO starts, any valuation failure leaves no newly matched acquisition/disposal output. A FIFO failure still leaves output matched through the last successfully applied event for debugging.
 
 Collecting multiple projection failures is outside this change because skipping a failed event can make later FIFO failures misleading.
 
@@ -173,7 +186,9 @@ Collecting multiple projection failures is outside this change because skipping 
 
 ### Regression coverage
 
-- existing direct pricing, overrides, remainder solving, tier rebalancing, fee handling, and FIFO behavior remain unchanged
+- existing direct pricing, overrides, remainder solving, tier rebalancing, fee handling, and FIFO matching rules remain unchanged
+- a valuation failure occurs before FIFO and leaves no newly matched projection output
+- a FIFO failure retains output through the last successfully matched event
 - the known fcbBTC/pfcbBTC sequence completes without persisted derived overrides
 - representative one-sided UNI-V2 and RONIN events resolve from adjacent standard-valued events
 
@@ -189,9 +204,10 @@ After implementation:
 
 1. Add focused tests for standard anchor eligibility and deterministic anchor selection.
 2. Refactor non-fee rate discovery so unavailable rates are distinguishable from other valuation failures.
-3. Pre-project the event sequence and build the non-fee asset candidate index.
-4. Add memoized, non-recursive standard valuation for anchor candidates.
-5. Add incremental target-event resolution with transient borrowed rates.
-6. Add one-sided, failure-boundary, and no-chaining tests.
-7. Run formatting, static checks, and the full data test suite.
-8. Update the authoritative domain documentation to match the implemented behavior.
+3. Add the complete-sequence quantity projection pass.
+4. Add the standard non-fee valuation pass and build the anchor index from its successful results.
+5. Add the second-pass adjacent resolution with transient borrowed rates.
+6. Move fee completion before the chronological FIFO pass.
+7. Add one-sided, failure-boundary, no-chaining, and pass-order tests.
+8. Run formatting, static checks, and the full data test suite.
+9. Update the authoritative domain documentation to match the implemented behavior.
