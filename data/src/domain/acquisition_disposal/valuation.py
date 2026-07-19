@@ -7,7 +7,7 @@ from config import BASE_CURRENCY_ASSET_ID
 from ..ledger import AssetId, EventOrigin
 from ..pricing import PriceProvider
 from .constants import ValuationTier, is_reference_priced, valuation_tier
-from .errors import AcquisitionDisposalValuationError
+from .errors import AcquisitionDisposalUnresolvedRatesError, AcquisitionDisposalValuationError
 from .pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
 
 
@@ -68,7 +68,7 @@ def _value_non_fee_groups(
         return {}
 
     direct_rates: dict[AssetId, Decimal] = {}
-    unknown_group: _ProjectedAssetResidualGroup | None = None
+    unknown_groups: list[_ProjectedAssetResidualGroup] = []
 
     for group in projected_event.non_fee_groups:
         direct_rate = rate_resolver.rate(
@@ -82,16 +82,20 @@ def _value_non_fee_groups(
                     f"Reference-priced asset cannot be priced directly in {BASE_CURRENCY_ASSET_ID}: "
                     f"asset={group.asset_id}."
                 )
-            if unknown_group is not None:
-                raise AcquisitionDisposalValuationError(
-                    "More than one distinct non-fee asset is unpriceable in the same event: "
-                    f"assets={unknown_group.asset_id},{group.asset_id}."
-                )
-            unknown_group = group
+            unknown_groups.append(group)
         else:
             direct_rates[group.asset_id] = direct_rate
 
-    if unknown_group:
+    if len(unknown_groups) > 1:
+        asset_ids = frozenset(group.asset_id for group in unknown_groups)
+        raise AcquisitionDisposalUnresolvedRatesError(
+            "More than one distinct non-fee asset is unpriceable in the same event: "
+            f"assets={_format_asset_ids(unknown_groups)}.",
+            asset_ids=asset_ids,
+        )
+
+    if unknown_groups:
+        unknown_group = unknown_groups[0]
         solved_rate = _solve_unknown_rate(
             projected_event.non_fee_groups,
             direct_rates=direct_rates,
@@ -224,9 +228,10 @@ def _solve_unknown_rate(
         same_side_total = known_disposal_total
 
     if opposite_total <= 0:
-        raise AcquisitionDisposalValuationError(
+        raise AcquisitionDisposalUnresolvedRatesError(
             "One-sided event relies on direct price service valuation and the price is unavailable: "
-            f"asset={unknown_group.asset_id}."
+            f"asset={unknown_group.asset_id}.",
+            asset_ids=frozenset({unknown_group.asset_id}),
         )
 
     unknown_total = opposite_total - same_side_total

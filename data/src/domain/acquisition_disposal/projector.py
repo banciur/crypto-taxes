@@ -6,12 +6,12 @@ from decimal import Decimal
 
 from ..ledger import AssetId, EventOrigin, LedgerEvent
 from ..pricing import PriceProvider
-from .errors import AcquisitionDisposalProjectionError
+from .errors import AcquisitionDisposalProjectionError, AcquisitionDisposalUnresolvedRatesError
 from .fifo import match_event_fifo
 from .models import AcquisitionLot, DisposalLink
 from .pipeline_types import _LotBalance, _ProjectedEvent
 from .quantities import project_event_quantities
-from .valuation import _DirectRateResolver
+from .valuation import _DirectRateResolver, _value_non_fee_groups
 
 
 @dataclass(frozen=True)
@@ -27,9 +27,15 @@ class _ProjectedLedgerEvent:
 
 
 @dataclass(frozen=True)
+class _UnresolvedNonFeeEvent:
+    projected: _ProjectedLedgerEvent
+    asset_ids: frozenset[AssetId]
+
+
+@dataclass(frozen=True)
 class _StandardNonFeeValuation:
     resolved: dict[EventOrigin, dict[AssetId, Decimal]]
-    unresolved: list[_ProjectedLedgerEvent]
+    unresolved: list[_UnresolvedNonFeeEvent]
 
 
 @dataclass(frozen=True)
@@ -125,7 +131,33 @@ def _value_standard_non_fee_events(
     projected_events: Sequence[_ProjectedLedgerEvent],
     rate_resolver: _DirectRateResolver,
 ) -> _StandardNonFeeValuation:
-    raise NotImplementedError
+    resolved: dict[EventOrigin, dict[AssetId, Decimal]] = {}
+    unresolved: list[_UnresolvedNonFeeEvent] = []
+
+    for projected in projected_events:
+        event = projected.ledger_event
+        try:
+            resolved[event.event_origin] = _value_non_fee_groups(
+                projected.projected_event,
+                event_origin=event.event_origin,
+                timestamp=event.timestamp,
+                rate_resolver=rate_resolver,
+            )
+        except AcquisitionDisposalUnresolvedRatesError as error:
+            unresolved.append(
+                _UnresolvedNonFeeEvent(
+                    projected=projected,
+                    asset_ids=error.asset_ids,
+                )
+            )
+        except AcquisitionDisposalProjectionError as error:
+            _add_event_context(error=error, event=event)
+            raise
+
+    return _StandardNonFeeValuation(
+        resolved=resolved,
+        unresolved=unresolved,
+    )
 
 
 def _index_anchors(
@@ -138,7 +170,7 @@ def _index_anchors(
 
 def _resolve_non_fee_events_by_anchor(
     *,
-    unresolved_events: Sequence[_ProjectedLedgerEvent],
+    unresolved_events: Sequence[_UnresolvedNonFeeEvent],
     anchors: Mapping[AssetId, Sequence[_Anchor]],
     rate_resolver: _DirectRateResolver,
 ) -> dict[EventOrigin, dict[AssetId, Decimal]]:
