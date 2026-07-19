@@ -163,7 +163,23 @@ def _index_anchors(
     projected_events: Sequence[_ProjectedLedgerEvent],
     rates_by_event_origin: Mapping[EventOrigin, Mapping[AssetId, Decimal]],
 ) -> dict[AssetId, list[_Anchor]]:
-    raise NotImplementedError
+    anchors: dict[AssetId, list[_Anchor]] = defaultdict(list)
+
+    for projected in projected_events:
+        rates = rates_by_event_origin.get(projected.ledger_event.event_origin)
+        if rates is None:
+            continue
+
+        for group in projected.projected_event.non_fee_groups:
+            anchors[group.asset_id].append(
+                _Anchor(
+                    event_origin=projected.ledger_event.event_origin,
+                    timestamp=projected.ledger_event.timestamp,
+                    rate=rates[group.asset_id],
+                )
+            )
+
+    return dict(anchors)
 
 
 def _resolve_non_fee_events_by_anchor(
