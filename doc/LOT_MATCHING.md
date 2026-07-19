@@ -28,7 +28,7 @@ The projection is split into three steps:
 
 - Events are already sorted chronologically before projection.
 - Open lots are tracked per `asset_id`, not per account.
-- `AcquisitionLot.cost_per_unit` and `DisposalLink.proceeds_total` are both EUR-based values.
+- `AcquisitionLot.cost_per_unit` and `DisposalLink.proceeds_total` are both EUR-based values. They are negative for a liability lot (a borrowed-asset debt token), whose cost basis and disposal proceeds are the negative of the underlying's value.
 - `LedgerLeg.quantity` is never zero.
 - `LedgerLeg.is_fee=True` means the leg is explicit and must stay explicit downstream.
 - Every asset has a valuation tier that says how far its EUR rate can be trusted: `EUR` is exact by definition, other fiat comes from an FX quote, selected stable assets add a peg assumption on top of that quote, and everything else is a market price.

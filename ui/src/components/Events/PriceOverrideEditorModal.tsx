@@ -73,8 +73,8 @@ export function PriceOverrideEditorModal({
 
   const handleSubmit = async () => {
     const rateEur = normalizeDecimalInput(rate);
-    if (rateEur === null || getDecimalStringSign(rateEur) !== 1) {
-      setValidationMessage("Rate must be a positive decimal.");
+    if (rateEur === null || getDecimalStringSign(rateEur) === 0) {
+      setValidationMessage("Rate must be a non-zero decimal.");
       return;
     }
 

@@ -18,6 +18,7 @@ LP_A = AssetId("LP_A")
 LP_B = AssetId("LP_B")
 BONUS = AssetId("BONUS")
 FEE_ASSET = AssetId("FEE_ASSET")
+DEBT = AssetId("DEBT")
 
 
 class FixedPriceProvider(PriceProvider):
@@ -118,6 +119,55 @@ def test_eur_anchor_uses_intrinsic_rate_and_crypto_side_scales_to_match() -> Non
     )
 
     assert rates == {EUR: Decimal("1"), ETH: expected_eth_rate}
+
+
+def test_liability_leg_cancels_its_underlying_on_the_same_side_without_rebalancing() -> None:
+    # A borrow receives the asset and mints a debt token priced at the negative of that asset, so the
+    # two acquisition legs cancel to zero EUR and every rate passes through untouched.
+    borrow_quantity = Decimal("0.5")
+    underlying_rate = Decimal("2500")
+
+    rates = _rates_for(
+        make_event(
+            legs=[
+                make_leg(asset_id=ETH, quantity=borrow_quantity),
+                make_leg(asset_id=DEBT, quantity=borrow_quantity),
+            ],
+        ),
+        rates={ETH: underlying_rate, DEBT: -underlying_rate},
+    )
+
+    assert rates == {ETH: underlying_rate, DEBT: -underlying_rate}
+
+
+def test_liability_leg_in_a_two_sided_event_is_rejected() -> None:
+    # A liability rate that does not cancel within its side would corrupt tier rebalancing, so the
+    # event is failed for manual correction instead.
+    with pytest.raises(AcquisitionDisposalValuationError, match="Liability-rated"):
+        _rates_for(
+            make_event(
+                legs=[
+                    make_leg(asset_id=ETH, quantity=Decimal("-1")),
+                    make_leg(asset_id=DEBT, quantity=Decimal("1")),
+                ],
+            ),
+            rates={ETH: Decimal("1500"), DEBT: Decimal("-500")},
+        )
+
+
+def test_liability_leg_alongside_an_unpriceable_asset_is_rejected() -> None:
+    # A single unpriceable asset would normally be remainder-solved, but a liability rate on the
+    # other side breaks that solve's positive-magnitude assumption, so it is rejected.
+    with pytest.raises(AcquisitionDisposalValuationError, match="Liability-rated"):
+        _rates_for(
+            make_event(
+                legs=[
+                    make_leg(asset_id=DEBT, quantity=Decimal("1")),
+                    make_leg(asset_id=EXOTIC, quantity=Decimal("-1")),
+                ],
+            ),
+            rates={DEBT: Decimal("-500")},
+        )
 
 
 def test_single_unpriceable_non_fee_asset_is_solved_by_remainder() -> None:

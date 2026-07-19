@@ -121,6 +121,22 @@ def _value_fee_groups(
     return fee_prices
 
 
+def _reject_liability_rebalancing(
+    groups: Sequence[_ProjectedAssetResidualGroup],
+    *,
+    rates: Mapping[AssetId, Decimal],
+) -> None:
+    """A negative (liability) rate cannot participate in tier rebalancing or remainder solving, whose
+    logic assumes positive per-side EUR magnitudes. Clean borrow/repay events cancel to zero on one
+    side and never reach here; anything that does needs a manual correction."""
+    negative = [group.asset_id for group in groups if rates.get(group.asset_id, Decimal(0)) < 0]
+    if negative:
+        raise AcquisitionDisposalValuationError(
+            "Liability-rated asset(s) present where the event must be balanced; resolve with a correction: "
+            f"assets={','.join(str(asset_id) for asset_id in negative)}."
+        )
+
+
 def _rebalance_known_rates(
     groups: Sequence[_ProjectedAssetResidualGroup],
     *,
@@ -150,6 +166,8 @@ def _rebalance_known_rates(
 
     if acquisition_total == 0 or disposal_total == 0 or acquisition_total == disposal_total:
         return balanced_rates
+
+    _reject_liability_rebalancing(groups, rates=direct_rates)
 
     if acquisition_adjustable_total > 0 and disposal_adjustable_total > 0:
         target_total = (acquisition_total + disposal_total) / Decimal(2)
@@ -197,6 +215,8 @@ def _solve_unknown_rate(
     direct_rates: dict[AssetId, Decimal],
     unknown_group: _ProjectedAssetResidualGroup,
 ) -> Decimal:
+    _reject_liability_rebalancing(groups, rates=direct_rates)
+
     known_acquisition_total = _side_total(groups, rates=direct_rates, side=1)
     known_disposal_total = _side_total(groups, rates=direct_rates, side=-1)
 

@@ -172,11 +172,15 @@ def _index_anchors(
             continue
 
         for group in projected.projected_event.non_fee_groups:
+            rate = rates[group.asset_id]
+            # A liability's negative rate must not be lent to another event as an adjacent anchor.
+            if rate < 0:
+                continue
             anchors[group.asset_id].append(
                 _Anchor(
                     event_origin=projected.ledger_event.event_origin,
                     timestamp=projected.ledger_event.timestamp,
-                    rate=rates[group.asset_id],
+                    rate=rate,
                 )
             )
 
