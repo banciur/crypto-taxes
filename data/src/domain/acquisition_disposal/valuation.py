@@ -46,6 +46,7 @@ def value_projected_event(
         event_origin=event_origin,
         timestamp=timestamp,
         rate_resolver=rate_resolver,
+        borrowed_rates={},
     )
     fee_prices = _value_fee_groups(
         projected_event.fee_groups,
@@ -63,6 +64,7 @@ def _value_non_fee_groups(
     event_origin: EventOrigin,
     timestamp: datetime,
     rate_resolver: _DirectRateResolver,
+    borrowed_rates: Mapping[AssetId, Decimal],
 ) -> dict[AssetId, Decimal]:
     if not projected_event.non_fee_groups:
         return {}
@@ -82,6 +84,8 @@ def _value_non_fee_groups(
                     f"Reference-priced asset cannot be priced directly in {BASE_CURRENCY_ASSET_ID}: "
                     f"asset={group.asset_id}."
                 )
+            direct_rate = borrowed_rates.get(group.asset_id)
+        if direct_rate is None:
             unknown_groups.append(group)
         else:
             direct_rates[group.asset_id] = direct_rate

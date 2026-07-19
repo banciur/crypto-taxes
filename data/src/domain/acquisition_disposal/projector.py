@@ -140,6 +140,7 @@ def _value_standard_non_fee_events(
                 event_origin=event.event_origin,
                 timestamp=event.timestamp,
                 rate_resolver=rate_resolver,
+                borrowed_rates={},
             )
         except AcquisitionDisposalUnresolvedRatesError as error:
             unresolved.append(
@@ -188,7 +189,58 @@ def _resolve_non_fee_events_by_anchor(
     anchors: Mapping[AssetId, Sequence[_Anchor]],
     rate_resolver: _DirectRateResolver,
 ) -> dict[EventOrigin, dict[AssetId, Decimal]]:
-    raise NotImplementedError
+    resolved: dict[EventOrigin, dict[AssetId, Decimal]] = {}
+
+    for unresolved in unresolved_events:
+        event = unresolved.projected.ledger_event
+        unresolved_asset_ids = unresolved.asset_ids
+        borrowed_rates: dict[AssetId, Decimal] = {}
+
+        while True:
+            candidate = min(
+                (
+                    (asset_id, anchor)
+                    for asset_id in unresolved_asset_ids
+                    for anchor in anchors.get(asset_id, ())
+                    if anchor.event_origin != event.event_origin
+                ),
+                key=lambda candidate: (
+                    abs(candidate[1].timestamp - event.timestamp),
+                    candidate[1].event_origin.location.value,
+                    candidate[1].event_origin.external_id,
+                    candidate[0],
+                ),
+                default=None,
+            )
+            if candidate is None:
+                error = AcquisitionDisposalUnresolvedRatesError(
+                    "No standard-valued adjacent anchor is available for unresolved non-fee assets: "
+                    f"assets={','.join(sorted(unresolved_asset_ids))}.",
+                    asset_ids=unresolved_asset_ids,
+                )
+                _add_event_context(error=error, event=event)
+                raise error
+
+            asset_id, anchor = candidate
+            borrowed_rates[asset_id] = anchor.rate
+
+            try:
+                resolved[event.event_origin] = _value_non_fee_groups(
+                    unresolved.projected.projected_event,
+                    event_origin=event.event_origin,
+                    timestamp=event.timestamp,
+                    rate_resolver=rate_resolver,
+                    borrowed_rates=borrowed_rates,
+                )
+            except AcquisitionDisposalUnresolvedRatesError as error:
+                unresolved_asset_ids = error.asset_ids
+                continue
+            except AcquisitionDisposalProjectionError as error:
+                _add_event_context(error=error, event=event)
+                raise
+            break
+
+    return resolved
 
 
 def _complete_rates_with_fees(

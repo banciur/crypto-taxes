@@ -50,7 +50,7 @@ An adjacent anchor for an asset is another event that:
 
 The nearest anchor is the standard-valued candidate with the smallest absolute timestamp difference from the target event. Candidates may precede or follow the target event.
 
-Sort candidates by absolute timestamp difference. If multiple candidates are equally close, sort by their stable `EventOrigin` (`location`, then `external_id`) to select one deterministically. The event-origin ordering is only a tie-breaker; it does not affect which event is closest in time.
+Sort candidates by absolute timestamp difference. If multiple candidates are equally close, sort by their stable `EventOrigin` (`location`, then `external_id`) to select one deterministically. When the same event anchors multiple unresolved assets, sort by `asset_id` as the final tie-breaker. These tie-breakers do not affect which event is closest in time.
 
 ## Resolution algorithm
 
