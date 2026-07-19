@@ -60,7 +60,7 @@ def test_weekly_tax_summary_skips_tax_free_disposals(
         ),
     ]
 
-    projection = acquisition_disposal_projector.project(events, overrides_by_event_origin={})
+    projection = acquisition_disposal_projector.project(events=events, overrides_by_event_origin={})
     tax_events = generate_tax_events(projection, events)
     assert len(tax_events) == 2
     assert all(event.kind == TaxEventKind.DISPOSAL for event in tax_events)

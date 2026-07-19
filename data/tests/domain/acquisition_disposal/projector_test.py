@@ -32,7 +32,10 @@ def test_valuation_error_includes_event_context() -> None:
     )
 
     with pytest.raises(AcquisitionDisposalProjectionError) as exc_info:
-        AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project([event], overrides_by_event_origin={})
+        AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project(
+            events=[event],
+            overrides_by_event_origin={},
+        )
 
     message = str(exc_info.value)
     assert f"asset={LP}" in message
@@ -53,7 +56,7 @@ def test_override_prices_otherwise_unpriceable_acquisition() -> None:
     overrides_by_event_origin = {event.event_origin: {LP: lp_override_rate}}
 
     projection = AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project(
-        [event],
+        events=[event],
         overrides_by_event_origin=overrides_by_event_origin,
     )
 
@@ -73,7 +76,10 @@ def test_unpriceable_reference_asset_error_includes_event_context() -> None:
     )
 
     with pytest.raises(AcquisitionDisposalProjectionError) as exc_info:
-        AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project([event], overrides_by_event_origin={})
+        AcquisitionDisposalProjector(price_provider=EmptyPriceProvider()).project(
+            events=[event],
+            overrides_by_event_origin={},
+        )
 
     message = str(exc_info.value)
     assert "Reference-priced asset" in message

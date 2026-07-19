@@ -84,9 +84,8 @@ For a one-sided event, standard valuation cannot remainder-solve the final missi
 
 ### Quantity projection pass
 
-`AcquisitionDisposalProjector.project()` needs the complete chronological event sequence because anchor events may be in the past or future.
+`AcquisitionDisposalProjector.project()` consumes the chronological event iterable once and materializes projected events because anchor events may be in the past or future.
 
-- Change the input type from `Iterable[LedgerEvent]` to `Sequence[LedgerEvent]`.
 - Project quantities once for every event.
 - Store each source event together with its projected groups.
 - Keep the original chronological sequence for valuation and FIFO application.
@@ -102,6 +101,8 @@ Refactor valuation so the projector can distinguish:
 - other valuation failures that must propagate
 
 Reuse this rate-discovery logic in standard valuation and target-event retrying. Do not duplicate the manual-override and price-service precedence rules in the projector.
+
+Construct one direct-rate resolver from the price provider and saved overrides. It exposes event-aware rate lookup with manual-override precedence and is passed to the standard valuation, adjacent valuation, and fee-completion passes.
 
 ### Standard non-fee valuation pass
 
@@ -202,12 +203,11 @@ After implementation:
 
 ## Implementation order
 
-1. Add focused tests for standard anchor eligibility and deterministic anchor selection.
+1. Write the projector's main pass orchestration and the signatures and return types of the new internal functions. Leave those functions unimplemented and review the algorithm and interfaces before proceeding.
 2. Refactor non-fee rate discovery so unavailable rates are distinguishable from other valuation failures.
-3. Add the complete-sequence quantity projection pass.
-4. Add the standard non-fee valuation pass and build the anchor index from its successful results.
-5. Add the second-pass adjacent resolution with transient borrowed rates.
-6. Move fee completion before the chronological FIFO pass.
-7. Add one-sided, failure-boundary, no-chaining, and pass-order tests.
-8. Run formatting, static checks, and the full data test suite.
-9. Update the authoritative domain documentation to match the implemented behavior.
+3. Implement the standard non-fee valuation pass and build the anchor index from its successful results.
+4. Implement the second-pass adjacent resolution with transient borrowed rates.
+5. Implement fee completion before the chronological FIFO pass.
+6. Add focused tests for standard anchor eligibility, deterministic anchor selection, one-sided resolution, failure boundaries, no chaining, and pass order.
+7. Run formatting, static checks, and the full data test suite.
+8. Update the authoritative domain documentation to match the implemented behavior.

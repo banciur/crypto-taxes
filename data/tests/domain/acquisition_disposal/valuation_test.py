@@ -5,7 +5,7 @@ import pytest
 
 from domain.acquisition_disposal.errors import AcquisitionDisposalProjectionError, AcquisitionDisposalValuationError
 from domain.acquisition_disposal.quantities import project_event_quantities
-from domain.acquisition_disposal.valuation import value_projected_event
+from domain.acquisition_disposal.valuation import _DirectRateResolver, value_projected_event
 from domain.ledger import AssetId, LedgerEvent
 from domain.pricing import PriceProvider
 from tests.constants import ETH, EUR, USD, USDC
@@ -41,9 +41,12 @@ def _rates_for(
 ) -> dict[AssetId, Decimal]:
     return value_projected_event(
         project_event_quantities(event),
+        event_origin=event.event_origin,
         timestamp=event.timestamp,
-        price_provider=FixedPriceProvider(rates),
-        overrides=overrides or {},
+        rate_resolver=_DirectRateResolver(
+            price_provider=FixedPriceProvider(rates),
+            overrides_by_event_origin={event.event_origin: overrides or {}},
+        ),
     )
 
 

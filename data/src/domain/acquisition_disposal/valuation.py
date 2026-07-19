@@ -4,54 +4,65 @@ from decimal import Decimal
 
 from config import BASE_CURRENCY_ASSET_ID
 
-from ..ledger import AssetId
+from ..ledger import AssetId, EventOrigin
 from ..pricing import PriceProvider
 from .constants import ValuationTier, is_reference_priced, valuation_tier
 from .errors import AcquisitionDisposalValuationError
 from .pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
 
 
+class _DirectRateResolver:
+    def __init__(
+        self,
+        *,
+        price_provider: PriceProvider,
+        overrides_by_event_origin: Mapping[EventOrigin, Mapping[AssetId, Decimal]],
+    ) -> None:
+        self._price_provider = price_provider
+        self._overrides_by_event_origin = overrides_by_event_origin
+
+    def rate(
+        self,
+        *,
+        event_origin: EventOrigin,
+        asset_id: AssetId,
+        timestamp: datetime,
+    ) -> Decimal | None:
+        overrides = self._overrides_by_event_origin.get(event_origin, {})
+        if asset_id in overrides:
+            return overrides[asset_id]
+        return self._price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
+
+
 def value_projected_event(
     projected_event: _ProjectedEvent,
     *,
+    event_origin: EventOrigin,
     timestamp: datetime,
-    price_provider: PriceProvider,
-    overrides: Mapping[AssetId, Decimal],
+    rate_resolver: _DirectRateResolver,
 ) -> dict[AssetId, Decimal]:
     non_fee_prices = _value_non_fee_groups(
         projected_event,
+        event_origin=event_origin,
         timestamp=timestamp,
-        price_provider=price_provider,
-        overrides=overrides,
+        rate_resolver=rate_resolver,
     )
     fee_prices = _value_fee_groups(
         projected_event.fee_groups,
         non_fee_prices=non_fee_prices,
+        event_origin=event_origin,
         timestamp=timestamp,
-        price_provider=price_provider,
-        overrides=overrides,
+        rate_resolver=rate_resolver,
     )
     return non_fee_prices | fee_prices
-
-
-def _rate_in_base_currency(
-    asset_id: AssetId,
-    *,
-    overrides: Mapping[AssetId, Decimal],
-    price_provider: PriceProvider,
-    timestamp: datetime,
-) -> Decimal | None:
-    if asset_id in overrides:
-        return overrides[asset_id]
-    return price_provider.rate(asset_id, BASE_CURRENCY_ASSET_ID, timestamp)
 
 
 def _value_non_fee_groups(
     projected_event: _ProjectedEvent,
     *,
+    event_origin: EventOrigin,
     timestamp: datetime,
-    price_provider: PriceProvider,
-    overrides: Mapping[AssetId, Decimal],
+    rate_resolver: _DirectRateResolver,
 ) -> dict[AssetId, Decimal]:
     if not projected_event.non_fee_groups:
         return {}
@@ -60,8 +71,10 @@ def _value_non_fee_groups(
     unknown_group: _ProjectedAssetResidualGroup | None = None
 
     for group in projected_event.non_fee_groups:
-        direct_rate = _rate_in_base_currency(
-            group.asset_id, overrides=overrides, price_provider=price_provider, timestamp=timestamp
+        direct_rate = rate_resolver.rate(
+            event_origin=event_origin,
+            asset_id=group.asset_id,
+            timestamp=timestamp,
         )
         if direct_rate is None:
             if is_reference_priced(group.asset_id):
@@ -96,9 +109,9 @@ def _value_fee_groups(
     fee_groups: Sequence[_ProjectedAssetResidualGroup],
     *,
     non_fee_prices: dict[AssetId, Decimal],
+    event_origin: EventOrigin,
     timestamp: datetime,
-    price_provider: PriceProvider,
-    overrides: Mapping[AssetId, Decimal],
+    rate_resolver: _DirectRateResolver,
 ) -> dict[AssetId, Decimal]:
     fee_prices: dict[AssetId, Decimal] = {}
 
@@ -109,8 +122,10 @@ def _value_fee_groups(
             fee_prices[group.asset_id] = non_fee_prices[group.asset_id]
             continue
 
-        direct_rate = _rate_in_base_currency(
-            group.asset_id, overrides=overrides, price_provider=price_provider, timestamp=timestamp
+        direct_rate = rate_resolver.rate(
+            event_origin=event_origin,
+            asset_id=group.asset_id,
+            timestamp=timestamp,
         )
         if direct_rate is None:
             raise AcquisitionDisposalValuationError(
