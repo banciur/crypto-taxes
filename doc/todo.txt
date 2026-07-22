@@ -1,7 +1,12 @@
 First stage: compute German taxes
 
+TODO: First tax approvimation
+
 Review the order of todos
 -----------------
+TODO: Real problem two assets with the same name and both are real USDS is Sky.money but also TheStandard USD (this one I used) so this is real collision not spam tokens. For now using bigger one as both are stable coins. But will have to implement real token service.
+TODO: Need a better valuation rules. If it's something like USDC - BSX trade. Despite BSX being on cmc probably price there is far from real and shouldn't be used. Introduce "strong assets" that even if there is opisite price aren't moved.
+TODO: Might need something better than globally unppricable coin. I belive CMC might have good price but only for some time. So I could depend on it but not every time, maybe introduce marker that woudl let me manually mark resolve price using stronger leg (or process on FE where I could click and system would compute this and let me save correction)
 TODO: Code that adjust prices by tier is not clear to me. Vibed it quickly.
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 TODO: Price asset-id normalization (upper-casing) happens three times on the same call path:
