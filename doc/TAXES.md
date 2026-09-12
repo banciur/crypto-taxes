@@ -16,11 +16,13 @@ Tax logic answers three further questions:
 
 ## Scope
 
-The stage turns acquisition lots and disposal links into `TaxEvent`s, one per taxable movement. It reads corrected ledger events as well, because classifying a receipt depends on the shape of the event that produced it rather than on the lot alone.
+The stage turns acquisition lots and disposal links into `TaxEvent`s, one per taxable movement. Its events and summaries are ledger-derived crypto subtotals intended to show the tax-relevant activity represented by this system; they are not a complete, return-ready calculation and do not incorporate income, expenses, or tax positions outside the crypto ledger. The stage reads corrected ledger events as well, because classifying a receipt depends on the shape of the event that produced it rather than on the lot alone.
+
+Wallet boundaries, FIFO ownership, and lot propagation across internal transfers belong to the acquisition/disposal projection. The current interpretation treats all internal wallets as one inventory for lot matching, so transfers between them do not change lot ownership or acquisition history. This interpretation requires further tax and legal review against paragraphs 61–62 of the [BMF letter on the income-tax treatment of crypto-assets dated 6 March 2025](https://www.bundesfinanzministerium.de/Content/DE/Downloads/BMF_Schreiben/Steuerarten/Einkommensteuer/2025-03-06-einzelfragen-kryptowerte-bmf-schreiben.pdf?__blob=publicationFile&v=2), which describe FIFO use and wallet-specific treatment. The tax stage treats persisted `AcquisitionLot`s and `DisposalLink`s as authoritative inputs and does not reinterpret or rematch them. Changing how the upstream projection handles wallets or internal transfers can change the records supplied to tax computation without changing the tax-stage algorithm, provided the projection preserves the original acquisition date and cost basis of transferred lots and does not emit internal transfers as taxable acquisitions or disposals.
 
 ## Tax Categories
 
-Two categories cover everything the ledger produces.
+The system treats all ledger assets as private wealth and all reward activity as non-business activity. Within that scope, two categories cover everything the ledger produces.
 
 **`PRIVATE_SALE` — §23 EStG, *privates Veräußerungsgeschäft*.** Disposing of an asset held inside the one-year speculation period: selling, swapping, spending, or paying a fee in it. The amount is a signed gain, proceeds minus cost basis, so a disposal at a loss carries a negative amount.
 
@@ -52,7 +54,7 @@ Fiat legs count as counterparts like any other asset, so a fiat purchase is not 
 
 Staking rewards reach the ledger in two shapes: a separate reward token arriving, and the balance of a held token growing. Both are receipts. The reward is consideration for staking, so each one recognises income at its value at the moment it lands.
 
-Every receipt is treated as taxable income. Whether a particular receipt was earned by an activity — a *Leistung* — turns on facts outside the ledger: what a protocol announced, and what was done to qualify for it. An airdrop that arrives with nothing given in return is arguably not income at receipt, but the ledger cannot see the difference, so the stage acts on the shape of the event.
+Every receipt is treated as taxable income. Whether a particular receipt was earned by an activity — a *Leistung* — turns on facts outside the ledger: what a protocol announced, and what was done to qualify for it. An airdrop that arrives with nothing given in return is arguably not income at receipt, but the ledger cannot see the difference, so the stage acts on the shape of the event. Corrections receive no separate tax treatment: their positive and negative movements follow the same receipt and disposal rules as imported events.
 
 ## Debt Tokens
 

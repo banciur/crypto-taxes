@@ -49,7 +49,7 @@ Plan steps should be complete work units:
 
 Add German tax computation as a `TAX_COMPUTATION` stage running after the acquisition/disposal projection.
 
-The stage is a pure function over data the pipeline already persists: acquisition lots, disposal links, and corrected ledger events. It produces one record set, `TaxEvent`.
+The stage is a pure function over data the pipeline already persists: acquisition lots, disposal links, and corrected ledger events. It produces one record set, `TaxEvent`. Its events and summaries are ledger-derived crypto subtotals for insight into the tax-relevant activity represented by this system, not a complete, return-ready calculation incorporating income, expenses, or tax positions outside the crypto ledger.
 
 ### Record shape
 
@@ -67,7 +67,7 @@ TaxEvent
 
 For a `PRIVATE_SALE`, `amount_eur` is `disposal.proceeds_total - disposal.quantity_used * lot.cost_per_unit`. For an `OTHER_INCOME` it is `lot.quantity_acquired * lot.cost_per_unit`.
 
-`kind` names the German tax category. `doc/TAXES.md` owns what each value means, which movements land under it, and the legal questions still open; the enum's docstring states each value's paragraph and what `amount_eur` means for it.
+`kind` names the German tax category under the assumption that all ledger assets are private wealth and all reward activity is non-business activity. `doc/TAXES.md` owns what each value means, which movements land under it, and the legal questions still open; the enum's docstring states each value's paragraph and what `amount_eur` means for it.
 
 The table holds only tax-relevant rows: a `PRIVATE_SALE` per disposal link inside the §23 speculation period, an `OTHER_INCOME` per acquisition lot whose source event was a one-sided receipt. A disposal held beyond the period produces no row and stays in `disposal_links`, which the inspection step reads to confirm nothing was dropped.
 
@@ -93,11 +93,19 @@ This is a pure function of the corrected event and static asset configuration. I
 
 Fiat legs count as counterparts like any other asset, so a `-5000 EUR` / `+268 ETH` purchase is not a receipt. A fiat-only event such as a bare EUR deposit reads as one, which is never consulted because fiat opens no FIFO lot.
 
-Classification lives in the tax layer; acquisition lots carry no tax classification field. The predicate answers a shape question and the stage assigns the paragraph.
+Classification lives in the tax layer; acquisition lots carry no tax classification field. The predicate answers a shape question and the stage assigns the paragraph. Corrected events receive no separate tax treatment: their positive and negative movements follow the same receipt and disposal rules as imported events.
 
 ### Identity
 
 `tax_events` lives in the main DB, which `run()` recreates with `reset=True` on every run alongside the projection it derives from. `source_id` is therefore a plain UUID join key, valid for exactly as long as the row it points at exists, matching how `DisposalLink.lot_id` already works. Durable identity is `EventLegRef`, which is what anything outside a single run refers to.
+
+### Open Questions
+
+- How are transaction fees reflected in §23 gain? The current formula subtracts only lot cost basis, while `doc/TAXES.md` records the open treatment of a fee disposal and its possible additional role as `Werbungskosten` of the related transaction.
+- Are liability-token acquisitions and repayments included in `PRIVATE_SALE` output before their treatment receives professional confirmation, or should they remain unclassified?
+- Is `EventLegRef` only a durable navigation anchor for a group of tax rows, or must it identify one tax row outside a run? A disposal leg funded by several lots produces several rows with the same `EventLegRef`.
+- What is the exact one-year boundary for a 29 February acquisition? The period implementation and tests must state which 2025 date is the anniversary under the applicable calendar-period rules.
+- The tax summary page is too broad for one implementation point.
 
 ## Steps
 
@@ -113,6 +121,6 @@ Classification lives in the tax layer; acquisition lots carry no tax classificat
 
   Extract the year/month/day grouping from `ui/src/components/DateChooser.tsx` into a shared helper parameterised by the value it aggregates, and use it for both the chooser's counts and the summary's amounts. Keep the human-owned comment at the top of `DateChooser.tsx` intact.
 
-  The year rows carry the figures that go on a return. For §23: net gains against losses within the private-sale basket, where losses offset only §23 gains, carry back one year, and carry forward indefinitely under §10d. Apply the §23 Freigrenze to the year's total gain — €600 through 2023, €1,000 from 2024 — free below the threshold and fully taxable at or above it. For §22: sum the receipts and apply the €256 Freigrenze the same way.
+  The year rows carry crypto-ledger subtotals for each category. For §23: net gains against losses within the private-sale basket, where losses offset only §23 gains, carry back one year, and carry forward indefinitely under §10d. Apply the §23 Freigrenze to the year's total gain — €600 through 2023, €1,000 from 2024 — free below the threshold and fully taxable at or above it. For §22: sum the receipts and apply the €256 Freigrenze the same way.
 
-  Add the API endpoint behind it, returning the tax event amounts by day and kind plus the year-level figures. It computes them on read, since they are a fold over `tax_events` with no other input. Update `ui/README.md` for the new route and the shared grouping helper.
+  Add the API endpoint behind it, returning the tax event amounts by day and kind plus the year-level crypto-ledger subtotals. It computes them on read, since the subtotal is a fold over `tax_events` with no other input. Update `ui/README.md` for the new route and the shared grouping helper.
