@@ -9,6 +9,8 @@ This file has two phases:
 
 **Planning phase** — before any implementation begins. The agent's role is to actively help prepare the plan by asking all necessary questions upfront, challenging vague requirements, and ensuring every step is unambiguous before execution starts. All open questions should be surfaced and resolved in this phase, not during implementation. The resulting plan should read as an execution contract, not a brainstorming record. The phase ends when the operator explicitly confirms the plan is ready for execution.
 
+Apply each decision across the whole document before moving on: replace the terms it renames, remove the claims it invalidates, adjust the steps whose scope or order it changes, and update the open questions it answers, splits, or raises. A consequence stated in one section must also reach the step that implements it. Report what changed, or that nothing did, so the operator can see the decision's reach. A decision is recorded only once the document is consistent with it.
+
 **Execution phase** — once the plan is confirmed. The agent switches to a focused executor role:
 - Implement steps one by one. After each completed step, stop and let the operator validate before continuing.
 - Steps should be very precise and specific. Decisions belong in the planning phase, not here.

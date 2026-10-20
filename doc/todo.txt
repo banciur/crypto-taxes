@@ -1,7 +1,18 @@
 First stage: compute German taxes
 
+TODO: First tax approvimation
+
 Review the order of todos
 -----------------
+TODO: Properly handle Stakewise vault operations. Entering a vault mints osETH while the ETH put in against it is not part of the same event, so the mint lands as a one-sided receipt and tax classification treats it as income. Decide how vault entry, exit and osETH minting are modelled, and whether the "virtual token" idea from the loose ideas section is the right shape.
+TODO: Handle Polygon situation. Was moving founds there through kraken(visible) and Coinbase and Coinbase PRO. As coinbase pro is not handled I'm missing data. Use manual flow find those tx in koinly. Add as manual transaction deposi EUR, buy USDC (use real price) and transform to second wallet. The return leg needs corrections too: USDC coming back to Coinbase from polygon has an invisible send side, so it lands as a one-sided receipt and tax classification treats it as income.
+TODO: Correctly assess SPK / stSPK history and add the corrections it needs. Staking swaps SPK for stSPK, and unstaking burns the stSPK with the SPK arriving only after a cooldown, so the two halves of an unstake land as separate unlinked events. The returning SPK then reads as a one-sided receipt and tax classification treats it as income, while the burn reads as a disposal.
+TODO: Tax overrides / corrections, the next layer of corrections, to mark events whose automatic tax classification is wrong. Need manual exception on taxes for some transactions, example when Neufund gave me BTC/ETH as a bonus. Also for a drop that arrived without anything done to earn it, which is not income at receipt, and for a receipt that is really own funds coming back. Target per event and asset like price overrides, in a durable store validated on each rebuild.
+TODO: Prepare a mechanism to store filed tax years so drift becomes visible. Once a year is filed, a later rerun can compute it differently after a correction, a valuation change or a change of method, and today that silently replaces the figures. Storing what was filed lets a rerun be diffed against it, so a fix worth amending and a regression worth investigating both surface. Loss carryforward makes it compound, since one year's carryforward feeds the next.
+TODO: Might be a big thing to rewrite to following wallets when building disposals and acqusitions
+TODO: Real problem two assets with the same name and both are real USDS is Sky.money but also TheStandard USD (this one I used) so this is real collision not spam tokens. For now using bigger one as both are stable coins. But will have to implement real token service.
+TODO: Need a better valuation rules. If it's something like USDC - BSX trade. Despite BSX being on cmc probably price there is far from real and shouldn't be used. Introduce "strong assets" that even if there is opisite price aren't moved.
+TODO: Might need something better than globally unppricable coin. I belive CMC might have good price but only for some time. So I could depend on it but not every time, maybe introduce marker that woudl let me manually mark resolve price using stronger leg (or process on FE where I could click and system would compute this and let me save correction)
 TODO: Code that adjust prices by tier is not clear to me. Vibed it quickly.
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 TODO: Price asset-id normalization (upper-casing) happens three times on the same call path:
@@ -9,7 +20,6 @@ TODO: Price asset-id normalization (upper-casing) happens three times on the sam
   each client's fetch_record uppercases once more (e.g. CoinMarketCapClient, OpenExchangeRatesClient).
   Every layer defends itself instead of trusting the caller. Pick one owner (the PriceService entry
   point is the natural one) and let the resolver + clients assume already-normalized AssetIds.
-TODO: Handle Polygon situation. Was moving founds there through kraken(visible) and Coinbase and Coinbase PRO. As coinbase pro is not handled I'm missing data. Use manual flow find those tx in koinly. Add as manual transaction deposi EUR, buy USDC (use real price) and transform to second wallet
 TODO: An override on EUR (or another valuation anchor) is accepted and wins over the base==quote rate, silently skewing anchor totals; reject anchor overrides and hide the Set price button on those legs.
 TODO: Reconsider the separate price_overrides.db (third SQLite file): merging it into corrections.db would drop the parallel engine/sessionmaker/lifespan/fixture stack and allow joins with corrections, but it requires starting to write migrations, so there is a cost.
 TODO: EventOrigin<->(origin_location, origin_external_id) column conversion is hand-rolled in four db modules (ledger_events, ledger_corrections, acquisition_disposal, price_overrides); extract a shared mixin/helper in db/.
@@ -51,8 +61,6 @@ TODO: Is there a possibility to have a whitelist of commands for codex?
 TODO: Add to my ~/.codex/AGENTS.md instruction to after making changes try to read general context and see if there could be some code refactoring done to reduce tech debt like code duplication or similar.
 TODO: add loaders to the UI when data is being fetched, especially when changing visible columns
 TODO: we will end with multiple ledger legs tables in the database - maybe combine them into one with a discriminator column?
-TODO: Need manual exception on taxes for some transactions. Example when Neufund gave me BTC/ETH as a bonus.
-TODO: mark non-taxable events (income), next layer of corrections
 TODO: Do I still need it? Maybe a good UI is enough? A tool to print from db event, legs etc. for debugging. After provided id print whole network of entities
 TODO: I'm suspicious of the tax calculations. Think how we can debug it better.
 TODO: Restore inventory taxable and free.
