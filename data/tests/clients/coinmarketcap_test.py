@@ -71,7 +71,8 @@ def _write_config(
     return path
 
 
-def test_recent_timestamp_uses_five_minute_interval(tmp_path: Path) -> None:
+def test_recent_timestamp_uses_five_minute_interval(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("clients.coinmarketcap.utc_now", lambda: _RECENT)
     _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.return_value = _mock_response(_quotes_payload(cmc_id=1, quote="USD", price=42000.5))
