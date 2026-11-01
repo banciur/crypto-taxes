@@ -44,7 +44,7 @@ def _has_non_zero_value(value: Any) -> bool:
         return False
     try:
         return Decimal(str(value)) != 0
-    except (InvalidOperation, ValueError):
+    except InvalidOperation, ValueError:
         return False
 
 

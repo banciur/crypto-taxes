@@ -82,7 +82,7 @@
 ## Technical Workflow
 
 ### Tech stack
-- Python 3.13;
+- Python 3.15;
 - Uses `uv` to manage dependencies and virtual environments;
 - Pydantic v2 models under `src/domain`;
 - Tests written in `pytest` under `tests`.
