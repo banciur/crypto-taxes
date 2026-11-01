@@ -90,8 +90,8 @@ class CoinbaseCacheRepository:
         account_rows: list[CoinbaseAccountRow] = [
             {
                 "account_id": str(account["id"]),
-                "created_at": datetime.fromisoformat(str(account["created_at"]).replace("Z", "+00:00")).astimezone(UTC),
-                "updated_at": datetime.fromisoformat(str(account["updated_at"]).replace("Z", "+00:00")).astimezone(UTC),
+                "created_at": datetime.fromisoformat(str(account["created_at"])).astimezone(UTC),
+                "updated_at": datetime.fromisoformat(str(account["updated_at"])).astimezone(UTC),
                 "payload": json.dumps(account),
             }
             for account in accounts
@@ -100,9 +100,7 @@ class CoinbaseCacheRepository:
             {
                 "transaction_id": str(transaction["id"]),
                 "account_id": str(transaction["resource_path"]).split("/")[3],
-                "created_at": datetime.fromisoformat(str(transaction["created_at"]).replace("Z", "+00:00")).astimezone(
-                    UTC
-                ),
+                "created_at": datetime.fromisoformat(str(transaction["created_at"])).astimezone(UTC),
                 "type": str(transaction["type"]),
                 "payload": json.dumps(transaction),
             }

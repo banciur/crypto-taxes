@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from accounts import (
     COINBASE_ACCOUNT_ID,
@@ -51,7 +52,7 @@ def test_registry_from_path_normalizes_real_address_and_location_types(tmp_path:
 
 
 def test_real_account_config_requires_preparsed_locations() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError, match="locations"):
         RealAccountConfig.model_validate(
             {
                 "name": "Wallet",

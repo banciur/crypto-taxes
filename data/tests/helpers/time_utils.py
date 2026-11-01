@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from itertools import count
 from random import Random
@@ -12,7 +12,7 @@ class TimeGenerator:
     """Deterministic timestamp generator with random-ish gaps."""
 
     _current: datetime | None = None
-    _rng: Random = Random(0)
+    _rng: Random = field(default_factory=lambda: Random(0))
     _seed: int = 0
 
     def __call__(self) -> datetime:

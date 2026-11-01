@@ -22,7 +22,7 @@ class _LidoRewardRow:
 
 
 def _parse_timestamp(raw_value: str) -> datetime:
-    return ensure_utc_datetime(datetime.fromisoformat(raw_value.replace("Z", "+00:00")))
+    return ensure_utc_datetime(datetime.fromisoformat(raw_value))
 
 
 def _build_external_id(*, timestamp: datetime) -> str:

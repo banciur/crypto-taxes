@@ -33,7 +33,7 @@ def _parse_requested_timestamp(value: str) -> datetime:
         return datetime.combine(parsed_date, time.min, tzinfo=UTC)
 
     try:
-        parsed_datetime = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed_datetime = datetime.fromisoformat(value)
     except ValueError as exc:
         raise argparse.ArgumentTypeError(
             "timestamp must be ISO formatted, e.g. 2026-01-01 or 2026-01-01T23:34+00:00"

@@ -340,7 +340,7 @@ class MoralisImporter:
             note = f"tx failed | {note}" if note else "tx failed"
 
         return LedgerEvent(
-            timestamp=ensure_utc_datetime(datetime.fromisoformat(tx["block_timestamp"].replace("Z", "+00:00"))),
+            timestamp=ensure_utc_datetime(datetime.fromisoformat(tx["block_timestamp"])),
             event_origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
             note=note,

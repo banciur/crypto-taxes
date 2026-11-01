@@ -172,7 +172,7 @@ def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> 
     tx = _build_tx(native_transfers=[transfer])
 
     event = test_ctx.importer._build_event(tx)
-    expected_timestamp = datetime.fromisoformat(BLOCK_TS.replace("Z", "+00:00")).astimezone(UTC)
+    expected_timestamp = datetime.fromisoformat(BLOCK_TS).astimezone(UTC)
 
     assert event is not None
     assert event.event_origin.location == LOCATION

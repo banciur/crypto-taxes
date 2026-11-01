@@ -40,9 +40,7 @@ class MoralisService:
                 "hash": str(record["hash"]),
                 "block_number": int(record["block_number"]),
                 "transaction_index": int(record["transaction_index"]),
-                "block_timestamp": datetime.fromisoformat(record["block_timestamp"].replace("Z", "+00:00")).astimezone(
-                    UTC
-                ),
+                "block_timestamp": datetime.fromisoformat(record["block_timestamp"]).astimezone(UTC),
                 "payload": json.dumps(record),
             }
             for record in records
