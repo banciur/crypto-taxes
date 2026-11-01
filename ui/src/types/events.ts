@@ -109,8 +109,7 @@ export type DisposalItemData = AcquisitionDisposalBase & {
 };
 
 export type AcquisitionDisposalItemData =
-  | AcquisitionItemData
-  | DisposalItemData;
+  AcquisitionItemData | DisposalItemData;
 
 export type LaneItemData =
   | RawEventCardData
