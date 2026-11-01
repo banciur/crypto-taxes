@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -11,7 +11,7 @@ from services.price_resolver import PriceResolver
 from services.price_service import PriceService
 from tests.constants import BTC, ETH, EUR, USD, USDC
 
-TS = datetime(2025, 6, 1, 12, 0, tzinfo=timezone.utc)
+TS = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
 EURC = AssetId("EURC")
 RETH2 = AssetId("RETH2")  # configured in ASSETS_PRICED_AS as taking ETH's price
 VARIABLE_DEBT_WSTETH = AssetId("variableDebtArbwstETH")  # configured in ASSETS_PRICED_AS_NEGATED

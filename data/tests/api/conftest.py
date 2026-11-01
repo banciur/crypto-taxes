@@ -11,8 +11,8 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-import api.api as api
 from accounts import KRAKEN_ACCOUNT_ID
+from api import api
 from db.base import Base
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.ledger_events import CorrectedLedgerEventRepository, LedgerEventRepository
@@ -23,7 +23,7 @@ from tests.constants import BTC, EUR
 
 
 @pytest.fixture()
-def db_engine_factory() -> Generator[Callable[[], Engine], None, None]:
+def db_engine_factory() -> Generator[Callable[[], Engine]]:
     engines: list[Engine] = []
 
     def make_engine() -> Engine:
@@ -42,7 +42,7 @@ def db_engine_factory() -> Generator[Callable[[], Engine], None, None]:
 
 
 @pytest.fixture()
-def client(db_engine_factory: Callable[[], Engine]) -> Generator[TestClient, None, None]:
+def client(db_engine_factory: Callable[[], Engine]) -> Generator[TestClient]:
     main_engine = db_engine_factory()
     corrections_engine = db_engine_factory()
     price_overrides_engine = db_engine_factory()

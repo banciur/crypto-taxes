@@ -2,7 +2,7 @@
 #  Please review and improve this file when making changes.
 
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import TypedDict
 from uuid import uuid4
@@ -95,7 +95,7 @@ def test_post_creates_and_get_lists_discard(
             raw_event(
                 location=EventLocation.ARBITRUM,
                 external_id=payload["sources"][0]["external_id"],
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=UTC),
             )
         ],
     )
@@ -153,7 +153,7 @@ def test_post_creates_replacement(
             raw_event(
                 location=EventLocation(source["location"]),
                 external_id=source["external_id"],
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=UTC),
             )
         ],
     )
@@ -185,7 +185,7 @@ def test_post_returns_409_when_source_is_already_consumed_by_active_correction(
             raw_event(
                 location=EventLocation.ARBITRUM,
                 external_id="0xdup",
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=UTC),
             )
         ],
     )
@@ -210,7 +210,7 @@ def test_delete_is_by_id_and_allows_manual_recreate(
             raw_event(
                 location=EventLocation.ARBITRUM,
                 external_id="0xrestore",
-                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2024, 2, 3, 10, 0, tzinfo=UTC),
             )
         ],
     )
@@ -229,11 +229,11 @@ def test_get_lists_persisted_corrections_in_desc_order(
     persist_correction: Callable[[LedgerCorrectionDraft], LedgerCorrection],
 ) -> None:
     older = LedgerCorrectionDraft(
-        timestamp=datetime(2024, 2, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 2, 1, 12, 0, tzinfo=UTC),
         legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
     )
     newer = LedgerCorrectionDraft(
-        timestamp=datetime(2024, 2, 2, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 2, 2, 12, 0, tzinfo=UTC),
         sources=frozenset([EventOrigin(location=EventLocation.BASE, external_id="0xorphan")]),
     )
     persisted_older = persist_correction(older)
@@ -258,7 +258,7 @@ def test_get_filtered_by_asset_matches_correction_legs(
 ) -> None:
     btc_opening_balance = persist_correction(
         LedgerCorrectionDraft(
-            timestamp=datetime(2024, 2, 1, 12, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 2, 1, 12, 0, tzinfo=UTC),
             legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
         )
     )
@@ -275,7 +275,7 @@ def test_get_filtered_by_asset_matches_assets_of_claimed_raw_sources(
     persist_raw_events: Callable[[list[LedgerEvent]], None],
     persist_correction: Callable[[LedgerCorrectionDraft], LedgerCorrection],
 ) -> None:
-    timestamp = datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 2, 3, 10, 0, tzinfo=UTC)
 
     def eth_source(external_id: str) -> LedgerEvent:
         return raw_event(

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -17,7 +17,7 @@ from tests.constants import BTC, ETH, LEDGER_WALLET
 from tests.helpers.ledger import make_leg, make_origin
 from tests.helpers.time_utils import make_event
 
-_TS = datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc)
+_TS = datetime(2024, 1, 1, 12, 0, tzinfo=UTC)
 
 
 def _event(external_id: str, *asset_ids: AssetId) -> LedgerEvent:

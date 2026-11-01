@@ -1,9 +1,8 @@
 import json
 import logging
-from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable, Sequence
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Sequence
 
 from accounts import RealAccountConfig
 from clients.moralis import MoralisClient
@@ -42,7 +41,7 @@ class MoralisService:
                 "block_number": int(record["block_number"]),
                 "transaction_index": int(record["transaction_index"]),
                 "block_timestamp": datetime.fromisoformat(record["block_timestamp"].replace("Z", "+00:00")).astimezone(
-                    timezone.utc
+                    UTC
                 ),
                 "payload": json.dumps(record),
             }

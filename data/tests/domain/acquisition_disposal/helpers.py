@@ -1,9 +1,9 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from domain.ledger import AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 
-BASE_TIMESTAMP = datetime(2024, 1, 1, 12, tzinfo=timezone.utc)
+BASE_TIMESTAMP = datetime(2024, 1, 1, 12, tzinfo=UTC)
 EXOTIC = AssetId("EXOTIC")
 
 

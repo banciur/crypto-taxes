@@ -1,10 +1,10 @@
 import logging
 from collections import defaultdict
+from collections.abc import Iterable
 from csv import DictReader
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Iterable
 
 from pydantic import field_validator
 

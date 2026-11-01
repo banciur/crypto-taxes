@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
@@ -9,7 +9,7 @@ from domain.ledger import EventLocation, LedgerEvent, LedgerLeg
 from tests.api.conftest import raw_event
 from tests.constants import ETH, EUR, USDC
 
-TIMESTAMP = datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc)
+TIMESTAMP = datetime(2024, 2, 3, 10, 0, tzinfo=UTC)
 
 
 def _eth_event(external_id: str) -> LedgerEvent:

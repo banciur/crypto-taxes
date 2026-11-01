@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from config import ASSETS_PRICED_AS, ASSETS_PRICED_AS_NEGATED, NUMERAIRE_ASSET_ID, STABLE_ASSETS_BY_PEG
@@ -50,7 +50,7 @@ class PriceService(PriceProvider):
         quote_id: AssetId,
         timestamp: datetime | None = None,
     ) -> Decimal | None:
-        ts = timestamp or datetime.now(timezone.utc)
+        ts = timestamp or datetime.now(UTC)
         base, base_sign = _substitute(AssetId(base_id.upper()))
         quote, quote_sign = _substitute(AssetId(quote_id.upper()))
         sign = base_sign * quote_sign

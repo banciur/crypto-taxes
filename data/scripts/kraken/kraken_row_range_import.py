@@ -2,9 +2,9 @@
 # uv run scripts/kraken/kraken_row_range_import.py 10 25 --csv artifacts/kraken-ledger.csv
 import argparse
 import sys
+from collections.abc import Iterable
 from csv import DictReader
 from pathlib import Path
-from typing import Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PROJECT_ROOT.parent

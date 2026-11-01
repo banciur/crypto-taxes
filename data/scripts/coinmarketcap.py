@@ -3,9 +3,9 @@ import argparse
 import json
 import logging
 import sys
-from datetime import date, datetime, time, timedelta, timezone
+from collections.abc import Sequence
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
-from typing import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -27,7 +27,7 @@ def _parse_requested_timestamp(value: str) -> datetime:
         parsed_date = None
 
     if parsed_date is not None:
-        return datetime.combine(parsed_date, time.min, tzinfo=timezone.utc)
+        return datetime.combine(parsed_date, time.min, tzinfo=UTC)
 
     try:
         parsed_datetime = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -37,8 +37,8 @@ def _parse_requested_timestamp(value: str) -> datetime:
         ) from exc
 
     if parsed_datetime.tzinfo is None:
-        return parsed_datetime.replace(tzinfo=timezone.utc)
-    return parsed_datetime.astimezone(timezone.utc)
+        return parsed_datetime.replace(tzinfo=UTC)
+    return parsed_datetime.astimezone(UTC)
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -49,7 +49,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--timestamp",
         type=_parse_requested_timestamp,
-        default=datetime.now(timezone.utc) - timedelta(hours=1),
+        default=datetime.now(UTC) - timedelta(hours=1),
         help="ISO date or datetime. Date-only values are interpreted as T00:00:00Z. Defaults to one hour ago (UTC).",
     )
     parser.add_argument("--quote", default=DEFAULT_QUOTE, help=f"Quote asset symbol (default: {DEFAULT_QUOTE}).")

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -14,7 +14,7 @@ from domain.ledger import (
 from tests.constants import ETH, LEDGER_WALLET
 from tests.helpers.ledger import make_leg
 
-TIMESTAMP = datetime(2024, 1, 1, 12, tzinfo=timezone.utc)
+TIMESTAMP = datetime(2024, 1, 1, 12, tzinfo=UTC)
 
 
 def test_ledger_event_rejects_duplicate_leg_identity() -> None:

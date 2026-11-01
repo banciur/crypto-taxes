@@ -1,6 +1,7 @@
 import json
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Sequence, TypedDict
+from typing import TypedDict
 
 from sqlalchemy import DateTime, Index, Integer, String, Text, UniqueConstraint, select
 from sqlalchemy.dialects.sqlite import insert

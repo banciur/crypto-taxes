@@ -1,6 +1,6 @@
+from collections.abc import Iterable
 from datetime import datetime
 from decimal import Decimal
-from typing import Iterable
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, Uuid, select, tuple_
@@ -32,9 +32,7 @@ class LedgerEventOrm(Base):
 
     __table_args__ = (UniqueConstraint("origin_location", "origin_external_id", name="uq_ledger_events_origin"),)
 
-    legs: Mapped[list["LedgerLegOrm"]] = relationship(
-        cascade="all, delete-orphan", back_populates="event", lazy="joined"
-    )
+    legs: Mapped[list[LedgerLegOrm]] = relationship(cascade="all, delete-orphan", back_populates="event", lazy="joined")
 
 
 class LedgerLegOrm(Base):
@@ -60,7 +58,7 @@ class CorrectedLedgerEventOrm(Base):
     origin_location: Mapped[str] = mapped_column(String, nullable=False)
     origin_external_id: Mapped[str] = mapped_column(String, nullable=False)
 
-    legs: Mapped[list["CorrectedLedgerLegOrm"]] = relationship(
+    legs: Mapped[list[CorrectedLedgerLegOrm]] = relationship(
         cascade="all, delete-orphan", back_populates="event", lazy="joined"
     )
 

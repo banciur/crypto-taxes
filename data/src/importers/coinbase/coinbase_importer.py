@@ -84,22 +84,22 @@ def _positive_quote_money(total: CoinbaseMoney | None, fallback: CoinbaseMoney) 
     return CoinbaseMoney(amount=abs(fallback.amount), currency=fallback.currency)
 
 
-def _pair_transactions[_TxT: CoinbaseTransaction](
-    positives: Iterable[_TxT],
-    negatives: Iterable[_TxT],
+def _pair_transactions[TxT: CoinbaseTransaction](
+    positives: Iterable[TxT],
+    negatives: Iterable[TxT],
     *,
     max_delta: timedelta,
-    matches: Callable[[_TxT, _TxT], bool],
-) -> tuple[list[tuple[_TxT, _TxT]], list[_TxT]]:
+    matches: Callable[[TxT, TxT], bool],
+) -> tuple[list[tuple[TxT, TxT]], list[TxT]]:
     ordered_positives = sorted(positives, key=lambda tx: tx.created_at)
     ordered_negatives = sorted(negatives, key=lambda tx: tx.created_at)
 
     used_negative_ids: set[str] = set()
-    pairs: list[tuple[_TxT, _TxT]] = []
-    leftovers: list[_TxT] = []
+    pairs: list[tuple[TxT, TxT]] = []
+    leftovers: list[TxT] = []
 
     for positive in ordered_positives:
-        best_match: _TxT | None = None
+        best_match: TxT | None = None
         best_delta: timedelta | None = None
         for negative in ordered_negatives:
             if negative.id in used_negative_ids:

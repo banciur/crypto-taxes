@@ -1,7 +1,7 @@
-from collections.abc import Generator
-from datetime import datetime, timezone
+from collections.abc import Generator, Sequence
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, NamedTuple, Sequence, cast
+from typing import Any, NamedTuple, cast
 
 import pytest
 from sqlalchemy import Engine, select
@@ -136,7 +136,7 @@ class _ImporterTestContext(NamedTuple):
 
 
 @pytest.fixture()
-def test_ctx(db_engine: Engine) -> Generator[_ImporterTestContext, None, None]:
+def test_ctx(db_engine: Engine) -> Generator[_ImporterTestContext]:
     CorrectionsBase.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
         repo = LedgerCorrectionRepository(session)
@@ -172,7 +172,7 @@ def test_native_transfer_builds_incoming_leg(test_ctx: _ImporterTestContext) -> 
     tx = _build_tx(native_transfers=[transfer])
 
     event = test_ctx.importer._build_event(tx)
-    expected_timestamp = datetime.fromisoformat(BLOCK_TS.replace("Z", "+00:00")).astimezone(timezone.utc)
+    expected_timestamp = datetime.fromisoformat(BLOCK_TS.replace("Z", "+00:00")).astimezone(UTC)
 
     assert event is not None
     assert event.event_origin.location == LOCATION

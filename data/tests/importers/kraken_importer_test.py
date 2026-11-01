@@ -1,5 +1,5 @@
 from csv import DictWriter
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from itertools import count
 from pathlib import Path
@@ -144,7 +144,7 @@ def test_deposit_fiat_becomes_deposit_event(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
+    assert event.timestamp == DEFAULT_TS.replace(tzinfo=UTC)
 
     assert len(event.legs) == 1
     leg = event.legs[0]
@@ -194,7 +194,7 @@ def test_deposit_crypto_becomes_transfer_event(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
+    assert event.timestamp == DEFAULT_TS.replace(tzinfo=UTC)
 
     assert len(event.legs) == 1
     leg = event.legs[0]
@@ -249,7 +249,7 @@ def test_withdrawal_fiat_becomes_withdrawal_event(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
+    assert event.timestamp == DEFAULT_TS.replace(tzinfo=UTC)
 
     assert len(event.legs) == 1
     leg = event.legs[0]
@@ -298,7 +298,7 @@ def test_withdrawal_crypto_becomes_transfer_event(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
+    assert event.timestamp == DEFAULT_TS.replace(tzinfo=UTC)
 
     assert len(event.legs) == 1
     leg = event.legs[0]
@@ -326,7 +326,7 @@ def test_withdrawal_crypto_with_fee(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
+    assert event.timestamp == DEFAULT_TS.replace(tzinfo=UTC)
 
     assert len(event.legs) == 1
     leg = event.legs[0]
@@ -368,7 +368,7 @@ def test_trade_event_with_fee(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
+    assert event.timestamp == DEFAULT_TS.replace(tzinfo=UTC)
 
     assert len(event.legs) == 2
     sell_leg = next(leg for leg in event.legs if leg.quantity < 0)
@@ -410,7 +410,7 @@ def test_spend_receive_trade(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
+    assert event.timestamp == DEFAULT_TS.replace(tzinfo=UTC)
 
     sell_leg = next(leg for leg in event.legs if leg.asset_id == "EUR")
     buy_leg = next(leg for leg in event.legs if leg.asset_id == "DAI")
@@ -441,7 +441,7 @@ def test_staking_reward_with_fee(tmp_path: Path) -> None:
 
     assert len(events) == 1
     event = events[0]
-    assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
+    assert event.timestamp == DEFAULT_TS.replace(tzinfo=UTC)
 
     assert len(event.legs) == 1
     reward_leg = event.legs[0]
@@ -566,7 +566,7 @@ def test_spot_from_futures_event(tmp_path: Path) -> None:
     importer = KrakenImporter(str(file))
     event = importer.load_events()[0]
 
-    assert event.timestamp == DEFAULT_TS.replace(tzinfo=timezone.utc)
+    assert event.timestamp == DEFAULT_TS.replace(tzinfo=UTC)
     assert len(event.legs) == 1
     assert event.legs[0].asset_id == "STRK"
     assert event.legs[0].quantity == Decimal("125.80924")
@@ -597,7 +597,7 @@ def test_spot_from_futures_event_with_fee_raises(tmp_path: Path) -> None:
 
 def test_preprocess_skips_spot_to_staking_pairs() -> None:
     importer = KrakenImporter("/tmp/dummy.csv")
-    ts = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    ts = datetime(2024, 1, 1, tzinfo=UTC)
     entries = [
         _preprocess_entry(
             refid="REF-A",
@@ -624,7 +624,7 @@ def test_preprocess_skips_spot_to_staking_pairs() -> None:
 
 def test_preprocess_leaves_rows_outside_time_window() -> None:
     importer = KrakenImporter("/tmp/dummy.csv")
-    ts = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    ts = datetime(2024, 1, 1, tzinfo=UTC)
     entries = [
         _preprocess_entry(
             refid="REF-C",

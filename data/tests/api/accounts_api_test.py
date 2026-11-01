@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-import api.api as api
 from accounts import (
     COINBASE_ACCOUNT_ID,
     COINBASE_ACCOUNT_NAME,
@@ -13,6 +12,7 @@ from accounts import (
     ArtificialAccountConfig,
     RealAccountConfig,
 )
+from api import api
 from domain.ledger import EventLocation, WalletAddress
 
 

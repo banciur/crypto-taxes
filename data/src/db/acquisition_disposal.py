@@ -25,7 +25,7 @@ class AcquisitionLotOrm(Base):
     quantity_acquired: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
     cost_per_unit: Mapped[Decimal] = mapped_column(DecimalAsString, nullable=False)
 
-    disposal_links: Mapped[list["DisposalLinkOrm"]] = relationship(back_populates="lot", cascade="all, delete-orphan")
+    disposal_links: Mapped[list[DisposalLinkOrm]] = relationship(back_populates="lot", cascade="all, delete-orphan")
 
 
 class DisposalLinkOrm(Base):

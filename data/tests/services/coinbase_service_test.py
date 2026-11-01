@@ -1,6 +1,6 @@
 # This file is completely vibed and I didn't read it.
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, NamedTuple, cast
 
 import pytest
@@ -13,7 +13,7 @@ from db.tx_cache_common import TransactionsCacheBase
 from services.coinbase import CoinbaseService
 from services.moralis import SyncMode
 
-FIXED_NOW = datetime(2026, 3, 14, 12, tzinfo=timezone.utc)
+FIXED_NOW = datetime(2026, 3, 14, 12, tzinfo=UTC)
 
 
 def _account(account_id: str = "btc-wallet") -> dict[str, object]:
@@ -90,7 +90,7 @@ class _ServiceTestContext(NamedTuple):
 
 
 @pytest.fixture()
-def test_ctx(db_engine: Engine) -> Generator[_ServiceTestContext, None, None]:
+def test_ctx(db_engine: Engine) -> Generator[_ServiceTestContext]:
     TransactionsCacheBase.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
         cache_repo = CoinbaseCacheRepository(session)

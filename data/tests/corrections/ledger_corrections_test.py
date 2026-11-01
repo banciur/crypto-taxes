@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -35,7 +35,7 @@ def _raw_event(
 ) -> LedgerEvent:
     return LedgerEvent(
         id=LedgerEventId(uuid4()),
-        timestamp=datetime(2024, 1, 1, hour, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, hour, 0, tzinfo=UTC),
         event_origin=EventOrigin(location=location, external_id=external_id),
         ingestion="raw_ingestion",
         legs=[LedgerLeg(asset_id=BTC, quantity=quantity, account_chain_id=account_chain_id)],
@@ -73,7 +73,7 @@ def test_apply_ingestion_corrections_handles_discard_replacement_and_opening_bal
     )
 
     opening_balance = LedgerCorrection(
-        timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=UTC),
         legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("0.5"), account_chain_id=LEDGER_WALLET)]),
         note="opening balance note",
     )
@@ -82,7 +82,7 @@ def test_apply_ingestion_corrections_handles_discard_replacement_and_opening_bal
         sources=frozenset([discarded.event_origin]),
     )
     replacement = LedgerCorrection(
-        timestamp=datetime(2024, 1, 1, 4, 30, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 4, 30, tzinfo=UTC),
         sources=frozenset([replaced_sent.event_origin, replaced_received.event_origin]),
         legs=frozenset(
             [
@@ -119,7 +119,7 @@ def test_apply_ingestion_corrections_handles_discard_replacement_and_opening_bal
 
 def test_ledger_event_from_correction_uses_unified_provenance() -> None:
     correction = LedgerCorrection(
-        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
         legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
         note="opening balance note",
     )
@@ -145,7 +145,7 @@ def test_validate_ingestion_corrections_rejects_missing_source() -> None:
         )
     ]
     correction = LedgerCorrection(
-        timestamp=datetime(2024, 1, 1, 10, 30, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 10, 30, tzinfo=UTC),
         sources=frozenset([EventOrigin(location=EventLocation.COINBASE, external_id="cb-missing")]),
     )
 
@@ -166,7 +166,7 @@ def test_validate_ingestion_corrections_rejects_duplicate_consumption() -> None:
     )
     first = LedgerCorrection(timestamp=raw_event.timestamp, sources=frozenset([raw_event.event_origin]))
     second = LedgerCorrection(
-        timestamp=datetime(2024, 1, 1, 11, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 11, 0, tzinfo=UTC),
         sources=frozenset([raw_event.event_origin]),
         legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
     )
@@ -179,7 +179,7 @@ def test_validate_ingestion_corrections_rejects_duplicate_consumption() -> None:
 
 
 def test_source_less_correction_allows_arbitrary_non_empty_legs() -> None:
-    timestamp = datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 1, 1, 0, tzinfo=UTC)
 
     multi_leg = LedgerCorrection(
         timestamp=timestamp,
@@ -202,7 +202,7 @@ def test_source_less_correction_allows_arbitrary_non_empty_legs() -> None:
 def test_correction_rejects_duplicate_leg_identity() -> None:
     with pytest.raises(ValidationError, match="duplicate leg identities") as exc_info:
         LedgerCorrection(
-            timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=UTC),
             legs=frozenset(
                 [
                     LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),

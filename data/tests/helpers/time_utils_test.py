@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from random import Random
 
@@ -35,11 +35,11 @@ def test_make_event_uses_generator_when_timestamp_missing() -> None:
     event2 = make_event(legs=legs, ts_gen=gen)
 
     assert event1.timestamp < event2.timestamp
-    assert event1.timestamp.tzinfo == timezone.utc
+    assert event1.timestamp.tzinfo == UTC
 
 
 def test_make_event_respects_provided_timestamp() -> None:
-    explicit_ts = datetime(2024, 2, 1, tzinfo=timezone.utc)
+    explicit_ts = datetime(2024, 2, 1, tzinfo=UTC)
     legs = [LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=AccountChainId("w"))]
 
     event = make_event(legs=legs, timestamp=explicit_ts)

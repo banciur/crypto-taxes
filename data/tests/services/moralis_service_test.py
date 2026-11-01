@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import NamedTuple, cast
 
 import pytest
@@ -14,7 +14,7 @@ from domain.ledger import EventLocation, WalletAddress
 from services.moralis import MoralisService, SyncMode
 from tests.constants import ETH_ADDRESS, LOCATION
 
-FIXED_NOW = datetime(2026, 3, 7, 12, tzinfo=timezone.utc)
+FIXED_NOW = datetime(2026, 3, 7, 12, tzinfo=UTC)
 
 
 class _StubMoralisClient:
@@ -73,7 +73,7 @@ def _account(
 
 
 @pytest.fixture()
-def test_ctx(db_engine: Engine) -> Generator[_ServiceTestContext, None, None]:
+def test_ctx(db_engine: Engine) -> Generator[_ServiceTestContext]:
     TransactionsCacheBase.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
         cache_repo = MoralisCacheRepository(session)
