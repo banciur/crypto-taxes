@@ -1,14 +1,14 @@
 [project]
 dynamic = ["version"]
 name = "crypto-taxes"
-requires-python = ">= 3.13"
+requires-python = ">= 3.15"
 
 dependencies = [
     "alembic==1.18.5",
     "coinbase-advanced-py==1.8.2",
     "fastapi[standard]>=0.139.0",
     "moralis==0.1.49",
-    "pydantic==2.13.4",
+    "pydantic==2.14.2",
     "pydantic-settings==2.13.1",
     "requests==2.33.0",
     "SQLAlchemy==2.0.51",
@@ -33,13 +33,13 @@ testpaths = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py315"
 
 [tool.ruff.lint]
 extend-select = ["I"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.15"
 disallow_untyped_defs = true
 show_error_codes = true
 no_implicit_optional = true
