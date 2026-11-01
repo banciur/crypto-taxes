@@ -12,12 +12,12 @@ from tests.helpers.time_utils import make_event
 def test_wallet_projector_processes_events_across_multiple_accounts(
     wallet_projector: WalletProjector,
 ) -> None:
-    starting_eur = Decimal("5000")
+    starting_eur = Decimal(5000)
     acquired_eth = Decimal("1.5")
-    spent_eur = Decimal("3000")
+    spent_eur = Decimal(3000)
     transfer_eth = Decimal("0.4")
-    fee_eur = Decimal("10")
-    received_eur = Decimal("1200")
+    fee_eur = Decimal(10)
+    received_eur = Decimal(1200)
     sold_eth = Decimal("0.3")
 
     events = [

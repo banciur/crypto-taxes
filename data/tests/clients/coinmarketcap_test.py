@@ -96,7 +96,7 @@ def test_old_timestamp_uses_daily_interval(tmp_path: Path) -> None:
 
     record = _client(session, tmp_path).fetch_record(BTC, EUR, timestamp=_OLD)
 
-    assert record.rate == Decimal("7200")
+    assert record.rate == Decimal(7200)
     assert record.valid_from == datetime(2020, 1, 1, tzinfo=UTC)
     assert record.valid_to == record.valid_from + timedelta(days=1)
     assert session.get.call_args.kwargs["params"]["interval"] == "daily"
@@ -158,7 +158,7 @@ def test_discovers_single_candidate_and_writes_map(tmp_path: Path) -> None:
 
     record = _client(session, tmp_path).fetch_record(AssetId("neu"), USD, timestamp=_OLD)
 
-    assert record.rate == Decimal("9")
+    assert record.rate == Decimal(9)
     assert session.get.call_count == 2
     assert _MAP_PATH in session.get.call_args_list[0].args[0]
     assert json.loads(config_path.read_text()) == {"asset_map": {"NEU": 2318}, "unpriceable": []}

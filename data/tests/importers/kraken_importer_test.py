@@ -416,7 +416,7 @@ def test_spend_receive_trade(tmp_path: Path) -> None:
     buy_leg = next(leg for leg in event.legs if leg.asset_id == "DAI")
 
     assert sell_leg.quantity == amount_eur - fee
-    assert buy_leg.quantity == Decimal("200")
+    assert buy_leg.quantity == Decimal(200)
 
 
 def test_staking_reward_with_fee(tmp_path: Path) -> None:
@@ -604,7 +604,7 @@ def test_preprocess_skips_spot_to_staking_pairs() -> None:
             txid="TX-A",
             subtype="spottostaking",
             asset="ETH",
-            amount=Decimal("-4"),
+            amount=Decimal(-4),
             timestamp=ts,
         ),
         _preprocess_entry(
@@ -612,7 +612,7 @@ def test_preprocess_skips_spot_to_staking_pairs() -> None:
             txid="TX-B",
             subtype="stakingfromspot",
             asset="ETH2.S",
-            amount=Decimal("4"),
+            amount=Decimal(4),
             timestamp=ts + timedelta(hours=4),
         ),
     ]
@@ -631,7 +631,7 @@ def test_preprocess_leaves_rows_outside_time_window() -> None:
             txid="TX-C",
             subtype="stakingtospot",
             asset="DOT.S",
-            amount=Decimal("-100"),
+            amount=Decimal(-100),
             timestamp=ts,
         ),
         _preprocess_entry(
@@ -639,7 +639,7 @@ def test_preprocess_leaves_rows_outside_time_window() -> None:
             txid="TX-D",
             subtype="spotfromstaking",
             asset="DOT",
-            amount=Decimal("100"),
+            amount=Decimal(100),
             timestamp=ts + timedelta(days=6),
         ),
     ]

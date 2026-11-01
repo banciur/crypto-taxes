@@ -34,7 +34,7 @@ def _sample_event(external_id: str, timestamp: datetime, *, note: str | None = N
         note=note,
         legs=[
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
-            LedgerLeg(asset_id=EUR, quantity=Decimal("-2000"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
+            LedgerLeg(asset_id=EUR, quantity=Decimal(-2000), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
         ],
     )
 
@@ -158,7 +158,7 @@ def test_replace_acquisition_disposal_projection(projection_repo: AcquisitionDis
             leg_index=0,
             lot_id=lots[0].id,
             quantity_used=Decimal("0.5"),
-            proceeds_total=Decimal("100"),
+            proceeds_total=Decimal(100),
         ),
         _disposal_link_from_event(
             disposal_event,
@@ -189,7 +189,7 @@ def test_replace_acquisition_disposal_projection_clears_previous_rows(
         leg_index=0,
         lot_id=stale_lot.id,
         quantity_used=Decimal("0.5"),
-        proceeds_total=Decimal("100"),
+        proceeds_total=Decimal(100),
     )
     projection_repo.replace(AcquisitionDisposalProjection(acquisition_lots=[stale_lot], disposal_links=[stale_link]))
 

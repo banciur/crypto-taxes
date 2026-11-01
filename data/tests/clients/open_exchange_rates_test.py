@@ -76,7 +76,7 @@ def test_price_source_converts_cross_currency_pair() -> None:
         timestamp=datetime(2024, 1, 1, 23, 59, tzinfo=UTC),
         base="USD",
         rates={
-            "USD": Decimal("1"),
+            "USD": Decimal(1),
             "EUR": Decimal("0.9"),
             "GBP": Decimal("0.8"),
         },
@@ -87,7 +87,7 @@ def test_price_source_converts_cross_currency_pair() -> None:
     quote = source.fetch_record(EUR, USD, timestamp=ts)
 
     assert quote is not None
-    assert quote.rate == Decimal("1") / Decimal("0.9")
+    assert quote.rate == Decimal(1) / Decimal("0.9")
     assert quote.base_id == EUR
     assert quote.quote_id == USD
     assert quote.valid_from == datetime(2024, 1, 1, 0, 0, tzinfo=UTC)
@@ -100,7 +100,7 @@ def test_price_source_returns_empty_record_for_missing_currency() -> None:
         date=date(2024, 1, 1),
         timestamp=datetime(2024, 1, 1, 23, 59, tzinfo=UTC),
         base="USD",
-        rates={"USD": Decimal("1")},
+        rates={"USD": Decimal(1)},
     )
     source = _StubOXRClient(snapshot=historical)
 

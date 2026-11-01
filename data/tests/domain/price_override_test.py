@@ -24,7 +24,7 @@ def _event(external_id: str, *asset_ids: AssetId) -> LedgerEvent:
     return make_event(
         timestamp=_TS,
         event_origin=make_origin(external_id),
-        legs=[make_leg(asset_id=asset, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET) for asset in asset_ids],
+        legs=[make_leg(asset_id=asset, quantity=Decimal(1), account_chain_id=LEDGER_WALLET) for asset in asset_ids],
     )
 
 
@@ -32,7 +32,7 @@ def _replacement(*sources: str) -> LedgerEvent:
     correction = LedgerCorrection(
         timestamp=_TS,
         sources=frozenset(make_origin(source) for source in sources),
-        legs=frozenset([make_leg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=KRAKEN_ACCOUNT_ID)]),
+        legs=frozenset([make_leg(asset_id=ETH, quantity=Decimal(1), account_chain_id=KRAKEN_ACCOUNT_ID)]),
     )
     return ledger_event_from_correction(correction)
 
@@ -58,11 +58,11 @@ def test_price_override_accepts_negative_rate() -> None:
     # A liability (debt-token) leg is priced at the negative of its underlying.
     override = _override(event_origin=make_origin("0xabc"), rate_eur="-1500")
 
-    assert override.rate_eur == Decimal("-1500")
+    assert override.rate_eur == Decimal(-1500)
 
 
 def test_price_override_draft_has_no_id_and_override_generates_one() -> None:
-    draft = PriceOverrideDraft(event_origin=make_origin("0xabc"), asset_id=ETH, rate_eur=Decimal("1500"))
+    draft = PriceOverrideDraft(event_origin=make_origin("0xabc"), asset_id=ETH, rate_eur=Decimal(1500))
     assert not hasattr(draft, "id")
 
     assert _override(event_origin=make_origin("0xabc")).id is not None

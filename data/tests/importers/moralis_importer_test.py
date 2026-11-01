@@ -247,7 +247,7 @@ def test_failed_tx_keeps_only_gas_fee_leg(test_ctx: _ImporterTestContext) -> Non
             _erc20_transfer(
                 from_address=ETH_ADDRESS,
                 to_address=ETH_ADDRESS_2,
-                amount=Decimal("100"),
+                amount=Decimal(100),
                 symbol="USDC",
                 token="0x0b2c639c533813f4aa9d7837caf62653d097ff85",
                 value="100000000",
@@ -400,7 +400,7 @@ def test_erc20_legs_sum_exact_atomic_values_before_collapsing(test_ctx: _Importe
     event = test_ctx.importer._build_event(tx)
 
     expected_quantity = (
-        Decimal("1423510770425597170044") + Decimal("1510229335278836495") + Decimal("175365468887696284727")
+        Decimal(1423510770425597170044) + Decimal(1510229335278836495) + Decimal(175365468887696284727)
     ) / (Decimal(10) ** Decimal(token_decimals))
 
     assert event is not None
@@ -599,7 +599,7 @@ def test_erc20_without_decimals_falls_back_to_raw_value(test_ctx: _ImporterTestC
     assert event is not None
     assert len(event.legs) == 1
     assert event.legs[0].asset_id == AssetId(token)
-    assert event.legs[0].quantity == Decimal("777")
+    assert event.legs[0].quantity == Decimal(777)
     assert event.legs[0].account_chain_id == AccountChainId(f"{LOCATION.value}:{ETH_ADDRESS}")
     assert event.legs[0].is_fee is False
 

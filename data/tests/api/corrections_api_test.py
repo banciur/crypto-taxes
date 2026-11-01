@@ -230,7 +230,7 @@ def test_get_lists_persisted_corrections_in_desc_order(
 ) -> None:
     older = LedgerCorrectionDraft(
         timestamp=datetime(2024, 2, 1, 12, 0, tzinfo=UTC),
-        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
+        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal(1), account_chain_id=LEDGER_WALLET)]),
     )
     newer = LedgerCorrectionDraft(
         timestamp=datetime(2024, 2, 2, 12, 0, tzinfo=UTC),
@@ -259,7 +259,7 @@ def test_get_filtered_by_asset_matches_correction_legs(
     btc_opening_balance = persist_correction(
         LedgerCorrectionDraft(
             timestamp=datetime(2024, 2, 1, 12, 0, tzinfo=UTC),
-            legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
+            legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal(1), account_chain_id=LEDGER_WALLET)]),
         )
     )
 
@@ -282,7 +282,7 @@ def test_get_filtered_by_asset_matches_assets_of_claimed_raw_sources(
             location=EventLocation.ARBITRUM,
             external_id=external_id,
             timestamp=timestamp,
-            legs=[LedgerLeg(asset_id=ETH, quantity=Decimal("-1"), account_chain_id=LEDGER_WALLET)],
+            legs=[LedgerLeg(asset_id=ETH, quantity=Decimal(-1), account_chain_id=LEDGER_WALLET)],
         )
 
     discarded_source = eth_source("0xeth-discarded")
@@ -298,7 +298,7 @@ def test_get_filtered_by_asset_matches_assets_of_claimed_raw_sources(
         LedgerCorrectionDraft(
             timestamp=timestamp,
             sources=frozenset([replaced_source.event_origin]),
-            legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
+            legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal(1), account_chain_id=LEDGER_WALLET)]),
         )
     )
 

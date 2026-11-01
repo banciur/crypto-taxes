@@ -7,7 +7,7 @@ from tests.helpers.ledger import make_leg
 
 
 def test_internal_transfer_projects_no_non_fee_asset_group() -> None:
-    quantity = Decimal("1")
+    quantity = Decimal(1)
 
     projected_event = project_event_quantities(
         make_event(
@@ -23,8 +23,8 @@ def test_internal_transfer_projects_no_non_fee_asset_group() -> None:
 
 
 def test_non_fee_eur_remains_in_non_fee_groups() -> None:
-    acquisition_quantity = Decimal("1")
-    eur_quantity = Decimal("-100")
+    acquisition_quantity = Decimal(1)
+    eur_quantity = Decimal(-100)
 
     projected_event = project_event_quantities(
         make_event(
@@ -46,9 +46,9 @@ def test_non_fee_eur_remains_in_non_fee_groups() -> None:
 
 
 def test_fee_group_stays_separate_when_fee_asset_matches_non_fee_asset() -> None:
-    non_fee_quantity = Decimal("-10")
-    fee_quantity = Decimal("-1")
-    usdc_quantity = Decimal("110")
+    non_fee_quantity = Decimal(-10)
+    fee_quantity = Decimal(-1)
+    usdc_quantity = Decimal(110)
 
     projected_event = project_event_quantities(
         make_event(
@@ -71,7 +71,7 @@ def test_fee_group_stays_separate_when_fee_asset_matches_non_fee_asset() -> None
 
 
 def test_residual_quantity_is_split_across_multiple_same_sign_source_legs() -> None:
-    negative_quantity = Decimal("-1")
+    negative_quantity = Decimal(-1)
     first_positive_quantity = Decimal("0.6")
     second_positive_quantity = Decimal("0.5")
     projected_total = first_positive_quantity + second_positive_quantity + negative_quantity

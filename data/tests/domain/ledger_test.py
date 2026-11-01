@@ -24,8 +24,8 @@ def test_ledger_event_rejects_duplicate_leg_identity() -> None:
             event_origin=EventOrigin(location=EventLocation.INTERNAL, external_id="duplicate-legs"),
             ingestion="test",
             legs=[
-                make_leg(quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),
-                make_leg(quantity=Decimal("2"), account_chain_id=LEDGER_WALLET),
+                make_leg(quantity=Decimal(1), account_chain_id=LEDGER_WALLET),
+                make_leg(quantity=Decimal(2), account_chain_id=LEDGER_WALLET),
             ],
         )
 
@@ -40,7 +40,7 @@ def test_ledger_event_allows_same_account_and_asset_when_fee_flag_differs() -> N
         event_origin=EventOrigin(location=EventLocation.INTERNAL, external_id="fee-distinguishes-leg"),
         ingestion="test",
         legs=[
-            make_leg(quantity=Decimal("1")),
+            make_leg(quantity=Decimal(1)),
             make_leg(quantity=Decimal("-0.01"), is_fee=True),
         ],
     )

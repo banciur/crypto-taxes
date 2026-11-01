@@ -47,7 +47,7 @@ def test_apply_ingestion_corrections_handles_discard_replacement_and_opening_bal
         location=EventLocation.ARBITRUM,
         external_id="0xdiscard",
         hour=2,
-        quantity=Decimal("1"),
+        quantity=Decimal(1),
         account_chain_id=KRAKEN_ACCOUNT_ID,
     )
     replaced_sent = _raw_event(
@@ -120,7 +120,7 @@ def test_apply_ingestion_corrections_handles_discard_replacement_and_opening_bal
 def test_ledger_event_from_correction_uses_unified_provenance() -> None:
     correction = LedgerCorrection(
         timestamp=datetime(2024, 1, 1, 12, 0, tzinfo=UTC),
-        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
+        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal(1), account_chain_id=LEDGER_WALLET)]),
         note="opening balance note",
     )
 
@@ -140,7 +140,7 @@ def test_validate_ingestion_corrections_rejects_missing_source() -> None:
             location=EventLocation.ETHEREUM,
             external_id="0xpresent",
             hour=10,
-            quantity=Decimal("1"),
+            quantity=Decimal(1),
             account_chain_id=KRAKEN_ACCOUNT_ID,
         )
     ]
@@ -161,14 +161,14 @@ def test_validate_ingestion_corrections_rejects_duplicate_consumption() -> None:
         location=EventLocation.ETHEREUM,
         external_id="0xshared",
         hour=10,
-        quantity=Decimal("1"),
+        quantity=Decimal(1),
         account_chain_id=KRAKEN_ACCOUNT_ID,
     )
     first = LedgerCorrection(timestamp=raw_event.timestamp, sources=frozenset([raw_event.event_origin]))
     second = LedgerCorrection(
         timestamp=datetime(2024, 1, 1, 11, 0, tzinfo=UTC),
         sources=frozenset([raw_event.event_origin]),
-        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET)]),
+        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal(1), account_chain_id=LEDGER_WALLET)]),
     )
 
     with pytest.raises(
@@ -185,8 +185,8 @@ def test_source_less_correction_allows_arbitrary_non_empty_legs() -> None:
         timestamp=timestamp,
         legs=frozenset(
             [
-                LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),
-                LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),
+                LedgerLeg(asset_id=BTC, quantity=Decimal(1), account_chain_id=LEDGER_WALLET),
+                LedgerLeg(asset_id=ETH, quantity=Decimal(1), account_chain_id=LEDGER_WALLET),
             ]
         ),
     )
@@ -194,7 +194,7 @@ def test_source_less_correction_allows_arbitrary_non_empty_legs() -> None:
 
     fee_only = LedgerCorrection(
         timestamp=timestamp,
-        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal("-1"), account_chain_id=LEDGER_WALLET, is_fee=True)]),
+        legs=frozenset([LedgerLeg(asset_id=BTC, quantity=Decimal(-1), account_chain_id=LEDGER_WALLET, is_fee=True)]),
     )
     assert next(iter(fee_only.legs)).is_fee
 
@@ -205,8 +205,8 @@ def test_correction_rejects_duplicate_leg_identity() -> None:
             timestamp=datetime(2024, 1, 1, 1, 0, tzinfo=UTC),
             legs=frozenset(
                 [
-                    LedgerLeg(asset_id=BTC, quantity=Decimal("1"), account_chain_id=LEDGER_WALLET),
-                    LedgerLeg(asset_id=BTC, quantity=Decimal("2"), account_chain_id=LEDGER_WALLET),
+                    LedgerLeg(asset_id=BTC, quantity=Decimal(1), account_chain_id=LEDGER_WALLET),
+                    LedgerLeg(asset_id=BTC, quantity=Decimal(2), account_chain_id=LEDGER_WALLET),
                 ]
             ),
         )

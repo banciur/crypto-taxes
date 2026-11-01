@@ -141,7 +141,7 @@ class OpenExchangeRatesClient:
         quote: AssetId,
     ) -> Decimal | None:
         if base == quote:
-            return Decimal("1")
+            return Decimal(1)
 
         try:
             base_rate = self._resolve_rate(snapshot=snapshot, currency=base)
@@ -153,7 +153,7 @@ class OpenExchangeRatesClient:
     @staticmethod
     def _resolve_rate(*, snapshot: HistoricalRates, currency: AssetId) -> Decimal:
         if currency == snapshot.base:
-            return Decimal("1")
+            return Decimal(1)
         return snapshot.rates[currency]
 
     @staticmethod

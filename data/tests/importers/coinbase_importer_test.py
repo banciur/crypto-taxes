@@ -282,8 +282,8 @@ def test_staking_transfer_pair_is_skipped_after_eth2_aliasing() -> None:
 
 
 def test_fiat_deposit_exchange_pass_through_pair_is_skipped() -> None:
-    paired_amount = Decimal("700")
-    standalone_amount = Decimal("950")
+    paired_amount = Decimal(700)
+    standalone_amount = Decimal(950)
     paired_deposit = transaction(
         tx_id="fiat-in",
         tx_type="fiat_deposit",

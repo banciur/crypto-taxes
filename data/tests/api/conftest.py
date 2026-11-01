@@ -75,7 +75,7 @@ def raw_event(
         legs=legs
         or [
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
-            LedgerLeg(asset_id=EUR, quantity=Decimal("-100"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
+            LedgerLeg(asset_id=EUR, quantity=Decimal(-100), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
         ],
     )
 
