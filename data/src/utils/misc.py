@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from random import choice
 from string import ascii_lowercase
@@ -22,7 +22,7 @@ def int_to_decimal(value: int, precision: int = 18) -> Decimal:
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @overload
@@ -37,5 +37,5 @@ def ensure_utc_datetime(value: datetime | None) -> datetime | None:
     if value is None:
         return value
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)

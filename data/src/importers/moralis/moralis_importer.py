@@ -1,10 +1,10 @@
 import logging
 from abc import ABC
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from functools import partial
-from typing import Any, Iterable, Mapping, cast
+from typing import Any, cast
 
 from accounts import AccountRegistry
 from db.ledger_corrections import LedgerCorrectionRepository
@@ -340,7 +340,7 @@ class MoralisImporter:
             note = f"tx failed | {note}" if note else "tx failed"
 
         return LedgerEvent(
-            timestamp=ensure_utc_datetime(datetime.fromisoformat(tx["block_timestamp"].replace("Z", "+00:00"))),
+            timestamp=ensure_utc_datetime(datetime.fromisoformat(tx["block_timestamp"])),
             event_origin=EventOrigin(location=location, external_id=str(tx["hash"])),
             ingestion=INGESTION_SOURCE,
             note=note,

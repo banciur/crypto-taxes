@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -28,34 +28,34 @@ def _store(tmp_path: Path) -> PriceCacheRepository:
 
 def test_store_returns_snapshot_within_coverage_window(tmp_path: Path) -> None:
     store = _store(tmp_path)
-    valid_from = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    valid_from = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
     base_id = BTC
     quote_id = EUR
     rate = "100.00"
 
     store.write(_price(base_id, quote_id, rate, valid_from, duration_minutes=59))
 
-    result = store.read(base_id, quote_id, datetime(2025, 1, 1, 12, 45, tzinfo=timezone.utc))
+    result = store.read(base_id, quote_id, datetime(2025, 1, 1, 12, 45, tzinfo=UTC))
     assert result is not None
     assert result.rate == Decimal(rate)
 
 
 def test_store_returns_none_when_outside_coverage(tmp_path: Path) -> None:
     store = _store(tmp_path)
-    valid_from = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    valid_from = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
     base_id = ETH
     quote_id = USD
     rate = "50.00"
     price = _price(base_id, quote_id, rate, valid_from, duration_minutes=10)
     store.write(price)
 
-    result = store.read(base_id, quote_id, datetime(2025, 1, 1, 12, 30, tzinfo=timezone.utc))
+    result = store.read(base_id, quote_id, datetime(2025, 1, 1, 12, 30, tzinfo=UTC))
     assert result is None
 
 
 def test_store_prefers_higher_resolution_for_overlapping_windows(tmp_path: Path) -> None:
     store = _store(tmp_path)
-    ts = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    ts = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
     later_ts = ts.replace(second=30)
     base_id = BTC
     quote_id = USD
@@ -70,7 +70,7 @@ def test_store_prefers_higher_resolution_for_overlapping_windows(tmp_path: Path)
 
 def test_store_records_negative_cache_rows(tmp_path: Path) -> None:
     store = _store(tmp_path)
-    valid_from = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    valid_from = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
     base_id = BTC
     quote_id = EUR
 
@@ -93,7 +93,7 @@ def test_store_records_negative_cache_rows(tmp_path: Path) -> None:
 
 def test_store_deduplicates_bucket_start(tmp_path: Path) -> None:
     store = _store(tmp_path)
-    timestamp = datetime(2025, 1, 1, 12, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2025, 1, 1, 12, 0, tzinfo=UTC)
     base_id = ETH
     quote_id = EUR
     replacement_rate = "125.00"

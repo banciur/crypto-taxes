@@ -1,7 +1,8 @@
 import logging
+from collections.abc import Mapping
 from datetime import date
 from time import sleep
-from typing import Any, Mapping
+from typing import Any
 
 from moralis import evm_api
 from moralis.evm_api.wallets.get_wallet_history import Params

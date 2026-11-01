@@ -2,9 +2,10 @@
 import argparse
 import json
 import sys
+from collections.abc import Sequence
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -44,7 +45,7 @@ def _has_non_zero_value(value: Any) -> bool:
         return False
     try:
         return Decimal(str(value)) != 0
-    except (InvalidOperation, ValueError):
+    except InvalidOperation, ValueError:
         return False
 
 

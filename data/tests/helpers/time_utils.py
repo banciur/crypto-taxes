@@ -1,8 +1,8 @@
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from itertools import count
 from random import Random
-from typing import Callable, Iterable
 
 from domain.ledger import EventLocation, EventOrigin, LedgerEvent, LedgerLeg
 
@@ -12,7 +12,7 @@ class TimeGenerator:
     """Deterministic timestamp generator with random-ish gaps."""
 
     _current: datetime | None = None
-    _rng: Random = Random(0)
+    _rng: Random = field(default_factory=lambda: Random(0))
     _seed: int = 0
 
     def __call__(self) -> datetime:
@@ -20,7 +20,7 @@ class TimeGenerator:
 
     def next(self) -> datetime:
         if self._current is None:
-            self._current = datetime(2024, 1, 1, tzinfo=timezone.utc)
+            self._current = datetime(2024, 1, 1, tzinfo=UTC)
         self._current += timedelta(seconds=self._rng.randint(5, 60))
         return self._current
 

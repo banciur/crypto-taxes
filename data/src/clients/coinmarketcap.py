@@ -5,7 +5,7 @@
 import json
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
@@ -134,7 +134,7 @@ class CoinMarketCapClient:
         ``5m`` requests for old timestamps fail with an access-window error. The cutoff is
         configurable rather than probed dynamically.
         """
-        moment = timestamp.astimezone(timezone.utc)
+        moment = timestamp.astimezone(UTC)
         cutoff = utc_now() - timedelta(days=self.high_resolution_days)
         if moment >= cutoff:
             valid_from = _floor_to_five_minutes(moment)

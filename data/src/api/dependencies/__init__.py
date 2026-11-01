@@ -1,4 +1,5 @@
-from typing import Annotated, Generator
+from collections.abc import Generator
+from typing import Annotated
 
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
@@ -11,17 +12,17 @@ from db.system_state import SystemStateRepository
 from db.wallet_projection import WalletBalanceRepository
 
 
-def get_session(request: Request) -> Generator[Session, None, None]:
+def get_session(request: Request) -> Generator[Session]:
     with request.app.state.sessionmaker() as session:
         yield session
 
 
-def get_corrections_session(request: Request) -> Generator[Session, None, None]:
+def get_corrections_session(request: Request) -> Generator[Session]:
     with request.app.state.corrections_sessionmaker() as session:
         yield session
 
 
-def get_price_overrides_session(request: Request) -> Generator[Session, None, None]:
+def get_price_overrides_session(request: Request) -> Generator[Session]:
     with request.app.state.price_overrides_sessionmaker() as session:
         yield session
 

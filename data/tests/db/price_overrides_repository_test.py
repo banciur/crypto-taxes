@@ -71,7 +71,7 @@ def test_rejects_a_second_override_for_the_same_origin_and_asset(repo: PriceOver
 
 
 def test_rates_by_origin_groups_by_event_origin_then_asset(repo: PriceOverrideRepository) -> None:
-    eth_rate, usdc_rate = Decimal("1500"), Decimal("1")
+    eth_rate, usdc_rate = Decimal(1500), Decimal(1)
     priced, other = make_origin("0xpriced"), make_origin("0xother")
     repo.create(_draft(external_id=priced.external_id, asset_id=ETH, rate_eur=str(eth_rate)))
     repo.create(_draft(external_id=priced.external_id, asset_id=USDC, rate_eur=str(usdc_rate)))

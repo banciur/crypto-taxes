@@ -12,7 +12,7 @@ from tests.helpers.time_utils import DEFAULT_TIME_GEN
 
 
 @pytest.fixture(scope="module")
-def db_engine() -> Generator[Engine, None, None]:
+def db_engine() -> Generator[Engine]:
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -23,7 +23,7 @@ def db_engine() -> Generator[Engine, None, None]:
 
 
 @pytest.fixture(scope="function")
-def test_session(db_engine: Engine) -> Generator[Session, None, None]:
+def test_session(db_engine: Engine) -> Generator[Session]:
     Base.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
         yield session

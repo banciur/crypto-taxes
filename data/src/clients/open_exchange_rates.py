@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -66,7 +66,7 @@ class OpenExchangeRatesClient:
         quote = AssetId(quote_id.upper())
 
         rate = self._compute_rate(snapshot=snapshot, base=base, quote=quote)
-        valid_from = datetime.combine(snapshot.date, time.min, tzinfo=timezone.utc)
+        valid_from = datetime.combine(snapshot.date, time.min, tzinfo=UTC)
 
         return PriceRecord(
             base_id=base,
@@ -88,7 +88,7 @@ class OpenExchangeRatesClient:
         if timestamp_raw is None or base_currency is None or not isinstance(rates_raw, dict):
             raise OpenExchangeRatesAPIError("Open Exchange Rates payload missing required fields", payload=payload)
 
-        timestamp = datetime.fromtimestamp(int(timestamp_raw), tz=timezone.utc)
+        timestamp = datetime.fromtimestamp(int(timestamp_raw), tz=UTC)
         parsed_rates: dict[str, Decimal] = {
             code_raw.upper(): self._to_decimal(rate) for code_raw, rate in rates_raw.items()
         }
@@ -141,7 +141,7 @@ class OpenExchangeRatesClient:
         quote: AssetId,
     ) -> Decimal | None:
         if base == quote:
-            return Decimal("1")
+            return Decimal(1)
 
         try:
             base_rate = self._resolve_rate(snapshot=snapshot, currency=base)
@@ -153,7 +153,7 @@ class OpenExchangeRatesClient:
     @staticmethod
     def _resolve_rate(*, snapshot: HistoricalRates, currency: AssetId) -> Decimal:
         if currency == snapshot.base:
-            return Decimal("1")
+            return Decimal(1)
         return snapshot.rates[currency]
 
     @staticmethod

@@ -1,5 +1,5 @@
 from csv import DictWriter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -94,8 +94,8 @@ def test_importer_ignores_non_reward_rows_and_sorts_rewards(tmp_path: Path) -> N
 
     assert len(events) == 2
     assert [event.timestamp for event in events] == [
-        datetime(2024, 12, 28, 12, 27, 23, tzinfo=timezone.utc),
-        datetime(2024, 12, 29, 12, 27, 35, tzinfo=timezone.utc),
+        datetime(2024, 12, 28, 12, 27, 23, tzinfo=UTC),
+        datetime(2024, 12, 29, 12, 27, 35, tzinfo=UTC),
     ]
     assert [event.event_origin.external_id for event in events] == [
         "reward:2024-12-28T12:27:23+00:00",

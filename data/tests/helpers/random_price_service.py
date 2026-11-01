@@ -12,8 +12,8 @@ class DeterministicRandomPriceSource(PriceSource):
         self,
         *,
         seed: int = 0,
-        min_price: Decimal = Decimal("10"),
-        max_price: Decimal = Decimal("70000"),
+        min_price: Decimal = Decimal(10),
+        max_price: Decimal = Decimal(70000),
         source_name: str = "test-deterministic-rng",
     ) -> None:
         if min_price <= 0:
@@ -64,8 +64,8 @@ class TestPriceService(PriceProvider):
         self,
         *,
         seed: int = 0,
-        min_price: Decimal = Decimal("10"),
-        max_price: Decimal = Decimal("70000"),
+        min_price: Decimal = Decimal(10),
+        max_price: Decimal = Decimal(70000),
         source_name: str = "test-price-service",
     ) -> None:
         self._source = DeterministicRandomPriceSource(

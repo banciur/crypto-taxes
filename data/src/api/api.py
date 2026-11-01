@@ -1,6 +1,6 @@
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from time import perf_counter
-from typing import AsyncGenerator, Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
 from sqlalchemy import Engine, create_engine
@@ -23,7 +23,7 @@ def create_app(
     price_overrides_sessionmaker_factory: sessionmaker[Session] | None = None,
 ) -> FastAPI:
     @asynccontextmanager
-    async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None, None]:
+    async def lifespan(fastapi_app: FastAPI) -> AsyncGenerator[None]:
         engine: Engine | None = None
         corrections_engine: Engine | None = None
         price_overrides_engine: Engine | None = None

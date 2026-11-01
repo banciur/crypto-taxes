@@ -24,12 +24,12 @@ class LedgerCorrectionOrm(TimestampAuditMixin, CorrectionsBase):
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     note: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
 
-    sources: Mapped[list["LedgerCorrectionSourceOrm"]] = relationship(
+    sources: Mapped[list[LedgerCorrectionSourceOrm]] = relationship(
         cascade="all, delete-orphan",
         back_populates="correction",
         lazy="joined",
     )
-    legs: Mapped[list["LedgerCorrectionLegOrm"]] = relationship(
+    legs: Mapped[list[LedgerCorrectionLegOrm]] = relationship(
         cascade="all, delete-orphan",
         back_populates="correction",
         lazy="joined",

@@ -1,25 +1,24 @@
 [project]
 dynamic = ["version"]
 name = "crypto-taxes"
-requires-python = ">= 3.13"
+requires-python = ">= 3.15"
 
 dependencies = [
-    "alembic==1.18.5",
-    "coinbase-advanced-py==1.8.2",
-    "fastapi[standard]>=0.139.0",
+    "alembic==1.20.1",
+    "coinbase-advanced-py==1.8.4",
+    "fastapi[standard]>=0.162.0",
     "moralis==0.1.49",
-    "pydantic==2.13.4",
-    "pydantic-settings==2.13.1",
-    "requests==2.33.0",
-    "SQLAlchemy==2.0.51",
+    "pydantic==2.14.2",
+    "pydantic-settings==2.16.2",
+    "requests==2.34.2",
+    "SQLAlchemy==2.1.6",
 ]
 
 [dependency-groups]
 dev = [
-    "types-requests>=2.32.4,<2.32.6",
-    "mypy==2.1.0",
-    "pytest==9.0.3",
-    "ruff==0.15.20",
+    "mypy==2.4.1",
+    "pytest==9.2.0",
+    "ruff==0.17.3",
 ]
 
 [tool.pytest.ini_options]
@@ -33,13 +32,13 @@ testpaths = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py315"
 
 [tool.ruff.lint]
-extend-select = ["I"]
+extend-select = ["I", "E", "F"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.15"
 disallow_untyped_defs = true
 show_error_codes = true
 no_implicit_optional = true

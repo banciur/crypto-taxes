@@ -34,11 +34,11 @@ def test_acquisition_lot_accepts_negative_cost_basis() -> None:
         asset_id=BTC,
         is_fee=False,
         timestamp=BASE_TIMESTAMP,
-        quantity_acquired=Decimal("1"),
-        cost_per_unit=Decimal("-2500"),
+        quantity_acquired=Decimal(1),
+        cost_per_unit=Decimal(-2500),
     )
 
-    assert lot.cost_per_unit == Decimal("-2500")
+    assert lot.cost_per_unit == Decimal(-2500)
 
 
 def test_disposal_link_accepts_negative_proceeds() -> None:
@@ -49,8 +49,8 @@ def test_disposal_link_accepts_negative_proceeds() -> None:
         is_fee=False,
         timestamp=BASE_TIMESTAMP,
         lot_id=LotId(uuid4()),
-        quantity_used=Decimal("1"),
-        proceeds_total=Decimal("-2500"),
+        quantity_used=Decimal(1),
+        proceeds_total=Decimal(-2500),
     )
 
-    assert link.proceeds_total == Decimal("-2500")
+    assert link.proceeds_total == Decimal(-2500)

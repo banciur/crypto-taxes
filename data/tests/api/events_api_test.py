@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
@@ -9,7 +9,7 @@ from domain.ledger import EventLocation, LedgerEvent, LedgerLeg
 from tests.api.conftest import raw_event
 from tests.constants import ETH, EUR, USDC
 
-TIMESTAMP = datetime(2024, 2, 3, 10, 0, tzinfo=timezone.utc)
+TIMESTAMP = datetime(2024, 2, 3, 10, 0, tzinfo=UTC)
 
 
 def _eth_event(external_id: str) -> LedgerEvent:
@@ -18,8 +18,8 @@ def _eth_event(external_id: str) -> LedgerEvent:
         external_id=external_id,
         timestamp=TIMESTAMP,
         legs=[
-            LedgerLeg(asset_id=ETH, quantity=Decimal("1"), account_chain_id=KRAKEN_ACCOUNT_ID),
-            LedgerLeg(asset_id=EUR, quantity=Decimal("-2500"), account_chain_id=KRAKEN_ACCOUNT_ID),
+            LedgerLeg(asset_id=ETH, quantity=Decimal(1), account_chain_id=KRAKEN_ACCOUNT_ID),
+            LedgerLeg(asset_id=EUR, quantity=Decimal(-2500), account_chain_id=KRAKEN_ACCOUNT_ID),
         ],
     )
 
@@ -30,8 +30,8 @@ def _usdc_event(external_id: str) -> LedgerEvent:
         external_id=external_id,
         timestamp=TIMESTAMP,
         legs=[
-            LedgerLeg(asset_id=USDC, quantity=Decimal("100"), account_chain_id=KRAKEN_ACCOUNT_ID),
-            LedgerLeg(asset_id=EUR, quantity=Decimal("-92"), account_chain_id=KRAKEN_ACCOUNT_ID),
+            LedgerLeg(asset_id=USDC, quantity=Decimal(100), account_chain_id=KRAKEN_ACCOUNT_ID),
+            LedgerLeg(asset_id=EUR, quantity=Decimal(-92), account_chain_id=KRAKEN_ACCOUNT_ID),
         ],
     )
 

@@ -1,7 +1,7 @@
 # This file is completely vibed and I didn't read it.
-from datetime import datetime, timezone
+from collections.abc import Mapping
+from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Mapping
 
 from accounts import COINBASE_ACCOUNT_ID
 from importers.coinbase.coinbase_importer import CoinbaseImporter
@@ -282,8 +282,8 @@ def test_staking_transfer_pair_is_skipped_after_eth2_aliasing() -> None:
 
 
 def test_fiat_deposit_exchange_pass_through_pair_is_skipped() -> None:
-    paired_amount = Decimal("700")
-    standalone_amount = Decimal("950")
+    paired_amount = Decimal(700)
+    standalone_amount = Decimal(950)
     paired_deposit = transaction(
         tx_id="fiat-in",
         tx_type="fiat_deposit",
@@ -427,4 +427,4 @@ def test_history_timestamps_are_normalized_to_utc() -> None:
     events = CoinbaseImporter(service=service).load_events()
 
     assert len(events) == 1
-    assert events[0].timestamp == datetime(2024, 12, 4, 18, 2, 34, tzinfo=timezone.utc)
+    assert events[0].timestamp == datetime(2024, 12, 4, 18, 2, 34, tzinfo=UTC)

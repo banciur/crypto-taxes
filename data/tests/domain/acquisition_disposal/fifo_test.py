@@ -39,7 +39,7 @@ def _open_lot(*, asset_id: AssetId, quantity: str, cost_per_unit: str) -> _LotBa
 
 def test_single_acquisition() -> None:
     quantity = Decimal("0.5")
-    cost = Decimal("40000")
+    cost = Decimal(40000)
     projected_event = _ProjectedEvent(
         non_fee_groups=[
             _ProjectedAssetResidualGroup(
@@ -74,8 +74,8 @@ def test_single_acquisition() -> None:
 def test_multiple_acquisitions() -> None:
     first_quantity = Decimal("0.5")
     second_quantity = Decimal("0.3")
-    first_cost = Decimal("40000")
-    second_cost = Decimal("45000")
+    first_cost = Decimal(40000)
+    second_cost = Decimal(45000)
     first_event = _ProjectedEvent(
         non_fee_groups=[
             _ProjectedAssetResidualGroup(
@@ -127,8 +127,8 @@ def test_multiple_acquisitions() -> None:
 def test_single_disposal() -> None:
     acquired_quantity = Decimal("0.5")
     disposed_quantity = Decimal("0.2")
-    acquisition_price = Decimal("40000")
-    disposal_price = Decimal("45000")
+    acquisition_price = Decimal(40000)
+    disposal_price = Decimal(45000)
     acquisition_event = _ProjectedEvent(
         non_fee_groups=[
             _ProjectedAssetResidualGroup(
@@ -182,9 +182,9 @@ def test_multiple_disposals() -> None:
     acquired_quantity = Decimal("0.5")
     first_disposed_quantity = Decimal("0.2")
     second_disposed_quantity = Decimal("0.1")
-    acquisition_price = Decimal("40000")
-    first_disposal_price = Decimal("45000")
-    second_disposal_price = Decimal("42000")
+    acquisition_price = Decimal(40000)
+    first_disposal_price = Decimal(45000)
+    second_disposal_price = Decimal(42000)
     acquisition_event = _ProjectedEvent(
         non_fee_groups=[
             _ProjectedAssetResidualGroup(
@@ -256,9 +256,9 @@ def test_disposal_that_disposes_multiple_acquisitions() -> None:
     first_quantity = Decimal("0.5")
     second_quantity = Decimal("0.3")
     disposed_quantity = Decimal("0.7")
-    first_price = Decimal("20000")
-    second_price = Decimal("30000")
-    disposal_price = Decimal("40000")
+    first_price = Decimal(20000)
+    second_price = Decimal(30000)
+    disposal_price = Decimal(40000)
     first_acquisition_event = _ProjectedEvent(
         non_fee_groups=[
             _ProjectedAssetResidualGroup(
@@ -331,7 +331,7 @@ def test_raises_when_open_lots_are_insufficient() -> None:
         non_fee_groups=[
             _ProjectedAssetResidualGroup(
                 asset_id=BTC,
-                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-1"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal(-1))],
             ),
         ],
         fee_groups=[],
@@ -340,7 +340,7 @@ def test_raises_when_open_lots_are_insufficient() -> None:
     with pytest.raises(AcquisitionDisposalProjectionError, match="Not enough open lots") as exc_info:
         match_event_fifo(
             projected_event,
-            prices={BTC: Decimal("40000")},
+            prices={BTC: Decimal(40000)},
             event_origin=EVENT_ORIGIN,
             timestamp=BASE_TIMESTAMP,
             open_lots_by_asset={},
@@ -348,14 +348,14 @@ def test_raises_when_open_lots_are_insufficient() -> None:
             disposals=[],
         )
 
-    assert exc_info.value.quantity_needed == Decimal("1")
+    assert exc_info.value.quantity_needed == Decimal(1)
     assert isinstance(exc_info.value, AcquisitionDisposalLotMatchingError)
     assert QUANTITY_NEEDED_MESSAGE_SUFFIX.format(quantity_needed=exc_info.value.quantity_needed) in str(exc_info.value)
 
 
 def test_skips_fiat_groups() -> None:
     btc_quantity = Decimal("0.5")
-    btc_price = Decimal("40000")
+    btc_price = Decimal(40000)
     projected_event = _ProjectedEvent(
         non_fee_groups=[
             _ProjectedAssetResidualGroup(
@@ -364,11 +364,11 @@ def test_skips_fiat_groups() -> None:
             ),
             _ProjectedAssetResidualGroup(
                 asset_id=EUR,
-                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("100"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal(100))],
             ),
             _ProjectedAssetResidualGroup(
                 asset_id=USD,
-                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-50"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal(-50))],
             ),
         ],
         fee_groups=[],
@@ -378,7 +378,7 @@ def test_skips_fiat_groups() -> None:
 
     match_event_fifo(
         projected_event,
-        prices={BTC: btc_price, EUR: Decimal("1"), USD: Decimal("0.9")},
+        prices={BTC: btc_price, EUR: Decimal(1), USD: Decimal("0.9")},
         event_origin=EVENT_ORIGIN,
         timestamp=BASE_TIMESTAMP,
         open_lots_by_asset={},
@@ -401,13 +401,13 @@ def test_processes_disposals_before_same_event_acquisitions() -> None:
         non_fee_groups=[
             _ProjectedAssetResidualGroup(
                 asset_id=EXOTIC,
-                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("100"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal(100))],
             ),
         ],
         fee_groups=[
             _ProjectedAssetResidualGroup(
                 asset_id=EXOTIC,
-                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-1"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal(-1))],
             ),
         ],
     )
@@ -416,7 +416,7 @@ def test_processes_disposals_before_same_event_acquisitions() -> None:
 
     match_event_fifo(
         projected_event,
-        prices={EXOTIC: Decimal("11")},
+        prices={EXOTIC: Decimal(11)},
         event_origin=EVENT_ORIGIN,
         timestamp=BASE_TIMESTAMP,
         open_lots_by_asset={EXOTIC: deque([existing_lot])},
@@ -428,9 +428,9 @@ def test_processes_disposals_before_same_event_acquisitions() -> None:
     (new_lot,) = acquisitions
 
     assert fee_link.lot_id == existing_lot.lot.id
-    assert fee_link.quantity_used == Decimal("1")
+    assert fee_link.quantity_used == Decimal(1)
     assert fee_link.is_fee is True
-    assert new_lot.quantity_acquired == Decimal("100")
+    assert new_lot.quantity_acquired == Decimal(100)
 
 
 def test_does_not_allow_fee_disposal_to_consume_same_event_non_fee_acquisition() -> None:
@@ -438,13 +438,13 @@ def test_does_not_allow_fee_disposal_to_consume_same_event_non_fee_acquisition()
         non_fee_groups=[
             _ProjectedAssetResidualGroup(
                 asset_id=EXOTIC,
-                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("100"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal(100))],
             ),
         ],
         fee_groups=[
             _ProjectedAssetResidualGroup(
                 asset_id=EXOTIC,
-                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal("-1"))],
+                residuals=[_ProjectedResidualLeg(account_chain_id=BASE_WALLET, quantity=Decimal(-1))],
             ),
         ],
     )
@@ -452,7 +452,7 @@ def test_does_not_allow_fee_disposal_to_consume_same_event_non_fee_acquisition()
     with pytest.raises(AcquisitionDisposalProjectionError, match="Not enough open lots") as exc_info:
         match_event_fifo(
             projected_event,
-            prices={EXOTIC: Decimal("11")},
+            prices={EXOTIC: Decimal(11)},
             event_origin=EVENT_ORIGIN,
             timestamp=BASE_TIMESTAMP,
             open_lots_by_asset={},
@@ -460,4 +460,4 @@ def test_does_not_allow_fee_disposal_to_consume_same_event_non_fee_acquisition()
             disposals=[],
         )
 
-    assert exc_info.value.quantity_needed == Decimal("1")
+    assert exc_info.value.quantity_needed == Decimal(1)

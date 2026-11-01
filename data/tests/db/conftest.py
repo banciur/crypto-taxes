@@ -9,7 +9,7 @@ from db.price_overrides import PriceOverridesBase
 
 
 @pytest.fixture(scope="function")
-def corrections_session(db_engine: Engine) -> Generator[Session, None, None]:
+def corrections_session(db_engine: Engine) -> Generator[Session]:
     CorrectionsBase.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
         yield session
@@ -17,7 +17,7 @@ def corrections_session(db_engine: Engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture(scope="function")
-def price_overrides_session(db_engine: Engine) -> Generator[Session, None, None]:
+def price_overrides_session(db_engine: Engine) -> Generator[Session]:
     PriceOverridesBase.metadata.create_all(db_engine)
     with sessionmaker(db_engine)() as session:
         yield session

@@ -1,10 +1,10 @@
 import logging
 from collections import defaultdict
+from collections.abc import Iterable
 from csv import DictReader
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Iterable
 
 from pydantic import field_validator
 
@@ -205,7 +205,8 @@ class KrakenImporter:
 
         if skip_txids:
             logger.info(
-                "Kraken staking-transfer preprocessor: processed %d rows, flagged %d staking transfer rows, dropped %d rows (%d pairs)",
+                "Kraken staking-transfer preprocessor: processed %d rows, flagged %d staking transfer rows, "
+                "dropped %d rows (%d pairs)",
                 len(entries),
                 staking_rows,
                 len(skip_txids),
@@ -213,7 +214,8 @@ class KrakenImporter:
             )
         elif staking_rows:
             logger.info(
-                "Kraken staking-transfer preprocessor: processed %d rows, flagged %d staking transfer rows, no drops (unmatched)",
+                "Kraken staking-transfer preprocessor: processed %d rows, flagged %d staking transfer rows, "
+                "no drops (unmatched)",
                 len(entries),
                 staking_rows,
             )

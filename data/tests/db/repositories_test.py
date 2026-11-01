@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -34,7 +34,7 @@ def _sample_event(external_id: str, timestamp: datetime, *, note: str | None = N
         note=note,
         legs=[
             LedgerLeg(asset_id=BTC, quantity=Decimal("0.1"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
-            LedgerLeg(asset_id=EUR, quantity=Decimal("-2000"), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
+            LedgerLeg(asset_id=EUR, quantity=Decimal(-2000), account_chain_id=KRAKEN_ACCOUNT_ID, is_fee=False),
         ],
     )
 
@@ -96,7 +96,7 @@ def corrected_repo(test_session: Session) -> CorrectedLedgerEventRepository:
 
 def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
     note = "approve"
-    event = _sample_event("ext-1", datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc), note=note)
+    event = _sample_event("ext-1", datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC), note=note)
 
     repo.create_many([event])
 
@@ -111,8 +111,8 @@ def test_create_and_get_ledger_event(repo: LedgerEventRepository) -> None:
 
 
 def test_list_ledger_events(repo: LedgerEventRepository) -> None:
-    first = _sample_event("first-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=timezone.utc))
-    second = _sample_event("second-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc))
+    first = _sample_event("first-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=UTC))
+    second = _sample_event("second-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=UTC))
 
     repo.create_many([first, second])
 
@@ -123,9 +123,9 @@ def test_list_ledger_events(repo: LedgerEventRepository) -> None:
 
 
 def test_list_event_timestamps_for_origins(repo: LedgerEventRepository) -> None:
-    first = _sample_event("first-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=timezone.utc))
-    ignored = _sample_event("ignored-ext", datetime(2024, 1, 2, 16, 30, 0, tzinfo=timezone.utc))
-    second = _sample_event("second-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc))
+    first = _sample_event("first-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=UTC))
+    ignored = _sample_event("ignored-ext", datetime(2024, 1, 2, 16, 30, 0, tzinfo=UTC))
+    second = _sample_event("second-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=UTC))
 
     repo.create_many([second, ignored, first])
 
@@ -138,16 +138,16 @@ def test_list_event_timestamps_for_origins(repo: LedgerEventRepository) -> None:
 
 
 def test_create_many_rejects_duplicate_event_origins(repo: LedgerEventRepository) -> None:
-    first = _sample_event("duplicate-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=timezone.utc))
-    second = _sample_event("duplicate-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=timezone.utc))
+    first = _sample_event("duplicate-ext", datetime(2024, 1, 2, 15, 30, 0, tzinfo=UTC))
+    second = _sample_event("duplicate-ext", datetime(2024, 1, 3, 8, 0, 0, tzinfo=UTC))
 
     with pytest.raises(IntegrityError):
         repo.create_many([first, second])
 
 
 def test_replace_acquisition_disposal_projection(projection_repo: AcquisitionDisposalProjectionRepository) -> None:
-    acquisition_event = _sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
-    disposal_event = _sample_event("disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=timezone.utc))
+    acquisition_event = _sample_event("acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=UTC))
+    disposal_event = _sample_event("disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=UTC))
     lots = [
         _acquisition_lot_from_event(acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23")),
         _acquisition_lot_from_event(acquisition_event, leg_index=1, cost_per_unit=Decimal("2.34")),
@@ -158,7 +158,7 @@ def test_replace_acquisition_disposal_projection(projection_repo: AcquisitionDis
             leg_index=0,
             lot_id=lots[0].id,
             quantity_used=Decimal("0.5"),
-            proceeds_total=Decimal("100"),
+            proceeds_total=Decimal(100),
         ),
         _disposal_link_from_event(
             disposal_event,
@@ -181,19 +181,19 @@ def test_replace_acquisition_disposal_projection(projection_repo: AcquisitionDis
 def test_replace_acquisition_disposal_projection_clears_previous_rows(
     projection_repo: AcquisitionDisposalProjectionRepository,
 ) -> None:
-    first_acquisition_event = _sample_event("first-acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc))
-    first_disposal_event = _sample_event("first-disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=timezone.utc))
+    first_acquisition_event = _sample_event("first-acq-ext", datetime(2024, 1, 4, 9, 0, 0, tzinfo=UTC))
+    first_disposal_event = _sample_event("first-disposal-ext", datetime(2024, 1, 5, 10, 30, 0, tzinfo=UTC))
     stale_lot = _acquisition_lot_from_event(first_acquisition_event, leg_index=0, cost_per_unit=Decimal("1.23"))
     stale_link = _disposal_link_from_event(
         first_disposal_event,
         leg_index=0,
         lot_id=stale_lot.id,
         quantity_used=Decimal("0.5"),
-        proceeds_total=Decimal("100"),
+        proceeds_total=Decimal(100),
     )
     projection_repo.replace(AcquisitionDisposalProjection(acquisition_lots=[stale_lot], disposal_links=[stale_link]))
 
-    replacement_event = _sample_event("replacement-acq-ext", datetime(2024, 1, 6, 9, 0, 0, tzinfo=timezone.utc))
+    replacement_event = _sample_event("replacement-acq-ext", datetime(2024, 1, 6, 9, 0, 0, tzinfo=UTC))
     replacement_lot = _acquisition_lot_from_event(replacement_event, leg_index=0, cost_per_unit=Decimal("4.56"))
     projection_repo.replace(AcquisitionDisposalProjection(acquisition_lots=[replacement_lot], disposal_links=[]))
 
@@ -229,7 +229,7 @@ def test_persist_tax_events(tax_repo: TaxEventRepository) -> None:
 
 def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRepository) -> None:
     external_id = "corrected-ext"
-    timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     note = "depositAll"
     event = _sample_event(external_id, timestamp, note=note)
 
@@ -246,7 +246,7 @@ def test_persist_corrected_ledger_events(corrected_repo: CorrectedLedgerEventRep
 
 
 def test_list_corrected_ledger_events_uses_canonical_order(corrected_repo: CorrectedLedgerEventRepository) -> None:
-    timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
     base_event = LedgerEvent(
         id=LedgerEventId(uuid4()),
         timestamp=timestamp,

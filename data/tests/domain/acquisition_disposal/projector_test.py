@@ -48,7 +48,7 @@ def test_valuation_error_includes_event_context() -> None:
     external_id = "projector-unpriced"
     event = make_event(
         external_id=external_id,
-        legs=[make_leg(asset_id=LP, quantity=Decimal("1"))],
+        legs=[make_leg(asset_id=LP, quantity=Decimal(1))],
         timestamp=BASE_TIMESTAMP,
     )
 
@@ -68,8 +68,8 @@ def test_valuation_error_includes_event_context() -> None:
 
 
 def test_override_prices_otherwise_unpriceable_acquisition() -> None:
-    lp_quantity = Decimal("2")
-    lp_override_rate = Decimal("1500")
+    lp_quantity = Decimal(2)
+    lp_override_rate = Decimal(1500)
     event = make_event(
         legs=[make_leg(asset_id=LP, quantity=lp_quantity)],
         timestamp=BASE_TIMESTAMP,
@@ -92,7 +92,7 @@ def test_unpriceable_reference_asset_error_includes_event_context() -> None:
     external_id = "projector-unpriceable-reference"
     event = make_event(
         external_id=external_id,
-        legs=[make_leg(asset_id=USDC, quantity=Decimal("1"))],
+        legs=[make_leg(asset_id=USDC, quantity=Decimal(1))],
         timestamp=BASE_TIMESTAMP,
     )
 
@@ -114,8 +114,8 @@ def test_unpriceable_reference_asset_error_includes_event_context() -> None:
 @pytest.mark.parametrize(
     ("past_offset", "future_offset", "expected_rate"),
     [
-        (-2, 1, Decimal("20")),
-        (-1, 3, Decimal("10")),
+        (-2, 1, Decimal(20)),
+        (-1, 3, Decimal(10)),
     ],
 )
 def test_one_sided_event_borrows_rate_from_closest_standard_anchor(
@@ -126,9 +126,9 @@ def test_one_sided_event_borrows_rate_from_closest_standard_anchor(
     target_timestamp = BASE_TIMESTAMP
     past_timestamp = target_timestamp + timedelta(days=past_offset)
     future_timestamp = target_timestamp + timedelta(days=future_offset)
-    past_rate = Decimal("10")
-    future_rate = Decimal("20")
-    quantity = Decimal("1")
+    past_rate = Decimal(10)
+    future_rate = Decimal(20)
+    quantity = Decimal(1)
     past = make_event(
         external_id="past-anchor",
         legs=[make_leg(asset_id=LP, quantity=quantity)],
@@ -162,9 +162,9 @@ def test_one_sided_event_borrows_rate_from_closest_standard_anchor(
 def test_equal_distance_anchors_are_selected_by_event_origin() -> None:
     anchor_timestamp = BASE_TIMESTAMP
     target_timestamp = anchor_timestamp + timedelta(days=1)
-    first_rate = Decimal("10")
-    second_rate = Decimal("20")
-    quantity = Decimal("1")
+    first_rate = Decimal(10)
+    second_rate = Decimal(20)
+    quantity = Decimal(1)
     second = make_event(
         external_id="z-anchor",
         legs=[make_leg(asset_id=LP, quantity=quantity)],
@@ -194,9 +194,9 @@ def test_equal_distance_anchors_are_selected_by_event_origin() -> None:
 
 
 def test_two_missing_rates_borrow_one_and_remainder_solve_the_other() -> None:
-    anchor_rate = Decimal("10")
-    disposed_quantity = Decimal("2")
-    acquired_quantity = Decimal("4")
+    anchor_rate = Decimal(10)
+    disposed_quantity = Decimal(2)
+    acquired_quantity = Decimal(4)
     expected_acquired_rate = anchor_rate * disposed_quantity / acquired_quantity
     anchor = make_event(
         external_id="lp-a-anchor",
@@ -223,9 +223,9 @@ def test_two_missing_rates_borrow_one_and_remainder_solve_the_other() -> None:
 
 
 def test_one_sided_event_borrows_every_missing_rate() -> None:
-    first_rate = Decimal("10")
-    second_rate = Decimal("20")
-    quantity = Decimal("1")
+    first_rate = Decimal(10)
+    second_rate = Decimal(20)
+    quantity = Decimal(1)
     first_anchor = make_event(
         external_id="lp-a-anchor",
         legs=[make_leg(asset_id=LP_A, quantity=quantity)],
@@ -261,9 +261,9 @@ def test_one_sided_event_borrows_every_missing_rate() -> None:
 
 
 def test_standard_remainder_solved_rate_can_anchor_another_event() -> None:
-    eur_quantity = Decimal("-100")
-    anchor_quantity = Decimal("5")
-    target_quantity = Decimal("1")
+    eur_quantity = Decimal(-100)
+    anchor_quantity = Decimal(5)
+    target_quantity = Decimal(1)
     expected_rate = abs(eur_quantity) / anchor_quantity
     anchor = make_event(
         external_id="remainder-anchor",
@@ -288,8 +288,8 @@ def test_standard_remainder_solved_rate_can_anchor_another_event() -> None:
 
 
 def test_adjacent_resolved_event_does_not_become_an_anchor() -> None:
-    anchor_rate = Decimal("10")
-    quantity = Decimal("1")
+    anchor_rate = Decimal(10)
+    quantity = Decimal(1)
     anchor = make_event(
         external_id="lp-a-anchor",
         legs=[make_leg(asset_id=LP_A, quantity=quantity)],
@@ -322,9 +322,9 @@ def test_adjacent_resolved_event_does_not_become_an_anchor() -> None:
 
 
 def test_same_anchor_event_uses_asset_id_to_choose_first_borrowed_rate() -> None:
-    first_rate = Decimal("10")
-    second_rate = Decimal("30")
-    quantity = Decimal("1")
+    first_rate = Decimal(10)
+    second_rate = Decimal(30)
+    quantity = Decimal(1)
     anchor = make_event(
         external_id="anchor",
         legs=[
@@ -353,9 +353,9 @@ def test_same_anchor_event_uses_asset_id_to_choose_first_borrowed_rate() -> None
 
 
 def test_override_wins_when_price_provider_has_a_rate() -> None:
-    provider_rate = Decimal("100")
-    override_rate = Decimal("42")
-    quantity = Decimal("1")
+    provider_rate = Decimal(100)
+    override_rate = Decimal(42)
+    quantity = Decimal(1)
     event = make_event(
         external_id="override",
         legs=[make_leg(asset_id=LP, quantity=quantity)],
@@ -371,8 +371,8 @@ def test_override_wins_when_price_provider_has_a_rate() -> None:
 
 
 def test_missing_fee_rate_fails_with_event_context_before_fifo() -> None:
-    lp_rate = Decimal("42")
-    quantity = Decimal("1")
+    lp_rate = Decimal(42)
+    quantity = Decimal(1)
     event = make_event(
         external_id="missing-fee",
         legs=[
@@ -396,7 +396,7 @@ def test_missing_fee_rate_fails_with_event_context_before_fifo() -> None:
 def test_price_provider_failure_is_not_treated_as_an_unavailable_rate() -> None:
     event = make_event(
         external_id="provider-failure",
-        legs=[make_leg(asset_id=LP, quantity=Decimal("1"))],
+        legs=[make_leg(asset_id=LP, quantity=Decimal(1))],
     )
 
     with pytest.raises(RuntimeError, match="price backend failed"):

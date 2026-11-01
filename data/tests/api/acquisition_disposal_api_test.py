@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import cast
 
@@ -76,9 +76,9 @@ def test_get_acquisition_disposal_returns_acquisition_item(
     client: TestClient,
     persist_acquisition_disposal_projection: Callable[[AcquisitionDisposalProjection], None],
 ) -> None:
-    timestamp = datetime(2024, 1, 4, 9, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2024, 1, 4, 9, 0, 0, tzinfo=UTC)
     quantity_acquired = Decimal("0.5")
-    cost_per_unit = Decimal("20000")
+    cost_per_unit = Decimal(20000)
     lot = _acquisition_lot(
         external_id="acq-ext",
         timestamp=timestamp,
@@ -111,30 +111,30 @@ def test_get_acquisition_disposal_returns_each_disposal_link_as_timeline_item(
 ) -> None:
     first_lot = _acquisition_lot(
         external_id="first-acq-ext",
-        timestamp=datetime(2024, 1, 1, 9, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 1, 9, 0, 0, tzinfo=UTC),
         quantity_acquired=Decimal("0.5"),
-        cost_per_unit=Decimal("10000"),
+        cost_per_unit=Decimal(10000),
     )
     second_lot = _acquisition_lot(
         external_id="second-acq-ext",
-        timestamp=datetime(2024, 1, 2, 9, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2024, 1, 2, 9, 0, 0, tzinfo=UTC),
         quantity_acquired=Decimal("0.5"),
-        cost_per_unit=Decimal("20000"),
+        cost_per_unit=Decimal(20000),
     )
-    disposal_timestamp = datetime(2024, 1, 3, 9, 0, 0, tzinfo=timezone.utc)
+    disposal_timestamp = datetime(2024, 1, 3, 9, 0, 0, tzinfo=UTC)
     first_link = _disposal_link(
         lot=first_lot,
         external_id="disposal-ext",
         timestamp=disposal_timestamp,
         quantity_used=Decimal("0.25"),
-        proceeds_total=Decimal("7500"),
+        proceeds_total=Decimal(7500),
     )
     second_link = _disposal_link(
         lot=second_lot,
         external_id="disposal-ext",
         timestamp=disposal_timestamp,
         quantity_used=Decimal("0.1"),
-        proceeds_total=Decimal("3000"),
+        proceeds_total=Decimal(3000),
     )
     persist_acquisition_disposal_projection(
         AcquisitionDisposalProjection(

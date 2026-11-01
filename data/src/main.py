@@ -1,11 +1,10 @@
 import argparse
 import logging
 import traceback as traceback_utils
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from time import perf_counter
-from typing import Sequence
 
 from accounts import AccountRegistry
 from clients.coinbase import CoinbaseClient

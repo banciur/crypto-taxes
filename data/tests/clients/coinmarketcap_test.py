@@ -1,7 +1,7 @@
 # This file is completely vibed and I didn't read it.
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -16,8 +16,8 @@ from tests.constants import BTC, EUR, USD
 
 _HIST_PATH = "/v3/cryptocurrency/quotes/historical"
 _MAP_PATH = "/v1/cryptocurrency/map"
-_RECENT = datetime(2026, 7, 4, 12, 3, 20, tzinfo=timezone.utc)
-_OLD = datetime(2020, 1, 1, 9, 30, tzinfo=timezone.utc)
+_RECENT = datetime(2026, 7, 4, 12, 3, 20, tzinfo=UTC)
+_OLD = datetime(2020, 1, 1, 9, 30, tzinfo=UTC)
 
 
 def _mock_response(payload: Any, status_code: int = 200) -> Mock:
@@ -71,7 +71,8 @@ def _write_config(
     return path
 
 
-def test_recent_timestamp_uses_five_minute_interval(tmp_path: Path) -> None:
+def test_recent_timestamp_uses_five_minute_interval(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("clients.coinmarketcap.utc_now", lambda: _RECENT)
     _write_config(tmp_path, asset_map={"BTC": 1})
     session = Mock()
     session.get.return_value = _mock_response(_quotes_payload(cmc_id=1, quote="USD", price=42000.5))
@@ -80,7 +81,7 @@ def test_recent_timestamp_uses_five_minute_interval(tmp_path: Path) -> None:
 
     assert record.rate == Decimal("42000.5")
     # 12:03:20 floors to 12:00:00, window is 5 minutes.
-    assert record.valid_from == datetime(2026, 7, 4, 12, 0, tzinfo=timezone.utc)
+    assert record.valid_from == datetime(2026, 7, 4, 12, 0, tzinfo=UTC)
     assert record.valid_to == record.valid_from + timedelta(minutes=5)
     params = session.get.call_args.kwargs["params"]
     assert params["interval"] == "5m"
@@ -96,8 +97,8 @@ def test_old_timestamp_uses_daily_interval(tmp_path: Path) -> None:
 
     record = _client(session, tmp_path).fetch_record(BTC, EUR, timestamp=_OLD)
 
-    assert record.rate == Decimal("7200")
-    assert record.valid_from == datetime(2020, 1, 1, tzinfo=timezone.utc)
+    assert record.rate == Decimal(7200)
+    assert record.valid_from == datetime(2020, 1, 1, tzinfo=UTC)
     assert record.valid_to == record.valid_from + timedelta(days=1)
     assert session.get.call_args.kwargs["params"]["interval"] == "daily"
 
@@ -107,11 +108,11 @@ def test_interval_selection_at_high_resolution_cutoff(tmp_path: Path) -> None:
     session = Mock()
     session.get.return_value = _mock_response(_quotes_payload(cmc_id=1, quote="USD", price=1))
 
-    just_inside = datetime.now(timezone.utc) - timedelta(days=29)
+    just_inside = datetime.now(UTC) - timedelta(days=29)
     _client(session, tmp_path, high_resolution_days=30).fetch_record(BTC, USD, timestamp=just_inside)
     assert session.get.call_args.kwargs["params"]["interval"] == "5m"
 
-    just_outside = datetime.now(timezone.utc) - timedelta(days=31)
+    just_outside = datetime.now(UTC) - timedelta(days=31)
     _client(session, tmp_path, high_resolution_days=30).fetch_record(BTC, USD, timestamp=just_outside)
     assert session.get.call_args.kwargs["params"]["interval"] == "daily"
 
@@ -123,7 +124,7 @@ def test_returns_none_on_empty_quotes(tmp_path: Path) -> None:
 
     record = _client(session, tmp_path).fetch_record(BTC, USD, timestamp=_OLD)
     assert record.rate is None
-    assert record.valid_from == datetime(2020, 1, 1, tzinfo=timezone.utc)
+    assert record.valid_from == datetime(2020, 1, 1, tzinfo=UTC)
 
 
 def test_returns_none_on_empty_data(tmp_path: Path) -> None:
@@ -158,7 +159,7 @@ def test_discovers_single_candidate_and_writes_map(tmp_path: Path) -> None:
 
     record = _client(session, tmp_path).fetch_record(AssetId("neu"), USD, timestamp=_OLD)
 
-    assert record.rate == Decimal("9")
+    assert record.rate == Decimal(9)
     assert session.get.call_count == 2
     assert _MAP_PATH in session.get.call_args_list[0].args[0]
     assert json.loads(config_path.read_text()) == {"asset_map": {"NEU": 2318}, "unpriceable": []}
@@ -186,7 +187,7 @@ def test_invalid_symbol_error_returns_unpriceable_record(tmp_path: Path) -> None
     assert record.quote_id == USD
     assert record.rate is None
     assert record.source == "coinmarketcap"
-    assert record.valid_from == datetime(2020, 1, 1, tzinfo=timezone.utc)
+    assert record.valid_from == datetime(2020, 1, 1, tzinfo=UTC)
     assert record.valid_to == record.valid_from + timedelta(days=1)
     assert session.get.call_count == 1
     assert _MAP_PATH in session.get.call_args.args[0]
@@ -203,7 +204,7 @@ def test_configured_unpriceable_symbol_returns_none_without_request(tmp_path: Pa
     assert record.base_id == symbol
     assert record.rate is None
     assert record.source == "coinmarketcap"
-    assert record.valid_from == datetime(2020, 1, 1, tzinfo=timezone.utc)
+    assert record.valid_from == datetime(2020, 1, 1, tzinfo=UTC)
     assert record.valid_to == record.valid_from + timedelta(days=1)
     # Neither symbol discovery nor a historical quote is requested.
     assert session.get.call_count == 0
@@ -296,5 +297,5 @@ def test_live_request() -> None:
     from config import config
 
     client = CoinMarketCapClient(api_key=config().coinmarketcap_api_key)
-    record = client.fetch_record(BTC, USD, timestamp=datetime.now(timezone.utc) - timedelta(hours=1))
+    record = client.fetch_record(BTC, USD, timestamp=datetime.now(UTC) - timedelta(hours=1))
     pprint(record)

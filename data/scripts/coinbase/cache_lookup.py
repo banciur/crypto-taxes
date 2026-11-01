@@ -3,8 +3,8 @@
 import argparse
 import json
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -26,7 +26,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--external-id",
         required=True,
-        help="Coinbase event external id. Supports raw transaction ids, buy/sell/trade ids, and wrap_asset synthetic ids.",
+        help=(
+            "Coinbase event external id. "
+            "Supports raw transaction ids, buy/sell/trade ids, and wrap_asset synthetic ids."
+        ),
     )
     parser.add_argument(
         "--cache-db",

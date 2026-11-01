@@ -11,26 +11,26 @@
     "types": "tsc --noEmit"
   },
   "dependencies": {
-    "@tanstack/react-virtual": "^3.13.18",
+    "@tanstack/react-virtual": "^3.14.25",
     "bootstrap": ">=5.3.8 <6.0.0",
-    "camelcase-keys": "^10.0.2",
+    "camelcase-keys": "^10.0.3",
     "clsx": "2.1.1",
-    "decamelize-keys": "^2.0.1",
+    "decamelize-keys": "^2.1.0",
     "decimal.js": "^10.6.0",
-    "next": "16.1.7",
-    "react": "19.2.1",
-    "react-bootstrap": ">=3.0.0-beta.5 <4.0.0",
-    "react-dom": "19.2.1"
+    "next": "16.4.3",
+    "react": "19.3.1",
+    "react-bootstrap": ">=3.0.0-beta.6 <4.0.0",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.8",
+    "eslint": "^10",
+    "eslint-config-next": "16.4.3",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "3.7.4",
-    "typescript": "^5"
+    "prettier": "3.9.10",
+    "typescript": "^6"
   },
   "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be"
 }

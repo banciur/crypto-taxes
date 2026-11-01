@@ -1,7 +1,8 @@
 # This file is completely vibed and I didn't read it.
 import json
-from datetime import datetime, timezone
-from typing import Any, Sequence, TypedDict
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from typing import Any, TypedDict
 
 from sqlalchemy import DateTime, Index, Integer, String, Text, delete, select
 from sqlalchemy.dialects.sqlite import insert
@@ -89,12 +90,8 @@ class CoinbaseCacheRepository:
         account_rows: list[CoinbaseAccountRow] = [
             {
                 "account_id": str(account["id"]),
-                "created_at": datetime.fromisoformat(str(account["created_at"]).replace("Z", "+00:00")).astimezone(
-                    timezone.utc
-                ),
-                "updated_at": datetime.fromisoformat(str(account["updated_at"]).replace("Z", "+00:00")).astimezone(
-                    timezone.utc
-                ),
+                "created_at": datetime.fromisoformat(str(account["created_at"])).astimezone(UTC),
+                "updated_at": datetime.fromisoformat(str(account["updated_at"])).astimezone(UTC),
                 "payload": json.dumps(account),
             }
             for account in accounts
@@ -103,9 +100,7 @@ class CoinbaseCacheRepository:
             {
                 "transaction_id": str(transaction["id"]),
                 "account_id": str(transaction["resource_path"]).split("/")[3],
-                "created_at": datetime.fromisoformat(str(transaction["created_at"]).replace("Z", "+00:00")).astimezone(
-                    timezone.utc
-                ),
+                "created_at": datetime.fromisoformat(str(transaction["created_at"])).astimezone(UTC),
                 "type": str(transaction["type"]),
                 "payload": json.dumps(transaction),
             }

@@ -1,7 +1,7 @@
 # TODO: Tests for LedgerCorrectionRepository were written quickly and do not cover most of the cases.
 #  Please review and improve this file when making changes.
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -54,8 +54,8 @@ def repo(corrections_session: Session) -> LedgerCorrectionRepository:
 
 
 def test_create_and_list_orders_by_timestamp_desc(repo: LedgerCorrectionRepository) -> None:
-    earlier = repo.create(_opening_balance(datetime(2024, 2, 3, 10, 30, tzinfo=timezone.utc)))
-    later = repo.create(_replacement(datetime(2024, 2, 4, 10, 30, tzinfo=timezone.utc), "0xlate"))
+    earlier = repo.create(_opening_balance(datetime(2024, 2, 3, 10, 30, tzinfo=UTC)))
+    later = repo.create(_replacement(datetime(2024, 2, 4, 10, 30, tzinfo=UTC), "0xlate"))
 
     listed = repo.list()
 
@@ -66,7 +66,7 @@ def test_delete_source_backed_hard_deletes_and_keeps_auto_suppression(
     corrections_session: Session,
     repo: LedgerCorrectionRepository,
 ) -> None:
-    correction = repo.create(_replacement(datetime(2024, 2, 3, 10, 30, tzinfo=timezone.utc), "0xabc"))
+    correction = repo.create(_replacement(datetime(2024, 2, 3, 10, 30, tzinfo=UTC), "0xabc"))
     repo.delete(correction.id)
 
     assert repo.list() == []
@@ -86,7 +86,7 @@ def test_delete_source_less_hard_deletes_without_auto_suppression(
     corrections_session: Session,
     repo: LedgerCorrectionRepository,
 ) -> None:
-    correction = repo.create(_opening_balance(datetime(2024, 2, 3, 10, 30, tzinfo=timezone.utc)))
+    correction = repo.create(_opening_balance(datetime(2024, 2, 3, 10, 30, tzinfo=UTC)))
     repo.delete(correction.id)
 
     assert repo.list() == []
@@ -100,8 +100,8 @@ def test_manual_create_reuses_source_after_delete_despite_auto_suppression(
     corrections_session: Session,
     repo: LedgerCorrectionRepository,
 ) -> None:
-    first = repo.create(_replacement(datetime(2024, 2, 3, 10, 30, tzinfo=timezone.utc), "0xshared"))
-    second = _replacement(datetime(2024, 2, 4, 10, 30, tzinfo=timezone.utc), "0xshared")
+    first = repo.create(_replacement(datetime(2024, 2, 3, 10, 30, tzinfo=UTC), "0xshared"))
+    second = _replacement(datetime(2024, 2, 4, 10, 30, tzinfo=UTC), "0xshared")
 
     repo.delete(first.id)
     recreated = repo.create(second)
@@ -112,8 +112,8 @@ def test_manual_create_reuses_source_after_delete_despite_auto_suppression(
 
 
 def test_create_rejects_duplicate_active_source(repo: LedgerCorrectionRepository) -> None:
-    first = _replacement(datetime(2024, 2, 3, 10, 30, tzinfo=timezone.utc), "0xshared")
-    second = _replacement(datetime(2024, 2, 4, 10, 30, tzinfo=timezone.utc), "0xshared")
+    first = _replacement(datetime(2024, 2, 3, 10, 30, tzinfo=UTC), "0xshared")
+    second = _replacement(datetime(2024, 2, 4, 10, 30, tzinfo=UTC), "0xshared")
 
     repo.create(first)
 

@@ -1,7 +1,7 @@
 # This file is completely vibed and I didn't read it.
 import logging
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Literal, Self, cast
 
@@ -41,7 +41,7 @@ class CoinbaseAccount(StrictBaseModel):
     def _ensure_utc(cls, value: datetime) -> datetime:
         if value.tzinfo is None:
             raise ValueError("Coinbase account timestamps must be timezone-aware")
-        return value.astimezone(timezone.utc)
+        return value.astimezone(UTC)
 
 
 class CoinbaseNetwork(StrictBaseModel):
@@ -105,7 +105,7 @@ class CoinbaseTransaction(StrictBaseModel):
     def _ensure_utc(cls, value: datetime) -> datetime:
         if value.tzinfo is None:
             raise ValueError("Coinbase transaction timestamps must be timezone-aware")
-        return value.astimezone(timezone.utc)
+        return value.astimezone(UTC)
 
     @property
     def account_id(self) -> str:
@@ -128,7 +128,7 @@ class CoinbaseAccountHistory(StrictBaseModel):
     def _ensure_utc(cls, value: datetime) -> datetime:
         if value.tzinfo is None:
             raise ValueError("Coinbase account-history fetched_at must be timezone-aware")
-        return value.astimezone(timezone.utc)
+        return value.astimezone(UTC)
 
     @model_validator(mode="after")
     def _validate_counts(self) -> Self:

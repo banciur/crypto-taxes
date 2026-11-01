@@ -20,7 +20,7 @@ def test_get_returns_empty_list_when_no_balances_are_persisted(repo: WalletBalan
 
 
 def test_replace_persists_balances_in_deterministic_order(repo: WalletBalanceRepository) -> None:
-    kraken_eur = Decimal("1000")
+    kraken_eur = Decimal(1000)
     ledger_btc = Decimal("0.25")
     base_eth = Decimal("1.5")
     balances = [

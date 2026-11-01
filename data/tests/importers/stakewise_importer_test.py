@@ -1,5 +1,5 @@
 from csv import DictWriter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -39,7 +39,7 @@ def test_importer_sets_stakewise_note_on_reward_events(tmp_path: Path) -> None:
 
     event = StakewiseImporter([file], wallet_address=wallet_address).load_events()[0]
 
-    assert event.timestamp == datetime(2024, 12, 29, 12, 27, tzinfo=timezone.utc)
+    assert event.timestamp == datetime(2024, 12, 29, 12, 27, tzinfo=UTC)
     assert event.ingestion == "stakewise_rewards_csv"
     assert event.note == "staking - StakeWise"
     assert len(event.legs) == 1

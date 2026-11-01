@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -11,7 +11,7 @@ from services.price_resolver import PriceResolver
 from services.price_service import PriceService
 from tests.constants import BTC, ETH, EUR, USD, USDC
 
-TS = datetime(2025, 6, 1, 12, 0, tzinfo=timezone.utc)
+TS = datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
 EURC = AssetId("EURC")
 RETH2 = AssetId("RETH2")  # configured in ASSETS_PRICED_AS as taking ETH's price
 VARIABLE_DEBT_WSTETH = AssetId("variableDebtArbwstETH")  # configured in ASSETS_PRICED_AS_NEGATED
@@ -56,17 +56,17 @@ def _empty_source(source_name: str) -> _StubSource:
 
 
 def test_pivot_composes_legs_through_numeraire(tmp_path: Path) -> None:
-    crypto = _StubSource({(ETH, USD): Decimal("2000")}, source_name="crypto")
+    crypto = _StubSource({(ETH, USD): Decimal(2000)}, source_name="crypto")
     fiat = _StubSource({(EUR, USD): Decimal("1.25")}, source_name="fiat")
     service = _service(crypto=crypto, fiat=fiat, store=_store(tmp_path))
 
-    assert service.rate(ETH, EUR, TS) == Decimal("1600")
+    assert service.rate(ETH, EUR, TS) == Decimal(1600)
     assert crypto.calls == [(ETH, USD, TS)]
     assert fiat.calls == [(EUR, USD, TS)]
 
 
 def test_pivot_caches_only_leg_edges(tmp_path: Path) -> None:
-    crypto = _StubSource({(ETH, USD): Decimal("2000")}, source_name="crypto")
+    crypto = _StubSource({(ETH, USD): Decimal(2000)}, source_name="crypto")
     fiat = _StubSource({(EUR, USD): Decimal("1.25")}, source_name="fiat")
     store = _store(tmp_path)
     service = _service(crypto=crypto, fiat=fiat, store=store)
@@ -74,7 +74,7 @@ def test_pivot_caches_only_leg_edges(tmp_path: Path) -> None:
     first = service.rate(ETH, EUR, TS)
     second = service.rate(ETH, EUR, TS)
 
-    assert first == second == Decimal("1600")
+    assert first == second == Decimal(1600)
     # Legs are served from cache on the second call; the composed cross-rate is never stored.
     assert crypto.calls == [(ETH, USD, TS)]
     assert fiat.calls == [(EUR, USD, TS)]
@@ -96,11 +96,11 @@ def test_identity_pair_short_circuits(tmp_path: Path) -> None:
 
 
 def test_numeraire_quote_uses_single_leg(tmp_path: Path) -> None:
-    crypto = _StubSource({(BTC, USD): Decimal("30000")}, source_name="crypto")
+    crypto = _StubSource({(BTC, USD): Decimal(30000)}, source_name="crypto")
     fiat = _empty_source("fiat")
     service = _service(crypto=crypto, fiat=fiat, store=_store(tmp_path))
 
-    assert service.rate(BTC, USD, TS) == Decimal("30000")
+    assert service.rate(BTC, USD, TS) == Decimal(30000)
     assert crypto.calls == [(BTC, USD, TS)]
     assert fiat.calls == []
 
@@ -113,7 +113,7 @@ def test_direct_cached_edge_preferred_over_pivot(tmp_path: Path) -> None:
         PriceRecord(
             base_id=ETH,
             quote_id=EUR,
-            rate=Decimal("999"),
+            rate=Decimal(999),
             source="manual",
             valid_from=TS - timedelta(days=1),
             valid_to=TS + timedelta(days=1),
@@ -122,7 +122,7 @@ def test_direct_cached_edge_preferred_over_pivot(tmp_path: Path) -> None:
     )
     service = _service(crypto=crypto, fiat=fiat, store=store)
 
-    assert service.rate(ETH, EUR, TS) == Decimal("999")
+    assert service.rate(ETH, EUR, TS) == Decimal(999)
     assert crypto.calls == []
     assert fiat.calls == []
 
@@ -153,7 +153,7 @@ def test_eur_pegged_stable_resolves_through_peg_currency(tmp_path: Path) -> None
 
 
 def test_unpriceable_leg_returns_none_and_negative_caches(tmp_path: Path) -> None:
-    crypto = _StubSource({(BTC, USD): Decimal("30000")}, source_name="crypto")
+    crypto = _StubSource({(BTC, USD): Decimal(30000)}, source_name="crypto")
     fiat = _StubSource({(EUR, USD): None}, source_name="fiat")
     store = _store(tmp_path)
     service = _service(crypto=crypto, fiat=fiat, store=store)
@@ -188,7 +188,7 @@ def test_operational_error_propagates_without_caching(tmp_path: Path) -> None:
 
 
 def test_asset_priced_as_another_borrows_that_asset_rate(tmp_path: Path) -> None:
-    eth_usd = Decimal("2000")
+    eth_usd = Decimal(2000)
     eur_usd = Decimal("1.25")
     crypto = _StubSource({(ETH, USD): eth_usd}, source_name="crypto")
     fiat = _StubSource({(EUR, USD): eur_usd}, source_name="fiat")
@@ -212,7 +212,7 @@ def test_asset_priced_as_another_is_one_to_one_against_it(tmp_path: Path) -> Non
 
 
 def test_asset_priced_as_another_ignores_its_own_cached_edge(tmp_path: Path) -> None:
-    eth_usd = Decimal("2000")
+    eth_usd = Decimal(2000)
     crypto = _StubSource({(ETH, USD): eth_usd}, source_name="crypto")
     fiat = _empty_source("fiat")
     store = _store(tmp_path)
@@ -234,18 +234,18 @@ def test_asset_priced_as_another_ignores_its_own_cached_edge(tmp_path: Path) -> 
 
 
 def test_service_defaults_timestamp_and_normalizes_case(tmp_path: Path) -> None:
-    crypto = _StubSource({(BTC, USD): Decimal("30000")}, source_name="crypto")
+    crypto = _StubSource({(BTC, USD): Decimal(30000)}, source_name="crypto")
     fiat = _empty_source("fiat")
     service = _service(crypto=crypto, fiat=fiat, store=_store(tmp_path))
 
-    assert service.rate(AssetId("btc"), AssetId("usd")) == Decimal("30000")
+    assert service.rate(AssetId("btc"), AssetId("usd")) == Decimal(30000)
     assert len(crypto.calls) == 1
     assert crypto.calls[0][0] == BTC
     assert crypto.calls[0][1] == USD
 
 
 def test_negated_priced_as_asset_borrows_underlying_rate_with_flipped_sign(tmp_path: Path) -> None:
-    wsteth_usd = Decimal("2500")
+    wsteth_usd = Decimal(2500)
     eur_usd = Decimal("1.25")
     crypto = _StubSource({(WSTETH, USD): wsteth_usd}, source_name="crypto")
     fiat = _StubSource({(EUR, USD): eur_usd}, source_name="fiat")

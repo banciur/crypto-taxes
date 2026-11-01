@@ -2,9 +2,9 @@
 # uv run scripts/kraken/kraken_row_range_import.py 10 25 --csv artifacts/kraken-ledger.csv
 import argparse
 import sys
+from collections.abc import Iterable
 from csv import DictReader
 from pathlib import Path
-from typing import Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = PROJECT_ROOT.parent
@@ -13,8 +13,8 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from domain.ledger import LedgerEvent  # noqa: E402
-from importers.kraken import KrakenImporter, KrakenLedgerEntry  # noqa: E402
+from domain.ledger import LedgerEvent
+from importers.kraken import KrakenImporter, KrakenLedgerEntry
 
 
 def _load_rows(csv_path: Path, start_row: int, end_row: int) -> list[tuple[int, KrakenLedgerEntry]]:

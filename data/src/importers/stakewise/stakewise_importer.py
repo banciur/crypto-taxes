@@ -1,9 +1,9 @@
+from collections.abc import Iterable
 from csv import DictReader
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Iterable
 
 from accounts import account_chain_id_for
 from domain.ledger import AssetId, EventLocation, EventOrigin, LedgerEvent, LedgerLeg, WalletAddress

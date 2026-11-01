@@ -1,6 +1,7 @@
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Annotated, Iterable, Self
+from typing import Annotated, Self
 
 from pydantic import StringConstraints
 
@@ -173,7 +174,7 @@ class AccountRegistry:
 def _parse_accounts_file(path: Path) -> tuple[list[RealAccountConfig], list[ArtificialAccountConfig]]:
     payload = json.loads(path.read_text())
     if not isinstance(payload, dict):
-        raise ValueError("Accounts file must contain an object with real and artificial account lists.")
+        raise TypeError("Accounts file must contain an object with real and artificial account lists.")
     keys = frozenset(payload)
     if keys != ACCOUNTS_FILE_KEYS:
         missing_keys = sorted(ACCOUNTS_FILE_KEYS - keys)
