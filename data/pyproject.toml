@@ -4,21 +4,20 @@ name = "crypto-taxes"
 requires-python = ">= 3.15"
 
 dependencies = [
-    "alembic==1.18.5",
-    "coinbase-advanced-py==1.8.2",
+    "alembic==1.20.1",
+    "coinbase-advanced-py==1.8.4",
     "fastapi[standard]>=0.139.0",
     "moralis==0.1.49",
     "pydantic==2.14.2",
-    "pydantic-settings==2.13.1",
-    "requests==2.33.0",
+    "pydantic-settings==2.16.2",
+    "requests==2.34.2",
     "SQLAlchemy==2.0.51",
 ]
 
 [dependency-groups]
 dev = [
-    "types-requests>=2.32.4,<2.32.6",
-    "mypy==2.1.0",
-    "pytest==9.0.3",
+    "mypy==2.4.1",
+    "pytest==9.2.0",
     "ruff==0.15.20",
 ]
 
