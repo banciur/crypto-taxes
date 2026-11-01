@@ -318,7 +318,8 @@ class CoinbaseImporter:
     def _build_buy_event(self, transactions: list[CoinbaseTransaction]) -> LedgerEvent | None:
         if len(transactions) not in {1, 2}:
             raise ValueError(
-                f"Unsupported Coinbase buy group size={len(transactions)} nested_id={transactions[0].buy.id if transactions[0].buy else 'missing'}"
+                f"Unsupported Coinbase buy group size={len(transactions)} "
+                f"nested_id={transactions[0].buy.id if transactions[0].buy else 'missing'}"
             )
 
         buy = transactions[0].buy
@@ -340,7 +341,8 @@ class CoinbaseImporter:
     def _build_sell_event(self, transactions: list[CoinbaseTransaction]) -> LedgerEvent | None:
         if len(transactions) not in {1, 2}:
             raise ValueError(
-                f"Unsupported Coinbase sell group size={len(transactions)} nested_id={transactions[0].sell.id if transactions[0].sell else 'missing'}"
+                f"Unsupported Coinbase sell group size={len(transactions)} "
+                f"nested_id={transactions[0].sell.id if transactions[0].sell else 'missing'}"
             )
 
         sell = transactions[0].sell
@@ -362,7 +364,8 @@ class CoinbaseImporter:
     def _build_trade_event(self, transactions: list[CoinbaseTransaction]) -> LedgerEvent | None:
         if len(transactions) != 2:
             raise ValueError(
-                f"Unsupported Coinbase trade group size={len(transactions)} nested_id={transactions[0].trade.id if transactions[0].trade else 'missing'}"
+                f"Unsupported Coinbase trade group size={len(transactions)} "
+                f"nested_id={transactions[0].trade.id if transactions[0].trade else 'missing'}"
             )
 
         trade = transactions[0].trade

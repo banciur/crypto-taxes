@@ -26,7 +26,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--external-id",
         required=True,
-        help="Coinbase event external id. Supports raw transaction ids, buy/sell/trade ids, and wrap_asset synthetic ids.",
+        help=(
+            "Coinbase event external id. "
+            "Supports raw transaction ids, buy/sell/trade ids, and wrap_asset synthetic ids."
+        ),
     )
     parser.add_argument(
         "--cache-db",
