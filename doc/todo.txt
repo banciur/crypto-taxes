@@ -1,8 +1,11 @@
+TODO: TypeScript 7 is blocked: pnpm lint crashes because typescript-eslint (through eslint-config-next) does not support TS 7 yet (typescript-eslint#10940), so ui stays on TS 6. Dependabot keeps trying the 6 -> 7 major bump and its PR would fail lint; either ignore typescript semver-major in .github/dependabot.yml or close the PR, and upgrade once eslint-config-next supports TS 7.
+TODO: Potential problem Coinbase / Moralis on Coinbase it's CBETH, on Moralis it's cbETH. Proper solution would be this token registry, but for now maybe we can live with lowercasing all token names.
+TODO: Find Moralis alternative
+
 First stage: compute German taxes
 
 Review the order of todos
 -----------------
-TODO: TypeScript 7 is blocked: pnpm lint crashes because typescript-eslint (through eslint-config-next) does not support TS 7 yet (typescript-eslint#10940), so ui stays on TS 6. Dependabot keeps trying the 6 -> 7 major bump and its PR would fail lint; either ignore typescript semver-major in .github/dependabot.yml or close the PR, and upgrade once eslint-config-next supports TS 7.
 TODO: Code that adjust prices by tier is not clear to me. Vibed it quickly.
 TODO: Maybe need to redo opening balances and have a separate entity for that. I think there will be a problem with prices for price service.
 TODO: Price asset-id normalization (upper-casing) happens three times on the same call path:
@@ -22,7 +25,6 @@ TODO: ui/src/components/SystemState and ui/src/components/WalletProjection are v
 TODO: In valuation during acquisition / disposal matching I have a mid-point rule which might be not correct for Germany. Review it. Even if it is correct review the logic and tests again initial task was done a bit fast.
 TODO: Maybe it would make sense to add eur value to corrected events lane. Code that does price valuation exists in disposal. Maybe it should be stored in db to do it only once? Maybe this part of code should be executer earlier, not during acq / disposal matching
 TODO: Possible name cleaning. There are accounts with its endpoint and there is a wallet projection with another endpoint. Those carry different semantics.
-TODO: Potential problem Coinbase / Moralis on Coinbase it's CBETH, on Moralis it's cbETH. Proper solution would be this token registry, but for now maybe we can live with lowercasing all token names.
 TODO: Need automation to rerun computation (src/main.py) through the UI see if https://fastapi.tiangolo.com/tutorial/background-tasks/ could be useful. This could get a bit more complicated. I would like to have a reporting of problems with clear information and error types. Then I could handle such problems in the UI. For example, report there is a missing amount, then I could click and open a window with token history and tx that failed. For missing price I could open different window with price manipulations. etc
 TODO: Find a way to remove spam transactions by looking at them from a token perspective. The first idea is to create a page with all events for a token then those could be removed.
 TODO: Identify places where I went out and came back from other blockchains. Polygon, Fantom/Sonic, Uni. The first idea is to introduce "fake" wallet for such cases. Then I can model blockchain operations correctly, now they will become acquisitions / disposals.
@@ -141,7 +143,7 @@ Other projects
 
 Source of onchain transactions
 ------------------
-https://docs.moralis.com/
+https://docs.moralis.com/ <- expensive
 
 https://thegraph.com/
 https://docs.etherscan.io/introduction
