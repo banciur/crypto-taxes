@@ -167,6 +167,8 @@ def _import_and_persist_raw_events(
         ),
         CoinbaseCacheRepository(tx_cache_session),
     )
+    # TEMP(paid-apis-off): no new transactions so prices stay cache-only
+    coinbase_service._ensure_history_synced = lambda *_: None  # type: ignore[method-assign]
     coinbase_importer = CoinbaseImporter(service=coinbase_service)
 
     account_registry = AccountRegistry.from_path()
@@ -178,6 +180,8 @@ def _import_and_persist_raw_events(
         account_registry=account_registry,
         correction_repository=correction_repository,
     )
+    # TEMP(paid-apis-off): Moralis is paid; read transactions_cache.db only
+    moralis_importer.service._ensure_locations_synced = lambda *_: None  # type: ignore[method-assign]
 
     logger.info("Importing Kraken events from %s", csv_path)
     kraken_started = perf_counter()
