@@ -79,7 +79,9 @@ const formatStage = (stage: SystemStateStage | null) =>
   stage ? STAGE_LABELS[stage] : "None";
 
 export function SystemStateSection({ state }: SystemStateSectionProps) {
-  const [open, setOpen] = useState(state.status === "FAILED");
+  // Restore after development finished:
+  // const [open, setOpen] = useState(state.status === "FAILED");
+  const [open, setOpen] = useState(false);
   const statusMeta = STATUS_META[state.status];
 
   return (
