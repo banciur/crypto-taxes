@@ -16,7 +16,7 @@ if str(SRC_DIR) not in sys.path:
 
 from accounts import AccountRegistry
 from clients.moralis import MoralisClient
-from config import CORRECTIONS_DB_PATH, TRANSACTIONS_CACHE_DB_PATH, config
+from config import TRANSACTIONS_CACHE_DB_PATH, VARIOUS_PERSISTENT_DB_PATH, config
 from db.ledger_corrections import CorrectionsBase, LedgerCorrectionRepository
 from db.session import init_db_session
 from db.tx_cache_common import init_transactions_cache_db
@@ -55,7 +55,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     account_registry = AccountRegistry.from_path(args.accounts)
     cache_session = init_transactions_cache_db(db_path=TRANSACTIONS_CACHE_DB_PATH)
     corrections_session = init_db_session(
-        db_path=CORRECTIONS_DB_PATH,
+        db_path=VARIOUS_PERSISTENT_DB_PATH,
         metadata=CorrectionsBase.metadata,
         reset=False,
     )

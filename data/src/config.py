@@ -13,7 +13,7 @@ PRICE_CACHE_DB_PATH = ARTIFACTS_DIR / "price_cache.db"
 PRICE_OVERRIDES_DB_PATH = ARTIFACTS_DIR / "price_overrides.db"
 CMC_CONFIG_PATH = ARTIFACTS_DIR / "cmc_config.json"
 DB_PATH = ARTIFACTS_DIR / "crypto_taxes.db"
-CORRECTIONS_DB_PATH = ARTIFACTS_DIR / "corrections.db"
+VARIOUS_PERSISTENT_DB_PATH = ARTIFACTS_DIR / "various_persistent.db"
 
 # Pricing model configuration.
 BASE_CURRENCY_ASSET_ID = AssetId("EUR")

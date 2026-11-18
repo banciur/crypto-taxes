@@ -64,7 +64,7 @@
 - `src/domain/price_override.py` owns the `PriceOverride` model and `validate_overrides`; the
   targeting, validation, and valuation semantics live in `doc/CURRENT.md`.
 - Overrides live in their own durable store (`artifacts/price_overrides.db`, `src/db/price_overrides.py`),
-  a sibling of `corrections.db`. A unique constraint on `(origin_location, origin_external_id, asset_id)`
+  a sibling of `various_persistent.db`. A unique constraint on `(origin_location, origin_external_id, asset_id)`
   makes two competing rates for one asset unrepresentable, so `PriceOverrideRepository.rates_by_origin()`
   can regroup rows for valuation without silently dropping one. `POST /price-overrides` maps that
   constraint's `IntegrityError` to a `409`.

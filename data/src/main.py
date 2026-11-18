@@ -13,11 +13,11 @@ from clients.moralis import MoralisClient
 from clients.open_exchange_rates import OpenExchangeRatesClient
 from config import (
     ARTIFACTS_DIR,
-    CORRECTIONS_DB_PATH,
     DB_PATH,
     PRICE_CACHE_DB_PATH,
     PRICE_OVERRIDES_DB_PATH,
     TRANSACTIONS_CACHE_DB_PATH,
+    VARIOUS_PERSISTENT_DB_PATH,
     AppSettings,
     config,
 )
@@ -292,7 +292,7 @@ def run(
     settings = config()
     events_session = init_db_session(db_path=DB_PATH, metadata=Base.metadata, reset=True)
     corrections_session = init_db_session(
-        db_path=CORRECTIONS_DB_PATH,
+        db_path=VARIOUS_PERSISTENT_DB_PATH,
         metadata=CorrectionsBase.metadata,
         reset=False,
     )

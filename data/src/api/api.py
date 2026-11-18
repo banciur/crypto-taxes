@@ -13,7 +13,7 @@ from api.events import router as events_router
 from api.price_overrides import router as price_overrides_router
 from api.system_state import router as system_state_router
 from api.wallet_balances import router as wallet_balances_router
-from config import CORRECTIONS_DB_PATH, DB_PATH, PRICE_OVERRIDES_DB_PATH
+from config import DB_PATH, PRICE_OVERRIDES_DB_PATH, VARIOUS_PERSISTENT_DB_PATH
 
 
 def create_app(
@@ -35,7 +35,7 @@ def create_app(
             fastapi_app.state.sessionmaker = sessionmaker_factory
 
         if corrections_sessionmaker_factory is None:
-            corrections_engine = create_engine(f"sqlite:///{CORRECTIONS_DB_PATH}", echo=False)
+            corrections_engine = create_engine(f"sqlite:///{VARIOUS_PERSISTENT_DB_PATH}", echo=False)
             fastapi_app.state.corrections_sessionmaker = sessionmaker(corrections_engine)
         else:
             fastapi_app.state.corrections_sessionmaker = corrections_sessionmaker_factory
