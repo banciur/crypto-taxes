@@ -15,12 +15,11 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
+from clients.errors import PriceClientError
 from config import CMC_CONFIG_PATH
 from domain.ledger import AssetId
 from domain.pricing import PriceRecord
 from utils.misc import utc_now
-
-from .errors import PriceClientError
 
 logger = logging.getLogger(__name__)
 

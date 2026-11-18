@@ -2,8 +2,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
-from ..ledger import AccountChainId, AssetId
-from .models import AcquisitionLot
+from domain.acquisition_disposal.models import AcquisitionLot
+from domain.ledger import AccountChainId, AssetId
 
 
 @dataclass(frozen=True)

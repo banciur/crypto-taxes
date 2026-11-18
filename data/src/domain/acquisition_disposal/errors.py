@@ -1,8 +1,7 @@
 from decimal import Decimal
 
+from domain.ledger import AssetId, LedgerEvent, LedgerLeg
 from errors import CryptoTaxesError
-
-from ..ledger import AssetId, LedgerEvent, LedgerLeg
 
 
 class AcquisitionDisposalProjectionError(CryptoTaxesError):

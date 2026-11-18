@@ -8,11 +8,10 @@ from requests import Response
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
+from clients.errors import PriceClientError
 from domain.ledger import AssetId
 from domain.pricing import PriceRecord
 from utils.misc import utc_now
-
-from .errors import PriceClientError
 
 
 class OpenExchangeRatesAPIError(PriceClientError):

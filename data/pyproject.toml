@@ -35,7 +35,8 @@ line-length = 120
 target-version = "py315"
 
 [tool.ruff.lint]
-extend-select = ["I", "E", "F"]
+extend-select = ["I", "E", "F", "TID252"]
+flake8-tidy-imports.ban-relative-imports = "all"
 
 [tool.mypy]
 python_version = "3.15"

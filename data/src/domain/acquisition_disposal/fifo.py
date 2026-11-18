@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from ..ledger import AccountChainId, AssetId, EventOrigin, LotId
-from .constants import is_fifo_tracked_asset
-from .errors import AcquisitionDisposalLotMatchingError
-from .models import AcquisitionLot, DisposalLink
-from .pipeline_types import _LotBalance, _ProjectedEvent
+from domain.acquisition_disposal.constants import is_fifo_tracked_asset
+from domain.acquisition_disposal.errors import AcquisitionDisposalLotMatchingError
+from domain.acquisition_disposal.models import AcquisitionLot, DisposalLink
+from domain.acquisition_disposal.pipeline_types import _LotBalance, _ProjectedEvent
+from domain.ledger import AccountChainId, AssetId, EventOrigin, LotId
 
 QUANTITY_NEEDED_MESSAGE_SUFFIX = " quantity_needed={quantity_needed}"
 

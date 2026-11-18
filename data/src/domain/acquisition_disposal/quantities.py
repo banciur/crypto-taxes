@@ -2,12 +2,12 @@ from collections import defaultdict
 from decimal import Decimal
 from operator import gt, lt
 
-from ..ledger import AssetId, LedgerEvent, LedgerLeg
-from .pipeline_types import (
+from domain.acquisition_disposal.pipeline_types import (
     _ProjectedAssetResidualGroup,
     _ProjectedEvent,
     _ProjectedResidualLeg,
 )
+from domain.ledger import AssetId, LedgerEvent, LedgerLeg
 
 
 def project_event_quantities(event: LedgerEvent) -> _ProjectedEvent:

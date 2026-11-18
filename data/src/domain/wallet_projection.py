@@ -2,10 +2,9 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping, MutableMapping
 from decimal import Decimal
 
+from domain.ledger import AccountChainId, AssetId, EventOrigin, LedgerEvent
 from errors import CryptoTaxesError
 from pydantic_base import StrictBaseModel
-
-from .ledger import AccountChainId, AssetId, EventOrigin, LedgerEvent
 
 BalanceKey = tuple[AccountChainId, AssetId]
 BalanceMap = Mapping[BalanceKey, Decimal]

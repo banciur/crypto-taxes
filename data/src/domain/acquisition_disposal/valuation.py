@@ -3,12 +3,14 @@ from datetime import datetime
 from decimal import Decimal
 
 from config import BASE_CURRENCY_ASSET_ID
-
-from ..ledger import AssetId, EventOrigin
-from ..pricing import PriceProvider
-from .constants import ValuationTier, is_reference_priced, valuation_tier
-from .errors import AcquisitionDisposalUnresolvedRatesError, AcquisitionDisposalValuationError
-from .pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
+from domain.acquisition_disposal.constants import ValuationTier, is_reference_priced, valuation_tier
+from domain.acquisition_disposal.errors import (
+    AcquisitionDisposalUnresolvedRatesError,
+    AcquisitionDisposalValuationError,
+)
+from domain.acquisition_disposal.pipeline_types import _ProjectedAssetResidualGroup, _ProjectedEvent
+from domain.ledger import AssetId, EventOrigin
+from domain.pricing import PriceProvider
 
 
 class _DirectRateResolver:

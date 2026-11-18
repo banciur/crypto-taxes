@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
 
-from .ledger import AssetId
+from domain.ledger import AssetId
 
 
 @dataclass(frozen=True)

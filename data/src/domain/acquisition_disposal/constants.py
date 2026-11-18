@@ -1,8 +1,7 @@
 from enum import IntEnum
 
 from config import BASE_CURRENCY_ASSET_ID, FIAT_CURRENCY_CODES, STABLE_ASSETS_BY_PEG
-
-from ..ledger import AssetId
+from domain.ledger import AssetId
 
 _STABLE_ASSET_IDS = frozenset(stable for stables in STABLE_ASSETS_BY_PEG.values() for stable in stables)
 

@@ -4,14 +4,17 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from ..ledger import AssetId, EventOrigin, LedgerEvent
-from ..pricing import PriceProvider
-from .errors import AcquisitionDisposalProjectionError, AcquisitionDisposalUnresolvedRatesError
-from .fifo import match_event_fifo
-from .models import AcquisitionLot, DisposalLink
-from .pipeline_types import _LotBalance, _ProjectedEvent
-from .quantities import project_event_quantities
-from .valuation import _DirectRateResolver, _value_fee_groups, _value_non_fee_groups
+from domain.acquisition_disposal.errors import (
+    AcquisitionDisposalProjectionError,
+    AcquisitionDisposalUnresolvedRatesError,
+)
+from domain.acquisition_disposal.fifo import match_event_fifo
+from domain.acquisition_disposal.models import AcquisitionLot, DisposalLink
+from domain.acquisition_disposal.pipeline_types import _LotBalance, _ProjectedEvent
+from domain.acquisition_disposal.quantities import project_event_quantities
+from domain.acquisition_disposal.valuation import _DirectRateResolver, _value_fee_groups, _value_non_fee_groups
+from domain.ledger import AssetId, EventOrigin, LedgerEvent
+from domain.pricing import PriceProvider
 
 
 @dataclass(frozen=True)

@@ -5,8 +5,7 @@ from decimal import Decimal
 from config import ASSETS_PRICED_AS, ASSETS_PRICED_AS_NEGATED, NUMERAIRE_ASSET_ID, STABLE_ASSETS_BY_PEG
 from domain.ledger import AssetId
 from domain.pricing import PriceCache, PriceProvider
-
-from .price_resolver import PriceResolver
+from services.price_resolver import PriceResolver
 
 logger = logging.getLogger(__name__)
 
